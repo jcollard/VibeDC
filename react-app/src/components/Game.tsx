@@ -20,8 +20,8 @@ export const Game: React.FC = () => {
   const [movementError, setMovementError] = useState<string>('');
 
   // Light control state
-  const [lightIntensity, setLightIntensity] = useState<number>(1.0);
-  const [lightDistance, setLightDistance] = useState<number>(8);
+  const [lightIntensity, setLightIntensity] = useState<number>(2.0);
+  const [lightDistance, setLightDistance] = useState<number>(4);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);

@@ -26,8 +26,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   direction,
   grid,
   cameraOffset = 0.3, // Default: slightly forward in the tile
-  lightIntensity = 1.0, // Default: normal brightness
-  lightDistance = 8 // Default: 8 tiles range
+  lightIntensity = 2.0, // Default: bright light
+  lightDistance = 4 // Default: 4 tiles range
 }) => {
   // Spritesheet loader state
   const [spriteSheetLoader, setSpriteSheetLoader] = useState<SpriteSheetLoader | null>(null);
