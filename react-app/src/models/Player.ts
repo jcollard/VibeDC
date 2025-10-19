@@ -55,7 +55,7 @@ export class Player {
   }
 
   /**
-   * Move in the current direction
+   * Move forward in the current direction
    */
   moveForward(): { x: number; y: number } {
     const newPos = { x: this.x, y: this.y };
@@ -79,7 +79,79 @@ export class Player {
   }
 
   /**
-   * Rotate clockwise
+   * Move backward (opposite of current direction)
+   */
+  moveBackward(): { x: number; y: number } {
+    const newPos = { x: this.x, y: this.y };
+
+    switch (this.direction) {
+      case 'North':
+        newPos.y += 1;
+        break;
+      case 'South':
+        newPos.y -= 1;
+        break;
+      case 'West':
+        newPos.x += 1;
+        break;
+      case 'East':
+        newPos.x -= 1;
+        break;
+    }
+
+    return newPos;
+  }
+
+  /**
+   * Strafe left (perpendicular to current direction)
+   */
+  strafeLeft(): { x: number; y: number } {
+    const newPos = { x: this.x, y: this.y };
+
+    switch (this.direction) {
+      case 'North':
+        newPos.x -= 1;
+        break;
+      case 'South':
+        newPos.x += 1;
+        break;
+      case 'West':
+        newPos.y += 1;
+        break;
+      case 'East':
+        newPos.y -= 1;
+        break;
+    }
+
+    return newPos;
+  }
+
+  /**
+   * Strafe right (perpendicular to current direction)
+   */
+  strafeRight(): { x: number; y: number } {
+    const newPos = { x: this.x, y: this.y };
+
+    switch (this.direction) {
+      case 'North':
+        newPos.x += 1;
+        break;
+      case 'South':
+        newPos.x -= 1;
+        break;
+      case 'West':
+        newPos.y -= 1;
+        break;
+      case 'East':
+        newPos.y += 1;
+        break;
+    }
+
+    return newPos;
+  }
+
+  /**
+   * Rotate clockwise (90 degrees)
    */
   turnRight(): Direction {
     const rotations: Record<Direction, Direction> = {
@@ -92,7 +164,7 @@ export class Player {
   }
 
   /**
-   * Rotate counter-clockwise
+   * Rotate counter-clockwise (-90 degrees)
    */
   turnLeft(): Direction {
     const rotations: Record<Direction, Direction> = {
@@ -102,5 +174,28 @@ export class Player {
       'East': 'North'
     };
     return rotations[this.direction];
+  }
+
+  /**
+   * Calculate new position based on a relative movement action
+   */
+  static calculateRelativeMove(
+    x: number,
+    y: number,
+    direction: Direction,
+    action: 'forward' | 'backward' | 'strafeLeft' | 'strafeRight'
+  ): { x: number; y: number } {
+    const tempPlayer = new Player('temp', x, y, direction, 'temp');
+
+    switch (action) {
+      case 'forward':
+        return tempPlayer.moveForward();
+      case 'backward':
+        return tempPlayer.moveBackward();
+      case 'strafeLeft':
+        return tempPlayer.strafeLeft();
+      case 'strafeRight':
+        return tempPlayer.strafeRight();
+    }
   }
 }

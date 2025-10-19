@@ -1,10 +1,11 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, ensureAuth } from '../firebase';
-import type { GameState, MovementDirection } from '../types';
+import type { GameState } from '../types';
 import { GameBoard } from './GameBoard';
 import { parseMap } from '../utils/mapParser';
+import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import './Game.css';
 
 const GAME_ID = 'test-game';
@@ -15,6 +16,9 @@ export const Game: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [movementError, setMovementError] = useState<string>('');
+
+  // Initialize input configuration
+  const inputConfig = useMemo(() => UserInputConfig.load(), []);
 
   // Initialize game
   useEffect(() => {
@@ -74,18 +78,18 @@ export const Game: React.FC = () => {
     return () => unsubscribe();
   }, [playerId]);
 
-  // Handle movement
-  const handleMove = useCallback(async (direction: MovementDirection) => {
+  // Handle player action
+  const handleAction = useCallback(async (action: PlayerAction) => {
     if (!playerId || !gameState) return;
 
     setMovementError('');
 
     try {
-      const makeMove = httpsCallable(functions, 'makeMove');
-      await makeMove({ gameId: GAME_ID, direction });
+      const performAction = httpsCallable(functions, 'performAction');
+      await performAction({ gameId: GAME_ID, action });
     } catch (err: any) {
-      console.error('Movement error:', err);
-      const errorMessage = err.message || 'Failed to move';
+      console.error('Action error:', err);
+      const errorMessage = err.message || 'Failed to perform action';
       setMovementError(errorMessage);
 
       // Clear error after 2 seconds
@@ -93,40 +97,20 @@ export const Game: React.FC = () => {
     }
   }, [playerId, gameState]);
 
-  // Handle keyboard input
+  // Handle keyboard input using UserInputConfig
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      switch (e.key) {
-        case 'ArrowUp':
-        case 'w':
-        case 'W':
-          e.preventDefault();
-          handleMove('up');
-          break;
-        case 'ArrowDown':
-        case 's':
-        case 'S':
-          e.preventDefault();
-          handleMove('down');
-          break;
-        case 'ArrowLeft':
-        case 'a':
-        case 'A':
-          e.preventDefault();
-          handleMove('left');
-          break;
-        case 'ArrowRight':
-        case 'd':
-        case 'D':
-          e.preventDefault();
-          handleMove('right');
-          break;
+      const action = inputConfig.getAction(e.key);
+
+      if (action) {
+        e.preventDefault();
+        handleAction(action);
       }
     };
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [handleMove]);
+  }, [handleAction, inputConfig]);
 
   if (loading) {
     return <div className="game-container">Loading...</div>;
@@ -150,7 +134,12 @@ export const Game: React.FC = () => {
           <p>Player: {currentPlayer?.name || 'Unknown'}</p>
           <p>Position: ({currentPlayer?.x}, {currentPlayer?.y})</p>
           <p>Facing: {currentPlayer?.direction || 'Unknown'}</p>
-          <p className="controls">Use Arrow Keys or WASD to move</p>
+          <p className="controls">
+            Q/E: Turn | WASD/Arrows: Move relative to facing
+          </p>
+          <p className="controls-detail">
+            W=Forward, S=Back, A=Strafe Left, D=Strafe Right
+          </p>
         </div>
         {movementError && (
           <div className="movement-error">{movementError}</div>

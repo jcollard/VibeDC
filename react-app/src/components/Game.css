@@ -34,6 +34,14 @@
   font-size: 0.9em;
   color: #aaa;
   font-style: italic;
+  font-weight: bold;
+}
+
+.controls-detail {
+  font-size: 0.8em;
+  color: #888;
+  font-style: italic;
+  margin-top: 2px !important;
 }
 
 .movement-error {
