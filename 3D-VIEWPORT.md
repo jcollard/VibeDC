@@ -29,6 +29,12 @@ Main viewport component that:
 - `playerY`: Player's Y position on grid
 - `direction`: Player's facing direction (North/East/South/West)
 - `grid`: String array representing the map
+- `cameraOffset`: (Optional) Camera position offset in forward direction
+  - `0.0` = Centered in tile
+  - `0.3` = Slightly forward (default)
+  - `0.5` = At front edge of tile
+  - `-0.3` = Slightly backward
+  - Range: -0.5 to 0.5 recommended
 
 ### Cell
 Location: [react-app/src/components/Cell.tsx](react-app/src/components/Cell.tsx)
@@ -193,6 +199,39 @@ Edit FOV in [FirstPersonView.tsx](react-app/src/components/FirstPersonView.tsx):
 
 Higher FOV = wider view (fish-eye effect)
 Lower FOV = narrower view (telephoto effect)
+
+### Adjusting Camera Offset
+
+The `cameraOffset` prop positions the camera within the player's tile:
+
+```tsx
+<FirstPersonView
+  playerX={5}
+  playerY={3}
+  direction="North"
+  grid={grid}
+  cameraOffset={0.3}  // Adjust this value
+/>
+```
+
+**Effect of different offsets:**
+
+| Offset | Position | Effect |
+|--------|----------|--------|
+| `-0.5` | Back edge of tile | See more ahead, less behind |
+| `-0.3` | Slightly back | Balanced view, more forward |
+| `0.0` | Center (default classic) | Perfectly centered |
+| `0.3` | Slightly forward | See immediate surroundings better |
+| `0.5` | Front edge | Maximum view of current tile |
+
+**Recommended values:**
+- **Exploration**: `0.3` - See what's ahead while being aware of current tile
+- **Combat/Tactical**: `0.0` - Centered view for balanced awareness
+- **Scouting**: `-0.3` - See further ahead, less of current position
+
+The offset is in the **forward direction** relative to player facing:
+- Facing North with `0.3` offset = camera is 0.3 units south (behind where you're looking)
+- This creates a "looking forward from back of tile" perspective
 
 ## Troubleshooting
 

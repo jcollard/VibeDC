@@ -10,6 +10,7 @@ interface FirstPersonViewProps {
   playerY: number;
   direction: CardinalDirection;
   grid: string[];
+  cameraOffset?: number; // Offset in the forward direction (0 = centered, -0.3 = back, 0.3 = forward)
 }
 
 /**
@@ -19,8 +20,17 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   playerX,
   playerY,
   direction,
-  grid
+  grid,
+  cameraOffset = 0.3 // Default: slightly forward in the tile
 }) => {
+  // Calculate camera position offset based on direction
+  const cameraPosition = useMemo(() => {
+    // Camera is offset in the Z direction (forward/backward from player perspective)
+    // Positive Z offset = camera is behind center (looking forward more)
+    // Negative Z offset = camera is ahead of center (looking backward more)
+    return [0, 0, cameraOffset] as [number, number, number];
+  }, [cameraOffset]);
+
   // Calculate visible cells based on player position and direction
   const visibleCells = useMemo(() => {
     const cells: Array<{ x: number; z: number; tileType: string }> = [];
@@ -50,8 +60,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   return (
     <div className="first-person-view">
       <Canvas>
-        {/* Camera at player position, looking forward */}
-        <PerspectiveCamera makeDefault position={[0, 0, 0]} fov={75} />
+        {/* Camera offset from tile center based on facing direction */}
+        <PerspectiveCamera makeDefault position={cameraPosition} fov={75} />
 
         {/* Ambient light */}
         <ambientLight intensity={0.4} />
@@ -59,8 +69,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
         {/* Directional light from above */}
         <directionalLight position={[0, 5, 2]} intensity={0.8} />
 
-        {/* Point light at player position for nearby lighting */}
-        <pointLight position={[0, 0, 0]} intensity={0.5} distance={5} />
+        {/* Point light at camera position for nearby lighting */}
+        <pointLight position={cameraPosition} intensity={0.5} distance={5} />
 
         {/* Render all visible cells */}
         {visibleCells.map((cell, index) => (

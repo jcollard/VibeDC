@@ -156,6 +156,7 @@ export const Game: React.FC = () => {
             playerY={currentPlayer.y}
             direction={currentPlayer.direction}
             grid={gameState.grid}
+            cameraOffset={0.3} // Position camera slightly forward in tile (0 = center, 0.5 = edge)
           />
         </div>
 
