@@ -69,6 +69,13 @@
   flex-wrap: wrap;
 }
 
+.viewport-section {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 15px;
+}
+
 .viewport-container,
 .map-container {
   display: flex;

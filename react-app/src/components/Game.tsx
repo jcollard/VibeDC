@@ -5,6 +5,7 @@ import { db, functions, ensureAuth } from '../firebase';
 import type { GameState } from '../types';
 import { GameBoard } from './GameBoard';
 import { FirstPersonView } from './FirstPersonView';
+import { LightControl } from './LightControl';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import './Game.css';
@@ -17,6 +18,10 @@ export const Game: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
   const [movementError, setMovementError] = useState<string>('');
+
+  // Light control state
+  const [lightIntensity, setLightIntensity] = useState<number>(1.0);
+  const [lightDistance, setLightDistance] = useState<number>(8);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -149,14 +154,26 @@ export const Game: React.FC = () => {
 
       <div className="game-views">
         {/* First-person 3D viewport */}
-        <div className="viewport-container">
-          <h3>First-Person View</h3>
-          <FirstPersonView
-            playerX={currentPlayer.x}
-            playerY={currentPlayer.y}
-            direction={currentPlayer.direction}
-            grid={gameState.grid}
-            cameraOffset={0.3} // Position camera slightly forward in tile (0 = center, 0.5 = edge)
+        <div className="viewport-section">
+          <div className="viewport-container">
+            <h3>First-Person View</h3>
+            <FirstPersonView
+              playerX={currentPlayer.x}
+              playerY={currentPlayer.y}
+              direction={currentPlayer.direction}
+              grid={gameState.grid}
+              cameraOffset={0.3}
+              lightIntensity={lightIntensity}
+              lightDistance={lightDistance}
+            />
+          </div>
+
+          {/* Light control panel */}
+          <LightControl
+            intensity={lightIntensity}
+            distance={lightDistance}
+            onIntensityChange={setLightIntensity}
+            onDistanceChange={setLightDistance}
           />
         </div>
 

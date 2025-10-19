@@ -11,6 +11,8 @@ interface FirstPersonViewProps {
   direction: CardinalDirection;
   grid: string[];
   cameraOffset?: number; // Offset in the forward direction (0 = centered, -0.3 = back, 0.3 = forward)
+  lightIntensity?: number; // Player light intensity (0 = off, 1 = normal, 2 = bright)
+  lightDistance?: number; // How far the player's light reaches (in tiles)
 }
 
 /**
@@ -21,7 +23,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   playerY,
   direction,
   grid,
-  cameraOffset = 0.3 // Default: slightly forward in the tile
+  cameraOffset = 0.3, // Default: slightly forward in the tile
+  lightIntensity = 1.0, // Default: normal brightness
+  lightDistance = 8 // Default: 8 tiles range
 }) => {
   // Calculate camera position offset based on direction
   const cameraPosition = useMemo(() => {
@@ -63,14 +67,34 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
         {/* Camera offset from tile center based on facing direction */}
         <PerspectiveCamera makeDefault position={cameraPosition} fov={75} />
 
-        {/* Ambient light */}
-        <ambientLight intensity={0.4} />
+        {/* Ambient light - base lighting for entire scene */}
+        <ambientLight intensity={0.3} />
 
-        {/* Directional light from above */}
-        <directionalLight position={[0, 5, 2]} intensity={0.8} />
+        {/* Directional light from above - simulates sunlight/general lighting */}
+        <directionalLight position={[0, 5, 2]} intensity={0.5} />
 
-        {/* Point light at camera position for nearby lighting */}
-        <pointLight position={cameraPosition} intensity={0.5} distance={5} />
+        {/* Player's light source - adjustable torch/flashlight effect */}
+        <pointLight
+          position={cameraPosition}
+          intensity={lightIntensity}
+          distance={lightDistance}
+          decay={2}
+          color="#ffddaa"
+        />
+
+        {/* Additional spot light for focused forward illumination */}
+        {lightIntensity > 0 && (
+          <spotLight
+            position={cameraPosition}
+            target-position={[0, 0, -5]}
+            angle={Math.PI / 4}
+            penumbra={0.5}
+            intensity={lightIntensity * 0.8}
+            distance={lightDistance * 1.5}
+            decay={2}
+            color="#ffddaa"
+          />
+        )}
 
         {/* Render all visible cells */}
         {visibleCells.map((cell, index) => (
