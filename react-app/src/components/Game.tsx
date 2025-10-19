@@ -4,6 +4,7 @@ import { httpsCallable } from 'firebase/functions';
 import { db, functions, ensureAuth } from '../firebase';
 import type { GameState } from '../types';
 import { GameBoard } from './GameBoard';
+import { FirstPersonView } from './FirstPersonView';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import './Game.css';
@@ -146,7 +147,24 @@ export const Game: React.FC = () => {
         )}
       </div>
 
-      <GameBoard gameState={gameState} currentPlayerId={playerId} />
+      <div className="game-views">
+        {/* First-person 3D viewport */}
+        <div className="viewport-container">
+          <h3>First-Person View</h3>
+          <FirstPersonView
+            playerX={currentPlayer.x}
+            playerY={currentPlayer.y}
+            direction={currentPlayer.direction}
+            grid={gameState.grid}
+          />
+        </div>
+
+        {/* Top-down 2D map */}
+        <div className="map-container">
+          <h3>Map View</h3>
+          <GameBoard gameState={gameState} currentPlayerId={playerId} />
+        </div>
+      </div>
 
       <div className="game-footer">
         <p>Players online: {Object.keys(gameState.players).length}</p>

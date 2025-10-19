@@ -60,6 +60,32 @@
   75% { transform: translateX(10px); }
 }
 
+.game-views {
+  display: flex;
+  gap: 30px;
+  align-items: flex-start;
+  justify-content: center;
+  margin: 20px 0;
+  flex-wrap: wrap;
+}
+
+.viewport-container,
+.map-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+
+.viewport-container h3,
+.map-container h3 {
+  margin: 0;
+  color: #4CAF50;
+  font-size: 1.2em;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
 .game-footer {
   margin-top: 20px;
   text-align: center;
@@ -69,4 +95,11 @@
 .error {
   color: #ff6b6b;
   font-size: 1.2em;
+}
+
+/* Responsive layout */
+@media (max-width: 1200px) {
+  .game-views {
+    flex-direction: column;
+  }
 }
