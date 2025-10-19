@@ -1,23 +1,19 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { doc, onSnapshot } from 'firebase/firestore';
-import { httpsCallable } from 'firebase/functions';
-import { db, functions, ensureAuth } from '../firebase';
-import type { GameState } from '../types';
-import { GameBoard } from './GameBoard';
 import { FirstPersonView } from './FirstPersonView';
-import { LightControl } from './LightControl';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
+import { Player, type Direction } from '../models/Player';
 import './Game.css';
 
-const GAME_ID = 'test-game';
+interface SinglePlayerState {
+  grid: string[];
+  player: Player;
+}
 
 export const Game: React.FC = () => {
-  const [gameState, setGameState] = useState<GameState | null>(null);
-  const [playerId, setPlayerId] = useState<string>('');
+  const [gameState, setGameState] = useState<SinglePlayerState | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>('');
-  const [movementError, setMovementError] = useState<string>('');
 
   // Light control state
   const [lightIntensity, setLightIntensity] = useState<number>(2.0);
@@ -30,31 +26,33 @@ export const Game: React.FC = () => {
   useEffect(() => {
     const initGame = async () => {
       try {
-        // Ensure user is authenticated
-        const uid = await ensureAuth();
-        setPlayerId(uid);
-
         // Load map
         const response = await fetch('/test.map');
         const mapText = await response.text();
         const { grid, width, height } = parseMap(mapText);
 
-        // Try to create game via Cloud Function
-        const createGameFn = httpsCallable(functions, 'createGame');
-        const createResult = await createGameFn({
-          gameId: GAME_ID,
-          grid,
-          gridWidth: width,
-          gridHeight: height
-        });
+        // Find spawn point (first '.' in the grid)
+        let spawnX = 1;
+        let spawnY = 1;
 
-        const createData = createResult.data as { success: boolean; alreadyExists: boolean };
-
-        // If game already exists, join it
-        if (createData.alreadyExists) {
-          const joinGameFn = httpsCallable(functions, 'joinGame');
-          await joinGameFn({ gameId: GAME_ID });
+        for (let y = 0; y < grid.length; y++) {
+          for (let x = 0; x < grid[y].length; x++) {
+            if (grid[y][x] === '.') {
+              spawnX = x;
+              spawnY = y;
+              break;
+            }
+          }
+          if (grid[spawnY][spawnX] === '.') break;
         }
+
+        // Create single player
+        const player = new Player('player', spawnX, spawnY, 'North', 'Player');
+
+        setGameState({
+          grid,
+          player
+        });
 
         setLoading(false);
       } catch (err) {
@@ -67,41 +65,80 @@ export const Game: React.FC = () => {
     initGame();
   }, []);
 
-  // Subscribe to game state
-  useEffect(() => {
-    if (!playerId) return;
+  // Check if a tile is walkable
+  const isWalkable = useCallback((x: number, y: number, grid: string[]): boolean => {
+    // Check bounds
+    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) {
+      return false;
+    }
 
-    const gameRef = doc(db, 'games', GAME_ID);
-    const unsubscribe = onSnapshot(gameRef, (snapshot) => {
-      if (snapshot.exists()) {
-        setGameState(snapshot.data() as GameState);
-      }
-    }, (err) => {
-      console.error('Error listening to game state:', err);
-      setError('Failed to connect to game');
-    });
-
-    return () => unsubscribe();
-  }, [playerId]);
+    // Check tile type
+    return grid[y][x] === '.';
+  }, []);
 
   // Handle player action
-  const handleAction = useCallback(async (action: PlayerAction) => {
-    if (!playerId || !gameState) return;
+  const handleAction = useCallback((action: PlayerAction) => {
+    if (!gameState) return;
 
-    setMovementError('');
+    const { player, grid } = gameState;
+    let newX = player.x;
+    let newY = player.y;
+    let newDirection = player.direction;
 
-    try {
-      const performAction = httpsCallable(functions, 'performAction');
-      await performAction({ gameId: GAME_ID, action });
-    } catch (err: any) {
-      console.error('Action error:', err);
-      const errorMessage = err.message || 'Failed to perform action';
-      setMovementError(errorMessage);
-
-      // Clear error after 2 seconds
-      setTimeout(() => setMovementError(''), 2000);
+    switch (action) {
+      case 'moveForward': {
+        const pos = player.moveForward();
+        newX = pos.x;
+        newY = pos.y;
+        break;
+      }
+      case 'moveBackward': {
+        const pos = player.moveBackward();
+        newX = pos.x;
+        newY = pos.y;
+        break;
+      }
+      case 'strafeLeft': {
+        const pos = player.strafeLeft();
+        newX = pos.x;
+        newY = pos.y;
+        break;
+      }
+      case 'strafeRight': {
+        const pos = player.strafeRight();
+        newX = pos.x;
+        newY = pos.y;
+        break;
+      }
+      case 'turnLeft':
+        newDirection = player.turnLeft();
+        break;
+      case 'turnRight':
+        newDirection = player.turnRight();
+        break;
     }
-  }, [playerId, gameState]);
+
+    // Validate movement (only for position changes)
+    if (newX !== player.x || newY !== player.y) {
+      if (!isWalkable(newX, newY, grid)) {
+        return; // Invalid move, don't update state
+      }
+    }
+
+    // Update player state
+    const updatedPlayer = new Player(
+      player.id,
+      newX,
+      newY,
+      newDirection,
+      player.name
+    );
+
+    setGameState({
+      grid,
+      player: updatedPlayer
+    });
+  }, [gameState, isWalkable]);
 
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
@@ -119,18 +156,40 @@ export const Game: React.FC = () => {
   }, [handleAction, inputConfig]);
 
   if (loading) {
-    return <div className="game-container">Loading...</div>;
+    return <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#000',
+      color: '#fff'
+    }}>Loading...</div>;
   }
 
   if (error) {
-    return <div className="game-container error">{error}</div>;
+    return <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#000',
+      color: '#f00'
+    }}>{error}</div>;
   }
 
   if (!gameState) {
-    return <div className="game-container">Waiting for game state...</div>;
+    return <div style={{
+      width: '100vw',
+      height: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#000',
+      color: '#fff'
+    }}>Initializing...</div>;
   }
-
-  const currentPlayer = gameState.players[playerId];
 
   return (
     <div style={{
@@ -152,9 +211,9 @@ export const Game: React.FC = () => {
         position: 'relative'
       }}>
         <FirstPersonView
-          playerX={currentPlayer.x}
-          playerY={currentPlayer.y}
-          direction={currentPlayer.direction}
+          playerX={gameState.player.x}
+          playerY={gameState.player.y}
+          direction={gameState.player.direction}
           grid={gameState.grid}
           cameraOffset={0.3}
           lightIntensity={lightIntensity}
