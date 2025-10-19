@@ -105,7 +105,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
   return (
     <div className="first-person-view">
-      <Canvas>
+      <Canvas gl={{ antialias: false }}>
         {/* Camera offset from tile center based on facing direction */}
         <PerspectiveCamera makeDefault position={cameraPosition} fov={75} />
 
