@@ -28,7 +28,8 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
   const posZ = -z * cellSize; // Negative Z is forward in Three.js
 
   // Small offset to prevent z-fighting between adjacent floor/ceiling tiles
-  const depthOffset = z * 0.0001; // Offset based on depth to separate overlapping planes
+  // Add base offset plus depth-based offset to ensure player's tile (z=0) also has separation
+  const depthOffset = (z + x * 0.1) * 0.0001; // Offset based on depth and lateral position
 
   // Fallback colors based on tile type (used if no textures provided)
   const isWall = tileType === '#';
@@ -49,7 +50,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
             side={THREE.FrontSide}
             polygonOffset={true}
             polygonOffsetFactor={-1}
-            polygonOffsetUnits={-z}
+            polygonOffsetUnits={-(z * 10 + x + 1)}
           />
         </mesh>
 
@@ -62,7 +63,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
             side={THREE.FrontSide}
             polygonOffset={true}
             polygonOffsetFactor={-1}
-            polygonOffsetUnits={-z}
+            polygonOffsetUnits={-(z * 10 + x + 1)}
           />
         </mesh>
       </group>
@@ -81,7 +82,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
           side={THREE.FrontSide}
           polygonOffset={true}
           polygonOffsetFactor={-1}
-          polygonOffsetUnits={-z}
+          polygonOffsetUnits={-(z * 10 + x + 1)}
         />
       </mesh>
 
@@ -94,7 +95,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
           side={THREE.FrontSide}
           polygonOffset={true}
           polygonOffsetFactor={-1}
-          polygonOffsetUnits={-z}
+          polygonOffsetUnits={-(z * 10 + x + 1)}
         />
       </mesh>
 
