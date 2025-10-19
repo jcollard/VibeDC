@@ -1,8 +1,10 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { PerspectiveCamera } from '@react-three/drei';
 import type { CardinalDirection } from '../types';
 import { Cell } from './Cell';
+import { SpriteSheetLoader } from '../utils/SpriteSheetLoader';
+import { getTileTextureMapping } from '../utils/tileTextureConfig';
 import './FirstPersonView.css';
 
 interface FirstPersonViewProps {
@@ -27,6 +29,32 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   lightIntensity = 1.0, // Default: normal brightness
   lightDistance = 8 // Default: 8 tiles range
 }) => {
+  // Spritesheet loader state
+  const [spriteSheetLoader, setSpriteSheetLoader] = useState<SpriteSheetLoader | null>(null);
+  const [texturesLoaded, setTexturesLoaded] = useState<boolean>(false);
+
+  // Load spritesheet on mount
+  useEffect(() => {
+    const loader = new SpriteSheetLoader('/tiles/world-tiles.png', 12, 12);
+    loader.load()
+      .then(() => {
+        setSpriteSheetLoader(loader);
+        setTexturesLoaded(true);
+      })
+      .catch((error) => {
+        console.error('Failed to load spritesheet:', error);
+        // Continue without textures (will use solid colors)
+        setTexturesLoaded(true);
+      });
+
+    // Cleanup on unmount
+    return () => {
+      if (loader) {
+        loader.dispose();
+      }
+    };
+  }, []);
+
   // Calculate camera position offset based on direction
   const cameraPosition = useMemo(() => {
     // Camera is offset in the Z direction (forward/backward from player perspective)
@@ -60,6 +88,20 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
     return cells;
   }, [playerX, playerY, direction, grid]);
+
+  // Don't render until textures are loaded (or failed to load)
+  if (!texturesLoaded) {
+    return (
+      <div className="first-person-view" style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        color: '#fff'
+      }}>
+        Loading textures...
+      </div>
+    );
+  }
 
   return (
     <div className="first-person-view">
@@ -97,14 +139,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
         )}
 
         {/* Render all visible cells */}
-        {visibleCells.map((cell, index) => (
-          <Cell
-            key={`${cell.x}-${cell.z}-${index}`}
-            x={cell.x}
-            z={cell.z}
-            tileType={cell.tileType}
-          />
-        ))}
+        {visibleCells.map((cell, index) => {
+          // Get texture mapping for this tile type
+          const textureMapping = getTileTextureMapping(cell.tileType);
+          const textures = spriteSheetLoader ? spriteSheetLoader.getTileTextures(textureMapping) : undefined;
+
+          return (
+            <Cell
+              key={`${cell.x}-${cell.z}-${index}`}
+              x={cell.x}
+              z={cell.z}
+              tileType={cell.tileType}
+              textures={textures}
+            />
+          );
+        })}
 
         {/* Fog for depth effect */}
         <fog attach="fog" args={['#0a0a0a', 2, 10]} />
