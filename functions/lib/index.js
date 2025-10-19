@@ -54,7 +54,9 @@ exports.createGame = (0, https_1.onCall)(async (request) => {
             players: {
                 [playerId]: {
                     id: playerId,
-                    position: startPos,
+                    x: startPos.x,
+                    y: startPos.y,
+                    direction: 'South',
                     name: `Player ${playerId.slice(0, 4)}`
                 }
             }
@@ -91,7 +93,8 @@ exports.joinGame = (0, https_1.onCall)(async (request) => {
             const gameData = gameDoc.data();
             // Check if player already in game
             if (gameData.players[playerId]) {
-                return { success: true, alreadyJoined: true, position: gameData.players[playerId].position };
+                const player = gameData.players[playerId];
+                return { success: true, alreadyJoined: true, position: { x: player.x, y: player.y } };
             }
             // Find available starting position
             const startPos = findWalkablePosition(gameData.grid);
@@ -102,7 +105,9 @@ exports.joinGame = (0, https_1.onCall)(async (request) => {
             transaction.update(gameRef, {
                 [`players.${playerId}`]: {
                     id: playerId,
-                    position: startPos,
+                    x: startPos.x,
+                    y: startPos.y,
+                    direction: 'South',
                     name: `Player ${playerId.slice(0, 4)}`
                 }
             });
@@ -142,21 +147,25 @@ exports.makeMove = (0, https_1.onCall)(async (request) => {
             if (!player) {
                 throw new https_1.HttpsError('not-found', 'Player not in game');
             }
-            // Calculate new position
-            const currentPos = player.position;
-            const newPos = Object.assign({}, currentPos);
+            // Calculate new position and direction
+            const newPos = { x: player.x, y: player.y };
+            let newDirection = player.direction;
             switch (direction) {
                 case 'up':
                     newPos.y -= 1;
+                    newDirection = 'North';
                     break;
                 case 'down':
                     newPos.y += 1;
+                    newDirection = 'South';
                     break;
                 case 'left':
                     newPos.x -= 1;
+                    newDirection = 'West';
                     break;
                 case 'right':
                     newPos.x += 1;
+                    newDirection = 'East';
                     break;
             }
             // Validate: Check bounds
@@ -170,13 +179,15 @@ exports.makeMove = (0, https_1.onCall)(async (request) => {
                 throw new https_1.HttpsError('failed-precondition', 'Cannot walk through walls');
             }
             // Validate: Check if another player is there
-            const occupiedByOtherPlayer = Object.entries(gameData.players).some(([id, p]) => id !== playerId && p.position.x === newPos.x && p.position.y === newPos.y);
+            const occupiedByOtherPlayer = Object.entries(gameData.players).some(([id, p]) => id !== playerId && p.x === newPos.x && p.y === newPos.y);
             if (occupiedByOtherPlayer) {
                 throw new https_1.HttpsError('failed-precondition', 'Tile occupied by another player');
             }
-            // All validations passed - update position
+            // All validations passed - update position and direction
             transaction.update(gameRef, {
-                [`players.${playerId}.position`]: newPos
+                [`players.${playerId}.x`]: newPos.x,
+                [`players.${playerId}.y`]: newPos.y,
+                [`players.${playerId}.direction`]: newDirection
             });
             return { success: true, position: newPos };
         });

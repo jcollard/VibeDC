@@ -2,7 +2,7 @@ import React, { useEffect, useState, useCallback } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { httpsCallable } from 'firebase/functions';
 import { db, functions, ensureAuth } from '../firebase';
-import type { GameState, Direction } from '../types';
+import type { GameState, MovementDirection } from '../types';
 import { GameBoard } from './GameBoard';
 import { parseMap } from '../utils/mapParser';
 import './Game.css';
@@ -75,7 +75,7 @@ export const Game: React.FC = () => {
   }, [playerId]);
 
   // Handle movement
-  const handleMove = useCallback(async (direction: Direction) => {
+  const handleMove = useCallback(async (direction: MovementDirection) => {
     if (!playerId || !gameState) return;
 
     setMovementError('');
@@ -148,7 +148,8 @@ export const Game: React.FC = () => {
         <h1>VibeDC Prototype</h1>
         <div className="player-info">
           <p>Player: {currentPlayer?.name || 'Unknown'}</p>
-          <p>Position: ({currentPlayer?.position.x}, {currentPlayer?.position.y})</p>
+          <p>Position: ({currentPlayer?.x}, {currentPlayer?.y})</p>
+          <p>Facing: {currentPlayer?.direction || 'Unknown'}</p>
           <p className="controls">Use Arrow Keys or WASD to move</p>
         </div>
         {movementError && (

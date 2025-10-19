@@ -3,6 +3,8 @@ import { onCall, HttpsError } from 'firebase-functions/v2/https';
 
 admin.initializeApp();
 
+type CardinalDirection = 'North' | 'East' | 'South' | 'West';
+
 interface Position {
   x: number;
   y: number;
@@ -10,7 +12,9 @@ interface Position {
 
 interface Player {
   id: string;
-  position: Position;
+  x: number;
+  y: number;
+  direction: CardinalDirection;
   name: string;
 }
 
@@ -94,7 +98,9 @@ export const createGame = onCall(async (request) => {
       players: {
         [playerId]: {
           id: playerId,
-          position: startPos,
+          x: startPos.x,
+          y: startPos.y,
+          direction: 'South' as CardinalDirection,
           name: `Player ${playerId.slice(0, 4)}`
         }
       }
@@ -138,7 +144,8 @@ export const joinGame = onCall(async (request) => {
 
       // Check if player already in game
       if (gameData.players[playerId]) {
-        return { success: true, alreadyJoined: true, position: gameData.players[playerId].position };
+        const player = gameData.players[playerId];
+        return { success: true, alreadyJoined: true, position: { x: player.x, y: player.y } };
       }
 
       // Find available starting position
@@ -151,7 +158,9 @@ export const joinGame = onCall(async (request) => {
       transaction.update(gameRef, {
         [`players.${playerId}`]: {
           id: playerId,
-          position: startPos,
+          x: startPos.x,
+          y: startPos.y,
+          direction: 'South' as CardinalDirection,
           name: `Player ${playerId.slice(0, 4)}`
         }
       });
@@ -200,22 +209,26 @@ export const makeMove = onCall(async (request) => {
         throw new HttpsError('not-found', 'Player not in game');
       }
 
-      // Calculate new position
-      const currentPos = player.position;
-      const newPos: Position = { ...currentPos };
+      // Calculate new position and direction
+      const newPos: Position = { x: player.x, y: player.y };
+      let newDirection: CardinalDirection = player.direction;
 
       switch (direction) {
         case 'up':
           newPos.y -= 1;
+          newDirection = 'North';
           break;
         case 'down':
           newPos.y += 1;
+          newDirection = 'South';
           break;
         case 'left':
           newPos.x -= 1;
+          newDirection = 'West';
           break;
         case 'right':
           newPos.x += 1;
+          newDirection = 'East';
           break;
       }
 
@@ -233,16 +246,18 @@ export const makeMove = onCall(async (request) => {
 
       // Validate: Check if another player is there
       const occupiedByOtherPlayer = Object.entries(gameData.players).some(
-        ([id, p]) => id !== playerId && p.position.x === newPos.x && p.position.y === newPos.y
+        ([id, p]) => id !== playerId && p.x === newPos.x && p.y === newPos.y
       );
 
       if (occupiedByOtherPlayer) {
         throw new HttpsError('failed-precondition', 'Tile occupied by another player');
       }
 
-      // All validations passed - update position
+      // All validations passed - update position and direction
       transaction.update(gameRef, {
-        [`players.${playerId}.position`]: newPos
+        [`players.${playerId}.x`]: newPos.x,
+        [`players.${playerId}.y`]: newPos.y,
+        [`players.${playerId}.direction`]: newDirection
       });
 
       return { success: true, position: newPos };

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { GameState } from '../types';
+import type { GameState, CardinalDirection } from '../types';
 import { gridTo2D } from '../utils/mapParser';
 import './GameBoard.css';
 
@@ -8,17 +8,25 @@ interface GameBoardProps {
   currentPlayerId: string;
 }
 
+// Direction arrow symbols
+const DIRECTION_ARROWS: Record<CardinalDirection, string> = {
+  'North': '↑',
+  'East': '→',
+  'South': '↓',
+  'West': '←'
+};
+
 export const GameBoard: React.FC<GameBoardProps> = ({ gameState, currentPlayerId }) => {
   const { grid, players } = gameState;
 
   // Convert grid to 2D array for rendering
   const grid2D = gridTo2D(grid);
 
-  // Create a map of positions to player IDs for quick lookup
-  const positionMap = new Map<string, string>();
+  // Create a map of positions to player data for quick lookup
+  const positionMap = new Map<string, { id: string; direction: CardinalDirection }>();
   Object.entries(players).forEach(([id, player]) => {
-    const key = `${player.position.x},${player.position.y}`;
-    positionMap.set(key, id);
+    const key = `${player.x},${player.y}`;
+    positionMap.set(key, { id, direction: player.direction });
   });
 
   return (
@@ -27,17 +35,21 @@ export const GameBoard: React.FC<GameBoardProps> = ({ gameState, currentPlayerId
         <div key={y} className="grid-row">
           {row.map((tile, x) => {
             const posKey = `${x},${y}`;
-            const playerId = positionMap.get(posKey);
-            const isCurrentPlayer = playerId === currentPlayerId;
+            const playerData = positionMap.get(posKey);
+            const isCurrentPlayer = playerData?.id === currentPlayerId;
 
             return (
               <div
                 key={x}
-                className={`tile ${tile === '#' ? 'wall' : 'floor'} ${playerId ? 'has-player' : ''}`}
+                className={`tile ${tile === '#' ? 'wall' : 'floor'} ${playerData ? 'has-player' : ''}`}
               >
-                {playerId && (
-                  <div className={`player ${isCurrentPlayer ? 'current-player' : 'other-player'}`}>
-                    {isCurrentPlayer ? '😊' : '🧑'}
+                {playerData && (
+                  <div
+                    className={`player ${isCurrentPlayer ? 'current-player' : 'other-player'}`}
+                    title={`${players[playerData.id].name} facing ${playerData.direction}`}
+                  >
+                    <span className="player-emoji">{isCurrentPlayer ? '😊' : '🧑'}</span>
+                    <span className="player-direction">{DIRECTION_ARROWS[playerData.direction]}</span>
                   </div>
                 )}
               </div>

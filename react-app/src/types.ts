@@ -1,11 +1,16 @@
+export type CardinalDirection = 'North' | 'East' | 'South' | 'West';
+export type MovementDirection = 'up' | 'down' | 'left' | 'right';
+
 export interface Position {
   x: number;
   y: number;
 }
 
-export interface Player {
+export interface PlayerData {
   id: string;
-  position: Position;
+  x: number;
+  y: number;
+  direction: CardinalDirection;
   name: string;
 }
 
@@ -13,7 +18,5 @@ export interface GameState {
   grid: string[]; // Array of strings, each string is a row
   gridWidth: number;
   gridHeight: number;
-  players: { [playerId: string]: Player };
+  players: { [playerId: string]: PlayerData };
 }
-
-export type Direction = 'up' | 'down' | 'left' | 'right';
