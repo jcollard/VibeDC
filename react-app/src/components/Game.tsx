@@ -133,59 +133,33 @@ export const Game: React.FC = () => {
   const currentPlayer = gameState.players[playerId];
 
   return (
-    <div className="game-container">
-      <div className="game-header">
-        <h1>VibeDC Prototype</h1>
-        <div className="player-info">
-          <p>Player: {currentPlayer?.name || 'Unknown'}</p>
-          <p>Position: ({currentPlayer?.x}, {currentPlayer?.y})</p>
-          <p>Facing: {currentPlayer?.direction || 'Unknown'}</p>
-          <p className="controls">
-            Q/E: Turn | WASD/Arrows: Move relative to facing
-          </p>
-          <p className="controls-detail">
-            W=Forward, S=Back, A=Strafe Left, D=Strafe Right
-          </p>
-        </div>
-        {movementError && (
-          <div className="movement-error">{movementError}</div>
-        )}
-      </div>
-
-      <div className="game-views">
-        {/* First-person 3D viewport */}
-        <div className="viewport-section">
-          <div className="viewport-container">
-            <h3>First-Person View</h3>
-            <FirstPersonView
-              playerX={currentPlayer.x}
-              playerY={currentPlayer.y}
-              direction={currentPlayer.direction}
-              grid={gameState.grid}
-              cameraOffset={0.3}
-              lightIntensity={lightIntensity}
-              lightDistance={lightDistance}
-            />
-          </div>
-
-          {/* Light control panel */}
-          <LightControl
-            intensity={lightIntensity}
-            distance={lightDistance}
-            onIntensityChange={setLightIntensity}
-            onDistanceChange={setLightDistance}
-          />
-        </div>
-
-        {/* Top-down 2D map */}
-        <div className="map-container">
-          <h3>Map View</h3>
-          <GameBoard gameState={gameState} currentPlayerId={playerId} />
-        </div>
-      </div>
-
-      <div className="game-footer">
-        <p>Players online: {Object.keys(gameState.players).length}</p>
+    <div style={{
+      width: '100vw',
+      height: '100vh',
+      margin: 0,
+      padding: 0,
+      overflow: 'hidden',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: '#000'
+    }}>
+      <div style={{
+        width: '100%',
+        height: '100%',
+        maxWidth: '177.78vh', // 16:9 aspect ratio (16/9 * 100vh)
+        maxHeight: '56.25vw', // 16:9 aspect ratio (9/16 * 100vw)
+        position: 'relative'
+      }}>
+        <FirstPersonView
+          playerX={currentPlayer.x}
+          playerY={currentPlayer.y}
+          direction={currentPlayer.direction}
+          grid={gameState.grid}
+          cameraOffset={0.3}
+          lightIntensity={lightIntensity}
+          lightDistance={lightDistance}
+        />
       </div>
     </div>
   );
