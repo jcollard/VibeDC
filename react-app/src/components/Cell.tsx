@@ -27,6 +27,9 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
   const posX = x * cellSize;
   const posZ = -z * cellSize; // Negative Z is forward in Three.js
 
+  // Small offset to prevent z-fighting between adjacent floor/ceiling tiles
+  const depthOffset = z * 0.0001; // Offset based on depth to separate overlapping planes
+
   // Fallback colors based on tile type (used if no textures provided)
   const isWall = tileType === '#';
   const wallColor = isWall ? '#444444' : '#666666';
@@ -38,22 +41,28 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
     return (
       <group position={[posX, 0, posZ]}>
         {/* Floor */}
-        <mesh position={[0, -halfSize, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+        <mesh position={[0, -halfSize + depthOffset, 0]} rotation={[-Math.PI / 2, 0, 0]}>
           <planeGeometry args={[cellSize, cellSize]} />
           <meshStandardMaterial
             map={textures?.floor}
             color={textures?.floor ? '#ffffff' : floorColor}
-            side={THREE.DoubleSide}
+            side={THREE.FrontSide}
+            polygonOffset={true}
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-z}
           />
         </mesh>
 
         {/* Ceiling */}
-        <mesh position={[0, halfSize, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <mesh position={[0, halfSize - depthOffset, 0]} rotation={[Math.PI / 2, 0, 0]}>
           <planeGeometry args={[cellSize, cellSize]} />
           <meshStandardMaterial
             map={textures?.ceiling}
             color={textures?.ceiling ? '#ffffff' : ceilingColor}
-            side={THREE.DoubleSide}
+            side={THREE.FrontSide}
+            polygonOffset={true}
+            polygonOffsetFactor={-1}
+            polygonOffsetUnits={-z}
           />
         </mesh>
       </group>
@@ -64,22 +73,28 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
   return (
     <group position={[posX, 0, posZ]}>
       {/* Floor */}
-      <mesh position={[0, -halfSize, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+      <mesh position={[0, -halfSize + depthOffset, 0]} rotation={[-Math.PI / 2, 0, 0]}>
         <planeGeometry args={[cellSize, cellSize]} />
         <meshStandardMaterial
           map={textures?.floor}
           color={textures?.floor ? '#ffffff' : floorColor}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-z}
         />
       </mesh>
 
       {/* Ceiling */}
-      <mesh position={[0, halfSize, 0]} rotation={[Math.PI / 2, 0, 0]}>
+      <mesh position={[0, halfSize - depthOffset, 0]} rotation={[Math.PI / 2, 0, 0]}>
         <planeGeometry args={[cellSize, cellSize]} />
         <meshStandardMaterial
           map={textures?.ceiling}
           color={textures?.ceiling ? '#ffffff' : ceilingColor}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
+          polygonOffset={true}
+          polygonOffsetFactor={-1}
+          polygonOffsetUnits={-z}
         />
       </mesh>
 
@@ -89,7 +104,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
         <meshStandardMaterial
           map={textures?.wallFront}
           color={textures?.wallFront ? '#ffffff' : wallColor}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
         />
       </mesh>
 
@@ -99,7 +114,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
         <meshStandardMaterial
           map={textures?.wallBack}
           color={textures?.wallBack ? '#ffffff' : wallColor}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
         />
       </mesh>
 
@@ -109,7 +124,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
         <meshStandardMaterial
           map={textures?.wallLeft}
           color={textures?.wallLeft ? '#ffffff' : wallColor}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
         />
       </mesh>
 
@@ -119,7 +134,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
         <meshStandardMaterial
           map={textures?.wallRight}
           color={textures?.wallRight ? '#ffffff' : wallColor}
-          side={THREE.DoubleSide}
+          side={THREE.FrontSide}
         />
       </mesh>
     </group>
