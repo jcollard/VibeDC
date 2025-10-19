@@ -14,18 +14,18 @@ import type { TileTextureMapping } from './SpriteSheetLoader';
 export const TILE_TEXTURE_MAPPINGS: Record<string, TileTextureMapping> = {
   // Wall tile '#'
   '#': {
-    floor: { x: 0, y: 0 },      // Dark stone floor
-    ceiling: { x: 1, y: 0 },    // Dark stone ceiling
-    wallFront: { x: 2, y: 0 },  // Stone wall
-    wallBack: { x: 2, y: 0 },   // Stone wall (same as front)
-    wallLeft: { x: 2, y: 0 },   // Stone wall (same as front)
-    wallRight: { x: 2, y: 0 },  // Stone wall (same as front)
+    floor: { x: 4, y: 3 },      // Floor sprite (row 3, column 4)
+    ceiling: { x: 3, y: 3 },    // Ceiling sprite (row 3, column 3)
+    wallFront: { x: 0, y: 0 },  // Wall sprite (row 0, column 0)
+    wallBack: { x: 0, y: 0 },   // Wall sprite (same as front)
+    wallLeft: { x: 0, y: 0 },   // Wall sprite (same as front)
+    wallRight: { x: 0, y: 0 },  // Wall sprite (same as front)
   },
 
   // Floor tile '.'
   '.': {
-    floor: { x: 3, y: 0 },      // Light stone floor
-    ceiling: { x: 4, y: 0 },    // Light stone ceiling
+    floor: { x: 4, y: 3 },      // Floor sprite (row 3, column 4)
+    ceiling: { x: 3, y: 3 },    // Ceiling sprite (row 3, column 3)
     // No walls for floor tiles
   },
 
