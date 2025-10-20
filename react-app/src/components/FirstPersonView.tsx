@@ -1,8 +1,9 @@
-import React, { useMemo, useState, useEffect } from 'react';
+import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { Canvas } from '@react-three/fiber';
-import { PerspectiveCamera } from '@react-three/drei';
 import type { CardinalDirection } from '../types';
 import { Cell } from './Cell';
+import { AnimatedPerspectiveCamera, type CameraAnimationHandle } from './AnimatedPerspectiveCamera';
+import { CameraLights } from './CameraLights';
 import { SpriteSheetLoader } from '../utils/SpriteSheetLoader';
 import { getTileTextureMapping } from '../utils/tileTextureConfig';
 import './FirstPersonView.css';
@@ -15,6 +16,7 @@ interface FirstPersonViewProps {
   cameraOffset?: number; // Offset in the forward direction (0 = centered, -0.3 = back, 0.3 = forward)
   lightIntensity?: number; // Player light intensity (0 = off, 1 = normal, 2 = bright)
   lightDistance?: number; // How far the player's light reaches (in tiles)
+  movementDuration?: number; // Duration of camera movement animation in seconds
 }
 
 /**
@@ -27,11 +29,19 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   grid,
   cameraOffset = 0.3, // Default: slightly forward in the tile
   lightIntensity = 2.0, // Default: bright light
-  lightDistance = 4 // Default: 4 tiles range
+  lightDistance = 4, // Default: 4 tiles range
+  movementDuration = 2 // Default: 0.2 seconds
 }) => {
   // Spritesheet loader state
   const [spriteSheetLoader, setSpriteSheetLoader] = useState<SpriteSheetLoader | null>(null);
   const [texturesLoaded, setTexturesLoaded] = useState<boolean>(false);
+
+  // Camera animation ref
+  const cameraRef = useRef<CameraAnimationHandle>(null);
+  const prevTransform = useRef<{
+    position: [number, number, number];
+    rotation: [number, number, number];
+  } | null>(null);
 
   // Load spritesheet on mount
   useEffect(() => {
@@ -91,6 +101,37 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     };
   }, [playerX, playerY, direction, cameraOffset]);
 
+  // Trigger animation when player position or direction changes
+  useEffect(() => {
+    if (!cameraRef.current) return;
+
+    const targetPos = cameraTransform.position;
+    const targetRot = cameraTransform.rotation;
+
+    // Get current camera position (or use target if first render)
+    let startPos: [number, number, number];
+    let startRot: [number, number, number];
+
+    if (prevTransform.current) {
+      // Get actual current position from camera
+      startPos = cameraRef.current.getCurrentPosition();
+      startRot = cameraRef.current.getCurrentRotation();
+    } else {
+      // First render - snap to position without animation
+      startPos = targetPos;
+      startRot = targetRot;
+    }
+
+    // Start animation
+    cameraRef.current.startAnimation(startPos, startRot, targetPos, targetRot, movementDuration);
+
+    // Store target as previous for next update
+    prevTransform.current = {
+      position: targetPos,
+      rotation: targetRot
+    };
+  }, [playerX, playerY, direction, cameraTransform, movementDuration]);
+
   // Calculate visible cells based on player position
   // Cells are now positioned in absolute world coordinates
   const visibleCells = useMemo(() => {
@@ -142,45 +183,19 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   return (
     <div className="first-person-view">
       <Canvas gl={{ antialias: false }}>
-        {/* Camera positioned at player's world location and rotated to face direction */}
-        <PerspectiveCamera
-          makeDefault
-          position={cameraTransform.position}
-          rotation={cameraTransform.rotation}
+        {/* Animated camera that smoothly moves to player's position */}
+        <AnimatedPerspectiveCamera
+          ref={cameraRef}
+          targetPosition={cameraTransform.position}
+          targetRotation={cameraTransform.rotation}
           fov={75}
         />
 
         {/* Ambient light - base lighting for entire scene */}
         <ambientLight intensity={0.3} />
 
-        {/* Directional light from above - simulates sunlight/general lighting */}
-        <directionalLight
-          position={[cameraTransform.position[0], cameraTransform.position[1] + 5, cameraTransform.position[2]]}
-          intensity={0.5}
-        />
-
-        {/* Player's light source - adjustable torch/flashlight effect */}
-        <pointLight
-          position={cameraTransform.position}
-          intensity={lightIntensity}
-          distance={lightDistance}
-          decay={2}
-          color="#ffddaa"
-        />
-
-        {/* Additional spot light for focused forward illumination */}
-        {lightIntensity > 0 && (
-          <spotLight
-            position={cameraTransform.position}
-            rotation={cameraTransform.rotation}
-            angle={Math.PI / 4}
-            penumbra={0.5}
-            intensity={lightIntensity * 0.8}
-            distance={lightDistance * 1.5}
-            decay={2}
-            color="#ffddaa"
-          />
-        )}
+        {/* Lights that follow the camera's animated position */}
+        <CameraLights lightIntensity={lightIntensity} lightDistance={lightDistance} />
 
         {/* Render all visible cells */}
         {visibleCells.map((cell, index) => {
