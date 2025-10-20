@@ -69,19 +69,19 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     switch (direction) {
       case 'North':
         rotationY = Math.PI; // Looking in -Z direction (North is negative grid Y, which is positive world Z)
-        offsetZ = cameraOffset; // Offset in the direction we're facing
+        offsetZ = -cameraOffset; // Camera looks back, so negative offset moves it forward in view direction
         break;
       case 'South':
         rotationY = 0; // Looking in +Z direction (South is positive grid Y, which is negative world Z)
-        offsetZ = -cameraOffset;
+        offsetZ = cameraOffset; // Camera looks forward, so positive offset moves it forward in view direction
         break;
       case 'East':
         rotationY = -Math.PI / 2; // Looking in +X direction (right)
-        offsetX = cameraOffset;
+        offsetX = -cameraOffset; // Camera looks right, offset moves in view direction
         break;
       case 'West':
         rotationY = Math.PI / 2; // Looking in -X direction (left)
-        offsetX = -cameraOffset;
+        offsetX = cameraOffset; // Camera looks left, offset moves in view direction
         break;
     }
 

@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { FirstPersonView } from './FirstPersonView';
+import { DebugPanel } from './DebugPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player, type Direction } from '../models/Player';
@@ -220,52 +221,12 @@ export const Game: React.FC = () => {
           lightDistance={lightDistance}
         />
 
-        {/* Debug Minimap */}
-        <div style={{
-          position: 'absolute',
-          top: '10px',
-          right: '10px',
-          background: 'rgba(0, 0, 0, 0.8)',
-          border: '2px solid #666',
-          padding: '10px',
-          borderRadius: '4px',
-          color: '#fff',
-          fontFamily: 'monospace',
-          fontSize: '12px',
-          zIndex: 1000
-        }}>
-          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>Debug Info</div>
-          <div>Player: ({gameState.player.x}, {gameState.player.y})</div>
-          <div>Facing: {gameState.player.direction}</div>
-          <div style={{ marginTop: '8px' }}>
-            {gameState.grid.map((row, y) => (
-              <div key={y} style={{ display: 'flex', lineHeight: '14px' }}>
-                {row.split('').map((cell, x) => {
-                  const isPlayer = x === gameState.player.x && y === gameState.player.y;
-                  const dirSymbol = { North: '↑', South: '↓', East: '→', West: '←' };
-                  return (
-                    <span
-                      key={x}
-                      style={{
-                        width: '14px',
-                        height: '14px',
-                        display: 'inline-block',
-                        textAlign: 'center',
-                        background: isPlayer ? '#4CAF50' : (cell === '#' ? '#333' : '#666'),
-                        color: isPlayer ? '#fff' : '#888',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        fontSize: '10px',
-                        lineHeight: '14px'
-                      }}
-                    >
-                      {isPlayer ? dirSymbol[gameState.player.direction] : ''}
-                    </span>
-                  );
-                })}
-              </div>
-            ))}
-          </div>
-        </div>
+        <DebugPanel
+          playerX={gameState.player.x}
+          playerY={gameState.player.y}
+          direction={gameState.player.direction}
+          grid={gameState.grid}
+        />
       </div>
     </div>
   );
