@@ -59,7 +59,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   const cameraTransform = useMemo(() => {
     // Convert grid position to world position (each tile is 1 unit)
     let worldX = playerX;
-    let worldZ = -playerY; // Negative because Z is forward in Three.js, Y is down in grid
+    let worldZ = playerY; // Grid Y maps directly to world Z
 
     // Calculate rotation (in radians) based on cardinal direction
     let rotationY = 0;
@@ -68,20 +68,20 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
     switch (direction) {
       case 'North':
-        rotationY = Math.PI; // Looking in -Z direction (North is negative grid Y, which is positive world Z)
-        offsetZ = -cameraOffset; // Camera looks back, so negative offset moves it forward in view direction
+        rotationY = 0; // Looking in -Z direction (North is negative grid Y)
+        offsetZ = -cameraOffset; // Offset forward
         break;
       case 'South':
-        rotationY = 0; // Looking in +Z direction (South is positive grid Y, which is negative world Z)
-        offsetZ = cameraOffset; // Camera looks forward, so positive offset moves it forward in view direction
+        rotationY = Math.PI; // Looking in +Z direction (South is positive grid Y)
+        offsetZ = cameraOffset; // Offset forward
         break;
       case 'East':
-        rotationY = -Math.PI / 2; // Looking in +X direction (right)
-        offsetX = -cameraOffset; // Camera looks right, offset moves in view direction
+        rotationY = -Math.PI / 2; // Looking in +X direction (East is positive grid X)
+        offsetX = cameraOffset; // Offset forward
         break;
       case 'West':
-        rotationY = Math.PI / 2; // Looking in -X direction (left)
-        offsetX = cameraOffset; // Camera looks left, offset moves in view direction
+        rotationY = Math.PI / 2; // Looking in -X direction (West is negative grid X)
+        offsetX = -cameraOffset; // Offset forward
         break;
     }
 
@@ -107,7 +107,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
           // Out of bounds - treat as wall
           cells.push({
             worldX: gridX,
-            worldZ: -gridY, // Convert grid Y to world Z (negative)
+            worldZ: gridY, // Grid Y maps directly to world Z
             tileType: '#'
           });
           continue;
@@ -116,7 +116,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
         const tileType = grid[gridY][gridX];
         cells.push({
           worldX: gridX,
-          worldZ: -gridY, // Convert grid Y to world Z (negative)
+          worldZ: gridY, // Grid Y maps directly to world Z
           tileType
         });
       }

@@ -216,7 +216,7 @@ export const Game: React.FC = () => {
           playerY={gameState.player.y}
           direction={gameState.player.direction}
           grid={gameState.grid}
-          cameraOffset={0.3}
+          cameraOffset={-0.3}
           lightIntensity={lightIntensity}
           lightDistance={lightDistance}
         />
