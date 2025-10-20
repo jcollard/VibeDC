@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { FirstPersonView } from './FirstPersonView';
 import { DebugPanel } from './DebugPanel';
 import { parseMap } from '../utils/mapParser';
@@ -141,19 +141,36 @@ export const Game: React.FC = () => {
     });
   }, [gameState, isWalkable]);
 
+  // Track pressed keys across renders to prevent key repeat
+  const pressedKeysRef = useRef(new Set<string>());
+
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if this key is already pressed (prevents key repeat)
+      if (pressedKeysRef.current.has(e.key)) {
+        return;
+      }
+
       const action = inputConfig.getAction(e.key);
 
       if (action) {
         e.preventDefault();
+        pressedKeysRef.current.add(e.key);
         handleAction(action);
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      pressedKeysRef.current.delete(e.key);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [handleAction, inputConfig]);
 
   if (loading) {
