@@ -13,12 +13,11 @@ interface AnimatedPerspectiveCameraProps {
 }
 
 export interface CameraAnimationHandle {
-  startAnimation: (
-    start: [number, number, number],
-    startRotation: [number, number, number],
-    end: [number, number, number],
-    endRotation: [number, number, number],
-    duration: number
+  updateTarget: (
+    target: [number, number, number],
+    targetRotation: [number, number, number],
+    movementDuration: number,
+    rotationDuration: number
   ) => void;
   getCurrentPosition: () => [number, number, number];
   getCurrentRotation: () => [number, number, number];
@@ -33,104 +32,109 @@ export const AnimatedPerspectiveCamera = React.forwardRef<
 >(({ targetPosition, targetRotation, onAnimationStart, onAnimationComplete, fov = 75 }, ref) => {
   const cameraRef = useRef<THREE.PerspectiveCamera>(null);
 
-  // Animation state
-  const [isAnimating, setIsAnimating] = useState(false);
-  const animationProgress = useRef(1); // 1 = complete, 0 = just started
+  // Animation state - always animating
+  const positionProgress = useRef(1); // 1 = at target, 0 = just started toward new target
+  const rotationProgress = useRef(1);
   const startPos = useRef<THREE.Vector3>(new THREE.Vector3(...targetPosition));
-  const endPos = useRef<THREE.Vector3>(new THREE.Vector3(...targetPosition));
+  const currentPos = useRef<THREE.Vector3>(new THREE.Vector3(...targetPosition));
+  const targetPos = useRef<THREE.Vector3>(new THREE.Vector3(...targetPosition));
   const startRot = useRef<THREE.Euler>(new THREE.Euler(...targetRotation));
-  const endRot = useRef<THREE.Euler>(new THREE.Euler(...targetRotation));
-  const duration = useRef(0.2);
-
-  // Current interpolated position
-  const [currentPosition, setCurrentPosition] = useState<THREE.Vector3>(
-    new THREE.Vector3(...targetPosition)
-  );
-  const [currentRotation, setCurrentRotation] = useState<THREE.Euler>(
-    new THREE.Euler(...targetRotation)
-  );
+  const currentRot = useRef<THREE.Euler>(new THREE.Euler(...targetRotation));
+  const targetRot = useRef<THREE.Euler>(new THREE.Euler(...targetRotation));
+  const movementDuration = useRef(0.2);
+  const rotationDuration = useRef(0.1);
 
   // Expose methods via ref
   React.useImperativeHandle(ref, () => ({
-    startAnimation: (
-      start: [number, number, number],
-      startRotation: [number, number, number],
-      end: [number, number, number],
-      endRotation: [number, number, number],
-      animDuration: number
+    updateTarget: (
+      target: [number, number, number],
+      targetRotation: [number, number, number],
+      moveDuration: number,
+      rotateDuration: number
     ) => {
-      startPos.current.set(...start);
-      startRot.current.set(...startRotation);
-      endPos.current.set(...end);
-      endRot.current.set(...endRotation);
-      duration.current = animDuration;
-      animationProgress.current = 0;
-      setIsAnimating(true);
+      // Store current position as start for new animation
+      startPos.current.copy(currentPos.current);
+      startRot.current.copy(currentRot.current);
+
+      // Set new target
+      targetPos.current.set(...target);
+      targetRot.current.set(...targetRotation);
+      movementDuration.current = moveDuration;
+      rotationDuration.current = rotateDuration;
+      positionProgress.current = 0; // Restart position animation
+      rotationProgress.current = 0; // Restart rotation animation
       onAnimationStart?.();
     },
     getCurrentPosition: () => {
-      return [currentPosition.x, currentPosition.y, currentPosition.z];
+      return [currentPos.current.x, currentPos.current.y, currentPos.current.z];
     },
     getCurrentRotation: () => {
-      return [currentRotation.x, currentRotation.y, currentRotation.z];
+      return [currentRot.current.x, currentRot.current.y, currentRot.current.z];
     }
   }));
 
-  // Animation loop
+  // Animation loop - always running, smoothly moves toward target
   useFrame((state, delta) => {
-    if (!isAnimating || animationProgress.current >= 1) {
-      return;
+    let hasUpdates = false;
+
+    // Animate position
+    if (positionProgress.current < 1) {
+      positionProgress.current = Math.min(1, positionProgress.current + delta / movementDuration.current);
+      const tPos = positionProgress.current;
+
+      // Smoothly interpolate from start position to target
+      currentPos.current.lerpVectors(startPos.current, targetPos.current, tPos);
+      hasUpdates = true;
     }
 
-    // Update progress
-    animationProgress.current = Math.min(1, animationProgress.current + delta / duration.current);
-    const t = animationProgress.current;
+    // Animate rotation (independently)
+    if (rotationProgress.current < 1) {
+      rotationProgress.current = Math.min(1, rotationProgress.current + delta / rotationDuration.current);
+      const tRot = rotationProgress.current;
 
-    // Linear interpolation for position
-    const newPos = new THREE.Vector3().lerpVectors(startPos.current, endPos.current, t);
-    setCurrentPosition(newPos);
-
-    // Interpolation for rotation with angle wrapping
-    const newRot = new THREE.Euler(
-      THREE.MathUtils.lerp(startRot.current.x, endRot.current.x, t),
-      lerpAngle(startRot.current.y, endRot.current.y, t),
-      THREE.MathUtils.lerp(startRot.current.z, endRot.current.z, t)
-    );
-    setCurrentRotation(newRot);
-
-    // Update camera
-    if (cameraRef.current) {
-      cameraRef.current.position.copy(newPos);
-      cameraRef.current.rotation.copy(newRot);
+      // Interpolate rotation with angle wrapping from start to target
+      currentRot.current.set(
+        THREE.MathUtils.lerp(startRot.current.x, targetRot.current.x, tRot),
+        lerpAngle(startRot.current.y, targetRot.current.y, tRot),
+        THREE.MathUtils.lerp(startRot.current.z, targetRot.current.z, tRot)
+      );
+      hasUpdates = true;
     }
 
-    // Check if animation is complete
-    if (animationProgress.current >= 1) {
-      setIsAnimating(false);
-      onAnimationComplete?.();
+    // Update camera if anything changed
+    if (hasUpdates && cameraRef.current) {
+      cameraRef.current.position.copy(currentPos.current);
+      cameraRef.current.rotation.copy(currentRot.current);
+    }
+
+    // Check if both animations are complete
+    if (positionProgress.current >= 1 && rotationProgress.current >= 1) {
+      if (hasUpdates) {
+        onAnimationComplete?.();
+      }
     }
   });
 
-  // Snap to target when not animating
+  // Initialize camera position on mount
   useEffect(() => {
-    if (!isAnimating) {
-      const pos = new THREE.Vector3(...targetPosition);
-      const rot = new THREE.Euler(...targetRotation);
-      setCurrentPosition(pos);
-      setCurrentRotation(rot);
-      if (cameraRef.current) {
-        cameraRef.current.position.copy(pos);
-        cameraRef.current.rotation.copy(rot);
-      }
+    startPos.current.set(...targetPosition);
+    currentPos.current.set(...targetPosition);
+    targetPos.current.set(...targetPosition);
+    startRot.current.set(...targetRotation);
+    currentRot.current.set(...targetRotation);
+    targetRot.current.set(...targetRotation);
+    if (cameraRef.current) {
+      cameraRef.current.position.copy(currentPos.current);
+      cameraRef.current.rotation.copy(currentRot.current);
     }
-  }, [targetPosition, targetRotation, isAnimating]);
+  }, []);
 
   return (
     <PerspectiveCamera
       ref={cameraRef}
       makeDefault
-      position={currentPosition}
-      rotation={currentRotation}
+      position={currentPos.current}
+      rotation={currentRot.current}
       fov={fov}
     />
   );

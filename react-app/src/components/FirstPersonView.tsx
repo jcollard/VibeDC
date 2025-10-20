@@ -17,6 +17,7 @@ interface FirstPersonViewProps {
   lightIntensity?: number; // Player light intensity (0 = off, 1 = normal, 2 = bright)
   lightDistance?: number; // How far the player's light reaches (in tiles)
   movementDuration?: number; // Duration of camera movement animation in seconds
+  rotationDuration?: number; // Duration of camera rotation animation in seconds
 }
 
 /**
@@ -30,7 +31,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   cameraOffset = 0.3, // Default: slightly forward in the tile
   lightIntensity = 2.0, // Default: bright light
   lightDistance = 4, // Default: 4 tiles range
-  movementDuration = 2 // Default: 0.2 seconds
+  movementDuration = 0.2, // Default: 0.2 seconds
+  rotationDuration = 0.1 // Default: 0.1 seconds
 }) => {
   // Spritesheet loader state
   const [spriteSheetLoader, setSpriteSheetLoader] = useState<SpriteSheetLoader | null>(null);
@@ -38,10 +40,6 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
   // Camera animation ref
   const cameraRef = useRef<CameraAnimationHandle>(null);
-  const prevTransform = useRef<{
-    position: [number, number, number];
-    rotation: [number, number, number];
-  } | null>(null);
 
   // Load spritesheet on mount
   useEffect(() => {
@@ -101,36 +99,18 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     };
   }, [playerX, playerY, direction, cameraOffset]);
 
-  // Trigger animation when player position or direction changes
+  // Update camera target when player position or direction changes
   useEffect(() => {
     if (!cameraRef.current) return;
 
-    const targetPos = cameraTransform.position;
-    const targetRot = cameraTransform.rotation;
-
-    // Get current camera position (or use target if first render)
-    let startPos: [number, number, number];
-    let startRot: [number, number, number];
-
-    if (prevTransform.current) {
-      // Get actual current position from camera
-      startPos = cameraRef.current.getCurrentPosition();
-      startRot = cameraRef.current.getCurrentRotation();
-    } else {
-      // First render - snap to position without animation
-      startPos = targetPos;
-      startRot = targetRot;
-    }
-
-    // Start animation
-    cameraRef.current.startAnimation(startPos, startRot, targetPos, targetRot, movementDuration);
-
-    // Store target as previous for next update
-    prevTransform.current = {
-      position: targetPos,
-      rotation: targetRot
-    };
-  }, [playerX, playerY, direction, cameraTransform, movementDuration]);
+    // Simply update the target - camera will smoothly animate toward it
+    cameraRef.current.updateTarget(
+      cameraTransform.position,
+      cameraTransform.rotation,
+      movementDuration,
+      rotationDuration
+    );
+  }, [playerX, playerY, direction, cameraTransform, movementDuration, rotationDuration]);
 
   // Calculate visible cells based on player position
   // Cells are now positioned in absolute world coordinates

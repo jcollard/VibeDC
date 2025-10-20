@@ -219,7 +219,8 @@ export const Game: React.FC = () => {
           cameraOffset={-0.3}
           lightIntensity={lightIntensity}
           lightDistance={lightDistance}
-          movementDuration={2}
+          movementDuration={0.2}
+          rotationDuration={0.2}
         />
 
         <DebugPanel
