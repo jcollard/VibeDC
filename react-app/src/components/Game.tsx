@@ -77,9 +77,16 @@ export const Game: React.FC = () => {
     return grid[y][x] === '.';
   }, []);
 
+  // Track pressed keys across renders to prevent key repeat
+  const pressedKeysRef = useRef(new Set<string>());
+  const isAnimatingRef = useRef(false);
+
   // Handle player action
   const handleAction = useCallback((action: PlayerAction) => {
-    if (!gameState) return;
+    if (!gameState) {
+      isAnimatingRef.current = false;
+      return;
+    }
 
     const { player, grid } = gameState;
     let newX = player.x;
@@ -122,7 +129,21 @@ export const Game: React.FC = () => {
     // Validate movement (only for position changes)
     if (newX !== player.x || newY !== player.y) {
       if (!isWalkable(newX, newY, grid)) {
-        return; // Invalid move, don't update state
+        // Invalid move - reset animation state and check for held keys
+        isAnimatingRef.current = false;
+
+        // Check if any keys are still pressed and retry
+        setTimeout(() => {
+          for (const key of pressedKeysRef.current) {
+            const nextAction = inputConfig.getAction(key);
+            if (nextAction) {
+              isAnimatingRef.current = true;
+              handleAction(nextAction);
+              break;
+            }
+          }
+        }, 0);
+        return;
       }
     }
 
@@ -139,10 +160,23 @@ export const Game: React.FC = () => {
       grid,
       player: updatedPlayer
     });
-  }, [gameState, isWalkable]);
+  }, [gameState, isWalkable, inputConfig]);
 
-  // Track pressed keys across renders to prevent key repeat
-  const pressedKeysRef = useRef(new Set<string>());
+  // Handle animation complete - check if any movement keys are still held
+  const handleAnimationComplete = useCallback(() => {
+    isAnimatingRef.current = false;
+
+    // Check if any keys are still pressed
+    for (const key of pressedKeysRef.current) {
+      const action = inputConfig.getAction(key);
+      if (action) {
+        // Key is still held, trigger the action again
+        isAnimatingRef.current = true;
+        handleAction(action);
+        break; // Only process one key at a time
+      }
+    }
+  }, [handleAction, inputConfig]);
 
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
@@ -157,7 +191,12 @@ export const Game: React.FC = () => {
       if (action) {
         e.preventDefault();
         pressedKeysRef.current.add(e.key);
-        handleAction(action);
+
+        // Only trigger action if not currently animating
+        if (!isAnimatingRef.current) {
+          isAnimatingRef.current = true;
+          handleAction(action);
+        }
       }
     };
 
@@ -239,6 +278,7 @@ export const Game: React.FC = () => {
           lightYOffset={-0.3}
           movementDuration={0.2}
           rotationDuration={0.2}
+          onAnimationComplete={handleAnimationComplete}
         />
 
         <DebugPanel

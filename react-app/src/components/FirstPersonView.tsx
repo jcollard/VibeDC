@@ -19,6 +19,7 @@ interface FirstPersonViewProps {
   lightYOffset?: number; // Y offset for the light source (0 = camera height, positive = above)
   movementDuration?: number; // Duration of camera movement animation in seconds
   rotationDuration?: number; // Duration of camera rotation animation in seconds
+  onAnimationComplete?: () => void; // Callback when camera animation completes
 }
 
 /**
@@ -34,7 +35,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   lightDistance = 4, // Default: 4 tiles range
   lightYOffset = 0, // Default: at camera height
   movementDuration = 0.2, // Default: 0.2 seconds
-  rotationDuration = 0.1 // Default: 0.1 seconds
+  rotationDuration = 0.1, // Default: 0.1 seconds
+  onAnimationComplete
 }) => {
   // Spritesheet loader state
   const [spriteSheetLoader, setSpriteSheetLoader] = useState<SpriteSheetLoader | null>(null);
@@ -171,6 +173,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
           targetPosition={cameraTransform.position}
           targetRotation={cameraTransform.rotation}
           fov={75}
+          onAnimationComplete={onAnimationComplete}
         />
 
         {/* Ambient light - base lighting for entire scene */}
