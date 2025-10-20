@@ -1,6 +1,7 @@
 import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { FirstPersonView } from './FirstPersonView';
 import { DebugPanel } from './DebugPanel';
+import { MapEditor } from './MapEditor';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player, type Direction } from '../models/Player';
@@ -23,8 +24,61 @@ export const Game: React.FC = () => {
   const [lightDecay, setLightDecay] = useState<number>(0.5);
   const [lightColor, setLightColor] = useState<string>('#fff7e5');
 
+  // Debug panel visibility
+  const [debugPanelVisible, setDebugPanelVisible] = useState<boolean>(false);
+
+  // Map editor visibility
+  const [mapEditorVisible, setMapEditorVisible] = useState<boolean>(false);
+
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
+
+  // Expose debug panel toggle to console
+  useEffect(() => {
+    (window as any).showDebugInfo = () => {
+      setDebugPanelVisible(true);
+      console.log('Debug panel shown');
+    };
+    (window as any).hideDebugInfo = () => {
+      setDebugPanelVisible(false);
+      console.log('Debug panel hidden');
+    };
+    (window as any).toggleDebugInfo = () => {
+      setDebugPanelVisible(prev => !prev);
+      console.log('Debug panel toggled');
+    };
+
+    return () => {
+      delete (window as any).showDebugInfo;
+      delete (window as any).hideDebugInfo;
+      delete (window as any).toggleDebugInfo;
+    };
+  }, []);
+
+  // Expose map editor toggle to console (development only)
+  useEffect(() => {
+    // Only expose map editor in development mode
+    if (import.meta.env.DEV) {
+      (window as any).showMapEditor = () => {
+        setMapEditorVisible(true);
+        console.log('Map editor shown');
+      };
+      (window as any).hideMapEditor = () => {
+        setMapEditorVisible(false);
+        console.log('Map editor hidden');
+      };
+      (window as any).toggleMapEditor = () => {
+        setMapEditorVisible(prev => !prev);
+        console.log('Map editor toggled');
+      };
+
+      return () => {
+        delete (window as any).showMapEditor;
+        delete (window as any).hideMapEditor;
+        delete (window as any).toggleMapEditor;
+      };
+    }
+  }, []);
 
   // Initialize game
   useEffect(() => {
@@ -305,22 +359,32 @@ export const Game: React.FC = () => {
           onAnimationComplete={handleAnimationComplete}
         />
 
-        <DebugPanel
-          playerX={gameState.player.x}
-          playerY={gameState.player.y}
-          direction={gameState.player.direction}
-          grid={gameState.grid}
-          lightIntensity={lightIntensity}
-          lightDistance={lightDistance}
-          lightYOffset={lightYOffset}
-          lightDecay={lightDecay}
-          lightColor={lightColor}
-          onLightIntensityChange={setLightIntensity}
-          onLightDistanceChange={setLightDistance}
-          onLightYOffsetChange={setLightYOffset}
-          onLightDecayChange={setLightDecay}
-          onLightColorChange={setLightColor}
-        />
+        {debugPanelVisible && (
+          <DebugPanel
+            playerX={gameState.player.x}
+            playerY={gameState.player.y}
+            direction={gameState.player.direction}
+            grid={gameState.grid}
+            lightIntensity={lightIntensity}
+            lightDistance={lightDistance}
+            lightYOffset={lightYOffset}
+            lightDecay={lightDecay}
+            lightColor={lightColor}
+            onLightIntensityChange={setLightIntensity}
+            onLightDistanceChange={setLightDistance}
+            onLightYOffsetChange={setLightYOffset}
+            onLightDecayChange={setLightDecay}
+            onLightColorChange={setLightColor}
+            onClose={() => setDebugPanelVisible(false)}
+          />
+        )}
+
+        {/* Map editor - only available in development mode */}
+        {import.meta.env.DEV && mapEditorVisible && (
+          <MapEditor
+            onClose={() => setMapEditorVisible(false)}
+          />
+        )}
       </div>
     </div>
   );

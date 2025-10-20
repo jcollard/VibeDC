@@ -16,6 +16,7 @@ interface DebugPanelProps {
   onLightYOffsetChange?: (value: number) => void;
   onLightDecayChange?: (value: number) => void;
   onLightColorChange?: (value: string) => void;
+  onClose?: () => void;
 }
 
 /**
@@ -35,7 +36,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   onLightDistanceChange,
   onLightYOffsetChange,
   onLightDecayChange,
-  onLightColorChange
+  onLightColorChange,
+  onClose
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spriteSheetRef = useRef<HTMLImageElement | null>(null);
@@ -138,7 +140,35 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
       fontSize: '12px',
       zIndex: 1000
     }}>
-      <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>Debug Info</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+        <div style={{ fontWeight: 'bold' }}>Debug Info</div>
+        {onClose && (
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#fff',
+              fontSize: '16px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              padding: '0',
+              width: '20px',
+              height: '20px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              opacity: 0.7,
+              transition: 'opacity 0.2s'
+            }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '0.7'}
+            title="Close debug panel"
+          >
+            ×
+          </button>
+        )}
+      </div>
       <div>Player: ({playerX}, {playerY})</div>
       <div>Facing: {direction}</div>
       <div style={{ marginTop: '8px' }}>
