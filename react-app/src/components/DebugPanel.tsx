@@ -6,6 +6,16 @@ interface DebugPanelProps {
   playerY: number;
   direction: 'North' | 'South' | 'East' | 'West';
   grid: string[];
+  lightIntensity?: number;
+  lightDistance?: number;
+  lightYOffset?: number;
+  lightDecay?: number;
+  lightColor?: string;
+  onLightIntensityChange?: (value: number) => void;
+  onLightDistanceChange?: (value: number) => void;
+  onLightYOffsetChange?: (value: number) => void;
+  onLightDecayChange?: (value: number) => void;
+  onLightColorChange?: (value: string) => void;
 }
 
 /**
@@ -15,7 +25,17 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   playerX,
   playerY,
   direction,
-  grid
+  grid,
+  lightIntensity = 2.0,
+  lightDistance = 4,
+  lightYOffset = 0,
+  lightDecay = 2,
+  lightColor = '#ffddaa',
+  onLightIntensityChange,
+  onLightDistanceChange,
+  onLightYOffsetChange,
+  onLightDecayChange,
+  onLightColorChange
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spriteSheetRef = useRef<HTMLImageElement | null>(null);
@@ -133,6 +153,95 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
           }}
         />
       </div>
+
+      {/* Light Controls */}
+      {(onLightIntensityChange || onLightDistanceChange || onLightYOffsetChange || onLightDecayChange || onLightColorChange) && (
+        <div style={{ marginTop: '12px', paddingTop: '8px', borderTop: '1px solid #666' }}>
+          <div style={{ fontWeight: 'bold', marginBottom: '6px' }}>Light Controls</div>
+
+          {onLightIntensityChange && (
+            <div style={{ marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>
+                Intensity: {lightIntensity.toFixed(1)}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="5"
+                step="0.1"
+                value={lightIntensity}
+                onChange={(e) => onLightIntensityChange(parseFloat(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </div>
+          )}
+
+          {onLightDistanceChange && (
+            <div style={{ marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>
+                Distance: {lightDistance.toFixed(1)} tiles
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="10"
+                step="0.5"
+                value={lightDistance}
+                onChange={(e) => onLightDistanceChange(parseFloat(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </div>
+          )}
+
+          {onLightDecayChange && (
+            <div style={{ marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>
+                Decay: {lightDecay.toFixed(1)}
+              </label>
+              <input
+                type="range"
+                min="0"
+                max="2"
+                step="0.1"
+                value={lightDecay}
+                onChange={(e) => onLightDecayChange(parseFloat(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </div>
+          )}
+
+          {onLightColorChange && (
+            <div style={{ marginBottom: '6px' }}>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>
+                Color: {lightColor}
+              </label>
+              <input
+                type="color"
+                value={lightColor}
+                onChange={(e) => onLightColorChange(e.target.value)}
+                style={{ width: '100%', height: '30px', cursor: 'pointer' }}
+              />
+            </div>
+          )}
+
+          {onLightYOffsetChange && (
+            <div>
+              <label style={{ display: 'block', fontSize: '11px', marginBottom: '2px' }}>
+                Y Offset: {lightYOffset.toFixed(1)}
+              </label>
+              <input
+                type="range"
+                min="-2"
+                max="2"
+                step="0.1"
+                value={lightYOffset}
+                onChange={(e) => onLightYOffsetChange(parseFloat(e.target.value))}
+                style={{ width: '100%' }}
+              />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };

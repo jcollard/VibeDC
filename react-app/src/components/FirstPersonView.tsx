@@ -17,6 +17,8 @@ interface FirstPersonViewProps {
   lightIntensity?: number; // Player light intensity (0 = off, 1 = normal, 2 = bright)
   lightDistance?: number; // How far the player's light reaches (in tiles)
   lightYOffset?: number; // Y offset for the light source (0 = camera height, positive = above)
+  lightDecay?: number; // Light decay rate (0 = no decay, 1 = linear, 2 = inverse square)
+  lightColor?: string; // Light color (hex format)
   movementDuration?: number; // Duration of camera movement animation in seconds
   rotationDuration?: number; // Duration of camera rotation animation in seconds
   onAnimationComplete?: () => void; // Callback when camera animation completes
@@ -34,6 +36,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   lightIntensity = 2.0, // Default: bright light
   lightDistance = 4, // Default: 4 tiles range
   lightYOffset = 0, // Default: at camera height
+  lightDecay = 2, // Default: inverse square falloff
+  lightColor = '#ffddaa', // Default: warm torch color
   movementDuration = 0.2, // Default: 0.2 seconds
   rotationDuration = 0.1, // Default: 0.1 seconds
   onAnimationComplete
@@ -176,11 +180,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
           onAnimationComplete={onAnimationComplete}
         />
 
-        {/* Ambient light - base lighting for entire scene */}
-        <ambientLight intensity={0.3} />
-
         {/* Lights that follow the camera's animated position */}
-        <CameraLights lightIntensity={lightIntensity} lightDistance={lightDistance} lightYOffset={lightYOffset} />
+        <CameraLights lightIntensity={lightIntensity} lightDistance={lightDistance} lightYOffset={lightYOffset} lightDecay={lightDecay} lightColor={lightColor} />
 
         {/* Render all visible cells */}
         {visibleCells.map((cell, index) => {

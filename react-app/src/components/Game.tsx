@@ -18,7 +18,10 @@ export const Game: React.FC = () => {
 
   // Light control state
   const [lightIntensity, setLightIntensity] = useState<number>(3.0);
-  const [lightDistance, setLightDistance] = useState<number>(4);
+  const [lightDistance, setLightDistance] = useState<number>(6.0);
+  const [lightYOffset, setLightYOffset] = useState<number>(0.0);
+  const [lightDecay, setLightDecay] = useState<number>(0.5);
+  const [lightColor, setLightColor] = useState<string>('#fff7e5');
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -294,7 +297,9 @@ export const Game: React.FC = () => {
           cameraOffset={-0.3}
           lightIntensity={lightIntensity}
           lightDistance={lightDistance}
-          lightYOffset={-0.3}
+          lightYOffset={lightYOffset}
+          lightDecay={lightDecay}
+          lightColor={lightColor}
           movementDuration={0.2}
           rotationDuration={0.2}
           onAnimationComplete={handleAnimationComplete}
@@ -305,6 +310,16 @@ export const Game: React.FC = () => {
           playerY={gameState.player.y}
           direction={gameState.player.direction}
           grid={gameState.grid}
+          lightIntensity={lightIntensity}
+          lightDistance={lightDistance}
+          lightYOffset={lightYOffset}
+          lightDecay={lightDecay}
+          lightColor={lightColor}
+          onLightIntensityChange={setLightIntensity}
+          onLightDistanceChange={setLightDistance}
+          onLightYOffsetChange={setLightYOffset}
+          onLightDecayChange={setLightDecay}
+          onLightColorChange={setLightColor}
         />
       </div>
     </div>
