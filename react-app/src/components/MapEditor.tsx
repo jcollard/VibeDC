@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { getTileTextureMapping } from '../utils/tileTextureConfig';
 
 interface MapEditorProps {
@@ -18,6 +18,11 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
   const gridWidth = grid[0]?.length || 0;
   const gridHeight = grid.length;
 
+  // Selection state
+  const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+
   // Load sprite sheet
   useEffect(() => {
     const img = new Image();
@@ -28,12 +33,12 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
     };
   }, []);
 
-  // Redraw map when grid changes
+  // Redraw map when grid or selection changes
   useEffect(() => {
     if (spriteSheetRef.current) {
       drawMap();
     }
-  }, [grid]);
+  }, [grid, selectedCells]);
 
   const drawMap = () => {
     const canvas = canvasRef.current;
@@ -75,8 +80,105 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
           sx, sy, SPRITE_SIZE, SPRITE_SIZE,  // Source position and size
           dx, dy, CELL_SIZE, CELL_SIZE       // Destination position and size
         );
+
+        // Draw selection overlay if cell is selected
+        const cellKey = `${x},${y}`;
+        if (selectedCells.has(cellKey)) {
+          ctx.fillStyle = 'rgba(255, 255, 0, 0.4)'; // Transparent yellow
+          ctx.fillRect(dx, dy, CELL_SIZE, CELL_SIZE);
+        }
       }
     }
+  };
+
+  // Helper to get cell coordinates from mouse event
+  const getCellFromMouseEvent = (e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } | null => {
+    const canvas = canvasRef.current;
+    if (!canvas) return null;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const x = Math.floor(mouseX / CELL_SIZE);
+    const y = Math.floor(mouseY / CELL_SIZE);
+
+    if (x >= 0 && x < gridWidth && y >= 0 && y < gridHeight) {
+      return { x, y };
+    }
+    return null;
+  };
+
+  // Handle mouse down - start selection
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const cell = getCellFromMouseEvent(e);
+    if (!cell) return;
+
+    setIsDragging(true);
+    setDragStart(cell);
+
+    const cellKey = `${cell.x},${cell.y}`;
+
+    if (e.shiftKey) {
+      // Shift-click: toggle selection
+      setSelectedCells(prev => {
+        const newSet = new Set(prev);
+        if (newSet.has(cellKey)) {
+          newSet.delete(cellKey);
+        } else {
+          newSet.add(cellKey);
+        }
+        return newSet;
+      });
+    } else {
+      // Regular click: start new selection
+      setSelectedCells(new Set([cellKey]));
+    }
+  };
+
+  // Handle mouse move - drag selection
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || !dragStart) return;
+
+    const cell = getCellFromMouseEvent(e);
+    if (!cell) return;
+
+    // Calculate rectangle from drag start to current cell
+    const minX = Math.min(dragStart.x, cell.x);
+    const maxX = Math.max(dragStart.x, cell.x);
+    const minY = Math.min(dragStart.y, cell.y);
+    const maxY = Math.max(dragStart.y, cell.y);
+
+    const newSelection = new Set<string>();
+    for (let y = minY; y <= maxY; y++) {
+      for (let x = minX; x <= maxX; x++) {
+        newSelection.add(`${x},${y}`);
+      }
+    }
+
+    if (e.shiftKey) {
+      // Shift-drag: add to existing selection
+      setSelectedCells(prev => {
+        const combined = new Set(prev);
+        newSelection.forEach(cell => combined.add(cell));
+        return combined;
+      });
+    } else {
+      // Regular drag: replace selection
+      setSelectedCells(newSelection);
+    }
+  };
+
+  // Handle mouse up - end selection
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setDragStart(null);
+  };
+
+  // Handle mouse leave - end selection
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setDragStart(null);
   };
 
   return (
@@ -135,9 +237,14 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
           ref={canvasRef}
           width={gridWidth * CELL_SIZE}
           height={gridHeight * CELL_SIZE}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
           style={{
             border: '1px solid rgba(255,255,255,0.2)',
-            imageRendering: 'pixelated'
+            imageRendering: 'pixelated',
+            cursor: 'crosshair'
           } as React.CSSProperties}
         />
       </div>
