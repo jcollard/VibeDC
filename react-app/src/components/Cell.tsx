@@ -32,12 +32,15 @@ export const Cell: React.FC<CellProps> = ({ worldX, worldZ, tileType, textures }
 
   // Fallback colors based on tile type (used if no textures provided)
   const isWall = tileType === '#';
-  const wallColor = isWall ? '#444444' : '#666666';
+  const isDoor = tileType === '+';
+  const hasWalls = isWall || isDoor; // Both walls and doors render vertical surfaces
+
+  const wallColor = isWall ? '#444444' : (isDoor ? '#8B4513' : '#666666');
   const floorColor = isWall ? '#222222' : '#333333';
   const ceilingColor = isWall ? '#1a1a1a' : '#2a2a2a';
 
-  // Only render walls for wall tiles
-  if (!isWall) {
+  // Only render walls for wall and door tiles
+  if (!hasWalls) {
     return (
       <group position={[posX, 0, posZ]}>
         {/* Floor */}

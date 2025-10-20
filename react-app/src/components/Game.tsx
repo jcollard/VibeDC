@@ -73,8 +73,9 @@ export const Game: React.FC = () => {
       return false;
     }
 
-    // Check tile type
-    return grid[y][x] === '.';
+    // Check tile type - both '.' (floor) and '+' (door) are walkable
+    const tile = grid[y][x];
+    return tile === '.' || tile === '+';
   }, []);
 
   // Track pressed keys across renders to prevent key repeat
@@ -144,6 +145,24 @@ export const Game: React.FC = () => {
           }
         }, 0);
         return;
+      }
+
+      // Check if we landed on a door - if so, push through to the next cell
+      if (grid[newY]?.[newX] === '+') {
+        // Calculate the movement delta to know which direction we moved
+        const deltaX = newX - player.x;
+        const deltaY = newY - player.y;
+
+        // Try to move one more cell in the same direction
+        const beyondX = newX + deltaX;
+        const beyondY = newY + deltaY;
+
+        // If the cell beyond the door is walkable, move there instead
+        if (isWalkable(beyondX, beyondY, grid)) {
+          newX = beyondX;
+          newY = beyondY;
+        }
+        // Otherwise, stay on the door tile (player gets stuck in doorway)
       }
     }
 
