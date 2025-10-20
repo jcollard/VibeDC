@@ -257,10 +257,17 @@ export const Game: React.FC = () => {
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // F2 to toggle map editor (development only)
-      if (import.meta.env.DEV && e.key === 'F2') {
+      // Alt+M to toggle map editor (development only)
+      if (import.meta.env.DEV && e.altKey && e.key === 'm') {
         e.preventDefault();
         setMapEditorVisible(prev => !prev);
+        return;
+      }
+
+      // Alt+D to toggle debug panel
+      if (e.altKey && e.key === 'd') {
+        e.preventDefault();
+        setDebugPanelVisible(prev => !prev);
         return;
       }
 
@@ -389,7 +396,7 @@ export const Game: React.FC = () => {
         {/* Map editor - only available in development mode */}
         {import.meta.env.DEV && mapEditorVisible && (
           <MapEditor
-            grid={gameState.map.toStringArray()}
+            map={gameState.map}
             onClose={() => setMapEditorVisible(false)}
           />
         )}

@@ -1,23 +1,24 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { getTileTextureMapping } from '../utils/tileTextureConfig';
+import { MapData } from '../models/MapData';
 
 interface MapEditorProps {
-  grid: string[];
+  map: MapData;
   onClose?: () => void;
 }
 
 /**
  * Map editor panel for creating and editing maps
  */
-export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
+export const MapEditor: React.FC<MapEditorProps> = ({ map, onClose }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const spriteSheetRef = useRef<HTMLImageElement | null>(null);
 
   const CELL_SIZE = 24; // 24x24 pixels per cell
   const SPRITE_SIZE = 12; // Size of each sprite in the spritesheet (12x12 grid)
   const DRAG_THRESHOLD = 5; // Pixels mouse must move before drag starts
-  const gridWidth = grid[0]?.length || 0;
-  const gridHeight = grid.length;
+  const gridWidth = map.width;
+  const gridHeight = map.height;
 
   // Selection state
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
@@ -35,12 +36,12 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
     };
   }, []);
 
-  // Redraw map when grid or selection changes
+  // Redraw map when map or selection changes
   useEffect(() => {
     if (spriteSheetRef.current) {
       drawMap();
     }
-  }, [grid, selectedCells]);
+  }, [map, selectedCells]);
 
   const drawMap = () => {
     const canvas = canvasRef.current;
@@ -59,8 +60,10 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
     // Draw each cell
     for (let y = 0; y < gridHeight; y++) {
       for (let x = 0; x < gridWidth; x++) {
-        const tileType = grid[y][x];
-        const textureMapping = getTileTextureMapping(tileType);
+        const cell = map.getCell(x, y);
+        if (!cell) continue;
+
+        const textureMapping = getTileTextureMapping(cell.tileType);
 
         // Determine which sprite to use for the map editor
         // Use wallFront for walls/doors, floor for everything else
