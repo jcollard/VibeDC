@@ -17,7 +17,7 @@ export const Game: React.FC = () => {
   const [error, setError] = useState<string>('');
 
   // Light control state
-  const [lightIntensity, setLightIntensity] = useState<number>(2.0);
+  const [lightIntensity, setLightIntensity] = useState<number>(3.0);
   const [lightDistance, setLightDistance] = useState<number>(4);
 
   // Initialize input configuration
@@ -219,6 +219,7 @@ export const Game: React.FC = () => {
           cameraOffset={-0.3}
           lightIntensity={lightIntensity}
           lightDistance={lightDistance}
+          lightYOffset={-0.3}
           movementDuration={0.2}
           rotationDuration={0.2}
         />

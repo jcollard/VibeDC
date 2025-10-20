@@ -5,6 +5,7 @@ import * as THREE from 'three';
 interface CameraLightsProps {
   lightIntensity: number;
   lightDistance: number;
+  lightYOffset: number;
 }
 
 /**
@@ -12,7 +13,8 @@ interface CameraLightsProps {
  */
 export const CameraLights: React.FC<CameraLightsProps> = ({
   lightIntensity,
-  lightDistance
+  lightDistance,
+  lightYOffset
 }) => {
   const { camera } = useThree();
   const directionalRef = useRef<THREE.DirectionalLight>(null);
@@ -33,14 +35,22 @@ export const CameraLights: React.FC<CameraLightsProps> = ({
       );
     }
 
-    // Update point light (at camera)
+    // Update point light (at camera with Y offset)
     if (pointRef.current) {
-      pointRef.current.position.copy(cameraPos);
+      pointRef.current.position.set(
+        cameraPos.x,
+        cameraPos.y + lightYOffset,
+        cameraPos.z
+      );
     }
 
-    // Update spot light (at camera, pointing forward)
+    // Update spot light (at camera with Y offset, pointing forward)
     if (spotRef.current) {
-      spotRef.current.position.copy(cameraPos);
+      spotRef.current.position.set(
+        cameraPos.x,
+        cameraPos.y + lightYOffset,
+        cameraPos.z
+      );
       spotRef.current.rotation.copy(cameraRot);
     }
   });
