@@ -257,6 +257,13 @@ export const Game: React.FC = () => {
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // F2 to toggle map editor (development only)
+      if (import.meta.env.DEV && e.key === 'F2') {
+        e.preventDefault();
+        setMapEditorVisible(prev => !prev);
+        return;
+      }
+
       // Ignore if this key is already pressed (prevents key repeat)
       if (pressedKeysRef.current.has(e.key)) {
         return;

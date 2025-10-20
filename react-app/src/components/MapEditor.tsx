@@ -15,6 +15,7 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
 
   const CELL_SIZE = 24; // 24x24 pixels per cell
   const SPRITE_SIZE = 12; // Size of each sprite in the spritesheet (12x12 grid)
+  const DRAG_THRESHOLD = 5; // Pixels mouse must move before drag starts
   const gridWidth = grid[0]?.length || 0;
   const gridHeight = grid.length;
 
@@ -22,6 +23,7 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
   const [selectedCells, setSelectedCells] = useState<Set<string>>(new Set());
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState<{ x: number; y: number } | null>(null);
+  const [mouseDownPos, setMouseDownPos] = useState<{ x: number; y: number } | null>(null);
 
   // Load sprite sheet
   useEffect(() => {
@@ -114,7 +116,15 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
     const cell = getCellFromMouseEvent(e);
     if (!cell) return;
 
-    setIsDragging(true);
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Store mouse down position for drag threshold
+    setMouseDownPos({ x: mouseX, y: mouseY });
     setDragStart(cell);
 
     const cellKey = `${cell.x},${cell.y}`;
@@ -138,7 +148,28 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
 
   // Handle mouse move - drag selection
   const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDragging || !dragStart) return;
+    if (!dragStart || !mouseDownPos) return;
+
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    // Check if mouse has moved beyond threshold
+    if (!isDragging) {
+      const dx = mouseX - mouseDownPos.x;
+      const dy = mouseY - mouseDownPos.y;
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < DRAG_THRESHOLD) {
+        return; // Haven't moved far enough yet
+      }
+
+      // Start dragging
+      setIsDragging(true);
+    }
 
     const cell = getCellFromMouseEvent(e);
     if (!cell) return;
@@ -173,12 +204,14 @@ export const MapEditor: React.FC<MapEditorProps> = ({ grid, onClose }) => {
   const handleMouseUp = () => {
     setIsDragging(false);
     setDragStart(null);
+    setMouseDownPos(null);
   };
 
   // Handle mouse leave - end selection
   const handleMouseLeave = () => {
     setIsDragging(false);
     setDragStart(null);
+    setMouseDownPos(null);
   };
 
   return (
