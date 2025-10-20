@@ -5,10 +5,11 @@ import { MapEditor } from './MapEditor';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
+import { MapData } from '../models/MapData';
 import './Game.css';
 
 interface SinglePlayerState {
-  grid: string[];
+  map: MapData;
   player: Player;
 }
 
@@ -89,26 +90,31 @@ export const Game: React.FC = () => {
         const mapText = await response.text();
         const { grid } = parseMap(mapText);
 
+        // Convert to MapData
+        const map = MapData.fromStringArray(grid, 'Test Map');
+
         // Find spawn point (first '.' in the grid)
         let spawnX = 1;
         let spawnY = 1;
 
-        for (let y = 0; y < grid.length; y++) {
-          for (let x = 0; x < grid[y].length; x++) {
-            if (grid[y][x] === '.') {
+        for (let y = 0; y < map.height; y++) {
+          for (let x = 0; x < map.width; x++) {
+            const cell = map.getCell(x, y);
+            if (cell && cell.tileType === '.') {
               spawnX = x;
               spawnY = y;
               break;
             }
           }
-          if (grid[spawnY][spawnX] === '.') break;
+          const spawnCell = map.getCell(spawnX, spawnY);
+          if (spawnCell && spawnCell.tileType === '.') break;
         }
 
         // Create single player
         const player = new Player('player', spawnX, spawnY, 'North', 'Player');
 
         setGameState({
-          grid,
+          map,
           player
         });
 
@@ -124,15 +130,8 @@ export const Game: React.FC = () => {
   }, []);
 
   // Check if a tile is walkable
-  const isWalkable = useCallback((x: number, y: number, grid: string[]): boolean => {
-    // Check bounds
-    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) {
-      return false;
-    }
-
-    // Check tile type - both '.' (floor) and '+' (door) are walkable
-    const tile = grid[y][x];
-    return tile === '.' || tile === '+';
+  const isWalkable = useCallback((x: number, y: number, map: MapData): boolean => {
+    return map.isWalkable(x, y);
   }, []);
 
   // Track pressed keys across renders to prevent key repeat
@@ -146,7 +145,7 @@ export const Game: React.FC = () => {
       return;
     }
 
-    const { player, grid } = gameState;
+    const { player, map } = gameState;
     let newX = player.x;
     let newY = player.y;
     let newDirection = player.direction;
@@ -186,7 +185,7 @@ export const Game: React.FC = () => {
 
     // Validate movement (only for position changes)
     if (newX !== player.x || newY !== player.y) {
-      if (!isWalkable(newX, newY, grid)) {
+      if (!isWalkable(newX, newY, map)) {
         // Invalid move - reset animation state and check for held keys
         isAnimatingRef.current = false;
 
@@ -205,7 +204,8 @@ export const Game: React.FC = () => {
       }
 
       // Check if we landed on a door - if so, push through to the next cell
-      if (grid[newY]?.[newX] === '+') {
+      const landedCell = map.getCell(newX, newY);
+      if (landedCell && landedCell.isDoor()) {
         // Calculate the movement delta to know which direction we moved
         const deltaX = newX - player.x;
         const deltaY = newY - player.y;
@@ -215,7 +215,7 @@ export const Game: React.FC = () => {
         const beyondY = newY + deltaY;
 
         // If the cell beyond the door is walkable, move there instead
-        if (isWalkable(beyondX, beyondY, grid)) {
+        if (isWalkable(beyondX, beyondY, map)) {
           newX = beyondX;
           newY = beyondY;
         }
@@ -233,7 +233,7 @@ export const Game: React.FC = () => {
     );
 
     setGameState({
-      grid,
+      map,
       player: updatedPlayer
     });
   }, [gameState, isWalkable, inputConfig]);
@@ -354,7 +354,7 @@ export const Game: React.FC = () => {
           playerX={gameState.player.x}
           playerY={gameState.player.y}
           direction={gameState.player.direction}
-          grid={gameState.grid}
+          grid={gameState.map.toStringArray()}
           cameraOffset={-0.3}
           lightIntensity={lightIntensity}
           lightDistance={lightDistance}
@@ -371,7 +371,7 @@ export const Game: React.FC = () => {
             playerX={gameState.player.x}
             playerY={gameState.player.y}
             direction={gameState.player.direction}
-            grid={gameState.grid}
+            grid={gameState.map.toStringArray()}
             lightIntensity={lightIntensity}
             lightDistance={lightDistance}
             lightYOffset={lightYOffset}
@@ -389,7 +389,7 @@ export const Game: React.FC = () => {
         {/* Map editor - only available in development mode */}
         {import.meta.env.DEV && mapEditorVisible && (
           <MapEditor
-            grid={gameState.grid}
+            grid={gameState.map.toStringArray()}
             onClose={() => setMapEditorVisible(false)}
           />
         )}
