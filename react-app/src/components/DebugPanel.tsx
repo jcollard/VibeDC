@@ -1,11 +1,12 @@
 import React, { useEffect, useRef } from 'react';
 import { getTileTextureMapping } from '../utils/tileTextureConfig';
+import { MapData } from '../models/MapData';
 
 interface DebugPanelProps {
   playerX: number;
   playerY: number;
   direction: 'North' | 'South' | 'East' | 'West';
-  grid: string[];
+  map: MapData;
   lightIntensity?: number;
   lightDistance?: number;
   lightYOffset?: number;
@@ -26,7 +27,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   playerX,
   playerY,
   direction,
-  grid,
+  map,
   lightIntensity = 2.0,
   lightDistance = 4,
   lightYOffset = 0,
@@ -59,7 +60,7 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
   // Render the minimap whenever dependencies change
   useEffect(() => {
     renderMinimap();
-  }, [playerX, playerY, direction, grid]);
+  }, [playerX, playerY, direction, map]);
 
   const renderMinimap = () => {
     const canvas = canvasRef.current;
@@ -76,9 +77,12 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
     ctx.imageSmoothingEnabled = false;
 
     // Render each tile
-    grid.forEach((row, y) => {
-      row.split('').forEach((cell, x) => {
-        const tileMapping = getTileTextureMapping(cell);
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        const cell = map.getCell(x, y);
+        if (!cell) continue;
+
+        const tileMapping = getTileTextureMapping(cell.tileType);
 
         // Determine which sprite to use for the minimap
         // Use wallFront for walls/doors, floor for everything else
@@ -100,8 +104,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
             dx, dy, MINIMAP_TILE_SIZE, MINIMAP_TILE_SIZE
           );
         }
-      });
-    });
+      }
+    }
 
     // Draw player indicator on top
     const playerScreenX = playerX * MINIMAP_TILE_SIZE;
@@ -123,8 +127,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
     );
   };
 
-  const gridWidth = grid[0]?.length || 0;
-  const gridHeight = grid.length;
+  const gridWidth = map.width;
+  const gridHeight = map.height;
 
   return (
     <div style={{

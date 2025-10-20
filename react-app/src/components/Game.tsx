@@ -371,7 +371,7 @@ export const Game: React.FC = () => {
             playerX={gameState.player.x}
             playerY={gameState.player.y}
             direction={gameState.player.direction}
-            grid={gameState.map.toStringArray()}
+            map={gameState.map}
             lightIntensity={lightIntensity}
             lightDistance={lightDistance}
             lightYOffset={lightYOffset}
