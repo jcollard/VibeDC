@@ -178,9 +178,8 @@ export const DebugPanel: React.FC<DebugPanelProps> = ({
           height={gridHeight * MINIMAP_TILE_SIZE}
           style={{
             border: '1px solid rgba(255,255,255,0.2)',
-            imageRendering: 'pixelated',
-            imageRendering: 'crisp-edges'
-          }}
+            imageRendering: 'pixelated'
+          } as React.CSSProperties}
         />
       </div>
 

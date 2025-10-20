@@ -4,7 +4,7 @@ import { DebugPanel } from './DebugPanel';
 import { MapEditor } from './MapEditor';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
-import { Player, type Direction } from '../models/Player';
+import { Player } from '../models/Player';
 import './Game.css';
 
 interface SinglePlayerState {
@@ -87,7 +87,7 @@ export const Game: React.FC = () => {
         // Load map
         const response = await fetch('/test.map');
         const mapText = await response.text();
-        const { grid, width, height } = parseMap(mapText);
+        const { grid } = parseMap(mapText);
 
         // Find spawn point (first '.' in the grid)
         let spawnX = 1;
@@ -382,6 +382,7 @@ export const Game: React.FC = () => {
         {/* Map editor - only available in development mode */}
         {import.meta.env.DEV && mapEditorVisible && (
           <MapEditor
+            grid={gameState.grid}
             onClose={() => setMapEditorVisible(false)}
           />
         )}

@@ -52,7 +52,7 @@ export const AnimatedCamera: React.FC<AnimatedCameraProps> = ({
       targetRotation[0], targetRotation[1], targetRotation[2]]);
 
   // Animate on each frame
-  useFrame((state, delta) => {
+  useFrame((_state, delta) => {
     if (animationProgress.current < 1) {
       // Increment progress based on time
       animationProgress.current = Math.min(
