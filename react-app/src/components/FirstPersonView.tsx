@@ -55,39 +55,75 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     };
   }, []);
 
-  // Calculate camera position offset based on direction
-  const cameraPosition = useMemo(() => {
-    // Camera is offset in the Z direction (forward/backward from player perspective)
-    // Positive Z offset = camera is behind center (looking forward more)
-    // Negative Z offset = camera is ahead of center (looking backward more)
-    return [0, 0, cameraOffset] as [number, number, number];
-  }, [cameraOffset]);
+  // Calculate camera position and rotation based on player position and direction
+  const cameraTransform = useMemo(() => {
+    // Convert grid position to world position (each tile is 1 unit)
+    let worldX = playerX;
+    let worldZ = -playerY; // Negative because Z is forward in Three.js, Y is down in grid
 
-  // Calculate visible cells based on player position and direction
+    // Calculate rotation (in radians) based on cardinal direction
+    let rotationY = 0;
+    let offsetX = 0;
+    let offsetZ = 0;
+
+    switch (direction) {
+      case 'North':
+        rotationY = Math.PI; // Looking in -Z direction (North is negative grid Y, which is positive world Z)
+        offsetZ = cameraOffset; // Offset in the direction we're facing
+        break;
+      case 'South':
+        rotationY = 0; // Looking in +Z direction (South is positive grid Y, which is negative world Z)
+        offsetZ = -cameraOffset;
+        break;
+      case 'East':
+        rotationY = -Math.PI / 2; // Looking in +X direction (right)
+        offsetX = cameraOffset;
+        break;
+      case 'West':
+        rotationY = Math.PI / 2; // Looking in -X direction (left)
+        offsetX = -cameraOffset;
+        break;
+    }
+
+    return {
+      position: [worldX + offsetX, 0, worldZ + offsetZ] as [number, number, number],
+      rotation: [0, rotationY, 0] as [number, number, number]
+    };
+  }, [playerX, playerY, direction, cameraOffset]);
+
+  // Calculate visible cells based on player position
+  // Cells are now positioned in absolute world coordinates
   const visibleCells = useMemo(() => {
-    const cells: Array<{ x: number; z: number; tileType: string }> = [];
-    const viewDistance = 8; // How far ahead to render
+    const cells: Array<{ worldX: number; worldZ: number; tileType: string }> = [];
+    const viewDistance = 8; // How far in each direction to render
     const viewWidth = 6; // How wide the view is
 
-    for (let depth = 0; depth <= viewDistance; depth++) {
-      for (let lateral = -viewWidth; lateral <= viewWidth; lateral++) {
-        const gridPos = getGridPosition(playerX, playerY, direction, depth, lateral);
-
+    // Render a rectangular area around the player
+    for (let gridY = playerY - viewDistance; gridY <= playerY + viewDistance; gridY++) {
+      for (let gridX = playerX - viewWidth; gridX <= playerX + viewWidth; gridX++) {
         // Check bounds
-        if (gridPos.y < 0 || gridPos.y >= grid.length ||
-            gridPos.x < 0 || gridPos.x >= grid[gridPos.y].length) {
+        if (gridY < 0 || gridY >= grid.length ||
+            gridX < 0 || gridX >= grid[gridY].length) {
           // Out of bounds - treat as wall
-          cells.push({ x: lateral, z: depth, tileType: '#' });
+          cells.push({
+            worldX: gridX,
+            worldZ: -gridY, // Convert grid Y to world Z (negative)
+            tileType: '#'
+          });
           continue;
         }
 
-        const tileType = grid[gridPos.y][gridPos.x];
-        cells.push({ x: lateral, z: depth, tileType });
+        const tileType = grid[gridY][gridX];
+        cells.push({
+          worldX: gridX,
+          worldZ: -gridY, // Convert grid Y to world Z (negative)
+          tileType
+        });
       }
     }
 
     return cells;
-  }, [playerX, playerY, direction, grid]);
+  }, [playerX, playerY, grid]);
 
   // Don't render until textures are loaded (or failed to load)
   if (!texturesLoaded) {
@@ -106,18 +142,26 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   return (
     <div className="first-person-view">
       <Canvas gl={{ antialias: false }}>
-        {/* Camera offset from tile center based on facing direction */}
-        <PerspectiveCamera makeDefault position={cameraPosition} fov={75} />
+        {/* Camera positioned at player's world location and rotated to face direction */}
+        <PerspectiveCamera
+          makeDefault
+          position={cameraTransform.position}
+          rotation={cameraTransform.rotation}
+          fov={75}
+        />
 
         {/* Ambient light - base lighting for entire scene */}
         <ambientLight intensity={0.3} />
 
         {/* Directional light from above - simulates sunlight/general lighting */}
-        <directionalLight position={[0, 5, 2]} intensity={0.5} />
+        <directionalLight
+          position={[cameraTransform.position[0], cameraTransform.position[1] + 5, cameraTransform.position[2]]}
+          intensity={0.5}
+        />
 
         {/* Player's light source - adjustable torch/flashlight effect */}
         <pointLight
-          position={cameraPosition}
+          position={cameraTransform.position}
           intensity={lightIntensity}
           distance={lightDistance}
           decay={2}
@@ -127,8 +171,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
         {/* Additional spot light for focused forward illumination */}
         {lightIntensity > 0 && (
           <spotLight
-            position={cameraPosition}
-            target-position={[0, 0, -5]}
+            position={cameraTransform.position}
+            rotation={cameraTransform.rotation}
             angle={Math.PI / 4}
             penumbra={0.5}
             intensity={lightIntensity * 0.8}
@@ -146,9 +190,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
           return (
             <Cell
-              key={`${cell.x}-${cell.z}-${index}`}
-              x={cell.x}
-              z={cell.z}
+              key={`${cell.worldX}-${cell.worldZ}-${index}`}
+              worldX={cell.worldX}
+              worldZ={cell.worldZ}
               tileType={cell.tileType}
               textures={textures}
             />
@@ -168,37 +212,3 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   );
 };
 
-/**
- * Get grid position based on relative distance and lateral offset
- */
-function getGridPosition(
-  playerX: number,
-  playerY: number,
-  direction: CardinalDirection,
-  depth: number,
-  lateral: number
-): { x: number; y: number } {
-  let gridX = playerX;
-  let gridY = playerY;
-
-  switch (direction) {
-    case 'North':
-      gridY -= depth;
-      gridX += lateral;
-      break;
-    case 'South':
-      gridY += depth;
-      gridX -= lateral;
-      break;
-    case 'East':
-      gridX += depth;
-      gridY += lateral;
-      break;
-    case 'West':
-      gridX -= depth;
-      gridY -= lateral;
-      break;
-  }
-
-  return { x: gridX, y: gridY };
-}

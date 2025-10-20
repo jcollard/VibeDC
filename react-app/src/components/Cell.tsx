@@ -2,8 +2,8 @@ import React from 'react';
 import * as THREE from 'three';
 
 interface CellProps {
-  x: number; // Left/right position
-  z: number; // Depth (distance from player)
+  worldX: number; // Absolute world X position
+  worldZ: number; // Absolute world Z position
   tileType: string;
   textures?: {
     floor?: THREE.Texture;
@@ -19,17 +19,16 @@ interface CellProps {
  * A single cell in the 3D grid
  * Renders 6 planes: floor, ceiling, and 4 walls
  */
-export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
+export const Cell: React.FC<CellProps> = ({ worldX, worldZ, tileType, textures }) => {
   const cellSize = 1;
   const halfSize = cellSize / 2;
 
-  // Position in 3D space
-  const posX = x * cellSize;
-  const posZ = -z * cellSize; // Negative Z is forward in Three.js
+  // Use absolute world positions directly
+  const posX = worldX * cellSize;
+  const posZ = worldZ * cellSize;
 
   // Small offset to prevent z-fighting between adjacent floor/ceiling tiles
-  // Add base offset plus depth-based offset to ensure player's tile (z=0) also has separation
-  const depthOffset = (z + x * 0.1) * 0.0001; // Offset based on depth and lateral position
+  const depthOffset = (worldX + worldZ * 0.1) * 0.0001; // Offset based on world position
 
   // Fallback colors based on tile type (used if no textures provided)
   const isWall = tileType === '#';
@@ -50,7 +49,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
             side={THREE.FrontSide}
             polygonOffset={true}
             polygonOffsetFactor={-1}
-            polygonOffsetUnits={-(z * 10 + x + 1)}
+            polygonOffsetUnits={-(worldZ * 10 + worldX + 1)}
           />
         </mesh>
 
@@ -63,7 +62,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
             side={THREE.FrontSide}
             polygonOffset={true}
             polygonOffsetFactor={-1}
-            polygonOffsetUnits={-(z * 10 + x + 1)}
+            polygonOffsetUnits={-(worldZ * 10 + worldX + 1)}
           />
         </mesh>
       </group>
@@ -82,7 +81,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
           side={THREE.FrontSide}
           polygonOffset={true}
           polygonOffsetFactor={-1}
-          polygonOffsetUnits={-(z * 10 + x + 1)}
+          polygonOffsetUnits={-(worldZ * 10 + worldX + 1)}
         />
       </mesh>
 
@@ -95,7 +94,7 @@ export const Cell: React.FC<CellProps> = ({ x, z, tileType, textures }) => {
           side={THREE.FrontSide}
           polygonOffset={true}
           polygonOffsetFactor={-1}
-          polygonOffsetUnits={-(z * 10 + x + 1)}
+          polygonOffsetUnits={-(worldZ * 10 + worldX + 1)}
         />
       </mesh>
 
