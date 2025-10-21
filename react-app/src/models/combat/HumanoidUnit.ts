@@ -6,6 +6,7 @@ import { UnitClass } from './UnitClass';
  * Implementation of CombatUnit for humanoid characters
  */
 export class HumanoidUnit implements CombatUnit {
+  private _name: string;
   private _unitClass: UnitClass;
   private baseHealth: number;
   private baseMana: number;
@@ -15,6 +16,8 @@ export class HumanoidUnit implements CombatUnit {
   private baseMovement: number;
   private basePhysicalEvade: number;
   private baseMagicEvade: number;
+  private baseCourage: number;
+  private baseAttunement: number;
 
   private _wounds: number = 0;
   private _manaUsed: number = 0;
@@ -28,6 +31,7 @@ export class HumanoidUnit implements CombatUnit {
   private _accessory: Equipment | null = null;
 
   constructor(
+    name: string,
     unitClass: UnitClass,
     baseHealth: number,
     baseMana: number,
@@ -36,8 +40,11 @@ export class HumanoidUnit implements CombatUnit {
     baseSpeed: number,
     baseMovement: number,
     basePhysicalEvade: number,
-    baseMagicEvade: number
+    baseMagicEvade: number,
+    baseCourage: number,
+    baseAttunement: number
   ) {
+    this._name = name;
     this._unitClass = unitClass;
     this.baseHealth = baseHealth;
     this.baseMana = baseMana;
@@ -47,6 +54,12 @@ export class HumanoidUnit implements CombatUnit {
     this.baseMovement = baseMovement;
     this.basePhysicalEvade = basePhysicalEvade;
     this.baseMagicEvade = baseMagicEvade;
+    this.baseCourage = baseCourage;
+    this.baseAttunement = baseAttunement;
+  }
+
+  get name(): string {
+    return this._name;
   }
 
   get unitClass(): UnitClass {
@@ -103,6 +116,14 @@ export class HumanoidUnit implements CombatUnit {
 
   get magicEvade(): number {
     return this.baseMagicEvade;
+  }
+
+  get courage(): number {
+    return this.baseCourage;
+  }
+
+  get attunement(): number {
+    return this.baseAttunement;
   }
 
   // Equipment slot getters

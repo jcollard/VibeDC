@@ -6,6 +6,11 @@ import type { UnitClass } from './UnitClass';
  */
 export interface CombatUnit {
   /**
+   * The unit's name
+   */
+  get name(): string;
+
+  /**
    * The unit's character class
    */
   get unitClass(): UnitClass;
@@ -78,4 +83,14 @@ export interface CombatUnit {
    * Stat used to determine if a magical attack against this unit is successful
    */
   get magicEvade(): number;
+
+  /**
+   * Stat used to determine success of courage-based abilities
+   */
+  get courage(): number;
+
+  /**
+   * Stat used to determine success of attunement-based abilities
+   */
+  get attunement(): number;
 }

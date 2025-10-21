@@ -64,6 +64,26 @@ export class CombatEffect {
   public magicEvadeModifier: number;
 
   /**
+   * Modifier applied to courage stat
+   */
+  public courageModifier: number;
+
+  /**
+   * Modifier applied to attunement stat
+   */
+  public attunementModifier: number;
+
+  /**
+   * Modifier applied to wounds stat
+   */
+  public woundsModifier: number;
+
+  /**
+   * Modifier applied to manaUsed stat
+   */
+  public manaUsedModifier: number;
+
+  /**
    * Multiplier applied to health stat (1.0 = no change)
    */
   public healthMultiplier: number;
@@ -118,6 +138,16 @@ export class CombatEffect {
    */
   public magicEvadeMultiplier: number;
 
+  /**
+   * Multiplier applied to courage stat (1.0 = no change)
+   */
+  public courageMultiplier: number;
+
+  /**
+   * Multiplier applied to attunement stat (1.0 = no change)
+   */
+  public attunementMultiplier: number;
+
   constructor(
     name: string,
     turnsRemaining: number,
@@ -134,6 +164,8 @@ export class CombatEffect {
       movement?: number;
       physicalEvade?: number;
       magicEvade?: number;
+      courage?: number;
+      attunement?: number;
     } = {},
     multipliers: {
       health?: number;
@@ -147,6 +179,8 @@ export class CombatEffect {
       movement?: number;
       physicalEvade?: number;
       magicEvade?: number;
+      courage?: number;
+      attunement?: number;
     } = {}
   ) {
     this.name = name;
@@ -155,7 +189,9 @@ export class CombatEffect {
 
     // Initialize all modifiers (default to 0 if not provided)
     this.healthModifier = modifiers.health ?? 0;
+    this.woundsModifier = modifiers.wounds ?? 0;
     this.manaModifier = modifiers.mana ?? 0;
+    this.manaUsedModifier = modifiers.manaUsed ?? 0;
     this.physicalPowerModifier = modifiers.physicalPower ?? 0;
     this.magicPowerModifier = modifiers.magicPower ?? 0;
     this.speedModifier = modifiers.speed ?? 0;
@@ -163,6 +199,8 @@ export class CombatEffect {
     this.movementModifier = modifiers.movement ?? 0;
     this.physicalEvadeModifier = modifiers.physicalEvade ?? 0;
     this.magicEvadeModifier = modifiers.magicEvade ?? 0;
+    this.courageModifier = modifiers.courage ?? 0;
+    this.attunementModifier = modifiers.attunement ?? 0;
 
     // Initialize all multipliers (default to 1.0 if not provided)
     this.healthMultiplier = multipliers.health ?? 1.0;
@@ -176,6 +214,8 @@ export class CombatEffect {
     this.movementMultiplier = multipliers.movement ?? 1.0;
     this.physicalEvadeMultiplier = multipliers.physicalEvade ?? 1.0;
     this.magicEvadeMultiplier = multipliers.magicEvade ?? 1.0;
+    this.courageMultiplier = multipliers.courage ?? 1.0;
+    this.attunementMultiplier = multipliers.attunement ?? 1.0;
   }
 
   /**
@@ -223,7 +263,9 @@ export class CombatEffect {
       [...this.tags],
       {
         health: this.healthModifier,
+        wounds: this.woundsModifier,
         mana: this.manaModifier,
+        manaUsed: this.manaUsedModifier,
         physicalPower: this.physicalPowerModifier,
         magicPower: this.magicPowerModifier,
         speed: this.speedModifier,
@@ -231,6 +273,8 @@ export class CombatEffect {
         movement: this.movementModifier,
         physicalEvade: this.physicalEvadeModifier,
         magicEvade: this.magicEvadeModifier,
+        courage: this.courageModifier,
+        attunement: this.attunementModifier,
       },
       {
         health: this.healthMultiplier,
@@ -244,6 +288,8 @@ export class CombatEffect {
         movement: this.movementMultiplier,
         physicalEvade: this.physicalEvadeMultiplier,
         magicEvade: this.magicEvadeMultiplier,
+        courage: this.courageMultiplier,
+        attunement: this.attunementMultiplier,
       }
     );
   }
@@ -274,6 +320,10 @@ export class CombatEffect {
     if (this.physicalEvadeMultiplier !== 1.0) mods.push(`Phys.Evade x${this.physicalEvadeMultiplier}`);
     if (this.magicEvadeModifier !== 0) mods.push(`Magic.Evade ${this.magicEvadeModifier > 0 ? '+' : ''}${this.magicEvadeModifier}`);
     if (this.magicEvadeMultiplier !== 1.0) mods.push(`Magic.Evade x${this.magicEvadeMultiplier}`);
+    if (this.courageModifier !== 0) mods.push(`Courage ${this.courageModifier > 0 ? '+' : ''}${this.courageModifier}`);
+    if (this.courageMultiplier !== 1.0) mods.push(`Courage x${this.courageMultiplier}`);
+    if (this.attunementModifier !== 0) mods.push(`Attunement ${this.attunementModifier > 0 ? '+' : ''}${this.attunementModifier}`);
+    if (this.attunementMultiplier !== 1.0) mods.push(`Attunement x${this.attunementMultiplier}`);
 
     return mods.length > 0 ? mods.join(', ') : 'No modifiers';
   }

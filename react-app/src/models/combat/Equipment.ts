@@ -25,6 +25,8 @@ export class Equipment {
   public movementModifier: number = 0;
   public physicalEvadeModifier: number = 0;
   public magicEvadeModifier: number = 0;
+  public courageModifier: number = 0;
+  public attunementModifier: number = 0;
 
   // Multipliers (1.0 = no change, 1.5 = 150%, etc.)
   public healthMultiplier: number = 1.0;
@@ -35,6 +37,8 @@ export class Equipment {
   public movementMultiplier: number = 1.0;
   public physicalEvadeMultiplier: number = 1.0;
   public magicEvadeMultiplier: number = 1.0;
+  public courageMultiplier: number = 1.0;
+  public attunementMultiplier: number = 1.0;
 
   constructor(
     name: string,
@@ -48,6 +52,8 @@ export class Equipment {
       movement: number;
       physicalEvade: number;
       magicEvade: number;
+      courage: number;
+      attunement: number;
     }>,
     multipliers?: Partial<{
       health: number;
@@ -58,6 +64,8 @@ export class Equipment {
       movement: number;
       physicalEvade: number;
       magicEvade: number;
+      courage: number;
+      attunement: number;
     }>
   ) {
     this.name = name;
@@ -71,6 +79,8 @@ export class Equipment {
       this.movementModifier = modifiers.movement ?? 0;
       this.physicalEvadeModifier = modifiers.physicalEvade ?? 0;
       this.magicEvadeModifier = modifiers.magicEvade ?? 0;
+      this.courageModifier = modifiers.courage ?? 0;
+      this.attunementModifier = modifiers.attunement ?? 0;
     }
 
     if (multipliers) {
@@ -82,6 +92,8 @@ export class Equipment {
       this.movementMultiplier = multipliers.movement ?? 1.0;
       this.physicalEvadeMultiplier = multipliers.physicalEvade ?? 1.0;
       this.magicEvadeMultiplier = multipliers.magicEvade ?? 1.0;
+      this.courageMultiplier = multipliers.courage ?? 1.0;
+      this.attunementMultiplier = multipliers.attunement ?? 1.0;
     }
   }
 }
