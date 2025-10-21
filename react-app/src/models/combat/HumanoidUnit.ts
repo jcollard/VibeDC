@@ -1,7 +1,40 @@
 import type { CombatUnit } from './CombatUnit';
 import { Equipment } from './Equipment';
 import { UnitClass } from './UnitClass';
-import type { CombatAbility } from './CombatAbility';
+import { CombatAbility } from './CombatAbility';
+
+/**
+ * JSON representation of a HumanoidUnit for serialization
+ */
+export interface HumanoidUnitJSON {
+  name: string;
+  unitClassId: string;
+  secondaryClassId: string | null;
+  learnedAbilityIds: string[];
+  totalExperience: number;
+  classExperience: Record<string, number>;
+  reactionAbilityId: string | null;
+  passiveAbilityId: string | null;
+  movementAbilityId: string | null;
+  baseHealth: number;
+  baseMana: number;
+  basePhysicalPower: number;
+  baseMagicPower: number;
+  baseSpeed: number;
+  baseMovement: number;
+  basePhysicalEvade: number;
+  baseMagicEvade: number;
+  baseCourage: number;
+  baseAttunement: number;
+  wounds: number;
+  manaUsed: number;
+  turnGauge: number;
+  leftHandId: string | null;
+  rightHandId: string | null;
+  headId: string | null;
+  bodyId: string | null;
+  accessoryId: string | null;
+}
 
 /**
  * Implementation of CombatUnit for humanoid characters
@@ -424,5 +457,177 @@ export class HumanoidUnit implements CombatUnit {
 
     this._movementAbility = ability;
     return true;
+  }
+
+  // Serialization methods
+  /**
+   * Convert this HumanoidUnit to a JSON-serializable object
+   * @returns JSON representation of this unit
+   */
+  toJSON(): HumanoidUnitJSON {
+    return {
+      name: this._name,
+      unitClassId: this._unitClass.id,
+      secondaryClassId: this._secondaryClass?.id ?? null,
+      learnedAbilityIds: Array.from(this._learnedAbilities).map(a => a.id),
+      totalExperience: this._totalExperience,
+      classExperience: Object.fromEntries(this._classExperience),
+      reactionAbilityId: this._reactionAbility?.id ?? null,
+      passiveAbilityId: this._passiveAbility?.id ?? null,
+      movementAbilityId: this._movementAbility?.id ?? null,
+      baseHealth: this.baseHealth,
+      baseMana: this.baseMana,
+      basePhysicalPower: this.basePhysicalPower,
+      baseMagicPower: this.baseMagicPower,
+      baseSpeed: this.baseSpeed,
+      baseMovement: this.baseMovement,
+      basePhysicalEvade: this.basePhysicalEvade,
+      baseMagicEvade: this.baseMagicEvade,
+      baseCourage: this.baseCourage,
+      baseAttunement: this.baseAttunement,
+      wounds: this._wounds,
+      manaUsed: this._manaUsed,
+      turnGauge: this._turnGauge,
+      leftHandId: this._leftHand?.id ?? null,
+      rightHandId: this._rightHand?.id ?? null,
+      headId: this._head?.id ?? null,
+      bodyId: this._body?.id ?? null,
+      accessoryId: this._accessory?.id ?? null,
+    };
+  }
+
+  /**
+   * Create a HumanoidUnit from a JSON object
+   * @param json The JSON representation
+   * @returns A new HumanoidUnit instance, or null if deserialization fails
+   */
+  static fromJSON(json: HumanoidUnitJSON): HumanoidUnit | null {
+    // Look up the unit class
+    const unitClass = UnitClass.getById(json.unitClassId);
+    if (!unitClass) {
+      console.error(`Failed to deserialize HumanoidUnit: UnitClass with id ${json.unitClassId} not found`);
+      return null;
+    }
+
+    // Create the unit
+    const unit = new HumanoidUnit(
+      json.name,
+      unitClass,
+      json.baseHealth,
+      json.baseMana,
+      json.basePhysicalPower,
+      json.baseMagicPower,
+      json.baseSpeed,
+      json.baseMovement,
+      json.basePhysicalEvade,
+      json.baseMagicEvade,
+      json.baseCourage,
+      json.baseAttunement
+    );
+
+    // Restore secondary class
+    if (json.secondaryClassId) {
+      const secondaryClass = UnitClass.getById(json.secondaryClassId);
+      if (secondaryClass) {
+        unit._secondaryClass = secondaryClass;
+      } else {
+        console.warn(`Secondary class with id ${json.secondaryClassId} not found`);
+      }
+    }
+
+    // Restore learned abilities
+    for (const abilityId of json.learnedAbilityIds) {
+      const ability = CombatAbility.getById(abilityId);
+      if (ability) {
+        unit._learnedAbilities.add(ability);
+      } else {
+        console.warn(`Ability with id ${abilityId} not found`);
+      }
+    }
+
+    // Restore experience
+    unit._totalExperience = json.totalExperience;
+    unit._classExperience = new Map(Object.entries(json.classExperience));
+
+    // Restore assigned abilities
+    if (json.reactionAbilityId) {
+      const ability = CombatAbility.getById(json.reactionAbilityId);
+      if (ability) {
+        unit._reactionAbility = ability;
+      } else {
+        console.warn(`Reaction ability with id ${json.reactionAbilityId} not found`);
+      }
+    }
+
+    if (json.passiveAbilityId) {
+      const ability = CombatAbility.getById(json.passiveAbilityId);
+      if (ability) {
+        unit._passiveAbility = ability;
+      } else {
+        console.warn(`Passive ability with id ${json.passiveAbilityId} not found`);
+      }
+    }
+
+    if (json.movementAbilityId) {
+      const ability = CombatAbility.getById(json.movementAbilityId);
+      if (ability) {
+        unit._movementAbility = ability;
+      } else {
+        console.warn(`Movement ability with id ${json.movementAbilityId} not found`);
+      }
+    }
+
+    // Restore combat state
+    unit._wounds = json.wounds;
+    unit._manaUsed = json.manaUsed;
+    unit._turnGauge = json.turnGauge;
+
+    // Restore equipment
+    if (json.leftHandId) {
+      const equipment = Equipment.getById(json.leftHandId);
+      if (equipment) {
+        unit._leftHand = equipment;
+      } else {
+        console.warn(`Left hand equipment with id ${json.leftHandId} not found`);
+      }
+    }
+
+    if (json.rightHandId) {
+      const equipment = Equipment.getById(json.rightHandId);
+      if (equipment) {
+        unit._rightHand = equipment;
+      } else {
+        console.warn(`Right hand equipment with id ${json.rightHandId} not found`);
+      }
+    }
+
+    if (json.headId) {
+      const equipment = Equipment.getById(json.headId);
+      if (equipment) {
+        unit._head = equipment;
+      } else {
+        console.warn(`Head equipment with id ${json.headId} not found`);
+      }
+    }
+
+    if (json.bodyId) {
+      const equipment = Equipment.getById(json.bodyId);
+      if (equipment) {
+        unit._body = equipment;
+      } else {
+        console.warn(`Body equipment with id ${json.bodyId} not found`);
+      }
+    }
+
+    if (json.accessoryId) {
+      const equipment = Equipment.getById(json.accessoryId);
+      if (equipment) {
+        unit._accessory = equipment;
+      } else {
+        console.warn(`Accessory equipment with id ${json.accessoryId} not found`);
+      }
+    }
+
+    return unit;
   }
 }
