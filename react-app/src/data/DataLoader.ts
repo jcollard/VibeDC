@@ -31,6 +31,7 @@ interface EquipmentData {
   type: EquipmentType;
   modifiers?: Record<string, number>;
   multipliers?: Record<string, number>;
+  allowedClasses?: string[];
 }
 
 /**
@@ -75,11 +76,15 @@ export function loadEquipment(): void {
   const data = yaml.load(equipmentYaml) as { equipment: EquipmentData[] };
 
   for (const equipData of data.equipment) {
+    // Convert allowedClasses array to Set
+    const allowedClasses = new Set<string>(equipData.allowedClasses || []);
+
     new Equipment(
       equipData.name,
       equipData.type,
       equipData.modifiers,
       equipData.multipliers,
+      allowedClasses,
       equipData.id
     );
   }

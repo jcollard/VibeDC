@@ -88,6 +88,7 @@ describe('HumanoidUnit Serialization', () => {
       'OneHandedWeapon',
       { physicalPower: 10, speed: 2 },
       { physicalPower: 1.1 },
+      new Set(), // No class restrictions
       'iron-sword-test-001'
     );
 
@@ -96,6 +97,7 @@ describe('HumanoidUnit Serialization', () => {
       'Body',
       { health: 15, physicalEvade: 5 },
       {},
+      new Set(), // No class restrictions
       'leather-armor-test-001'
     );
 
