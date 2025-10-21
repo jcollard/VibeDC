@@ -1,6 +1,7 @@
 import type { CombatUnit } from './CombatUnit';
 import { Equipment } from './Equipment';
 import { UnitClass } from './UnitClass';
+import type { CombatAbility } from './CombatAbility';
 
 /**
  * Implementation of CombatUnit for humanoid characters
@@ -8,6 +9,7 @@ import { UnitClass } from './UnitClass';
 export class HumanoidUnit implements CombatUnit {
   private _name: string;
   private _unitClass: UnitClass;
+  private _learnedAbilities: Set<CombatAbility> = new Set();
   private baseHealth: number;
   private baseMana: number;
   private basePhysicalPower: number;
@@ -64,6 +66,10 @@ export class HumanoidUnit implements CombatUnit {
 
   get unitClass(): UnitClass {
     return this._unitClass;
+  }
+
+  get learnedAbilities(): ReadonlySet<CombatAbility> {
+    return this._learnedAbilities;
   }
 
   get health(): number {
@@ -196,5 +202,35 @@ export class HumanoidUnit implements CombatUnit {
     const item = this._accessory;
     this._accessory = null;
     return item;
+  }
+
+  // Ability management methods
+  /**
+   * Learn a new ability
+   * @param ability The ability to learn
+   * @returns true if the ability was learned, false if it was already known
+   */
+  learnAbility(ability: CombatAbility): boolean {
+    if (this._learnedAbilities.has(ability)) {
+      return false;
+    }
+    this._learnedAbilities.add(ability);
+    return true;
+  }
+
+  /**
+   * Check if this unit has learned a specific ability
+   */
+  hasAbility(ability: CombatAbility): boolean {
+    return this._learnedAbilities.has(ability);
+  }
+
+  /**
+   * Forget an ability
+   * @param ability The ability to forget
+   * @returns true if the ability was forgotten, false if it wasn't known
+   */
+  forgetAbility(ability: CombatAbility): boolean {
+    return this._learnedAbilities.delete(ability);
   }
 }

@@ -1,4 +1,5 @@
 import type { UnitClass } from './UnitClass';
+import type { CombatAbility } from './CombatAbility';
 
 /**
  * Interface for combat units
@@ -14,6 +15,11 @@ export interface CombatUnit {
    * The unit's character class
    */
   get unitClass(): UnitClass;
+
+  /**
+   * Set of abilities this unit has learned
+   */
+  get learnedAbilities(): ReadonlySet<CombatAbility>;
 
   /**
    * Amount of wounds the unit can take before fainting
