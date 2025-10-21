@@ -141,8 +141,9 @@ describe('HumanoidUnit Serialization', () => {
     });
 
     it('should serialize learned abilities correctly', () => {
-      testUnit.learnAbility(slashAbility);
-      testUnit.learnAbility(counterAbility);
+      testUnit.addExperience(50, warriorClass); // Need experience to learn abilities
+      testUnit.learnAbility(slashAbility, warriorClass);
+      testUnit.learnAbility(counterAbility, warriorClass);
 
       const json = testUnit.toJSON();
 
@@ -162,9 +163,11 @@ describe('HumanoidUnit Serialization', () => {
     });
 
     it('should serialize assigned abilities correctly', () => {
-      testUnit.learnAbility(counterAbility);
-      testUnit.learnAbility(dashAbility);
-      testUnit.learnAbility(toughAbility);
+      testUnit.addExperience(100, warriorClass);
+      testUnit.addExperience(100, mageClass);
+      testUnit.learnAbility(counterAbility, warriorClass);
+      testUnit.learnAbility(dashAbility, mageClass);
+      testUnit.learnAbility(toughAbility, mageClass);
       testUnit.assignReactionAbility(counterAbility);
       testUnit.assignMovementAbility(dashAbility);
       testUnit.assignPassiveAbility(toughAbility);
@@ -230,8 +233,9 @@ describe('HumanoidUnit Serialization', () => {
     });
 
     it('should deserialize learned abilities correctly', () => {
-      testUnit.learnAbility(slashAbility);
-      testUnit.learnAbility(counterAbility);
+      testUnit.addExperience(50, warriorClass);
+      testUnit.learnAbility(slashAbility, warriorClass);
+      testUnit.learnAbility(counterAbility, warriorClass);
 
       const json = testUnit.toJSON();
       const restored = HumanoidUnit.fromJSON(json);
@@ -255,9 +259,11 @@ describe('HumanoidUnit Serialization', () => {
     });
 
     it('should deserialize assigned abilities correctly', () => {
-      testUnit.learnAbility(counterAbility);
-      testUnit.learnAbility(dashAbility);
-      testUnit.learnAbility(toughAbility);
+      testUnit.addExperience(100, warriorClass);
+      testUnit.addExperience(100, mageClass);
+      testUnit.learnAbility(counterAbility, warriorClass);
+      testUnit.learnAbility(dashAbility, mageClass);
+      testUnit.learnAbility(toughAbility, mageClass);
       testUnit.assignReactionAbility(counterAbility);
       testUnit.assignMovementAbility(dashAbility);
       testUnit.assignPassiveAbility(toughAbility);
@@ -307,7 +313,8 @@ describe('HumanoidUnit Serialization', () => {
     });
 
     it('should handle missing references gracefully', () => {
-      testUnit.learnAbility(slashAbility);
+      testUnit.addExperience(20, warriorClass);
+      testUnit.learnAbility(slashAbility, warriorClass);
       testUnit.setSecondaryClass(mageClass);
       testUnit.equipLeftHand(ironSword);
 
@@ -332,13 +339,13 @@ describe('HumanoidUnit Serialization', () => {
   describe('Round-trip serialization', () => {
     it('should perfectly restore a fully-configured unit', () => {
       // Set up a complex unit
-      testUnit.learnAbility(slashAbility);
-      testUnit.learnAbility(counterAbility);
-      testUnit.learnAbility(dashAbility);
-      testUnit.learnAbility(toughAbility);
       testUnit.addExperience(200);
       testUnit.addExperience(75, warriorClass);
       testUnit.addExperience(50, mageClass);
+      testUnit.learnAbility(slashAbility, warriorClass);
+      testUnit.learnAbility(counterAbility, warriorClass);
+      testUnit.learnAbility(dashAbility, mageClass);
+      testUnit.learnAbility(toughAbility, mageClass);
       testUnit.setSecondaryClass(mageClass);
       testUnit.assignReactionAbility(counterAbility);
       testUnit.assignMovementAbility(dashAbility);
@@ -379,8 +386,8 @@ describe('HumanoidUnit Serialization', () => {
     });
 
     it('should work with JSON.stringify and JSON.parse', () => {
-      testUnit.learnAbility(slashAbility);
       testUnit.addExperience(100, warriorClass);
+      testUnit.learnAbility(slashAbility, warriorClass);
       testUnit.equipLeftHand(ironSword);
 
       // Serialize to JSON string
@@ -395,6 +402,101 @@ describe('HumanoidUnit Serialization', () => {
       expect(restored!.totalExperience).toBe(testUnit.totalExperience);
       expect(restored!.hasAbility(slashAbility)).toBe(true);
       expect(restored!.leftHand?.id).toBe(ironSword.id);
+    });
+  });
+
+  describe('Class Experience Spent Tracking', () => {
+    it('should track experience spent on abilities by class', () => {
+      testUnit.addExperience(100, warriorClass);
+      testUnit.learnAbility(slashAbility, warriorClass); // costs 10
+      testUnit.learnAbility(counterAbility, warriorClass); // costs 20
+
+      expect(testUnit.getClassExperienceSpent(warriorClass)).toBe(30);
+      expect(testUnit.getUnspentClassExperience(warriorClass)).toBe(70);
+    });
+
+    it('should prevent learning abilities without enough class experience', () => {
+      testUnit.addExperience(15, warriorClass);
+
+      const learned = testUnit.learnAbility(counterAbility, warriorClass); // costs 20
+
+      expect(learned).toBe(false);
+      expect(testUnit.hasAbility(counterAbility)).toBe(false);
+    });
+
+    it('should allow learning with sufficient class experience', () => {
+      testUnit.addExperience(25, warriorClass);
+
+      const learned = testUnit.learnAbility(counterAbility, warriorClass); // costs 20
+
+      expect(learned).toBe(true);
+      expect(testUnit.hasAbility(counterAbility)).toBe(true);
+      expect(testUnit.getClassExperienceSpent(warriorClass)).toBe(20);
+    });
+
+    it('should refund experience when forgetting abilities', () => {
+      testUnit.addExperience(50, warriorClass);
+      testUnit.learnAbility(slashAbility, warriorClass); // costs 10
+      testUnit.learnAbility(counterAbility, warriorClass); // costs 20
+
+      expect(testUnit.getClassExperienceSpent(warriorClass)).toBe(30);
+
+      testUnit.forgetAbility(slashAbility, warriorClass);
+
+      expect(testUnit.getClassExperienceSpent(warriorClass)).toBe(20);
+      expect(testUnit.getUnspentClassExperience(warriorClass)).toBe(30);
+    });
+
+    it('should track spent experience separately for each class', () => {
+      testUnit.addExperience(50, warriorClass);
+      testUnit.addExperience(50, mageClass);
+      testUnit.learnAbility(slashAbility, warriorClass); // costs 10
+      testUnit.learnAbility(dashAbility, mageClass); // costs 15
+
+      expect(testUnit.getClassExperienceSpent(warriorClass)).toBe(10);
+      expect(testUnit.getClassExperienceSpent(mageClass)).toBe(15);
+      expect(testUnit.getUnspentClassExperience(warriorClass)).toBe(40);
+      expect(testUnit.getUnspentClassExperience(mageClass)).toBe(35);
+    });
+
+    it('should serialize and deserialize class experience spent', () => {
+      testUnit.addExperience(100, warriorClass);
+      testUnit.addExperience(80, mageClass);
+      testUnit.learnAbility(slashAbility, warriorClass);
+      testUnit.learnAbility(counterAbility, warriorClass);
+      testUnit.learnAbility(dashAbility, mageClass);
+
+      const json = testUnit.toJSON();
+      expect(json.classExperienceSpent['warrior-test-001']).toBe(30);
+      expect(json.classExperienceSpent['mage-test-001']).toBe(15);
+
+      const restored = HumanoidUnit.fromJSON(json);
+      expect(restored).not.toBeNull();
+      expect(restored!.getClassExperienceSpent(warriorClass)).toBe(30);
+      expect(restored!.getClassExperienceSpent(mageClass)).toBe(15);
+      expect(restored!.getUnspentClassExperience(warriorClass)).toBe(70);
+      expect(restored!.getUnspentClassExperience(mageClass)).toBe(65);
+    });
+
+    it('should calculate total unspent experience correctly', () => {
+      testUnit.addExperience(100, warriorClass);
+      testUnit.addExperience(80, mageClass);
+      testUnit.learnAbility(slashAbility, warriorClass); // costs 10
+      testUnit.learnAbility(dashAbility, mageClass); // costs 15
+
+      // Total: 180, Spent: 25
+      expect(testUnit.totalExperience).toBe(180);
+      expect(testUnit.unspentExperience).toBe(155);
+    });
+
+    it('should prevent learning abilities from wrong class', () => {
+      testUnit.addExperience(100, warriorClass);
+
+      // Try to learn a mage ability from warrior class
+      const learned = testUnit.learnAbility(dashAbility, warriorClass);
+
+      expect(learned).toBe(false);
+      expect(testUnit.hasAbility(dashAbility)).toBe(false);
     });
   });
 });

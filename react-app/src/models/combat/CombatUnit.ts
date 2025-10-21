@@ -52,6 +52,11 @@ export interface CombatUnit {
   get classExperience(): ReadonlyMap<string, number>;
 
   /**
+   * Mapping from UnitClass ID to experience spent on abilities from that class
+   */
+  get classExperienceSpent(): ReadonlyMap<string, number>;
+
+  /**
    * Amount of wounds the unit can take before fainting
    */
   get health(): number;

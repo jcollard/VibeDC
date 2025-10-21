@@ -13,6 +13,7 @@ export interface HumanoidUnitJSON {
   learnedAbilityIds: string[];
   totalExperience: number;
   classExperience: Record<string, number>;
+  classExperienceSpent: Record<string, number>;
   reactionAbilityId: string | null;
   passiveAbilityId: string | null;
   movementAbilityId: string | null;
@@ -46,6 +47,7 @@ export class HumanoidUnit implements CombatUnit {
   private _learnedAbilities: Set<CombatAbility> = new Set();
   private _totalExperience: number = 0;
   private _classExperience: Map<string, number> = new Map();
+  private _classExperienceSpent: Map<string, number> = new Map();
 
   // Assignable ability slots
   private _reactionAbility: CombatAbility | null = null;
@@ -136,6 +138,10 @@ export class HumanoidUnit implements CombatUnit {
 
   get classExperience(): ReadonlyMap<string, number> {
     return this._classExperience;
+  }
+
+  get classExperienceSpent(): ReadonlyMap<string, number> {
+    return this._classExperienceSpent;
   }
 
   get health(): number {
@@ -303,23 +309,50 @@ export class HumanoidUnit implements CombatUnit {
    */
   get unspentExperience(): number {
     let spent = 0;
-    for (const ability of this._learnedAbilities) {
-      spent += ability.experiencePrice;
+    for (const classSpent of this._classExperienceSpent.values()) {
+      spent += classSpent;
     }
     return this._totalExperience - spent;
   }
 
+  /**
+   * Get the amount of unspent experience for a specific class
+   * @param unitClass The class to check
+   * @returns The amount of unspent experience for that class
+   */
+  getUnspentClassExperience(unitClass: UnitClass): number {
+    const earned = this._classExperience.get(unitClass.id) ?? 0;
+    const spent = this._classExperienceSpent.get(unitClass.id) ?? 0;
+    return earned - spent;
+  }
+
   // Ability management methods
   /**
-   * Learn a new ability
+   * Learn a new ability from a specific class
    * @param ability The ability to learn
-   * @returns true if the ability was learned, false if it was already known
+   * @param fromClass The class this ability is being learned from
+   * @returns true if the ability was learned, false if it was already known or couldn't afford it
    */
-  learnAbility(ability: CombatAbility): boolean {
+  learnAbility(ability: CombatAbility, fromClass: UnitClass): boolean {
     if (this._learnedAbilities.has(ability)) {
       return false;
     }
+
+    // Check if the class offers this ability
+    if (!fromClass.learnableAbilities.includes(ability)) {
+      console.warn(`Ability ${ability.name} is not learnable from class ${fromClass.name}`);
+      return false;
+    }
+
+    // Check if the unit has enough class experience
+    if (this.getUnspentClassExperience(fromClass) < ability.experiencePrice) {
+      return false;
+    }
+
+    // Learn the ability and track the spent experience
     this._learnedAbilities.add(ability);
+    const currentSpent = this._classExperienceSpent.get(fromClass.id) ?? 0;
+    this._classExperienceSpent.set(fromClass.id, currentSpent + ability.experiencePrice);
     return true;
   }
 
@@ -331,19 +364,39 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   /**
-   * Forget an ability
+   * Forget an ability and refund experience to the class
    * @param ability The ability to forget
+   * @param fromClass The class this ability was learned from
    * @returns true if the ability was forgotten, false if it wasn't known
    */
-  forgetAbility(ability: CombatAbility): boolean {
-    return this._learnedAbilities.delete(ability);
+  forgetAbility(ability: CombatAbility, fromClass: UnitClass): boolean {
+    if (!this._learnedAbilities.delete(ability)) {
+      return false;
+    }
+
+    // Refund the experience to the class
+    const currentSpent = this._classExperienceSpent.get(fromClass.id) ?? 0;
+    this._classExperienceSpent.set(fromClass.id, Math.max(0, currentSpent - ability.experiencePrice));
+    return true;
   }
 
   /**
-   * Check if this unit can afford to learn an ability
+   * Check if this unit can afford to learn an ability from a specific class
+   * @param ability The ability to learn
+   * @param fromClass The class to learn it from
+   * @returns true if the unit has enough class experience
    */
-  canAffordAbility(ability: CombatAbility): boolean {
-    return this.unspentExperience >= ability.experiencePrice;
+  canAffordAbility(ability: CombatAbility, fromClass: UnitClass): boolean {
+    return this.getUnspentClassExperience(fromClass) >= ability.experiencePrice;
+  }
+
+  /**
+   * Get the class experience spent on a specific ability (for tracking purposes)
+   * @param unitClass The class to check
+   * @returns The amount of experience spent on abilities from that class
+   */
+  getClassExperienceSpent(unitClass: UnitClass): number {
+    return this._classExperienceSpent.get(unitClass.id) ?? 0;
   }
 
   // Class management methods
@@ -472,6 +525,7 @@ export class HumanoidUnit implements CombatUnit {
       learnedAbilityIds: Array.from(this._learnedAbilities).map(a => a.id),
       totalExperience: this._totalExperience,
       classExperience: Object.fromEntries(this._classExperience),
+      classExperienceSpent: Object.fromEntries(this._classExperienceSpent),
       reactionAbilityId: this._reactionAbility?.id ?? null,
       passiveAbilityId: this._passiveAbility?.id ?? null,
       movementAbilityId: this._movementAbility?.id ?? null,
@@ -548,6 +602,7 @@ export class HumanoidUnit implements CombatUnit {
     // Restore experience
     unit._totalExperience = json.totalExperience;
     unit._classExperience = new Map(Object.entries(json.classExperience));
+    unit._classExperienceSpent = new Map(Object.entries(json.classExperienceSpent ?? {}));
 
     // Restore assigned abilities
     if (json.reactionAbilityId) {
