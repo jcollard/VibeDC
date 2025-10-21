@@ -1,12 +1,15 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react';
 import { FirstPersonView } from './FirstPersonView';
+import { DebugPanel } from './DebugPanel';
+import { MapEditor } from './MapEditor';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
-import { Player, type Direction } from '../models/Player';
+import { Player } from '../models/Player';
+import { MapData } from '../models/MapData';
 import './Game.css';
 
 interface SinglePlayerState {
-  grid: string[];
+  map: MapData;
   player: Player;
 }
 
@@ -16,11 +19,67 @@ export const Game: React.FC = () => {
   const [error, setError] = useState<string>('');
 
   // Light control state
-  const [lightIntensity, setLightIntensity] = useState<number>(2.0);
-  const [lightDistance, setLightDistance] = useState<number>(4);
+  const [lightIntensity, setLightIntensity] = useState<number>(3.0);
+  const [lightDistance, setLightDistance] = useState<number>(6.0);
+  const [lightYOffset, setLightYOffset] = useState<number>(0.0);
+  const [lightDecay, setLightDecay] = useState<number>(0.5);
+  const [lightColor, setLightColor] = useState<string>('#fff7e5');
+
+  // Debug panel visibility
+  const [debugPanelVisible, setDebugPanelVisible] = useState<boolean>(false);
+
+  // Map editor visibility
+  const [mapEditorVisible, setMapEditorVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
+
+  // Expose debug panel toggle to console
+  useEffect(() => {
+    (window as any).showDebugInfo = () => {
+      setDebugPanelVisible(true);
+      console.log('Debug panel shown');
+    };
+    (window as any).hideDebugInfo = () => {
+      setDebugPanelVisible(false);
+      console.log('Debug panel hidden');
+    };
+    (window as any).toggleDebugInfo = () => {
+      setDebugPanelVisible(prev => !prev);
+      console.log('Debug panel toggled');
+    };
+
+    return () => {
+      delete (window as any).showDebugInfo;
+      delete (window as any).hideDebugInfo;
+      delete (window as any).toggleDebugInfo;
+    };
+  }, []);
+
+  // Expose map editor toggle to console (development only)
+  useEffect(() => {
+    // Only expose map editor in development mode
+    if (import.meta.env.DEV) {
+      (window as any).showMapEditor = () => {
+        setMapEditorVisible(true);
+        console.log('Map editor shown');
+      };
+      (window as any).hideMapEditor = () => {
+        setMapEditorVisible(false);
+        console.log('Map editor hidden');
+      };
+      (window as any).toggleMapEditor = () => {
+        setMapEditorVisible(prev => !prev);
+        console.log('Map editor toggled');
+      };
+
+      return () => {
+        delete (window as any).showMapEditor;
+        delete (window as any).hideMapEditor;
+        delete (window as any).toggleMapEditor;
+      };
+    }
+  }, []);
 
   // Initialize game
   useEffect(() => {
@@ -29,28 +88,33 @@ export const Game: React.FC = () => {
         // Load map
         const response = await fetch('/test.map');
         const mapText = await response.text();
-        const { grid, width, height } = parseMap(mapText);
+        const { grid } = parseMap(mapText);
+
+        // Convert to MapData
+        const map = MapData.fromStringArray(grid, 'Test Map');
 
         // Find spawn point (first '.' in the grid)
         let spawnX = 1;
         let spawnY = 1;
 
-        for (let y = 0; y < grid.length; y++) {
-          for (let x = 0; x < grid[y].length; x++) {
-            if (grid[y][x] === '.') {
+        for (let y = 0; y < map.height; y++) {
+          for (let x = 0; x < map.width; x++) {
+            const cell = map.getCell(x, y);
+            if (cell && cell.tileType === '.') {
               spawnX = x;
               spawnY = y;
               break;
             }
           }
-          if (grid[spawnY][spawnX] === '.') break;
+          const spawnCell = map.getCell(spawnX, spawnY);
+          if (spawnCell && spawnCell.tileType === '.') break;
         }
 
         // Create single player
         const player = new Player('player', spawnX, spawnY, 'North', 'Player');
 
         setGameState({
-          grid,
+          map,
           player
         });
 
@@ -66,21 +130,22 @@ export const Game: React.FC = () => {
   }, []);
 
   // Check if a tile is walkable
-  const isWalkable = useCallback((x: number, y: number, grid: string[]): boolean => {
-    // Check bounds
-    if (y < 0 || y >= grid.length || x < 0 || x >= grid[y].length) {
-      return false;
-    }
-
-    // Check tile type
-    return grid[y][x] === '.';
+  const isWalkable = useCallback((x: number, y: number, map: MapData): boolean => {
+    return map.isWalkable(x, y);
   }, []);
+
+  // Track pressed keys across renders to prevent key repeat
+  const pressedKeysRef = useRef(new Set<string>());
+  const isAnimatingRef = useRef(false);
 
   // Handle player action
   const handleAction = useCallback((action: PlayerAction) => {
-    if (!gameState) return;
+    if (!gameState) {
+      isAnimatingRef.current = false;
+      return;
+    }
 
-    const { player, grid } = gameState;
+    const { player, map } = gameState;
     let newX = player.x;
     let newY = player.y;
     let newDirection = player.direction;
@@ -120,8 +185,41 @@ export const Game: React.FC = () => {
 
     // Validate movement (only for position changes)
     if (newX !== player.x || newY !== player.y) {
-      if (!isWalkable(newX, newY, grid)) {
-        return; // Invalid move, don't update state
+      if (!isWalkable(newX, newY, map)) {
+        // Invalid move - reset animation state and check for held keys
+        isAnimatingRef.current = false;
+
+        // Check if any keys are still pressed and retry
+        setTimeout(() => {
+          for (const key of pressedKeysRef.current) {
+            const nextAction = inputConfig.getAction(key);
+            if (nextAction) {
+              isAnimatingRef.current = true;
+              handleAction(nextAction);
+              break;
+            }
+          }
+        }, 0);
+        return;
+      }
+
+      // Check if we landed on a door - if so, push through to the next cell
+      const landedCell = map.getCell(newX, newY);
+      if (landedCell && landedCell.isDoor()) {
+        // Calculate the movement delta to know which direction we moved
+        const deltaX = newX - player.x;
+        const deltaY = newY - player.y;
+
+        // Try to move one more cell in the same direction
+        const beyondX = newX + deltaX;
+        const beyondY = newY + deltaY;
+
+        // If the cell beyond the door is walkable, move there instead
+        if (isWalkable(beyondX, beyondY, map)) {
+          newX = beyondX;
+          newY = beyondY;
+        }
+        // Otherwise, stay on the door tile (player gets stuck in doorway)
       }
     }
 
@@ -135,24 +233,73 @@ export const Game: React.FC = () => {
     );
 
     setGameState({
-      grid,
+      map,
       player: updatedPlayer
     });
-  }, [gameState, isWalkable]);
+  }, [gameState, isWalkable, inputConfig]);
+
+  // Handle animation complete - check if any movement keys are still held
+  const handleAnimationComplete = useCallback(() => {
+    isAnimatingRef.current = false;
+
+    // Check if any keys are still pressed
+    for (const key of pressedKeysRef.current) {
+      const action = inputConfig.getAction(key);
+      if (action) {
+        // Key is still held, trigger the action again
+        isAnimatingRef.current = true;
+        handleAction(action);
+        break; // Only process one key at a time
+      }
+    }
+  }, [handleAction, inputConfig]);
 
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // Alt+M to toggle map editor (development only)
+      if (import.meta.env.DEV && e.altKey && e.key === 'm') {
+        e.preventDefault();
+        setMapEditorVisible(prev => !prev);
+        return;
+      }
+
+      // Alt+D to toggle debug panel
+      if (e.altKey && e.key === 'd') {
+        e.preventDefault();
+        setDebugPanelVisible(prev => !prev);
+        return;
+      }
+
+      // Ignore if this key is already pressed (prevents key repeat)
+      if (pressedKeysRef.current.has(e.key)) {
+        return;
+      }
+
       const action = inputConfig.getAction(e.key);
 
       if (action) {
         e.preventDefault();
-        handleAction(action);
+        pressedKeysRef.current.add(e.key);
+
+        // Only trigger action if not currently animating
+        if (!isAnimatingRef.current) {
+          isAnimatingRef.current = true;
+          handleAction(action);
+        }
       }
     };
 
+    const handleKeyUp = (e: KeyboardEvent) => {
+      pressedKeysRef.current.delete(e.key);
+    };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
   }, [handleAction, inputConfig]);
 
   if (loading) {
@@ -214,11 +361,45 @@ export const Game: React.FC = () => {
           playerX={gameState.player.x}
           playerY={gameState.player.y}
           direction={gameState.player.direction}
-          grid={gameState.grid}
-          cameraOffset={0.3}
+          grid={gameState.map.toStringArray()}
+          cameraOffset={-0.3}
           lightIntensity={lightIntensity}
           lightDistance={lightDistance}
+          lightYOffset={lightYOffset}
+          lightDecay={lightDecay}
+          lightColor={lightColor}
+          movementDuration={0.2}
+          rotationDuration={0.2}
+          onAnimationComplete={handleAnimationComplete}
         />
+
+        {debugPanelVisible && (
+          <DebugPanel
+            playerX={gameState.player.x}
+            playerY={gameState.player.y}
+            direction={gameState.player.direction}
+            map={gameState.map}
+            lightIntensity={lightIntensity}
+            lightDistance={lightDistance}
+            lightYOffset={lightYOffset}
+            lightDecay={lightDecay}
+            lightColor={lightColor}
+            onLightIntensityChange={setLightIntensity}
+            onLightDistanceChange={setLightDistance}
+            onLightYOffsetChange={setLightYOffset}
+            onLightDecayChange={setLightDecay}
+            onLightColorChange={setLightColor}
+            onClose={() => setDebugPanelVisible(false)}
+          />
+        )}
+
+        {/* Map editor - only available in development mode */}
+        {import.meta.env.DEV && mapEditorVisible && (
+          <MapEditor
+            map={gameState.map}
+            onClose={() => setMapEditorVisible(false)}
+          />
+        )}
       </div>
     </div>
   );

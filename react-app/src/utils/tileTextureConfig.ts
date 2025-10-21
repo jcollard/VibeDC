@@ -29,8 +29,17 @@ export const TILE_TEXTURE_MAPPINGS: Record<string, TileTextureMapping> = {
     // No walls for floor tiles
   },
 
+  // Door tile '+'
+  '+': {
+    floor: { x: 4, y: 3 },      // Floor sprite (row 3, column 4)
+    ceiling: { x: 3, y: 3 },    // Ceiling sprite (row 3, column 3)
+    wallFront: { x: 1, y: 1 },  // Door sprite (row 1, column 1)
+    wallBack: { x: 1, y: 1 },   // Door sprite (same as front)
+    wallLeft: { x: 1, y: 1 },   // Door sprite (same as front)
+    wallRight: { x: 1, y: 1 },  // Door sprite (same as front)
+  },
+
   // Add more tile types as needed:
-  // 'D': { ... }, // Door
   // 'W': { ... }, // Water
   // 'G': { ... }, // Grass
   // etc.
