@@ -16,6 +16,12 @@ export type EquipmentType =
  * Represents equipment that can modify a unit's combat stats
  */
 export class Equipment {
+  /**
+   * Registry of all created equipment, indexed by ID
+   */
+  private static registry: Map<string, Equipment> = new Map();
+
+  public readonly id: string;
   public readonly type: EquipmentType;
   public readonly name: string;
 
@@ -50,10 +56,39 @@ export class Equipment {
       magicEvade: number;
       courage: number;
       attunement: number;
-    }>
+    }>,
+    id?: string
   ) {
+    this.id = id ?? crypto.randomUUID();
     this.name = name;
     this.type = type;
     this.modifiers = new CombatUnitModifiers(modifiers, multipliers);
+
+    // Register this equipment in the registry
+    Equipment.registry.set(this.id, this);
+  }
+
+  /**
+   * Get Equipment by its ID
+   * @param id The ID of the equipment to retrieve
+   * @returns The Equipment with the given ID, or undefined if not found
+   */
+  static getById(id: string): Equipment | undefined {
+    return Equipment.registry.get(id);
+  }
+
+  /**
+   * Get all registered equipment
+   * @returns Array of all Equipment instances
+   */
+  static getAll(): Equipment[] {
+    return Array.from(Equipment.registry.values());
+  }
+
+  /**
+   * Clear the equipment registry (useful for testing)
+   */
+  static clearRegistry(): void {
+    Equipment.registry.clear();
   }
 }
