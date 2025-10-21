@@ -22,6 +22,16 @@ export interface CombatUnit {
   get learnedAbilities(): ReadonlySet<CombatAbility>;
 
   /**
+   * Total experience points this unit has accumulated
+   */
+  get totalExperience(): number;
+
+  /**
+   * Mapping from UnitClass ID to experience earned in that class
+   */
+  get classExperience(): ReadonlyMap<string, number>;
+
+  /**
    * Amount of wounds the unit can take before fainting
    */
   get health(): number;

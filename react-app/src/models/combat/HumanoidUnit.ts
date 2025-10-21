@@ -10,6 +10,8 @@ export class HumanoidUnit implements CombatUnit {
   private _name: string;
   private _unitClass: UnitClass;
   private _learnedAbilities: Set<CombatAbility> = new Set();
+  private _totalExperience: number = 0;
+  private _classExperience: Map<string, number> = new Map();
   private baseHealth: number;
   private baseMana: number;
   private basePhysicalPower: number;
@@ -70,6 +72,14 @@ export class HumanoidUnit implements CombatUnit {
 
   get learnedAbilities(): ReadonlySet<CombatAbility> {
     return this._learnedAbilities;
+  }
+
+  get totalExperience(): number {
+    return this._totalExperience;
+  }
+
+  get classExperience(): ReadonlyMap<string, number> {
+    return this._classExperience;
   }
 
   get health(): number {
@@ -204,6 +214,45 @@ export class HumanoidUnit implements CombatUnit {
     return item;
   }
 
+  // Experience management methods
+  /**
+   * Add experience points to this unit
+   * @param amount The amount of experience to add
+   * @param unitClass Optional class to attribute the experience to
+   */
+  addExperience(amount: number, unitClass?: UnitClass): void {
+    if (amount < 0) {
+      throw new Error("Cannot add negative experience");
+    }
+    this._totalExperience += amount;
+
+    // If a class is specified, add to that class's experience using the class ID
+    if (unitClass) {
+      const currentClassXp = this._classExperience.get(unitClass.id) ?? 0;
+      this._classExperience.set(unitClass.id, currentClassXp + amount);
+    }
+  }
+
+  /**
+   * Get experience earned in a specific class
+   * @param unitClass The class to check
+   * @returns The amount of experience earned in that class
+   */
+  getClassExperience(unitClass: UnitClass): number {
+    return this._classExperience.get(unitClass.id) ?? 0;
+  }
+
+  /**
+   * Get the amount of unspent experience (total - spent on abilities)
+   */
+  get unspentExperience(): number {
+    let spent = 0;
+    for (const ability of this._learnedAbilities) {
+      spent += ability.experiencePrice;
+    }
+    return this._totalExperience - spent;
+  }
+
   // Ability management methods
   /**
    * Learn a new ability
@@ -232,5 +281,12 @@ export class HumanoidUnit implements CombatUnit {
    */
   forgetAbility(ability: CombatAbility): boolean {
     return this._learnedAbilities.delete(ability);
+  }
+
+  /**
+   * Check if this unit can afford to learn an ability
+   */
+  canAffordAbility(ability: CombatAbility): boolean {
+    return this.unspentExperience >= ability.experiencePrice;
   }
 }
