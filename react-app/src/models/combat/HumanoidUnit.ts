@@ -1,10 +1,12 @@
 import type { CombatUnit } from './CombatUnit';
 import { Equipment } from './Equipment';
+import { UnitClass } from './UnitClass';
 
 /**
  * Implementation of CombatUnit for humanoid characters
  */
 export class HumanoidUnit implements CombatUnit {
+  private _unitClass: UnitClass;
   private baseHealth: number;
   private baseMana: number;
   private basePhysicalPower: number;
@@ -26,6 +28,7 @@ export class HumanoidUnit implements CombatUnit {
   private _accessory: Equipment | null = null;
 
   constructor(
+    unitClass: UnitClass,
     baseHealth: number,
     baseMana: number,
     basePhysicalPower: number,
@@ -35,6 +38,7 @@ export class HumanoidUnit implements CombatUnit {
     basePhysicalEvade: number,
     baseMagicEvade: number
   ) {
+    this._unitClass = unitClass;
     this.baseHealth = baseHealth;
     this.baseMana = baseMana;
     this.basePhysicalPower = basePhysicalPower;
@@ -43,6 +47,10 @@ export class HumanoidUnit implements CombatUnit {
     this.baseMovement = baseMovement;
     this.basePhysicalEvade = basePhysicalEvade;
     this.baseMagicEvade = baseMagicEvade;
+  }
+
+  get unitClass(): UnitClass {
+    return this._unitClass;
   }
 
   get health(): number {

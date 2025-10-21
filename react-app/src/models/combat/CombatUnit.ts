@@ -1,8 +1,15 @@
+import type { UnitClass } from './UnitClass';
+
 /**
  * Interface for combat units
  * All stats are calculated based on various factors
  */
 export interface CombatUnit {
+  /**
+   * The unit's character class
+   */
+  get unitClass(): UnitClass;
+
   /**
    * Amount of wounds the unit can take before fainting
    */
