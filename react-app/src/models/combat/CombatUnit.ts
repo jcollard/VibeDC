@@ -12,14 +12,34 @@ export interface CombatUnit {
   get name(): string;
 
   /**
-   * The unit's character class
+   * The unit's primary character class
    */
   get unitClass(): UnitClass;
+
+  /**
+   * The unit's secondary character class (grants access to action abilities from this class)
+   */
+  get secondaryClass(): UnitClass | null;
 
   /**
    * Set of abilities this unit has learned
    */
   get learnedAbilities(): ReadonlySet<CombatAbility>;
+
+  /**
+   * Assigned reaction ability (triggered in response to events)
+   */
+  get reactionAbility(): CombatAbility | null;
+
+  /**
+   * Assigned passive ability (always active)
+   */
+  get passiveAbility(): CombatAbility | null;
+
+  /**
+   * Assigned movement ability (special movement)
+   */
+  get movementAbility(): CombatAbility | null;
 
   /**
    * Total experience points this unit has accumulated

@@ -9,9 +9,16 @@ import type { CombatAbility } from './CombatAbility';
 export class HumanoidUnit implements CombatUnit {
   private _name: string;
   private _unitClass: UnitClass;
+  private _secondaryClass: UnitClass | null = null;
   private _learnedAbilities: Set<CombatAbility> = new Set();
   private _totalExperience: number = 0;
   private _classExperience: Map<string, number> = new Map();
+
+  // Assignable ability slots
+  private _reactionAbility: CombatAbility | null = null;
+  private _passiveAbility: CombatAbility | null = null;
+  private _movementAbility: CombatAbility | null = null;
+
   private baseHealth: number;
   private baseMana: number;
   private basePhysicalPower: number;
@@ -70,8 +77,24 @@ export class HumanoidUnit implements CombatUnit {
     return this._unitClass;
   }
 
+  get secondaryClass(): UnitClass | null {
+    return this._secondaryClass;
+  }
+
   get learnedAbilities(): ReadonlySet<CombatAbility> {
     return this._learnedAbilities;
+  }
+
+  get reactionAbility(): CombatAbility | null {
+    return this._reactionAbility;
+  }
+
+  get passiveAbility(): CombatAbility | null {
+    return this._passiveAbility;
+  }
+
+  get movementAbility(): CombatAbility | null {
+    return this._movementAbility;
   }
 
   get totalExperience(): number {
@@ -288,5 +311,118 @@ export class HumanoidUnit implements CombatUnit {
    */
   canAffordAbility(ability: CombatAbility): boolean {
     return this.unspentExperience >= ability.experiencePrice;
+  }
+
+  // Class management methods
+  /**
+   * Set the secondary class for this unit
+   * @param unitClass The class to set as secondary, or null to clear
+   */
+  setSecondaryClass(unitClass: UnitClass | null): void {
+    this._secondaryClass = unitClass;
+  }
+
+  /**
+   * Get action abilities available from the primary class
+   * @returns Array of learned action abilities from the primary class
+   */
+  getPrimaryActions(): CombatAbility[] {
+    const available: CombatAbility[] = [];
+
+    for (const ability of this._unitClass.learnableAbilities) {
+      if (ability.abilityType === "Action" && this.hasAbility(ability)) {
+        available.push(ability);
+      }
+    }
+
+    return available;
+  }
+
+  /**
+   * Get action abilities available from the secondary class
+   * @returns Array of learned action abilities from the secondary class (empty if no secondary class)
+   */
+  getSecondaryActions(): CombatAbility[] {
+    const available: CombatAbility[] = [];
+
+    if (this._secondaryClass) {
+      for (const ability of this._secondaryClass.learnableAbilities) {
+        if (ability.abilityType === "Action" && this.hasAbility(ability)) {
+          available.push(ability);
+        }
+      }
+    }
+
+    return available;
+  }
+
+  // Ability assignment methods
+  /**
+   * Assign a reaction ability to the reaction slot
+   * @param ability The ability to assign (must be Reaction type and learned)
+   * @returns true if assigned successfully, false otherwise
+   */
+  assignReactionAbility(ability: CombatAbility | null): boolean {
+    if (ability === null) {
+      this._reactionAbility = null;
+      return true;
+    }
+
+    if (ability.abilityType !== "Reaction") {
+      return false;
+    }
+
+    if (!this.hasAbility(ability)) {
+      return false;
+    }
+
+    this._reactionAbility = ability;
+    return true;
+  }
+
+  /**
+   * Assign a passive ability to the passive slot
+   * @param ability The ability to assign (must be Passive type and learned)
+   * @returns true if assigned successfully, false otherwise
+   */
+  assignPassiveAbility(ability: CombatAbility | null): boolean {
+    if (ability === null) {
+      this._passiveAbility = null;
+      return true;
+    }
+
+    if (ability.abilityType !== "Passive") {
+      return false;
+    }
+
+    if (!this.hasAbility(ability)) {
+      return false;
+    }
+
+    this._passiveAbility = ability;
+    return true;
+  }
+
+  /**
+   * Assign a movement ability to the movement slot
+   * @param ability The ability to assign (must be Movement type and learned)
+   * @returns true if assigned successfully, false otherwise
+   */
+  assignMovementAbility(ability: CombatAbility | null): boolean {
+    if (ability === null) {
+      this._movementAbility = null;
+      return true;
+    }
+
+    if (ability.abilityType !== "Movement") {
+      return false;
+    }
+
+    if (!this.hasAbility(ability)) {
+      return false;
+    }
+
+    this._movementAbility = ability;
+    return true;
   }
 }
