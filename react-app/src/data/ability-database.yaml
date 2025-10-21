@@ -1,0 +1,342 @@
+# Combat Abilities Database
+# Format: Each ability entry contains all properties needed to create a CombatAbility instance
+# AbilityType: Action, Reaction, Passive, Movement
+
+abilities:
+  # ACTION ABILITIES - Warrior/Physical
+  - id: "slash-001"
+    name: "Slash"
+    description: "A basic sword attack that deals physical damage to a single target"
+    abilityType: "Action"
+    experiencePrice: 50
+    tags:
+      - "attack"
+      - "physical"
+      - "single-target"
+
+  - id: "power-strike-001"
+    name: "Power Strike"
+    description: "A heavy attack that deals increased physical damage but costs more time"
+    abilityType: "Action"
+    experiencePrice: 150
+    tags:
+      - "attack"
+      - "physical"
+      - "heavy"
+
+  - id: "whirlwind-001"
+    name: "Whirlwind"
+    description: "Spin attack that hits all adjacent enemies"
+    abilityType: "Action"
+    experiencePrice: 300
+    tags:
+      - "attack"
+      - "physical"
+      - "aoe"
+
+  - id: "execute-001"
+    name: "Execute"
+    description: "Finishing move that deals massive damage to low-health targets"
+    abilityType: "Action"
+    experiencePrice: 400
+    tags:
+      - "attack"
+      - "physical"
+      - "finisher"
+
+  # ACTION ABILITIES - Mage/Magic
+  - id: "fireball-001"
+    name: "Fireball"
+    description: "Hurl a ball of fire that deals magic damage to a single target"
+    abilityType: "Action"
+    experiencePrice: 100
+    tags:
+      - "attack"
+      - "magic"
+      - "fire"
+      - "single-target"
+
+  - id: "lightning-bolt-001"
+    name: "Lightning Bolt"
+    description: "Strike an enemy with lightning for high magic damage"
+    abilityType: "Action"
+    experiencePrice: 150
+    tags:
+      - "attack"
+      - "magic"
+      - "lightning"
+
+  - id: "ice-storm-001"
+    name: "Ice Storm"
+    description: "Summon a storm of ice that damages and slows all enemies in an area"
+    abilityType: "Action"
+    experiencePrice: 350
+    tags:
+      - "attack"
+      - "magic"
+      - "ice"
+      - "aoe"
+      - "debuff"
+
+  - id: "meteor-001"
+    name: "Meteor"
+    description: "Call down a meteor that deals devastating magic damage to all enemies"
+    abilityType: "Action"
+    experiencePrice: 500
+    tags:
+      - "attack"
+      - "magic"
+      - "fire"
+      - "aoe"
+      - "ultimate"
+
+  # ACTION ABILITIES - Support/Healing
+  - id: "heal-001"
+    name: "Heal"
+    description: "Restore health to a single ally"
+    abilityType: "Action"
+    experiencePrice: 150
+    tags:
+      - "healing"
+      - "support"
+      - "single-target"
+
+  - id: "cure-all-001"
+    name: "Cure All"
+    description: "Heal all allies and remove negative status effects"
+    abilityType: "Action"
+    experiencePrice: 400
+    tags:
+      - "healing"
+      - "support"
+      - "aoe"
+      - "cleanse"
+
+  - id: "rally-001"
+    name: "Rally"
+    description: "Boost the physical power and courage of all allies"
+    abilityType: "Action"
+    experiencePrice: 250
+    tags:
+      - "buff"
+      - "support"
+      - "aoe"
+
+  - id: "arcane-shield-001"
+    name: "Arcane Shield"
+    description: "Grant a magical barrier to an ally that absorbs damage"
+    abilityType: "Action"
+    experiencePrice: 200
+    tags:
+      - "buff"
+      - "support"
+      - "defensive"
+      - "single-target"
+
+  # ACTION ABILITIES - Debuff/Control
+  - id: "weaken-001"
+    name: "Weaken"
+    description: "Reduce an enemy's physical and magic power"
+    abilityType: "Action"
+    experiencePrice: 120
+    tags:
+      - "debuff"
+      - "single-target"
+
+  - id: "fear-001"
+    name: "Fear"
+    description: "Terrify an enemy, reducing their courage and potentially making them flee"
+    abilityType: "Action"
+    experiencePrice: 180
+    tags:
+      - "debuff"
+      - "courage"
+      - "control"
+
+  # REACTION ABILITIES
+  - id: "counter-attack-001"
+    name: "Counter Attack"
+    description: "Automatically counterattack when hit by a physical attack"
+    abilityType: "Reaction"
+    experiencePrice: 200
+    tags:
+      - "counter"
+      - "physical"
+
+  - id: "spell-reflect-001"
+    name: "Spell Reflect"
+    description: "Reflect the next magic attack back at the caster"
+    abilityType: "Reaction"
+    experiencePrice: 300
+    tags:
+      - "counter"
+      - "magic"
+      - "reflect"
+
+  - id: "dodge-roll-001"
+    name: "Dodge Roll"
+    description: "Roll away when attacked, greatly increasing evasion"
+    abilityType: "Reaction"
+    experiencePrice: 250
+    tags:
+      - "defensive"
+      - "evasion"
+
+  - id: "last-stand-001"
+    name: "Last Stand"
+    description: "When reduced to 0 health, survive with 1 HP once per battle"
+    abilityType: "Reaction"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "survival"
+      - "ultimate"
+
+  - id: "vengeful-strike-001"
+    name: "Vengeful Strike"
+    description: "When an ally is defeated, gain increased physical power for the next attack"
+    abilityType: "Reaction"
+    experiencePrice: 220
+    tags:
+      - "counter"
+      - "buff"
+      - "physical"
+
+  # PASSIVE ABILITIES
+  - id: "battle-hardened-001"
+    name: "Battle Hardened"
+    description: "Permanently increase maximum health by 20%"
+    abilityType: "Passive"
+    experiencePrice: 180
+    tags:
+      - "buff"
+      - "health"
+      - "defensive"
+
+  - id: "arcane-mastery-001"
+    name: "Arcane Mastery"
+    description: "Permanently increase magic power by 15%"
+    abilityType: "Passive"
+    experiencePrice: 200
+    tags:
+      - "buff"
+      - "magic"
+
+  - id: "swift-footed-001"
+    name: "Swift Footed"
+    description: "Permanently increase speed and movement"
+    abilityType: "Passive"
+    experiencePrice: 150
+    tags:
+      - "buff"
+      - "speed"
+      - "movement"
+
+  - id: "iron-will-001"
+    name: "Iron Will"
+    description: "Permanently increase courage and resistance to fear effects"
+    abilityType: "Passive"
+    experiencePrice: 170
+    tags:
+      - "buff"
+      - "courage"
+      - "resistance"
+
+  - id: "mana-regeneration-001"
+    name: "Mana Regeneration"
+    description: "Recover a small amount of mana at the start of each turn"
+    abilityType: "Passive"
+    experiencePrice: 220
+    tags:
+      - "mana"
+      - "regeneration"
+
+  - id: "critical-mastery-001"
+    name: "Critical Mastery"
+    description: "Increase the chance and damage of critical hits"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "buff"
+      - "critical"
+      - "physical"
+
+  - id: "elemental-attunement-001"
+    name: "Elemental Attunement"
+    description: "Permanently increase attunement and magic evade"
+    abilityType: "Passive"
+    experiencePrice: 190
+    tags:
+      - "buff"
+      - "attunement"
+      - "magic"
+
+  - id: "berserker-rage-001"
+    name: "Berserker Rage"
+    description: "Gain increased physical power when health is low"
+    abilityType: "Passive"
+    experiencePrice: 250
+    tags:
+      - "buff"
+      - "physical"
+      - "conditional"
+
+  # MOVEMENT ABILITIES
+  - id: "dash-001"
+    name: "Dash"
+    description: "Quickly move to an adjacent tile"
+    abilityType: "Movement"
+    experiencePrice: 100
+    tags:
+      - "mobility"
+      - "quick"
+
+  - id: "teleport-001"
+    name: "Teleport"
+    description: "Instantly move to any visible location within range"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "mobility"
+      - "magic"
+      - "teleport"
+
+  - id: "leap-attack-001"
+    name: "Leap Attack"
+    description: "Jump to a distant location and attack upon landing"
+    abilityType: "Movement"
+    experiencePrice: 250
+    tags:
+      - "mobility"
+      - "attack"
+      - "physical"
+
+  - id: "shadow-step-001"
+    name: "Shadow Step"
+    description: "Move through shadows to appear behind an enemy"
+    abilityType: "Movement"
+    experiencePrice: 280
+    tags:
+      - "mobility"
+      - "stealth"
+      - "magic"
+
+  - id: "grappling-hook-001"
+    name: "Grappling Hook"
+    description: "Pull yourself to a distant location or pull an enemy toward you"
+    abilityType: "Movement"
+    experiencePrice: 200
+    tags:
+      - "mobility"
+      - "utility"
+      - "pull"
+
+  - id: "wind-walk-001"
+    name: "Wind Walk"
+    description: "Become incorporeal and move through obstacles briefly"
+    abilityType: "Movement"
+    experiencePrice: 350
+    tags:
+      - "mobility"
+      - "magic"
+      - "intangible"

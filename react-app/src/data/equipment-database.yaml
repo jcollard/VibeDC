@@ -1,0 +1,217 @@
+# Equipment Database
+# Format: Each equipment entry contains all properties needed to create an Equipment instance
+
+equipment:
+  # One-Handed Weapons
+  - id: "iron-sword-001"
+    name: "Iron Sword"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 10
+      speed: 2
+    multipliers: {}
+
+  - id: "steel-dagger-001"
+    name: "Steel Dagger"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 8
+      speed: 5
+    multipliers: {}
+
+  - id: "flame-blade-001"
+    name: "Flame Blade"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 12
+      magicPower: 8
+    multipliers:
+      physicalPower: 1.1
+
+  # Two-Handed Weapons
+  - id: "great-axe-001"
+    name: "Great Axe"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 25
+      speed: -3
+    multipliers:
+      physicalPower: 1.2
+
+  - id: "magic-staff-001"
+    name: "Magic Staff"
+    type: "TwoHandedWeapon"
+    modifiers:
+      magicPower: 20
+      mana: 15
+    multipliers:
+      magicPower: 1.3
+
+  - id: "war-hammer-001"
+    name: "War Hammer"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 30
+      speed: -5
+    multipliers:
+      physicalPower: 1.15
+
+  # Shields
+  - id: "wooden-shield-001"
+    name: "Wooden Shield"
+    type: "Shield"
+    modifiers:
+      physicalEvade: 5
+      health: 10
+    multipliers: {}
+
+  - id: "tower-shield-001"
+    name: "Tower Shield"
+    type: "Shield"
+    modifiers:
+      physicalEvade: 15
+      health: 20
+      speed: -2
+    multipliers:
+      health: 1.1
+
+  - id: "magic-barrier-001"
+    name: "Magic Barrier"
+    type: "Shield"
+    modifiers:
+      magicEvade: 12
+      mana: 10
+    multipliers:
+      magicEvade: 1.2
+
+  # Held Items
+  - id: "torch-001"
+    name: "Torch"
+    type: "Held"
+    modifiers:
+      magicPower: 3
+    multipliers: {}
+
+  - id: "crystal-orb-001"
+    name: "Crystal Orb"
+    type: "Held"
+    modifiers:
+      magicPower: 10
+      attunement: 5
+    multipliers:
+      attunement: 1.15
+
+  # Helmets
+  - id: "iron-helmet-001"
+    name: "Iron Helmet"
+    type: "Head"
+    modifiers:
+      health: 15
+      physicalEvade: 3
+    multipliers: {}
+
+  - id: "wizards-hat-001"
+    name: "Wizard's Hat"
+    type: "Head"
+    modifiers:
+      mana: 20
+      magicPower: 8
+    multipliers:
+      mana: 1.1
+
+  - id: "crown-of-courage-001"
+    name: "Crown of Courage"
+    type: "Head"
+    modifiers:
+      courage: 10
+      health: 10
+    multipliers:
+      courage: 1.2
+
+  # Body Armor
+  - id: "leather-armor-001"
+    name: "Leather Armor"
+    type: "Body"
+    modifiers:
+      health: 20
+      physicalEvade: 5
+      speed: -1
+    multipliers: {}
+
+  - id: "plate-armor-001"
+    name: "Plate Armor"
+    type: "Body"
+    modifiers:
+      health: 50
+      physicalEvade: 10
+      speed: -5
+    multipliers:
+      health: 1.2
+
+  - id: "wizards-robe-001"
+    name: "Wizard's Robe"
+    type: "Body"
+    modifiers:
+      mana: 30
+      magicPower: 12
+      magicEvade: 8
+    multipliers:
+      mana: 1.15
+      magicPower: 1.1
+
+  - id: "dragon-scale-armor-001"
+    name: "Dragon Scale Armor"
+    type: "Body"
+    modifiers:
+      health: 40
+      physicalEvade: 8
+      magicEvade: 8
+    multipliers:
+      health: 1.15
+      physicalEvade: 1.1
+      magicEvade: 1.1
+
+  # Accessories
+  - id: "strength-ring-001"
+    name: "Ring of Strength"
+    type: "Accessory"
+    modifiers:
+      physicalPower: 8
+    multipliers:
+      physicalPower: 1.1
+
+  - id: "mana-amulet-001"
+    name: "Mana Amulet"
+    type: "Accessory"
+    modifiers:
+      mana: 25
+      magicPower: 5
+    multipliers:
+      mana: 1.2
+
+  - id: "swift-boots-001"
+    name: "Swift Boots"
+    type: "Accessory"
+    modifiers:
+      speed: 8
+      movement: 1
+    multipliers:
+      speed: 1.15
+
+  - id: "mystic-pendant-001"
+    name: "Mystic Pendant"
+    type: "Accessory"
+    modifiers:
+      attunement: 12
+      magicPower: 6
+    multipliers:
+      attunement: 1.25
+
+  - id: "brave-heart-charm-001"
+    name: "Brave Heart Charm"
+    type: "Accessory"
+    modifiers:
+      courage: 15
+      health: 10
+    multipliers:
+      courage: 1.3
