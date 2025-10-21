@@ -2,6 +2,7 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { FirstPersonView } from './FirstPersonView';
 import { DebugPanel } from './DebugPanel';
 import { MapEditor } from './MapEditor';
+import { CombatView } from './CombatView';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -30,6 +31,9 @@ export const Game: React.FC = () => {
 
   // Map editor visibility
   const [mapEditorVisible, setMapEditorVisible] = useState<boolean>(false);
+
+  // Combat view visibility
+  const [combatViewVisible, setCombatViewVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -271,6 +275,13 @@ export const Game: React.FC = () => {
         return;
       }
 
+      // Alt+C to toggle combat view (development only)
+      if (import.meta.env.DEV && e.altKey && e.key === 'c') {
+        e.preventDefault();
+        setCombatViewVisible(prev => !prev);
+        return;
+      }
+
       // Ignore if this key is already pressed (prevents key repeat)
       if (pressedKeysRef.current.has(e.key)) {
         return;
@@ -357,48 +368,57 @@ export const Game: React.FC = () => {
         maxHeight: '56.25vw', // 16:9 aspect ratio (9/16 * 100vw)
         position: 'relative'
       }}>
-        <FirstPersonView
-          playerX={gameState.player.x}
-          playerY={gameState.player.y}
-          direction={gameState.player.direction}
-          grid={gameState.map.toStringArray()}
-          cameraOffset={-0.3}
-          lightIntensity={lightIntensity}
-          lightDistance={lightDistance}
-          lightYOffset={lightYOffset}
-          lightDecay={lightDecay}
-          lightColor={lightColor}
-          movementDuration={0.2}
-          rotationDuration={0.2}
-          onAnimationComplete={handleAnimationComplete}
-        />
-
-        {debugPanelVisible && (
-          <DebugPanel
-            playerX={gameState.player.x}
-            playerY={gameState.player.y}
-            direction={gameState.player.direction}
-            map={gameState.map}
-            lightIntensity={lightIntensity}
-            lightDistance={lightDistance}
-            lightYOffset={lightYOffset}
-            lightDecay={lightDecay}
-            lightColor={lightColor}
-            onLightIntensityChange={setLightIntensity}
-            onLightDistanceChange={setLightDistance}
-            onLightYOffsetChange={setLightYOffset}
-            onLightDecayChange={setLightDecay}
-            onLightColorChange={setLightColor}
-            onClose={() => setDebugPanelVisible(false)}
+        {/* Combat view - only available in development mode */}
+        {import.meta.env.DEV && combatViewVisible ? (
+          <CombatView
+            onExitCombat={() => setCombatViewVisible(false)}
           />
-        )}
+        ) : (
+          <>
+            <FirstPersonView
+              playerX={gameState.player.x}
+              playerY={gameState.player.y}
+              direction={gameState.player.direction}
+              grid={gameState.map.toStringArray()}
+              cameraOffset={-0.3}
+              lightIntensity={lightIntensity}
+              lightDistance={lightDistance}
+              lightYOffset={lightYOffset}
+              lightDecay={lightDecay}
+              lightColor={lightColor}
+              movementDuration={0.2}
+              rotationDuration={0.2}
+              onAnimationComplete={handleAnimationComplete}
+            />
 
-        {/* Map editor - only available in development mode */}
-        {import.meta.env.DEV && mapEditorVisible && (
-          <MapEditor
-            map={gameState.map}
-            onClose={() => setMapEditorVisible(false)}
-          />
+            {debugPanelVisible && (
+              <DebugPanel
+                playerX={gameState.player.x}
+                playerY={gameState.player.y}
+                direction={gameState.player.direction}
+                map={gameState.map}
+                lightIntensity={lightIntensity}
+                lightDistance={lightDistance}
+                lightYOffset={lightYOffset}
+                lightDecay={lightDecay}
+                lightColor={lightColor}
+                onLightIntensityChange={setLightIntensity}
+                onLightDistanceChange={setLightDistance}
+                onLightYOffsetChange={setLightYOffset}
+                onLightDecayChange={setLightDecay}
+                onLightColorChange={setLightColor}
+                onClose={() => setDebugPanelVisible(false)}
+              />
+            )}
+
+            {/* Map editor - only available in development mode */}
+            {import.meta.env.DEV && mapEditorVisible && (
+              <MapEditor
+                map={gameState.map}
+                onClose={() => setMapEditorVisible(false)}
+              />
+            )}
+          </>
         )}
       </div>
     </div>
