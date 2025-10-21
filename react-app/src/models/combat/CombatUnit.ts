@@ -9,6 +9,11 @@ export interface CombatUnit {
   get health(): number;
 
   /**
+   * The maximum health this unit may have
+   */
+  get maxHealth(): number;
+
+  /**
    * The number of wounds this unit has sustained
    */
   get wounds(): number;
@@ -17,6 +22,11 @@ export interface CombatUnit {
    * The maximum amount of energy available for using magic abilities
    */
   get mana(): number;
+
+  /**
+   * The maximum mana this unit may have
+   */
+  get maxMana(): number;
 
   /**
    * The amount of mana that has been used by this unit

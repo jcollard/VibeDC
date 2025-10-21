@@ -46,6 +46,10 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get health(): number {
+    return Math.max(0, this.maxHealth - this._wounds);
+  }
+
+  get maxHealth(): number {
     return this.baseHealth;
   }
 
@@ -54,6 +58,10 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get mana(): number {
+    return Math.max(0, this.maxMana - this._manaUsed);
+  }
+
+  get maxMana(): number {
     return this.baseMana;
   }
 
