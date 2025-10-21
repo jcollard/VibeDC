@@ -1,7 +1,21 @@
 /**
+ * Equipment slot types
+ */
+export type EquipmentType =
+  | "OneHandedWeapon"
+  | "TwoHandedWeapon"
+  | "Shield"
+  | "Held"
+  | "Head"
+  | "Body"
+  | "Accessory";
+
+/**
  * Represents equipment that can modify a unit's combat stats
  */
 export class Equipment {
+  public readonly type: EquipmentType;
+  public readonly name: string;
   // Flat modifiers
   public healthModifier: number = 0;
   public manaModifier: number = 0;
@@ -23,6 +37,8 @@ export class Equipment {
   public magicEvadeMultiplier: number = 1.0;
 
   constructor(
+    name: string,
+    type: EquipmentType,
     modifiers?: Partial<{
       health: number;
       mana: number;
@@ -44,6 +60,8 @@ export class Equipment {
       magicEvade: number;
     }>
   ) {
+    this.name = name;
+    this.type = type;
     if (modifiers) {
       this.healthModifier = modifiers.health ?? 0;
       this.manaModifier = modifiers.mana ?? 0;
