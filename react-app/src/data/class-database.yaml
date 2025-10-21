@@ -137,7 +137,7 @@ classes:
       physicalEvade: 1.2
       physicalPower: 1.1
 
-  # PALADIN - Holy warrior
+  # PALADIN - Holy warrior (requires Warrior and Cleric experience)
   - id: "paladin-001"
     name: "Paladin"
     description: "A holy warrior who combines martial prowess with divine magic"
@@ -146,6 +146,9 @@ classes:
       - "magic"
       - "tank"
       - "support"
+    requirements:
+      warrior-001: 100
+      cleric-001: 100
     learnableAbilities:
       # Actions
       - "slash-001"
@@ -172,7 +175,7 @@ classes:
       health: 1.15
       courage: 1.2
 
-  # BERSERKER - Rage-fueled warrior
+  # BERSERKER - Rage-fueled warrior (requires Warrior experience)
   - id: "berserker-001"
     name: "Berserker"
     description: "A ferocious warrior who channels rage into devastating attacks"
@@ -180,6 +183,8 @@ classes:
       - "melee"
       - "physical"
       - "damage"
+    requirements:
+      warrior-001: 150
     learnableAbilities:
       # Actions
       - "slash-001"
@@ -205,7 +210,7 @@ classes:
       physicalPower: 1.25
       courage: 1.15
 
-  # BATTLE MAGE - Magic warrior hybrid
+  # BATTLE MAGE - Magic warrior hybrid (requires Warrior and Mage experience)
   - id: "battle-mage-001"
     name: "Battle Mage"
     description: "A spellblade who weaves magic and steel into a deadly combination"
@@ -213,6 +218,9 @@ classes:
       - "melee"
       - "magic"
       - "hybrid"
+    requirements:
+      warrior-001: 100
+      mage-001: 100
     learnableAbilities:
       # Actions
       - "slash-001"
@@ -271,7 +279,7 @@ classes:
       speed: 1.2
       physicalEvade: 1.1
 
-  # NECROMANCER - Dark magic user
+  # NECROMANCER - Dark magic user (requires Mage experience)
   - id: "necromancer-001"
     name: "Necromancer"
     description: "A wielder of dark magic who commands death and decay"
@@ -280,6 +288,8 @@ classes:
       - "magic"
       - "debuff"
       - "dark"
+    requirements:
+      mage-001: 150
     learnableAbilities:
       # Actions
       - "fireball-001"

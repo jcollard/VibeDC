@@ -44,6 +44,7 @@ interface ClassData {
   learnableAbilities?: string[];
   modifiers?: Record<string, number>;
   multipliers?: Record<string, number>;
+  requirements?: Record<string, number>;
 }
 
 /**
@@ -105,6 +106,11 @@ export function loadClasses(): void {
       console.warn(`Class ${classData.name} has ${missingCount} missing ability references`);
     }
 
+    // Convert requirements Record to Map
+    const requirements = new Map<string, number>(
+      Object.entries(classData.requirements || {})
+    );
+
     new UnitClass(
       classData.name,
       classData.description,
@@ -112,6 +118,7 @@ export function loadClasses(): void {
       learnableAbilities,
       classData.modifiers,
       classData.multipliers,
+      requirements,
       classData.id
     );
   }

@@ -25,6 +25,13 @@ export class UnitClass {
    */
   public readonly learnableAbilities: readonly CombatAbility[];
 
+  /**
+   * Map of prerequisite class IDs to required experience amounts
+   * A unit must have earned at least this much experience in each prerequisite class
+   * before they can use this class as their primary or secondary class
+   */
+  public readonly requirements: ReadonlyMap<string, number>;
+
   constructor(
     name: string,
     description: string,
@@ -54,6 +61,7 @@ export class UnitClass {
       courage: number;
       attunement: number;
     }>,
+    requirements: Map<string, number> = new Map(),
     id?: string
   ) {
     this.id = id ?? crypto.randomUUID();
@@ -62,6 +70,7 @@ export class UnitClass {
     this.tags = tags;
     this.learnableAbilities = learnableAbilities;
     this.modifiers = new CombatUnitModifiers(modifiers, multipliers);
+    this.requirements = requirements;
 
     // Register this class in the registry
     UnitClass.registry.set(this.id, this);
@@ -89,5 +98,46 @@ export class UnitClass {
    */
   static clearRegistry(): void {
     UnitClass.registry.clear();
+  }
+
+  /**
+   * Check if a unit meets the requirements to use this class
+   * @param classExperience Map of class IDs to earned experience
+   * @returns true if all requirements are met, false otherwise
+   */
+  meetsRequirements(classExperience: ReadonlyMap<string, number>): boolean {
+    for (const [requiredClassId, requiredAmount] of this.requirements) {
+      const earnedAmount = classExperience.get(requiredClassId) ?? 0;
+      if (earnedAmount < requiredAmount) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Get a list of unmet requirements for this class
+   * @param classExperience Map of class IDs to earned experience
+   * @returns Array of {classId, required, current} for each unmet requirement
+   */
+  getUnmetRequirements(classExperience: ReadonlyMap<string, number>): Array<{
+    classId: string;
+    required: number;
+    current: number;
+  }> {
+    const unmet: Array<{ classId: string; required: number; current: number }> = [];
+
+    for (const [requiredClassId, requiredAmount] of this.requirements) {
+      const earnedAmount = classExperience.get(requiredClassId) ?? 0;
+      if (earnedAmount < requiredAmount) {
+        unmet.push({
+          classId: requiredClassId,
+          required: requiredAmount,
+          current: earnedAmount,
+        });
+      }
+    }
+
+    return unmet;
   }
 }

@@ -67,6 +67,7 @@ describe('HumanoidUnit Serialization', () => {
       [slashAbility, counterAbility],
       { health: 20, physicalPower: 10 },
       { health: 1.2 },
+      new Map(), // requirements
       'warrior-test-001'
     );
 
@@ -77,6 +78,7 @@ describe('HumanoidUnit Serialization', () => {
       [dashAbility, toughAbility],
       { mana: 30, magicPower: 15 },
       { mana: 1.5 },
+      new Map(), // requirements
       'mage-test-001'
     );
 
