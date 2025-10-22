@@ -379,6 +379,55 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                       </div>
                     )}
                     <div><strong>Position:</strong> ({selectedSprite.x}, {selectedSprite.y})</div>
+
+                    {/* Sprite preview at 8x */}
+                    <div style={{ marginTop: '8px', textAlign: 'center' }}>
+                      <div style={{ marginBottom: '4px', fontSize: '10px', color: '#aaa' }}>Preview (8x):</div>
+                      {(() => {
+                        const img = imageRef.current;
+                        if (!img) return null;
+
+                        // Create a small canvas for the preview
+                        const previewScale = 8;
+                        const previewSize = SPRITE_SIZE * previewScale;
+
+                        return (
+                          <canvas
+                            width={previewSize}
+                            height={previewSize}
+                            ref={(canvas) => {
+                              if (canvas && img) {
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                  // Clear the canvas first
+                                  ctx.clearRect(0, 0, previewSize, previewSize);
+                                  // Disable smoothing for pixel-perfect rendering
+                                  ctx.imageSmoothingEnabled = false;
+                                  // Draw the selected sprite
+                                  ctx.drawImage(
+                                    img,
+                                    selectedSprite.x * SPRITE_SIZE,
+                                    selectedSprite.y * SPRITE_SIZE,
+                                    SPRITE_SIZE,
+                                    SPRITE_SIZE,
+                                    0,
+                                    0,
+                                    previewSize,
+                                    previewSize
+                                  );
+                                }
+                              }
+                            }}
+                            style={{
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              imageRendering: 'pixelated',
+                              background: 'rgba(0, 0, 0, 0.3)',
+                            } as React.CSSProperties}
+                          />
+                        );
+                      })()}
+                    </div>
+
                     {selectedSprite.id && (() => {
                       const sprite = SpriteRegistry.getById(selectedSprite.id);
                       return sprite?.tags && sprite.tags.length > 0 ? (
