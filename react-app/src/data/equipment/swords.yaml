@@ -1,0 +1,24 @@
+# Swords and Blade Weapons
+# One-handed and two-handed swords
+
+equipment:
+  # One-Handed Swords
+  - id: "iron-sword-001"
+    name: "Iron Sword"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 10
+      speed: 2
+    multipliers: {}
+
+  - id: "flame-blade-001"
+    name: "Flame Blade"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 12
+      magicPower: 8
+    multipliers:
+      physicalPower: 1.1
+
+  # Two-Handed Swords
+  # TODO: Add great swords, longswords, etc.
