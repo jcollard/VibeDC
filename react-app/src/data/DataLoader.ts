@@ -8,12 +8,15 @@ import type { EquipmentType } from '../models/combat/Equipment';
 import type { AbilityType } from '../models/combat/CombatAbility';
 import { SpriteRegistry } from '../utils/SpriteRegistry';
 import type { SpriteDefinitionJSON } from '../utils/SpriteRegistry';
+import { EnemyRegistry } from '../utils/EnemyRegistry';
+import type { EnemyDefinitionJSON } from '../utils/EnemyRegistry';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
 import classYaml from './class-database.yaml?raw';
 import encounterYaml from './encounter-database.yaml?raw';
 import spriteYaml from './sprite-definitions.yaml?raw';
+import enemyYaml from './enemy-definitions.yaml?raw';
 
 // Import equipment YAML files
 import swordsYaml from './equipment/swords.yaml?raw';
@@ -193,20 +196,36 @@ export function loadSprites(): void {
 }
 
 /**
+ * Load all enemy definitions from the YAML database
+ */
+export function loadEnemies(): void {
+  const data = yaml.load(enemyYaml) as { enemies: EnemyDefinitionJSON[] };
+
+  for (const enemyData of data.enemies) {
+    EnemyRegistry.register(enemyData);
+  }
+
+  console.log(`Loaded ${data.enemies.length} enemy definitions`);
+}
+
+/**
  * Load all game data from YAML files
  * Call this once at application startup
  */
 export function loadAllGameData(): void {
   console.log('Loading game data...');
 
-  // Order matters: abilities must be loaded before classes and encounters
-  // Sprites can be loaded at any time (independent)
+  // Order matters:
+  // - Sprites should be loaded first (referenced by enemies)
+  // - Abilities must be loaded before classes and encounters
+  // - Enemies should be loaded after classes (they reference unit classes)
   loadSprites();
   loadAbilities();
   loadEquipment();
   loadClasses();
+  loadEnemies();
   loadEncounters();
 
   console.log('Game data loaded successfully');
-  console.log(`Total: ${SpriteRegistry.count} sprites, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${CombatEncounter.getAll().length} encounters`);
+  console.log(`Total: ${SpriteRegistry.count} sprites, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${CombatEncounter.getAll().length} encounters`);
 }

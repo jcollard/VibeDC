@@ -1,0 +1,230 @@
+# Enemy definitions for combat
+# Templates for creating enemy CombatUnits
+
+enemies:
+  # Goblins - weak melee enemies
+  - id: "goblin"
+    name: "Goblin"
+    unitClassId: "monster"
+    baseHealth: 20
+    baseMana: 10
+    basePhysicalPower: 8
+    baseMagicPower: 4
+    baseSpeed: 6
+    baseMovement: 3
+    basePhysicalEvade: 10
+    baseMagicEvade: 5
+    baseCourage: 6
+    baseAttunement: 4
+    spriteId: "monsters-0"
+    tags: ["goblin", "weak", "melee"]
+    description: "A small, aggressive creature with crude weapons"
+
+  - id: "goblin-archer"
+    name: "Goblin Archer"
+    unitClassId: "monster"
+    baseHealth: 18
+    baseMana: 12
+    basePhysicalPower: 10
+    baseMagicPower: 4
+    baseSpeed: 7
+    baseMovement: 3
+    basePhysicalEvade: 12
+    baseMagicEvade: 6
+    baseCourage: 5
+    baseAttunement: 5
+    spriteId: "monsters-1"
+    tags: ["goblin", "weak", "ranged"]
+    description: "A goblin equipped with a crude bow"
+
+  - id: "goblin-shaman"
+    name: "Goblin Shaman"
+    unitClassId: "monster"
+    baseHealth: 16
+    baseMana: 25
+    basePhysicalPower: 5
+    baseMagicPower: 12
+    baseSpeed: 5
+    baseMovement: 3
+    basePhysicalEvade: 8
+    baseMagicEvade: 12
+    baseCourage: 7
+    baseAttunement: 10
+    spriteId: "monsters-2"
+    tags: ["goblin", "weak", "magic"]
+    description: "A goblin with rudimentary magical abilities"
+
+  # Wolves - fast melee enemies
+  - id: "wolf"
+    name: "Wolf"
+    unitClassId: "monster"
+    baseHealth: 25
+    baseMana: 5
+    basePhysicalPower: 12
+    baseMagicPower: 2
+    baseSpeed: 10
+    baseMovement: 4
+    basePhysicalEvade: 14
+    baseMagicEvade: 6
+    baseCourage: 8
+    baseAttunement: 3
+    spriteId: "monsters-8"
+    tags: ["beast", "fast", "melee"]
+    description: "A fierce predator with sharp teeth and claws"
+
+  - id: "dire-wolf"
+    name: "Dire Wolf"
+    unitClassId: "monster"
+    baseHealth: 35
+    baseMana: 8
+    basePhysicalPower: 16
+    baseMagicPower: 3
+    baseSpeed: 11
+    baseMovement: 4
+    basePhysicalEvade: 15
+    baseMagicEvade: 7
+    baseCourage: 10
+    baseAttunement: 4
+    spriteId: "monsters-9"
+    tags: ["beast", "fast", "melee", "strong"]
+    description: "A larger, more dangerous wolf with enhanced abilities"
+
+  # Skeletons - undead enemies
+  - id: "skeleton"
+    name: "Skeleton"
+    unitClassId: "monster"
+    baseHealth: 22
+    baseMana: 0
+    basePhysicalPower: 10
+    baseMagicPower: 0
+    baseSpeed: 5
+    baseMovement: 3
+    basePhysicalEvade: 8
+    baseMagicEvade: 15
+    baseCourage: 15
+    baseAttunement: 2
+    spriteId: "monsters-16"
+    tags: ["undead", "melee"]
+    description: "Animated bones driven by dark magic"
+
+  - id: "skeleton-archer"
+    name: "Skeleton Archer"
+    unitClassId: "monster"
+    baseHealth: 20
+    baseMana: 0
+    basePhysicalPower: 12
+    baseMagicPower: 0
+    baseSpeed: 6
+    baseMovement: 3
+    basePhysicalEvade: 10
+    baseMagicEvade: 16
+    baseCourage: 15
+    baseAttunement: 2
+    spriteId: "monsters-17"
+    tags: ["undead", "ranged"]
+    description: "An undead archer with unerring aim"
+
+  # Orcs - strong melee enemies
+  - id: "orc-warrior"
+    name: "Orc Warrior"
+    unitClassId: "monster"
+    baseHealth: 40
+    baseMana: 10
+    basePhysicalPower: 18
+    baseMagicPower: 5
+    baseSpeed: 6
+    baseMovement: 3
+    basePhysicalEvade: 8
+    baseMagicEvade: 6
+    baseCourage: 12
+    baseAttunement: 6
+    spriteId: "monsters-24"
+    tags: ["orc", "strong", "melee"]
+    description: "A brutish warrior with immense strength"
+
+  - id: "orc-berserker"
+    name: "Orc Berserker"
+    unitClassId: "monster"
+    baseHealth: 50
+    baseMana: 5
+    basePhysicalPower: 22
+    baseMagicPower: 3
+    baseSpeed: 8
+    baseMovement: 4
+    basePhysicalEvade: 6
+    baseMagicEvade: 4
+    baseCourage: 16
+    baseAttunement: 4
+    spriteId: "monsters-25"
+    tags: ["orc", "strong", "melee", "berserker"]
+    description: "A rage-fueled orc that fights with reckless abandon"
+
+  # Elementals - magical enemies
+  - id: "fire-elemental"
+    name: "Fire Elemental"
+    unitClassId: "monster"
+    baseHealth: 30
+    baseMana: 40
+    basePhysicalPower: 8
+    baseMagicPower: 20
+    baseSpeed: 7
+    baseMovement: 3
+    basePhysicalEvade: 12
+    baseMagicEvade: 18
+    baseCourage: 10
+    baseAttunement: 16
+    spriteId: "monsters-32"
+    tags: ["elemental", "fire", "magic"]
+    description: "A being of pure flame"
+
+  - id: "ice-elemental"
+    name: "Ice Elemental"
+    unitClassId: "monster"
+    baseHealth: 32
+    baseMana: 38
+    basePhysicalPower: 10
+    baseMagicPower: 18
+    baseSpeed: 5
+    baseMovement: 3
+    basePhysicalEvade: 10
+    baseMagicEvade: 20
+    baseCourage: 12
+    baseAttunement: 15
+    spriteId: "monsters-33"
+    tags: ["elemental", "ice", "magic"]
+    description: "A being of frozen water and frost"
+
+  # Dragons - boss enemies
+  - id: "young-dragon"
+    name: "Young Dragon"
+    unitClassId: "monster"
+    baseHealth: 80
+    baseMana: 50
+    basePhysicalPower: 24
+    baseMagicPower: 22
+    baseSpeed: 8
+    baseMovement: 5
+    basePhysicalEvade: 12
+    baseMagicEvade: 14
+    baseCourage: 18
+    baseAttunement: 16
+    spriteId: "monsters-48"
+    tags: ["dragon", "boss", "strong", "magic"]
+    description: "A juvenile dragon, still formidable in power"
+
+  - id: "ancient-dragon"
+    name: "Ancient Dragon"
+    unitClassId: "monster"
+    baseHealth: 150
+    baseMana: 100
+    basePhysicalPower: 35
+    baseMagicPower: 32
+    baseSpeed: 10
+    baseMovement: 6
+    basePhysicalEvade: 16
+    baseMagicEvade: 18
+    baseCourage: 22
+    baseAttunement: 20
+    spriteId: "monsters-49"
+    tags: ["dragon", "boss", "strong", "magic", "legendary"]
+    description: "An elder dragon of immense power and wisdom"
