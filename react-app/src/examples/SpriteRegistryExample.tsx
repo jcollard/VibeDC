@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { SpriteRegistry } from '../utils/SpriteRegistry';
 import { loadSprites } from '../data/DataLoader';
 

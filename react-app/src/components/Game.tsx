@@ -3,6 +3,7 @@ import { FirstPersonView } from './FirstPersonView';
 import { DebugPanel } from './DebugPanel';
 import { MapEditor } from './MapEditor';
 import { CombatView } from './CombatView';
+import { DeveloperPanel } from './developer/DeveloperPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -34,6 +35,9 @@ export const Game: React.FC = () => {
 
   // Combat view visibility
   const [combatViewVisible, setCombatViewVisible] = useState<boolean>(false);
+
+  // Developer panel visibility (development only)
+  const [developerPanelVisible, setDeveloperPanelVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -261,6 +265,13 @@ export const Game: React.FC = () => {
   // Handle keyboard input using UserInputConfig
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      // F2 to toggle developer panel (development only)
+      if (import.meta.env.DEV && e.key === 'F2') {
+        e.preventDefault();
+        setDeveloperPanelVisible(prev => !prev);
+        return;
+      }
+
       // Alt+M to toggle map editor (development only)
       if (import.meta.env.DEV && e.altKey && e.key === 'm') {
         e.preventDefault();
@@ -416,6 +427,25 @@ export const Game: React.FC = () => {
               <MapEditor
                 map={gameState.map}
                 onClose={() => setMapEditorVisible(false)}
+              />
+            )}
+
+            {/* Developer panel - only available in development mode */}
+            {import.meta.env.DEV && developerPanelVisible && (
+              <DeveloperPanel
+                onClose={() => setDeveloperPanelVisible(false)}
+                onOpenMapEditor={() => {
+                  setMapEditorVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
+                onOpenSpriteRegistry={() => {
+                  // TODO: Open sprite registry panel
+                  console.log('Sprite registry not yet implemented');
+                }}
+                onOpenDebugPanel={() => {
+                  setDebugPanelVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
               />
             )}
           </>
