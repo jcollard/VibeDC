@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CombatEncounter } from './CombatEncounter';
 import { CombatMap, TerrainType } from './CombatMap';
-import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClass } from './UnitClass';
 import { CombatAbility } from './CombatAbility';
+import { EnemyRegistry } from '../../utils/EnemyRegistry';
 import {
   AllEnemiesDefeatedPredicate,
   AllPlayersDefeatedPredicate,
@@ -21,6 +21,7 @@ describe('CombatEncounter', () => {
     CombatEncounter.clearRegistry();
     UnitClass.clearRegistry();
     CombatAbility.clearRegistry();
+    EnemyRegistry.clearRegistry();
 
     // Create test ability
     basicAttack = new CombatAbility(
@@ -91,20 +92,23 @@ describe('CombatEncounter', () => {
     it('should create encounter with enemy units', () => {
       const map = new CombatMap(10, 8);
 
-      const enemy1 = new HumanoidUnit(
-        'Goblin',
-        testClass,
-        20, // health
-        10, // mana
-        3,  // physicalPower
-        1,  // magicPower
-        5,  // speed
-        3,  // movement
-        1,  // physicalEvade
-        0,  // magicEvade
-        2,  // courage
-        1   // attunement
-      );
+      // Register a test enemy in the EnemyRegistry
+      EnemyRegistry.register({
+        id: 'test-goblin',
+        name: 'Goblin',
+        unitClassId: testClass.id,
+        baseHealth: 20,
+        baseMana: 10,
+        basePhysicalPower: 3,
+        baseMagicPower: 1,
+        baseSpeed: 5,
+        baseMovement: 3,
+        basePhysicalEvade: 1,
+        baseMagicEvade: 0,
+        baseCourage: 2,
+        baseAttunement: 1,
+        spriteId: 'goblin-sprite',
+      });
 
       const encounter = new CombatEncounter(
         'goblin-encounter',
@@ -115,13 +119,19 @@ describe('CombatEncounter', () => {
         [new AllPlayersDefeatedPredicate()],
         [{ x: 1, y: 7 }],
         [
-          { unit: enemy1, position: { x: 5, y: 2 } }
+          { enemyId: 'test-goblin', position: { x: 5, y: 2 } }
         ]
       );
 
       expect(encounter.enemyCount).toBe(1);
-      expect(encounter.enemyPlacements[0].unit.name).toBe('Goblin');
+      expect(encounter.enemyPlacements[0].enemyId).toBe('test-goblin');
       expect(encounter.enemyPlacements[0].position).toEqual({ x: 5, y: 2 });
+
+      // Test creating enemy units from the encounter
+      const enemyUnits = encounter.createEnemyUnits();
+      expect(enemyUnits.length).toBe(1);
+      expect(enemyUnits[0].unit.name).toBe('Goblin');
+      expect(enemyUnits[0].position).toEqual({ x: 5, y: 2 });
     });
   });
 
@@ -228,20 +238,23 @@ describe('CombatEncounter', () => {
     it('should serialize and deserialize encounter', () => {
       const map = new CombatMap(10, 8);
 
-      const enemy = new HumanoidUnit(
-        'Test Enemy',
-        testClass,
-        30, // health
-        10, // mana
-        5,  // physicalPower
-        2,  // magicPower
-        4,  // speed
-        3,  // movement
-        1,  // physicalEvade
-        1,  // magicEvade
-        3,  // courage
-        2   // attunement
-      );
+      // Register a test enemy in the EnemyRegistry
+      EnemyRegistry.register({
+        id: 'test-enemy',
+        name: 'Test Enemy',
+        unitClassId: testClass.id,
+        baseHealth: 30,
+        baseMana: 10,
+        basePhysicalPower: 5,
+        baseMagicPower: 2,
+        baseSpeed: 4,
+        baseMovement: 3,
+        basePhysicalEvade: 1,
+        baseMagicEvade: 1,
+        baseCourage: 3,
+        baseAttunement: 2,
+        spriteId: 'test-sprite',
+      });
 
       const original = new CombatEncounter(
         'serialize-test',
@@ -251,13 +264,13 @@ describe('CombatEncounter', () => {
         [new AllEnemiesDefeatedPredicate()],
         [new AllPlayersDefeatedPredicate()],
         [{ x: 1, y: 7 }, { x: 2, y: 7 }],
-        [{ unit: enemy, position: { x: 5, y: 2 } }]
+        [{ enemyId: 'test-enemy', position: { x: 5, y: 2 } }]
       );
 
       const json = original.toJSON();
 
-      // Note: testClass is still in the registry from beforeEach,
-      // so deserialization can find it by ID
+      // Note: testClass and test-enemy are still in their registries from above,
+      // so deserialization can find them by ID
       const deserialized = CombatEncounter.fromJSON(json);
 
       expect(deserialized.id).toBe(original.id);
@@ -267,8 +280,15 @@ describe('CombatEncounter', () => {
       expect(deserialized.map.height).toBe(original.map.height);
       expect(deserialized.deploymentSlotCount).toBe(2);
       expect(deserialized.enemyCount).toBe(1);
-      expect(deserialized.enemyPlacements[0].unit.name).toBe('Test Enemy');
-      expect(deserialized.enemyPlacements[0].unit.unitClass).toBe(testClass);
+      expect(deserialized.enemyPlacements[0].enemyId).toBe('test-enemy');
+      expect(deserialized.enemyPlacements[0].position).toEqual({ x: 5, y: 2 });
+
+      // Test creating enemy units from the deserialized encounter
+      const enemyUnits = deserialized.createEnemyUnits();
+      expect(enemyUnits.length).toBe(1);
+      expect(enemyUnits[0].unit.name).toBe('Test Enemy');
+      expect(enemyUnits[0].unit.unitClass).toBe(testClass);
+
       expect(deserialized.victoryConditions.length).toBe(1);
       expect(deserialized.defeatConditions.length).toBe(1);
     });

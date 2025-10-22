@@ -166,7 +166,7 @@ describe('DataLoader', () => {
     it('should load classes with correct properties', () => {
       loadClasses();
 
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.name).toBe('Fighter');
       expect(fighter!.description).toContain('combat');
@@ -175,7 +175,7 @@ describe('DataLoader', () => {
     it('should load classes with tags', () => {
       loadClasses();
 
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.tags).toBeInstanceOf(Array);
       expect(fighter!.tags).toContain('melee');
@@ -185,7 +185,7 @@ describe('DataLoader', () => {
     it('should load classes with modifiers', () => {
       loadClasses();
 
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.modifiers).toBeDefined();
       expect(fighter!.modifiers.healthModifier).toBeGreaterThan(0);
@@ -195,7 +195,7 @@ describe('DataLoader', () => {
     it('should load classes with multipliers', () => {
       loadClasses();
 
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.modifiers.healthMultiplier).toBeGreaterThan(1.0);
     });
@@ -203,7 +203,7 @@ describe('DataLoader', () => {
     it('should resolve ability references correctly', () => {
       loadClasses();
 
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.learnableAbilities.length).toBeGreaterThan(0);
 
@@ -217,7 +217,7 @@ describe('DataLoader', () => {
     it('should load classes with no requirements', () => {
       loadClasses();
 
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.requirements.size).toBe(0);
     });
@@ -243,7 +243,7 @@ describe('DataLoader', () => {
     it('should load all base classes without requirements', () => {
       loadClasses();
 
-      const baseClasses = ['fighter-001', 'rogue-001', 'apprentice-001'];
+      const baseClasses = ['fighter', 'rogue', 'apprentice'];
 
       baseClasses.forEach(classId => {
         const unitClass = UnitClass.getById(classId);
@@ -295,7 +295,7 @@ describe('DataLoader', () => {
       expect(abilities.length).toBeGreaterThan(0);
 
       // Verify classes have resolved ability references
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.learnableAbilities.length).toBeGreaterThan(0);
 
@@ -425,7 +425,7 @@ describe('DataLoader', () => {
     });
 
     it('should load Fighter class correctly', () => {
-      const fighter = UnitClass.getById('fighter-001');
+      const fighter = UnitClass.getById('fighter');
       expect(fighter).toBeDefined();
       expect(fighter!.name).toBe('Fighter');
       expect(fighter!.tags).toContain('melee');
@@ -434,7 +434,7 @@ describe('DataLoader', () => {
     });
 
     it('should load Apprentice class correctly', () => {
-      const apprentice = UnitClass.getById('apprentice-001');
+      const apprentice = UnitClass.getById('apprentice');
       expect(apprentice).toBeDefined();
       expect(apprentice!.name).toBe('Apprentice');
       expect(apprentice!.requirements.size).toBe(0);

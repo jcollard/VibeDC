@@ -9,6 +9,7 @@ import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
 import { AbilityRegistryPanel } from './developer/AbilityRegistryPanel';
 import { EquipmentRegistryPanel } from './developer/EquipmentRegistryPanel';
 import { ClassRegistryPanel } from './developer/ClassRegistryPanel';
+import { EncounterRegistryPanel } from './developer/EncounterRegistryPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -58,6 +59,9 @@ export const Game: React.FC = () => {
 
   // Class registry panel visibility (development only)
   const [classRegistryVisible, setClassRegistryVisible] = useState<boolean>(false);
+
+  // Encounter registry panel visibility (development only)
+  const [encounterRegistryVisible, setEncounterRegistryVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -488,6 +492,10 @@ export const Game: React.FC = () => {
                   setClassRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenEncounterRegistry={() => {
+                  setEncounterRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenDebugPanel={() => {
                   setDebugPanelVisible(true);
                   setDeveloperPanelVisible(false);
@@ -527,6 +535,13 @@ export const Game: React.FC = () => {
             {import.meta.env.DEV && classRegistryVisible && (
               <ClassRegistryPanel
                 onClose={() => setClassRegistryVisible(false)}
+              />
+            )}
+
+            {/* Encounter registry panel - only available in development mode */}
+            {import.meta.env.DEV && encounterRegistryVisible && (
+              <EncounterRegistryPanel
+                onClose={() => setEncounterRegistryVisible(false)}
               />
             )}
           </>

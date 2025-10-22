@@ -1,9 +1,6 @@
 import type { Position } from "../../types";
 import type { CombatUnit } from "./CombatUnit";
-import { HumanoidUnit } from "./HumanoidUnit";
-import type { HumanoidUnitJSON } from "./HumanoidUnit";
-import { MonsterUnit } from "./MonsterUnit";
-import type { MonsterUnitJSON } from "./MonsterUnit";
+import { EnemyRegistry } from "../../utils/EnemyRegistry";
 import { CombatMap, parseASCIIMap } from "./CombatMap";
 import type { CombatMapJSON, ASCIIMapDefinition } from "./CombatMap";
 import type {
@@ -13,19 +10,20 @@ import type {
 import { CombatPredicateFactory } from "./CombatPredicate";
 
 /**
- * Represents a unit placement on the combat map.
+ * Represents an enemy placement on the combat map.
+ * References an enemy by ID from the EnemyRegistry.
  */
-export interface UnitPlacement {
-  unit: CombatUnit;
+export interface EnemyPlacement {
+  enemyId: string;
   position: Position;
 }
 
 /**
- * JSON representation of a unit placement for serialization.
- * Supports both HumanoidUnit and MonsterUnit.
+ * Legacy interface for backwards compatibility during migration.
+ * @deprecated Use EnemyPlacement instead
  */
-export interface UnitPlacementJSON {
-  unit: HumanoidUnitJSON | MonsterUnitJSON;
+export interface UnitPlacement {
+  unit: CombatUnit;
   position: Position;
 }
 
@@ -43,7 +41,7 @@ export class CombatEncounter {
   readonly victoryConditions: CombatPredicate[];
   readonly defeatConditions: CombatPredicate[];
   readonly playerDeploymentZones: Position[];
-  readonly enemyPlacements: UnitPlacement[];
+  readonly enemyPlacements: EnemyPlacement[];
 
   constructor(
     id: string,
@@ -53,7 +51,7 @@ export class CombatEncounter {
     victoryConditions: CombatPredicate[],
     defeatConditions: CombatPredicate[],
     playerDeploymentZones: Position[],
-    enemyPlacements: UnitPlacement[]
+    enemyPlacements: EnemyPlacement[]
   ) {
     this.id = id;
     this.name = name;
@@ -65,6 +63,28 @@ export class CombatEncounter {
     this.enemyPlacements = enemyPlacements;
 
     CombatEncounter.registry.set(id, this);
+  }
+
+  /**
+   * Creates enemy unit instances from the enemy placements.
+   * Returns an array of UnitPlacement objects with instantiated CombatUnits.
+   */
+  createEnemyUnits(): UnitPlacement[] {
+    return this.enemyPlacements
+      .map((placement) => {
+        const enemy = EnemyRegistry.createEnemy(placement.enemyId);
+        if (!enemy) {
+          console.error(
+            `Failed to create enemy '${placement.enemyId}' for encounter '${this.id}'`
+          );
+          return null;
+        }
+        return {
+          unit: enemy,
+          position: placement.position,
+        };
+      })
+      .filter((p): p is UnitPlacement => p !== null);
   }
 
   /**
@@ -113,10 +133,7 @@ export class CombatEncounter {
       victoryConditions: this.victoryConditions.map((vc) => vc.toJSON()),
       defeatConditions: this.defeatConditions.map((dc) => dc.toJSON()),
       playerDeploymentZones: this.playerDeploymentZones,
-      enemyPlacements: this.enemyPlacements.map((placement) => ({
-        unit: placement.unit.toJSON() as HumanoidUnitJSON,
-        position: placement.position,
-      })),
+      enemyPlacements: this.enemyPlacements,
     };
   }
 
@@ -140,30 +157,23 @@ export class CombatEncounter {
     const defeatConditions = json.defeatConditions.map((dc) =>
       CombatPredicateFactory.fromJSON(dc)
     );
-    const enemyPlacements: UnitPlacement[] = json.enemyPlacements
-      .map((placement) => {
-        // Determine unit type by checking for equipment fields (HumanoidUnit) or lack thereof (MonsterUnit)
-        const unitJson = placement.unit;
-        let unit: CombatUnit | null = null;
 
-        if ('leftHandId' in unitJson || 'rightHandId' in unitJson) {
-          // Has equipment fields - must be HumanoidUnit
-          unit = HumanoidUnit.fromJSON(unitJson as HumanoidUnitJSON);
-        } else {
-          // No equipment fields - must be MonsterUnit
-          unit = MonsterUnit.fromJSON(unitJson as MonsterUnitJSON);
-        }
-
-        if (!unit) {
-          console.error(`Failed to deserialize unit in encounter ${json.id}`);
-          return null;
-        }
-        return {
-          unit: unit as CombatUnit,
-          position: placement.position,
-        };
-      })
-      .filter((p): p is { unit: CombatUnit; position: Position } => p !== null);
+    // Convert enemy placements - handle both new format (enemyId) and legacy format (unit object)
+    const enemyPlacements: EnemyPlacement[] = json.enemyPlacements.map((placement) => {
+      // Check if this is the new format with enemyId
+      if ('enemyId' in placement) {
+        return placement as EnemyPlacement;
+      }
+      // Legacy format - log a warning
+      console.warn(
+        `Encounter '${json.id}' uses legacy unit format. Please update to use enemyId references.`
+      );
+      // For legacy format, we can't properly convert without knowing the enemy ID
+      // This is a migration issue - encounters should be updated to the new format
+      throw new Error(
+        `Encounter '${json.id}' uses legacy format. Please update encounter-database.yaml to use enemyId references.`
+      );
+    });
 
     return new CombatEncounter(
       json.id,
@@ -202,5 +212,5 @@ export interface CombatEncounterJSON {
   victoryConditions: CombatPredicateJSON[];
   defeatConditions: CombatPredicateJSON[];
   playerDeploymentZones: Position[];
-  enemyPlacements: UnitPlacementJSON[];
+  enemyPlacements: EnemyPlacement[];
 }

@@ -8,6 +8,7 @@ interface DeveloperPanelProps {
   onOpenAbilityRegistry?: () => void;
   onOpenEquipmentRegistry?: () => void;
   onOpenClassRegistry?: () => void;
+  onOpenEncounterRegistry?: () => void;
   onOpenDebugPanel?: () => void;
 }
 
@@ -23,6 +24,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onOpenAbilityRegistry,
   onOpenEquipmentRegistry,
   onOpenClassRegistry,
+  onOpenEncounterRegistry,
   onOpenDebugPanel,
 }) => {
   const panels = [
@@ -67,6 +69,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Class',
       available: !!onOpenClassRegistry,
       onClick: onOpenClassRegistry,
+    },
+    {
+      name: 'Encounter Registry',
+      description: 'Browse and edit combat encounters',
+      shortcut: 'F2 → Encounter',
+      available: !!onOpenEncounterRegistry,
+      onClick: onOpenEncounterRegistry,
     },
     {
       name: 'Debug Panel',
