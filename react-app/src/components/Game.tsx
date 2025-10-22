@@ -297,6 +297,11 @@ export const Game: React.FC = () => {
         return;
       }
 
+      // Ignore game input if any modal panels are open that accept text input
+      if (mapEditorVisible || spriteRegistryVisible) {
+        return;
+      }
+
       // Ignore if this key is already pressed (prevents key repeat)
       if (pressedKeysRef.current.has(e.key)) {
         return;
@@ -317,6 +322,11 @@ export const Game: React.FC = () => {
     };
 
     const handleKeyUp = (e: KeyboardEvent) => {
+      // Clear pressed keys when panels are open to prevent stuck keys
+      if (mapEditorVisible || spriteRegistryVisible) {
+        pressedKeysRef.current.clear();
+        return;
+      }
       pressedKeysRef.current.delete(e.key);
     };
 
@@ -326,7 +336,7 @@ export const Game: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleAction, inputConfig]);
+  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible]);
 
   if (loading) {
     return <div style={{

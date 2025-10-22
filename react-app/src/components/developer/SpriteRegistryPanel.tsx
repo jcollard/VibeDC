@@ -243,6 +243,70 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
     });
   };
 
+  // Handle exporting sprite definitions to YAML
+  const handleExport = () => {
+    const allSprites = SpriteRegistry.getAll();
+
+    // Sort sprites by sheet, then by y, then by x for cleaner output
+    const sortedSprites = allSprites.sort((a, b) => {
+      if (a.spriteSheet !== b.spriteSheet) {
+        return a.spriteSheet.localeCompare(b.spriteSheet);
+      }
+      if (a.y !== b.y) {
+        return a.y - b.y;
+      }
+      return a.x - b.x;
+    });
+
+    // Generate YAML content
+    let yaml = '# Sprite definitions for combat\n';
+    yaml += '# Maps sprite IDs to their locations in sprite sheets\n';
+    yaml += '# Exported from Sprite Registry Panel\n\n';
+    yaml += 'sprites:\n';
+
+    let currentSheet = '';
+    for (const sprite of sortedSprites) {
+      // Add a comment when switching to a new sprite sheet
+      if (sprite.spriteSheet !== currentSheet) {
+        currentSheet = sprite.spriteSheet;
+        yaml += `\n  # Sprite sheet: ${currentSheet}\n`;
+      }
+
+      yaml += `  - id: "${sprite.id}"\n`;
+      yaml += `    spriteSheet: "${sprite.spriteSheet}"\n`;
+      yaml += `    x: ${sprite.x}\n`;
+      yaml += `    y: ${sprite.y}\n`;
+
+      if (sprite.width && sprite.width !== 1) {
+        yaml += `    width: ${sprite.width}\n`;
+      }
+      if (sprite.height && sprite.height !== 1) {
+        yaml += `    height: ${sprite.height}\n`;
+      }
+      if (sprite.tags && sprite.tags.length > 0) {
+        yaml += `    tags: [${sprite.tags.map(t => `"${t}"`).join(', ')}]\n`;
+      }
+
+      yaml += '\n';
+    }
+
+    // Create a blob and download link
+    const blob = new Blob([yaml], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'sprite-definitions.yaml';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log('Exported sprite definitions:', {
+      count: allSprites.length,
+      sheets: [...new Set(allSprites.map(s => s.spriteSheet))]
+    });
+  };
+
   // Handle canvas click to select sprite
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -350,32 +414,60 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
         }}
       >
         <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Sprite Registry Browser</div>
-        {onClose && (
+        <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button
-            onClick={onClose}
+            onClick={handleExport}
             style={{
-              background: 'transparent',
-              border: 'none',
+              padding: '6px 12px',
+              background: 'rgba(33, 150, 243, 0.3)',
+              border: '1px solid rgba(33, 150, 243, 0.6)',
+              borderRadius: '4px',
               color: '#fff',
-              fontSize: '20px',
-              fontWeight: 'bold',
+              fontSize: '11px',
               cursor: 'pointer',
-              padding: '0',
-              width: '24px',
-              height: '24px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              opacity: 0.7,
-              transition: 'opacity 0.2s',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
-            onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
-            title="Close sprite registry"
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(33, 150, 243, 0.5)';
+              e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.8)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(33, 150, 243, 0.3)';
+              e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.6)';
+            }}
+            title="Export all sprite definitions to YAML file"
           >
-            ×
+            Export YAML
           </button>
-        )}
+          {onClose && (
+            <button
+              onClick={onClose}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: '#fff',
+                fontSize: '20px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                padding: '0',
+                width: '24px',
+                height: '24px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                opacity: 0.7,
+                transition: 'opacity 0.2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+              onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+              title="Close sprite registry"
+            >
+              ×
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Two-column layout */}
