@@ -26,6 +26,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   const [editedId, setEditedId] = useState<string>('');
   const [editError, setEditError] = useState<string>('');
   const [newTag, setNewTag] = useState<string>('');
+  const [selectedTag, setSelectedTag] = useState<string>('');
 
   // Sprite size constants (12x12 pixels per sprite in the sheet)
   const SPRITE_SIZE = 12;
@@ -143,6 +144,13 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       drawCanvas();
     }
   }, [scale, selectedSprite, imageLoaded, drawCanvas]);
+
+  // Redraw canvas when returning from grid view (tag deselected)
+  useEffect(() => {
+    if (!selectedTag && imageLoaded) {
+      drawCanvas();
+    }
+  }, [selectedTag, imageLoaded, drawCanvas]);
 
   // Handle starting edit mode
   const handleStartEdit = () => {
@@ -608,23 +616,49 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                   }}
                 >
                   <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>
-                    Tags
+                    Tags <span style={{ fontSize: '9px', color: '#aaa', fontWeight: 'normal' }}>(click to filter)</span>
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
-                    {sheetInfo.tags.map(tag => (
-                      <span
-                        key={tag}
-                        style={{
-                          padding: '3px 8px',
-                          background: 'rgba(76, 175, 80, 0.2)',
-                          border: '1px solid rgba(76, 175, 80, 0.4)',
-                          borderRadius: '3px',
-                          fontSize: '10px',
-                        }}
-                      >
-                        {tag}
-                      </span>
-                    ))}
+                    {sheetInfo.tags.map(tag => {
+                      const isActive = selectedTag === tag;
+                      return (
+                        <span
+                          key={tag}
+                          onClick={() => {
+                            // Toggle the tag - if already selected, deselect it
+                            setSelectedTag(isActive ? '' : tag);
+                          }}
+                          style={{
+                            padding: '3px 8px',
+                            background: isActive
+                              ? 'rgba(255, 255, 0, 0.3)'
+                              : 'rgba(76, 175, 80, 0.2)',
+                            border: isActive
+                              ? '1px solid rgba(255, 255, 0, 0.6)'
+                              : '1px solid rgba(76, 175, 80, 0.4)',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                          }}
+                          onMouseEnter={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.background = 'rgba(76, 175, 80, 0.4)';
+                              e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.6)';
+                            }
+                          }}
+                          onMouseLeave={(e) => {
+                            if (!isActive) {
+                              e.currentTarget.style.background = 'rgba(76, 175, 80, 0.2)';
+                              e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.4)';
+                            }
+                          }}
+                          title={isActive ? `Click to clear filter` : `Click to filter by "${tag}"`}
+                        >
+                          {tag}
+                        </span>
+                      );
+                    })}
                   </div>
                 </div>
               )}
@@ -1016,50 +1050,170 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
               padding: '10px',
             }}
           >
-            {/* Canvas - always rendered for ref */}
-            <canvas
-              ref={canvasRef}
-              onClick={handleCanvasClick}
-              style={{
-                border: '1px solid rgba(255, 255, 255, 0.2)',
-                imageRendering: 'pixelated',
-                display: imageLoaded ? 'block' : 'none',
-                cursor: 'pointer',
-              } as React.CSSProperties}
-            />
+            {/* Sheet view - Canvas (when no tag filter) */}
+            {!selectedTag && (
+              <>
+                <canvas
+                  ref={canvasRef}
+                  onClick={handleCanvasClick}
+                  style={{
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    imageRendering: 'pixelated',
+                    display: imageLoaded ? 'block' : 'none',
+                    cursor: 'pointer',
+                  } as React.CSSProperties}
+                />
 
-            {/* Status messages - centered when canvas not visible */}
-            {!imageLoaded && (
-              <div
-                style={{
-                  position: 'absolute',
-                  top: '50%',
-                  left: '50%',
-                  transform: 'translate(-50%, -50%)',
-                  textAlign: 'center',
-                }}
-              >
-                {!selectedSheet && (
-                  <div style={{ color: '#666', fontSize: '14px' }}>
-                    Select a sprite sheet to preview
+                {/* Status messages - centered when canvas not visible */}
+                {!imageLoaded && (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                    }}
+                  >
+                    {!selectedSheet && (
+                      <div style={{ color: '#666', fontSize: '14px' }}>
+                        Select a sprite sheet to preview
+                      </div>
+                    )}
+                    {selectedSheet && loadError && (
+                      <div style={{ color: '#f44', fontSize: '12px' }}>
+                        <div style={{ marginBottom: '8px' }}>Error loading sprite sheet</div>
+                        <div style={{ fontSize: '10px', color: '#aaa' }}>{loadError}</div>
+                        <div style={{ fontSize: '10px', color: '#aaa', marginTop: '8px' }}>
+                          Check browser console for details
+                        </div>
+                      </div>
+                    )}
+                    {selectedSheet && !loadError && (
+                      <div style={{ color: '#666', fontSize: '14px' }}>
+                        Loading sprite sheet...
+                      </div>
+                    )}
                   </div>
                 )}
-                {selectedSheet && loadError && (
-                  <div style={{ color: '#f44', fontSize: '12px' }}>
-                    <div style={{ marginBottom: '8px' }}>Error loading sprite sheet</div>
-                    <div style={{ fontSize: '10px', color: '#aaa' }}>{loadError}</div>
-                    <div style={{ fontSize: '10px', color: '#aaa', marginTop: '8px' }}>
-                      Check browser console for details
-                    </div>
-                  </div>
-                )}
-                {selectedSheet && !loadError && (
-                  <div style={{ color: '#666', fontSize: '14px' }}>
-                    Loading sprite sheet...
-                  </div>
-                )}
-              </div>
+              </>
             )}
+
+            {/* Grid view - Sprite grid (when tag is selected) */}
+            {selectedTag && (() => {
+              const allSprites = selectedSheet ? SpriteRegistry.getBySheet(selectedSheet) : [];
+              const filteredSprites = selectedTag
+                ? allSprites.filter(s => s.tags?.includes(selectedTag))
+                : allSprites;
+
+              if (filteredSprites.length === 0) {
+                return (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)',
+                      textAlign: 'center',
+                      color: '#666',
+                      fontSize: '14px',
+                    }}
+                  >
+                    No sprites found{selectedTag ? ` with tag "${selectedTag}"` : ''}
+                  </div>
+                );
+              }
+
+              const gridSize = SPRITE_SIZE * scale;
+
+              return (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(auto-fill, minmax(${gridSize + 40}px, 1fr))`,
+                  gap: '12px',
+                  padding: '4px'
+                }}>
+                  {filteredSprites.map((sprite) => (
+                    <div
+                      key={sprite.id}
+                      onClick={() => {
+                        setSelectedSprite({
+                          id: sprite.id,
+                          x: sprite.x,
+                          y: sprite.y
+                        });
+                        // Clear the tag filter to return to sheet view
+                        setSelectedTag('');
+                      }}
+                      style={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        padding: '8px',
+                        background: selectedSprite?.id === sprite.id ? 'rgba(255, 255, 0, 0.2)' : 'rgba(255, 255, 255, 0.05)',
+                        border: selectedSprite?.id === sprite.id ? '2px solid rgba(255, 255, 0, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        borderRadius: '4px',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedSprite?.id !== sprite.id) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.3)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedSprite?.id !== sprite.id) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                        }
+                      }}
+                      title={sprite.id}
+                    >
+                      <canvas
+                        width={gridSize}
+                        height={gridSize}
+                        ref={(canvas) => {
+                          if (canvas && imageRef.current) {
+                            const ctx = canvas.getContext('2d');
+                            if (ctx) {
+                              ctx.clearRect(0, 0, gridSize, gridSize);
+                              ctx.imageSmoothingEnabled = false;
+                              ctx.drawImage(
+                                imageRef.current,
+                                sprite.x * SPRITE_SIZE,
+                                sprite.y * SPRITE_SIZE,
+                                SPRITE_SIZE,
+                                SPRITE_SIZE,
+                                0,
+                                0,
+                                gridSize,
+                                gridSize
+                              );
+                            }
+                          }
+                        }}
+                        style={{
+                          imageRendering: 'pixelated',
+                          border: '1px solid rgba(255, 255, 255, 0.2)',
+                          background: 'rgba(0, 0, 0, 0.3)',
+                        } as React.CSSProperties}
+                      />
+                      <div style={{
+                        marginTop: '6px',
+                        fontSize: '9px',
+                        color: '#aaa',
+                        textAlign: 'center',
+                        wordBreak: 'break-word',
+                        maxWidth: '100%',
+                      }}>
+                        {sprite.id}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
