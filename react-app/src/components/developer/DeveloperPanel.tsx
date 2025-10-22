@@ -4,6 +4,7 @@ interface DeveloperPanelProps {
   onClose?: () => void;
   onOpenMapEditor?: () => void;
   onOpenSpriteRegistry?: () => void;
+  onOpenEnemyRegistry?: () => void;
   onOpenDebugPanel?: () => void;
 }
 
@@ -15,6 +16,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onClose,
   onOpenMapEditor,
   onOpenSpriteRegistry,
+  onOpenEnemyRegistry,
   onOpenDebugPanel,
 }) => {
   const panels = [
@@ -31,6 +33,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Sprite',
       available: !!onOpenSpriteRegistry,
       onClick: onOpenSpriteRegistry,
+    },
+    {
+      name: 'Enemy Registry',
+      description: 'Browse and edit enemies',
+      shortcut: 'F2 → Enemy',
+      available: !!onOpenEnemyRegistry,
+      onClick: onOpenEnemyRegistry,
     },
     {
       name: 'Debug Panel',

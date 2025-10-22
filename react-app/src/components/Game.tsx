@@ -5,6 +5,7 @@ import { MapEditor } from './MapEditor';
 import { CombatView } from './CombatView';
 import { DeveloperPanel } from './developer/DeveloperPanel';
 import { SpriteRegistryPanel } from './developer/SpriteRegistryPanel';
+import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -42,6 +43,9 @@ export const Game: React.FC = () => {
 
   // Sprite registry panel visibility (development only)
   const [spriteRegistryVisible, setSpriteRegistryVisible] = useState<boolean>(false);
+
+  // Enemy registry panel visibility (development only)
+  const [enemyRegistryVisible, setEnemyRegistryVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -298,7 +302,7 @@ export const Game: React.FC = () => {
       }
 
       // Ignore game input if any modal panels are open that accept text input
-      if (mapEditorVisible || spriteRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible) {
         return;
       }
 
@@ -323,7 +327,7 @@ export const Game: React.FC = () => {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       // Clear pressed keys when panels are open to prevent stuck keys
-      if (mapEditorVisible || spriteRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible) {
         pressedKeysRef.current.clear();
         return;
       }
@@ -336,7 +340,7 @@ export const Game: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible]);
+  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible]);
 
   if (loading) {
     return <div style={{
@@ -456,6 +460,10 @@ export const Game: React.FC = () => {
                   setSpriteRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenEnemyRegistry={() => {
+                  setEnemyRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenDebugPanel={() => {
                   setDebugPanelVisible(true);
                   setDeveloperPanelVisible(false);
@@ -467,6 +475,13 @@ export const Game: React.FC = () => {
             {import.meta.env.DEV && spriteRegistryVisible && (
               <SpriteRegistryPanel
                 onClose={() => setSpriteRegistryVisible(false)}
+              />
+            )}
+
+            {/* Enemy registry panel - only available in development mode */}
+            {import.meta.env.DEV && enemyRegistryVisible && (
+              <EnemyRegistryPanel
+                onClose={() => setEnemyRegistryVisible(false)}
               />
             )}
           </>
