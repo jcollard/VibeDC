@@ -134,4 +134,9 @@ export interface CombatUnit {
    * Stat used to determine success of attunement-based abilities
    */
   get attunement(): number;
+
+  /**
+   * Converts the unit to a JSON-serializable format
+   */
+  toJSON(): unknown;
 }

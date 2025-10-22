@@ -1,0 +1,351 @@
+import { describe, it, expect, beforeEach } from 'vitest';
+import { CombatEncounter } from './CombatEncounter';
+import { CombatMap, TerrainType } from './CombatMap';
+import { HumanoidUnit } from './HumanoidUnit';
+import { UnitClass } from './UnitClass';
+import { CombatAbility } from './CombatAbility';
+import {
+  AllEnemiesDefeatedPredicate,
+  AllPlayersDefeatedPredicate,
+  TurnLimitPredicate,
+  OrPredicate,
+  AndPredicate,
+} from './CombatPredicate';
+
+describe('CombatEncounter', () => {
+  let testClass: UnitClass;
+  let basicAttack: CombatAbility;
+
+  beforeEach(() => {
+    // Clear registries before each test
+    CombatEncounter.clearRegistry();
+    UnitClass.clearRegistry();
+    CombatAbility.clearRegistry();
+
+    // Create test ability
+    basicAttack = new CombatAbility(
+      'Basic Attack',
+      'A basic attack',
+      'Action',
+      0,
+      ['attack'],
+      'basic-attack'
+    );
+
+    // Create test class
+    testClass = new UnitClass(
+      'Fighter',
+      'A basic fighter class',
+      ['melee'],
+      [basicAttack],
+      { health: 10, physicalPower: 5 },
+      { health: 1.2 },
+      new Map(),
+      'fighter'
+    );
+  });
+
+  describe('Basic Encounter Creation', () => {
+    it('should create a basic encounter', () => {
+      const map = new CombatMap(10, 8);
+      const encounter = new CombatEncounter(
+        'test-encounter',
+        'Test Encounter',
+        'A test combat encounter',
+        map,
+        [new AllEnemiesDefeatedPredicate()],
+        [new AllPlayersDefeatedPredicate()],
+        [{ x: 1, y: 1 }, { x: 2, y: 1 }],
+        []
+      );
+
+      expect(encounter.id).toBe('test-encounter');
+      expect(encounter.name).toBe('Test Encounter');
+      expect(encounter.description).toBe('A test combat encounter');
+      expect(encounter.map.width).toBe(10);
+      expect(encounter.map.height).toBe(8);
+      expect(encounter.deploymentSlotCount).toBe(2);
+      expect(encounter.enemyCount).toBe(0);
+    });
+
+    it('should register encounter in global registry', () => {
+      const map = new CombatMap(5, 5);
+      new CombatEncounter(
+        'registered-encounter',
+        'Registered',
+        'Description',
+        map,
+        [],
+        [],
+        [],
+        []
+      );
+
+      const retrieved = CombatEncounter.getById('registered-encounter');
+      expect(retrieved).toBeDefined();
+      expect(retrieved?.name).toBe('Registered');
+    });
+  });
+
+  describe('Enemy Placements', () => {
+    it('should create encounter with enemy units', () => {
+      const map = new CombatMap(10, 8);
+
+      const enemy1 = new HumanoidUnit(
+        'Goblin',
+        testClass,
+        20, // health
+        10, // mana
+        3,  // physicalPower
+        1,  // magicPower
+        5,  // speed
+        3,  // movement
+        1,  // physicalEvade
+        0,  // magicEvade
+        2,  // courage
+        1   // attunement
+      );
+
+      const encounter = new CombatEncounter(
+        'goblin-encounter',
+        'Goblin Fight',
+        'Fight some goblins',
+        map,
+        [new AllEnemiesDefeatedPredicate()],
+        [new AllPlayersDefeatedPredicate()],
+        [{ x: 1, y: 7 }],
+        [
+          { unit: enemy1, position: { x: 5, y: 2 } }
+        ]
+      );
+
+      expect(encounter.enemyCount).toBe(1);
+      expect(encounter.enemyPlacements[0].unit.name).toBe('Goblin');
+      expect(encounter.enemyPlacements[0].position).toEqual({ x: 5, y: 2 });
+    });
+  });
+
+  describe('Victory and Defeat Conditions', () => {
+    it('should check victory conditions (all must be true)', () => {
+      const map = new CombatMap(5, 5);
+      const encounter = new CombatEncounter(
+        'test',
+        'Test',
+        'Test',
+        map,
+        [new AllEnemiesDefeatedPredicate()],
+        [new AllPlayersDefeatedPredicate()],
+        [],
+        []
+      );
+
+      // AllEnemiesDefeatedPredicate returns false (not implemented yet)
+      expect(encounter.isVictory({ turnNumber: 1 })).toBe(false);
+    });
+
+    it('should check defeat conditions (any can be true)', () => {
+      const map = new CombatMap(5, 5);
+      const encounter = new CombatEncounter(
+        'test',
+        'Test',
+        'Test',
+        map,
+        [],
+        [new AllPlayersDefeatedPredicate()],
+        [],
+        []
+      );
+
+      // AllPlayersDefeatedPredicate returns false (not implemented yet)
+      expect(encounter.isDefeat({ turnNumber: 1 })).toBe(false);
+    });
+
+    it('should handle turn limit victory condition', () => {
+      const map = new CombatMap(5, 5);
+      const encounter = new CombatEncounter(
+        'test',
+        'Test',
+        'Test',
+        map,
+        [new TurnLimitPredicate(10)],
+        [],
+        [],
+        []
+      );
+
+      expect(encounter.isVictory({ turnNumber: 5 })).toBe(false);
+      expect(encounter.isVictory({ turnNumber: 10 })).toBe(true);
+      expect(encounter.isVictory({ turnNumber: 15 })).toBe(true);
+    });
+
+    it('should handle complex OR victory conditions', () => {
+      const map = new CombatMap(5, 5);
+      const encounter = new CombatEncounter(
+        'test',
+        'Test',
+        'Test',
+        map,
+        [
+          new OrPredicate([
+            new TurnLimitPredicate(10),
+            new AllEnemiesDefeatedPredicate(),
+          ])
+        ],
+        [],
+        [],
+        []
+      );
+
+      // Victory if turn 10 reached (even if enemies not defeated)
+      expect(encounter.isVictory({ turnNumber: 10 })).toBe(true);
+    });
+
+    it('should handle complex AND victory conditions', () => {
+      const map = new CombatMap(5, 5);
+      const encounter = new CombatEncounter(
+        'test',
+        'Test',
+        'Test',
+        map,
+        [
+          new AndPredicate([
+            new TurnLimitPredicate(5),
+            new TurnLimitPredicate(3), // Both must be true
+          ])
+        ],
+        [],
+        [],
+        []
+      );
+
+      expect(encounter.isVictory({ turnNumber: 2 })).toBe(false);
+      expect(encounter.isVictory({ turnNumber: 3 })).toBe(false);
+      expect(encounter.isVictory({ turnNumber: 5 })).toBe(true);
+    });
+  });
+
+  describe('JSON Serialization', () => {
+    it('should serialize and deserialize encounter', () => {
+      const map = new CombatMap(10, 8);
+
+      const enemy = new HumanoidUnit(
+        'Test Enemy',
+        testClass,
+        30, // health
+        10, // mana
+        5,  // physicalPower
+        2,  // magicPower
+        4,  // speed
+        3,  // movement
+        1,  // physicalEvade
+        1,  // magicEvade
+        3,  // courage
+        2   // attunement
+      );
+
+      const original = new CombatEncounter(
+        'serialize-test',
+        'Serialize Test',
+        'Test serialization',
+        map,
+        [new AllEnemiesDefeatedPredicate()],
+        [new AllPlayersDefeatedPredicate()],
+        [{ x: 1, y: 7 }, { x: 2, y: 7 }],
+        [{ unit: enemy, position: { x: 5, y: 2 } }]
+      );
+
+      const json = original.toJSON();
+
+      // Note: testClass is still in the registry from beforeEach,
+      // so deserialization can find it by ID
+      const deserialized = CombatEncounter.fromJSON(json);
+
+      expect(deserialized.id).toBe(original.id);
+      expect(deserialized.name).toBe(original.name);
+      expect(deserialized.description).toBe(original.description);
+      expect(deserialized.map.width).toBe(original.map.width);
+      expect(deserialized.map.height).toBe(original.map.height);
+      expect(deserialized.deploymentSlotCount).toBe(2);
+      expect(deserialized.enemyCount).toBe(1);
+      expect(deserialized.enemyPlacements[0].unit.name).toBe('Test Enemy');
+      expect(deserialized.enemyPlacements[0].unit.unitClass).toBe(testClass);
+      expect(deserialized.victoryConditions.length).toBe(1);
+      expect(deserialized.defeatConditions.length).toBe(1);
+    });
+
+    it('should serialize map with different terrain types', () => {
+      const map = new CombatMap(3, 3);
+      map.setCell({ x: 0, y: 0 }, { terrain: TerrainType.Wall, walkable: false });
+      map.setCell({ x: 1, y: 1 }, { terrain: TerrainType.Water, walkable: false });
+      map.setCell({ x: 2, y: 2 }, { terrain: TerrainType.Floor, walkable: true });
+
+      const encounter = new CombatEncounter(
+        'terrain-test',
+        'Terrain Test',
+        'Test',
+        map,
+        [],
+        [],
+        [],
+        []
+      );
+
+      const json = encounter.toJSON();
+      const deserialized = CombatEncounter.fromJSON(json);
+
+      expect(deserialized.map.getCell({ x: 0, y: 0 })?.terrain).toBe(TerrainType.Wall);
+      expect(deserialized.map.getCell({ x: 1, y: 1 })?.terrain).toBe(TerrainType.Water);
+      expect(deserialized.map.getCell({ x: 2, y: 2 })?.terrain).toBe(TerrainType.Floor);
+    });
+  });
+
+  describe('CombatMap', () => {
+    it('should create map with default floor cells', () => {
+      const map = new CombatMap(5, 5);
+
+      const cell = map.getCell({ x: 2, y: 2 });
+      expect(cell?.terrain).toBe(TerrainType.Floor);
+      expect(cell?.walkable).toBe(true);
+    });
+
+    it('should check bounds correctly', () => {
+      const map = new CombatMap(5, 5);
+
+      expect(map.isInBounds({ x: 0, y: 0 })).toBe(true);
+      expect(map.isInBounds({ x: 4, y: 4 })).toBe(true);
+      expect(map.isInBounds({ x: 5, y: 5 })).toBe(false);
+      expect(map.isInBounds({ x: -1, y: 0 })).toBe(false);
+    });
+
+    it('should set and get cells', () => {
+      const map = new CombatMap(5, 5);
+
+      map.setCell({ x: 2, y: 3 }, { terrain: TerrainType.Wall, walkable: false });
+
+      const cell = map.getCell({ x: 2, y: 3 });
+      expect(cell?.terrain).toBe(TerrainType.Wall);
+      expect(cell?.walkable).toBe(false);
+    });
+
+    it('should check walkability', () => {
+      const map = new CombatMap(5, 5);
+
+      expect(map.isWalkable({ x: 0, y: 0 })).toBe(true);
+
+      map.setCell({ x: 1, y: 1 }, { terrain: TerrainType.Wall, walkable: false });
+      expect(map.isWalkable({ x: 1, y: 1 })).toBe(false);
+    });
+
+    it('should get all cells', () => {
+      const map = new CombatMap(3, 2);
+
+      const cells = map.getAllCells();
+      expect(cells.length).toBe(6); // 3 * 2
+
+      // Check that all positions are present
+      const positions = cells.map(c => `${c.position.x},${c.position.y}`);
+      expect(positions).toContain('0,0');
+      expect(positions).toContain('2,1');
+    });
+  });
+});

@@ -2,12 +2,15 @@ import * as yaml from 'js-yaml';
 import { CombatAbility } from '../models/combat/CombatAbility';
 import { Equipment } from '../models/combat/Equipment';
 import { UnitClass } from '../models/combat/UnitClass';
+import { CombatEncounter } from '../models/combat/CombatEncounter';
+import type { CombatEncounterJSON } from '../models/combat/CombatEncounter';
 import type { EquipmentType } from '../models/combat/Equipment';
 import type { AbilityType } from '../models/combat/CombatAbility';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
 import classYaml from './class-database.yaml?raw';
+import encounterYaml from './encounter-database.yaml?raw';
 
 // Import equipment YAML files
 import swordsYaml from './equipment/swords.yaml?raw';
@@ -155,17 +158,37 @@ export function loadClasses(): void {
 }
 
 /**
+ * Load all combat encounters from the YAML database
+ * Must be called after loadAbilities(), loadEquipment(), and loadClasses()
+ * since encounters reference these entities
+ */
+export function loadEncounters(): void {
+  const data = yaml.load(encounterYaml) as { encounters: CombatEncounterJSON[] };
+
+  for (const encounterData of data.encounters) {
+    try {
+      CombatEncounter.fromJSON(encounterData);
+    } catch (error) {
+      console.error(`Failed to load encounter ${encounterData.id}:`, error);
+    }
+  }
+
+  console.log(`Loaded ${data.encounters.length} combat encounters`);
+}
+
+/**
  * Load all game data from YAML files
  * Call this once at application startup
  */
 export function loadAllGameData(): void {
   console.log('Loading game data...');
 
-  // Order matters: abilities must be loaded before classes
+  // Order matters: abilities must be loaded before classes and encounters
   loadAbilities();
   loadEquipment();
   loadClasses();
+  loadEncounters();
 
   console.log('Game data loaded successfully');
-  console.log(`Total: ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes`);
+  console.log(`Total: ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${CombatEncounter.getAll().length} encounters`);
 }

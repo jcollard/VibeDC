@@ -1,0 +1,413 @@
+encounters:
+  # Example combat encounter: Forest Ambush
+  - id: "forest-ambush"
+    name: "Forest Ambush"
+    description: "A group of bandits ambush travelers on the forest road."
+
+    # Combat map definition
+    map:
+      width: 10
+      height: 8
+      grid:
+        # Row 0 (y=0)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+        # Row 1 (y=1)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        # Row 2 (y=2)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        # Row 3 (y=3)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        # Row 4 (y=4)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        # Row 5 (y=5)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        # Row 6 (y=6)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        # Row 7 (y=7)
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+
+    # Victory conditions (all must be true)
+    victoryConditions:
+      - type: "AllEnemiesDefeated"
+        description: "Defeat all bandits"
+
+    # Defeat conditions (any can be true)
+    defeatConditions:
+      - type: "AllPlayersDefeated"
+        description: "All party members defeated"
+
+    # Player deployment zones (bottom of map)
+    playerDeploymentZones:
+      - { x: 2, y: 6 }
+      - { x: 3, y: 6 }
+      - { x: 4, y: 6 }
+      - { x: 5, y: 6 }
+
+    # Enemy placements
+    enemyPlacements:
+      # Bandit Archer 1 (top left)
+      - position: { x: 2, y: 2 }
+        unit:
+          name: "Bandit Archer"
+          unitClassId: "rogue"
+          secondaryClassId: null
+          learnedAbilityIds: ["basic-attack", "quick-shot"]
+          totalExperience: 0
+          classExperience: { "rogue": 0 }
+          classExperienceSpent: { "rogue": 0 }
+          reactionAbilityId: null
+          passiveAbilityId: null
+          movementAbilityId: null
+          baseHealth: 25
+          baseMana: 10
+          basePhysicalPower: 3
+          baseMagicPower: 1
+          baseSpeed: 6
+          baseMovement: 4
+          basePhysicalEvade: 2
+          baseMagicEvade: 1
+          baseCourage: 3
+          baseAttunement: 1
+          wounds: 0
+          manaUsed: 0
+          turnGauge: 0
+          leftHandId: null
+          rightHandId: "short-bow"
+          headId: null
+          bodyId: "light-leather-armor"
+          accessoryId: null
+
+      # Bandit Warrior 1 (center)
+      - position: { x: 5, y: 3 }
+        unit:
+          name: "Bandit Warrior"
+          unitClassId: "fighter"
+          secondaryClassId: null
+          learnedAbilityIds: ["basic-attack", "power-strike"]
+          totalExperience: 0
+          classExperience: { "fighter": 0 }
+          classExperienceSpent: { "fighter": 0 }
+          reactionAbilityId: null
+          passiveAbilityId: null
+          movementAbilityId: null
+          baseHealth: 35
+          baseMana: 5
+          basePhysicalPower: 5
+          baseMagicPower: 1
+          baseSpeed: 4
+          baseMovement: 3
+          basePhysicalEvade: 1
+          baseMagicEvade: 0
+          baseCourage: 5
+          baseAttunement: 1
+          wounds: 0
+          manaUsed: 0
+          turnGauge: 0
+          leftHandId: "wooden-shield"
+          rightHandId: "iron-sword"
+          headId: null
+          bodyId: "medium-chain-armor"
+          accessoryId: null
+
+      # Bandit Archer 2 (top right)
+      - position: { x: 7, y: 2 }
+        unit:
+          name: "Bandit Archer"
+          unitClassId: "rogue"
+          secondaryClassId: null
+          learnedAbilityIds: ["basic-attack", "quick-shot"]
+          totalExperience: 0
+          classExperience: { "rogue": 0 }
+          classExperienceSpent: { "rogue": 0 }
+          reactionAbilityId: null
+          passiveAbilityId: null
+          movementAbilityId: null
+          baseHealth: 25
+          baseMana: 10
+          basePhysicalPower: 3
+          baseMagicPower: 1
+          baseSpeed: 6
+          baseMovement: 4
+          basePhysicalEvade: 2
+          baseMagicEvade: 1
+          baseCourage: 3
+          baseAttunement: 1
+          wounds: 0
+          manaUsed: 0
+          turnGauge: 0
+          leftHandId: null
+          rightHandId: "short-bow"
+          headId: null
+          bodyId: "light-leather-armor"
+          accessoryId: null
+
+  # Example encounter with turn limit and special victory condition
+  - id: "escort-mission"
+    name: "Escort Mission"
+    description: "Protect the merchant for 10 turns while enemies attack."
+
+    map:
+      width: 8
+      height: 8
+      grid:
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "floor", walkable: true }
+          - { terrain: "wall", walkable: false }
+        - - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+          - { terrain: "wall", walkable: false }
+
+    victoryConditions:
+      # Win by surviving 10 turns OR defeating all enemies
+      - type: "Or"
+        description: "Survive 10 turns or defeat all enemies"
+        predicates:
+          - type: "TurnLimit"
+            maxTurns: 10
+            description: "Survived for 10 turns"
+          - type: "AllEnemiesDefeated"
+            description: "Defeated all enemies"
+
+    defeatConditions:
+      # Lose if merchant dies OR all players die
+      - type: "Or"
+        description: "Merchant or all players defeated"
+        predicates:
+          - type: "UnitDefeated"
+            unitId: "merchant-npc"
+            description: "Merchant defeated"
+          - type: "AllPlayersDefeated"
+            description: "All party members defeated"
+
+    playerDeploymentZones:
+      - { x: 1, y: 6 }
+      - { x: 2, y: 6 }
+      - { x: 3, y: 6 }
+
+    enemyPlacements:
+      # Merchant NPC to protect (starts at center)
+      # Note: This unit would need special handling as it's an NPC ally, not an enemy
+      # For now it's in enemyPlacements but would need a separate field in a real implementation
+      - position: { x: 3, y: 3 }
+        unit:
+          name: "Merchant"
+          unitClassId: "fighter"
+          secondaryClassId: null
+          learnedAbilityIds: ["basic-attack"]
+          totalExperience: 0
+          classExperience: { "fighter": 0 }
+          classExperienceSpent: { "fighter": 0 }
+          reactionAbilityId: null
+          passiveAbilityId: null
+          movementAbilityId: null
+          baseHealth: 20
+          baseMana: 5
+          basePhysicalPower: 1
+          baseMagicPower: 1
+          baseSpeed: 3
+          baseMovement: 3
+          basePhysicalEvade: 0
+          baseMagicEvade: 0
+          baseCourage: 2
+          baseAttunement: 1
+          wounds: 0
+          manaUsed: 0
+          turnGauge: 0
+          leftHandId: null
+          rightHandId: null
+          headId: null
+          bodyId: null
+          accessoryId: null
+
+      # Goblin attackers
+      - position: { x: 1, y: 1 }
+        unit:
+          name: "Goblin Scout"
+          unitClassId: "rogue"
+          secondaryClassId: null
+          learnedAbilityIds: ["basic-attack"]
+          totalExperience: 0
+          classExperience: { "rogue": 0 }
+          classExperienceSpent: { "rogue": 0 }
+          reactionAbilityId: null
+          passiveAbilityId: null
+          movementAbilityId: null
+          baseHealth: 15
+          baseMana: 5
+          basePhysicalPower: 2
+          baseMagicPower: 0
+          baseSpeed: 7
+          baseMovement: 5
+          basePhysicalEvade: 3
+          baseMagicEvade: 1
+          baseCourage: 2
+          baseAttunement: 0
+          wounds: 0
+          manaUsed: 0
+          turnGauge: 0
+          leftHandId: null
+          rightHandId: "rusty-dagger"
+          headId: null
+          bodyId: null
+          accessoryId: null
+
+      - position: { x: 5, y: 1 }
+        unit:
+          name: "Goblin Scout"
+          unitClassId: "rogue"
+          secondaryClassId: null
+          learnedAbilityIds: ["basic-attack"]
+          totalExperience: 0
+          classExperience: { "rogue": 0 }
+          classExperienceSpent: { "rogue": 0 }
+          reactionAbilityId: null
+          passiveAbilityId: null
+          movementAbilityId: null
+          baseHealth: 15
+          baseMana: 5
+          basePhysicalPower: 2
+          baseMagicPower: 0
+          baseSpeed: 7
+          baseMovement: 5
+          basePhysicalEvade: 3
+          baseMagicEvade: 1
+          baseCourage: 2
+          baseAttunement: 0
+          wounds: 0
+          manaUsed: 0
+          turnGauge: 0
+          leftHandId: null
+          rightHandId: "rusty-dagger"
+          headId: null
+          bodyId: null
+          accessoryId: null
