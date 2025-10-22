@@ -31,6 +31,12 @@ export interface CombatCell {
   walkable: boolean;
 
   /**
+   * Optional sprite ID for rendering this cell.
+   * Used to specify which visual representation to use.
+   */
+  spriteId?: string;
+
+  /**
    * Optional prop placed on this cell (for future implementation).
    * Props may affect gameplay (cover, damage, etc.)
    */
@@ -155,4 +161,78 @@ export interface CombatMapJSON {
   width: number;
   height: number;
   grid: CombatCell[][];
+}
+
+/**
+ * Defines a tile type for ASCII map parsing
+ */
+export interface TileDefinition {
+  char: string;
+  terrain: TerrainType;
+  walkable: boolean;
+  spriteId?: string;
+}
+
+/**
+ * ASCII map format for easier map creation
+ */
+export interface ASCIIMapDefinition {
+  tileTypes: TileDefinition[];
+  grid: string;
+}
+
+/**
+ * Parses an ASCII map definition into a CombatMap
+ * @param ascii The ASCII map definition with tile types and grid
+ * @returns A new CombatMap instance
+ */
+export function parseASCIIMap(ascii: ASCIIMapDefinition): CombatMap {
+  // Create a lookup map from character to tile definition
+  const tileMap = new Map<string, TileDefinition>();
+  for (const tileDef of ascii.tileTypes) {
+    tileMap.set(tileDef.char, tileDef);
+  }
+
+  // Parse the grid string into rows
+  const rows = ascii.grid
+    .split('\n')
+    .map(line => line.trim())
+    .filter(line => line.length > 0);
+
+  if (rows.length === 0) {
+    throw new Error('ASCII map grid is empty');
+  }
+
+  const height = rows.length;
+  const width = rows[0].length;
+
+  // Validate all rows have the same width
+  for (let y = 0; y < height; y++) {
+    if (rows[y].length !== width) {
+      throw new Error(`Row ${y} has width ${rows[y].length}, expected ${width}`);
+    }
+  }
+
+  // Build the grid
+  const grid: CombatCell[][] = [];
+  for (let y = 0; y < height; y++) {
+    const row: CombatCell[] = [];
+    for (let x = 0; x < width; x++) {
+      const char = rows[y][x];
+      const tileDef = tileMap.get(char);
+
+      if (!tileDef) {
+        throw new Error(`Unknown tile character '${char}' at position (${x}, ${y})`);
+      }
+
+      row.push({
+        terrain: tileDef.terrain,
+        walkable: tileDef.walkable,
+        spriteId: tileDef.spriteId,
+      });
+    }
+    grid.push(row);
+  }
+
+  return new CombatMap(width, height, grid);
 }

@@ -1,0 +1,74 @@
+# Example showing the new ASCII map format for combat encounters
+
+# This is a more complex example showing various terrain types
+encounters:
+  - id: "dungeon-room"
+    name: "Dungeon Room"
+    description: "A small dungeon room with pillars and a treasure chest."
+
+    map:
+      tileTypes:
+        - { char: "#", terrain: "wall", walkable: false, spriteId: "dungeon-wall" }
+        - { char: ".", terrain: "floor", walkable: true, spriteId: "stone-floor" }
+        - { char: "~", terrain: "water", walkable: false, spriteId: "water" }
+        - { char: "^", terrain: "pit", walkable: false, spriteId: "pit" }
+        - { char: "O", terrain: "floor", walkable: true, spriteId: "pillar" } # Pillar (floor with prop)
+      grid: |
+        ##########
+        #........#
+        #.O....O.#
+        #........#
+        #...~~...#
+        #...~~...#
+        #........#
+        #.O....O.#
+        #........#
+        ##########
+
+    victoryConditions:
+      - type: "AllEnemiesDefeated"
+        description: "Defeat all dungeon guardians"
+
+    defeatConditions:
+      - type: "AllPlayersDefeated"
+        description: "Party defeated"
+
+    playerDeploymentZones:
+      - { x: 1, y: 8 }
+      - { x: 2, y: 8 }
+      - { x: 3, y: 8 }
+      - { x: 4, y: 8 }
+
+    enemyPlacements: []
+
+  - id: "lava-bridge"
+    name: "Lava Bridge"
+    description: "Cross the narrow bridge over pools of lava."
+
+    map:
+      tileTypes:
+        - { char: "#", terrain: "wall", walkable: false, spriteId: "cave-wall" }
+        - { char: ".", terrain: "floor", walkable: true, spriteId: "stone-bridge" }
+        - { char: "L", terrain: "lava", walkable: false, spriteId: "lava" }
+      grid: |
+        #########
+        #LLL.LLL#
+        #LLL.LLL#
+        #LLL.LLL#
+        #LLL.LLL#
+        #LLL.LLL#
+        #LLL.LLL#
+        #########
+
+    victoryConditions:
+      - type: "AllEnemiesDefeated"
+        description: "Defeat fire elementals"
+
+    defeatConditions:
+      - type: "AllPlayersDefeated"
+        description: "Party defeated"
+
+    playerDeploymentZones:
+      - { x: 4, y: 6 }
+
+    enemyPlacements: []

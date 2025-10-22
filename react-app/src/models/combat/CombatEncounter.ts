@@ -2,8 +2,8 @@ import type { Position } from "../../types";
 import type { CombatUnit } from "./CombatUnit";
 import { HumanoidUnit } from "./HumanoidUnit";
 import type { HumanoidUnitJSON } from "./HumanoidUnit";
-import { CombatMap } from "./CombatMap";
-import type { CombatMapJSON } from "./CombatMap";
+import { CombatMap, parseASCIIMap } from "./CombatMap";
+import type { CombatMapJSON, ASCIIMapDefinition } from "./CombatMap";
 import type {
   CombatPredicate,
   CombatPredicateJSON,
@@ -121,7 +121,16 @@ export class CombatEncounter {
    * Creates a CombatEncounter from a JSON representation.
    */
   static fromJSON(json: CombatEncounterJSON): CombatEncounter {
-    const map = CombatMap.fromJSON(json.map);
+    // Parse map - support both ASCII and JSON grid formats
+    let map: CombatMap;
+    if ('tileTypes' in json.map && 'grid' in json.map) {
+      // ASCII format
+      map = parseASCIIMap(json.map as ASCIIMapDefinition);
+    } else {
+      // JSON grid format
+      map = CombatMap.fromJSON(json.map as CombatMapJSON);
+    }
+
     const victoryConditions = json.victoryConditions.map((vc) =>
       CombatPredicateFactory.fromJSON(vc)
     );
@@ -175,7 +184,7 @@ export interface CombatEncounterJSON {
   id: string;
   name: string;
   description: string;
-  map: CombatMapJSON;
+  map: CombatMapJSON | ASCIIMapDefinition; // Support both formats
   victoryConditions: CombatPredicateJSON[];
   defeatConditions: CombatPredicateJSON[];
   playerDeploymentZones: Position[];

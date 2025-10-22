@@ -4,99 +4,20 @@ encounters:
     name: "Forest Ambush"
     description: "A group of bandits ambush travelers on the forest road."
 
-    # Combat map definition
+    # Combat map definition (ASCII format)
     map:
-      width: 10
-      height: 8
-      grid:
-        # Row 0 (y=0)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-        # Row 1 (y=1)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        # Row 2 (y=2)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        # Row 3 (y=3)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        # Row 4 (y=4)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        # Row 5 (y=5)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        # Row 6 (y=6)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        # Row 7 (y=7)
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
+      tileTypes:
+        - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
+        - { char: ".", terrain: "floor", walkable: true, spriteId: "grass" }
+      grid: |
+        ##########
+        #........#
+        #........#
+        #........#
+        #........#
+        #........#
+        #........#
+        ##########
 
     # Victory conditions (all must be true)
     victoryConditions:
@@ -219,73 +140,18 @@ encounters:
     description: "Protect the merchant for 10 turns while enemies attack."
 
     map:
-      width: 8
-      height: 8
-      grid:
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "floor", walkable: true }
-          - { terrain: "wall", walkable: false }
-        - - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
-          - { terrain: "wall", walkable: false }
+      tileTypes:
+        - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
+        - { char: ".", terrain: "floor", walkable: true, spriteId: "cobblestone" }
+      grid: |
+        ########
+        #......#
+        #......#
+        #......#
+        #......#
+        #......#
+        #......#
+        ########
 
     victoryConditions:
       # Win by surviving 10 turns OR defeating all enemies
