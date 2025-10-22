@@ -3,6 +3,7 @@ import { EnemyRegistry } from '../../utils/EnemyRegistry';
 import type { EnemyDefinition } from '../../utils/EnemyRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { SpriteBrowser } from './SpriteBrowser';
+import { CombatAbility } from '../../models/combat/CombatAbility';
 
 interface EnemyRegistryPanelProps {
   onClose?: () => void;
@@ -22,6 +23,7 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
   const [editError, setEditError] = useState<string>('');
   const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
   const spriteCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [availableAbilities, setAvailableAbilities] = useState<CombatAbility[]>([]);
 
   // Sprite size constant
   const SPRITE_SIZE = 12;
@@ -38,6 +40,9 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
       enemy.tags?.forEach(tag => tagsSet.add(tag));
     });
     setAllTags(Array.from(tagsSet).sort());
+
+    // Load available abilities
+    setAvailableAbilities(CombatAbility.getAll());
 
     console.log('EnemyRegistryPanel: Loaded enemies:', allEnemies.length);
   }, []);
@@ -297,6 +302,27 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
   const handleFieldChange = (field: keyof EnemyDefinition, value: any) => {
     if (!editedEnemy) return;
     setEditedEnemy({ ...editedEnemy, [field]: value });
+  };
+
+  // Handle adding a learned ability
+  const handleAddLearnedAbility = (abilityId: string) => {
+    if (!editedEnemy || !abilityId) return;
+    const learnedAbilities = editedEnemy.learnedAbilityIds || [];
+    if (learnedAbilities.includes(abilityId)) return;
+    setEditedEnemy({
+      ...editedEnemy,
+      learnedAbilityIds: [...learnedAbilities, abilityId]
+    });
+  };
+
+  // Handle removing a learned ability
+  const handleRemoveLearnedAbility = (abilityId: string) => {
+    if (!editedEnemy) return;
+    const learnedAbilities = editedEnemy.learnedAbilityIds || [];
+    setEditedEnemy({
+      ...editedEnemy,
+      learnedAbilityIds: learnedAbilities.filter(id => id !== abilityId)
+    });
   };
 
   return (
@@ -1143,6 +1169,217 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                     </span>
                   )) || (
                     <span style={{ fontSize: '11px', color: '#666', fontStyle: 'italic' }}>No tags</span>
+                  )}
+                </div>
+              </div>
+
+              {/* Ability Slots */}
+              <div style={{
+                background: 'rgba(156, 39, 176, 0.1)',
+                border: '1px solid rgba(156, 39, 176, 0.3)',
+                borderRadius: '4px',
+                padding: '12px',
+                marginTop: '12px',
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'rgba(156, 39, 176, 0.9)' }}>
+                  Ability Slots
+                </div>
+
+                {/* Learned Abilities (Actions) */}
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                    Learned Abilities (Actions):
+                  </label>
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '3px',
+                    padding: '6px',
+                    minHeight: '30px',
+                  }}>
+                    {(isEditing ? editedEnemy?.learnedAbilityIds : selectedEnemy.learnedAbilityIds)?.map(abilityId => {
+                      const ability = CombatAbility.getById(abilityId);
+                      return (
+                        <div
+                          key={abilityId}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '4px 0',
+                            borderBottom: '1px solid rgba(156, 39, 176, 0.2)',
+                          }}
+                        >
+                          <span style={{ fontSize: '10px' }}>
+                            {ability ? ability.name : abilityId}
+                          </span>
+                          {isEditing && (
+                            <button
+                              onClick={() => handleRemoveLearnedAbility(abilityId)}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#f44336',
+                                cursor: 'pointer',
+                                padding: 0,
+                                fontSize: '14px',
+                              }}
+                            >
+                              ×
+                            </button>
+                          )}
+                        </div>
+                      );
+                    }) || (
+                      <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>No learned abilities</div>
+                    )}
+                    {isEditing && (
+                      <div style={{ marginTop: '6px' }}>
+                        <select
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleAddLearnedAbility(e.target.value);
+                              e.target.value = '';
+                            }
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          <option value="">Add ability...</option>
+                          {availableAbilities
+                            .filter(a => a.abilityType === 'Action')
+                            .map(ability => (
+                              <option key={ability.id} value={ability.id}>
+                                {ability.name}
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Reaction Ability */}
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                    Reaction Ability:
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={editedEnemy?.reactionAbilityId || ''}
+                      onChange={(e) => handleFieldChange('reactionAbilityId', e.target.value || undefined)}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        borderRadius: '3px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      <option value="">None</option>
+                      {availableAbilities
+                        .filter(a => a.abilityType === 'Reaction')
+                        .map(ability => (
+                          <option key={ability.id} value={ability.id}>
+                            {ability.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#fff' }}>
+                      {selectedEnemy.reactionAbilityId
+                        ? CombatAbility.getById(selectedEnemy.reactionAbilityId)?.name || selectedEnemy.reactionAbilityId
+                        : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                      }
+                    </div>
+                  )}
+                </div>
+
+                {/* Passive Ability */}
+                <div style={{ marginBottom: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                    Passive Ability:
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={editedEnemy?.passiveAbilityId || ''}
+                      onChange={(e) => handleFieldChange('passiveAbilityId', e.target.value || undefined)}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        borderRadius: '3px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      <option value="">None</option>
+                      {availableAbilities
+                        .filter(a => a.abilityType === 'Passive')
+                        .map(ability => (
+                          <option key={ability.id} value={ability.id}>
+                            {ability.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#fff' }}>
+                      {selectedEnemy.passiveAbilityId
+                        ? CombatAbility.getById(selectedEnemy.passiveAbilityId)?.name || selectedEnemy.passiveAbilityId
+                        : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                      }
+                    </div>
+                  )}
+                </div>
+
+                {/* Movement Ability */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                    Movement Ability:
+                  </label>
+                  {isEditing ? (
+                    <select
+                      value={editedEnemy?.movementAbilityId || ''}
+                      onChange={(e) => handleFieldChange('movementAbilityId', e.target.value || undefined)}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        borderRadius: '3px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      <option value="">None</option>
+                      {availableAbilities
+                        .filter(a => a.abilityType === 'Movement')
+                        .map(ability => (
+                          <option key={ability.id} value={ability.id}>
+                            {ability.name}
+                          </option>
+                        ))}
+                    </select>
+                  ) : (
+                    <div style={{ fontSize: '11px', color: '#fff' }}>
+                      {selectedEnemy.movementAbilityId
+                        ? CombatAbility.getById(selectedEnemy.movementAbilityId)?.name || selectedEnemy.movementAbilityId
+                        : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                      }
+                    </div>
                   )}
                 </div>
               </div>

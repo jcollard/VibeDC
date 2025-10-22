@@ -1,0 +1,225 @@
+# Equipment Database
+# Exported from Equipment Registry Panel
+
+equipment:
+
+  # Accessory
+  - id: "brave-heart-charm-001"
+    name: "Brave Heart Charm"
+    type: "Accessory"
+    modifiers:
+      health: 10
+      courage: 15
+    multipliers:
+      courage: 1.3
+
+  - id: "mana-amulet-001"
+    name: "Mana Amulet"
+    type: "Accessory"
+    modifiers:
+      mana: 25
+      magicPower: 5
+    multipliers:
+      mana: 1.2
+
+  - id: "mystic-pendant-001"
+    name: "Mystic Pendant"
+    type: "Accessory"
+    modifiers:
+      magicPower: 6
+      attunement: 12
+    multipliers:
+      attunement: 1.25
+
+  - id: "strength-ring-001"
+    name: "Ring of Strength"
+    type: "Accessory"
+    modifiers:
+      physicalPower: 8
+    multipliers:
+      physicalPower: 1.1
+
+  - id: "swift-boots-001"
+    name: "Swift Boots"
+    type: "Accessory"
+    modifiers:
+      speed: 8
+      movement: 1
+    multipliers:
+      speed: 1.15
+
+
+  # Body
+  - id: "dragon-scale-armor-001"
+    name: "Dragon Scale Armor"
+    type: "Body"
+    modifiers:
+      health: 40
+      physicalEvade: 8
+      magicEvade: 8
+    multipliers:
+      health: 1.15
+      physicalEvade: 1.1
+      magicEvade: 1.1
+
+  - id: "leather-armor-001"
+    name: "Leather Armor"
+    type: "Body"
+    modifiers:
+      health: 20
+      speed: -1
+      physicalEvade: 5
+
+  - id: "plate-armor-001"
+    name: "Plate Armor"
+    type: "Body"
+    modifiers:
+      health: 50
+      speed: -5
+      physicalEvade: 10
+    multipliers:
+      health: 1.2
+
+  - id: "wizards-robe-001"
+    name: "Wizard's Robe"
+    type: "Body"
+    modifiers:
+      mana: 30
+      magicPower: 12
+      magicEvade: 8
+    multipliers:
+      mana: 1.15
+      magicPower: 1.1
+
+
+  # Head
+  - id: "crown-of-courage-001"
+    name: "Crown of Courage"
+    type: "Head"
+    modifiers:
+      health: 10
+      courage: 10
+    multipliers:
+      courage: 1.2
+
+  - id: "iron-helmet-001"
+    name: "Iron Helmet"
+    type: "Head"
+    modifiers:
+      health: 15
+      physicalEvade: 3
+
+  - id: "wizards-hat-001"
+    name: "Wizard's Hat"
+    type: "Head"
+    modifiers:
+      mana: 20
+      magicPower: 8
+    multipliers:
+      mana: 1.1
+
+
+  # Held
+  - id: "crystal-orb-001"
+    name: "Crystal Orb"
+    type: "Held"
+    modifiers:
+      magicPower: 10
+      attunement: 5
+    multipliers:
+      attunement: 1.15
+
+  - id: "torch-001"
+    name: "Torch"
+    type: "Held"
+    modifiers:
+      magicPower: 3
+
+
+  # OneHandedWeapon
+  - id: "flame-blade-001"
+    name: "Flame Blade"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 12
+      magicPower: 8
+    multipliers:
+      physicalPower: 1.1
+
+  - id: "iron-sword-001"
+    name: "Iron Sword"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 10
+      speed: 2
+
+  - id: "steel-dagger-001"
+    name: "Steel Dagger"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 8
+      speed: 5
+    allowedClasses:
+      - "rogue-001"
+
+
+  # Shield
+  - id: "magic-barrier-001"
+    name: "Magic Barrier"
+    type: "Shield"
+    modifiers:
+      mana: 10
+      magicEvade: 12
+    multipliers:
+      magicEvade: 1.2
+
+  - id: "tower-shield-001"
+    name: "Tower Shield"
+    type: "Shield"
+    modifiers:
+      health: 20
+      speed: -2
+      physicalEvade: 15
+    multipliers:
+      health: 1.1
+
+  - id: "wooden-shield-001"
+    name: "Wooden Shield"
+    type: "Shield"
+    modifiers:
+      health: 10
+      physicalEvade: 5
+
+
+  # TwoHandedWeapon
+  - id: "great-axe-001"
+    name: "Great Axe"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 25
+      speed: -3
+    multipliers:
+      physicalPower: 1.2
+
+  - id: "magic-staff-001"
+    name: "Magic Staff"
+    type: "TwoHandedWeapon"
+    modifiers:
+      mana: 15
+      magicPower: 20
+    multipliers:
+      magicPower: 1.3
+    allowedClasses:
+      - "apprentice-001"
+
+  - id: "war-hammer-001"
+    name: "War Hammer"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 30
+      speed: -5
+    multipliers:
+      physicalPower: 1.15
+    allowedClasses:
+      - "fighter-001"
+

@@ -16,6 +16,10 @@ enemies:
     baseCourage: 22
     baseAttunement: 20
     spriteId: "monsters-49"
+    learnedAbilityIds: ["disarm-001", "heal-001", "strength-001"]
+    reactionAbilityId: "parry-001"
+    passiveAbilityId: "fast-001"
+    movementAbilityId: "meditate-001"
     tags: ["dragon", "boss", "strong", "magic", "legendary"]
     description: "An elder dragon of immense power and wisdom"
 
