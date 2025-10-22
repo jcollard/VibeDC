@@ -91,6 +91,11 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
       return;
     }
 
+    // If ID changed, remove the old class first
+    if (editedClass.id !== selectedClass.id) {
+      UnitClassRegistry.unregister(selectedClass.id);
+    }
+
     // Register updated class
     UnitClassRegistry.register(editedClass);
 
@@ -339,6 +344,14 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
     setEditedClass({ ...editedClass, requirements });
   };
 
+  // Handle updating a requirement's XP value
+  const handleUpdateRequirementXP = (classId: string, xp: number) => {
+    if (!editedClass) return;
+    const requirements = { ...(editedClass.requirements || {}) };
+    requirements[classId] = xp;
+    setEditedClass({ ...editedClass, requirements });
+  };
+
   const displayClass = isEditing ? editedClass : selectedClass;
 
   return (
@@ -534,26 +547,51 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
               >
                 <div style={{ flex: 1 }}>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedClass?.name || ''}
-                      onChange={(e) => handleFieldChange('name', e.target.value)}
-                      style={{
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        color: '#fff',
-                        padding: '6px',
-                        borderRadius: '4px',
-                        fontSize: '14px',
-                        fontWeight: 'bold',
-                        width: '100%',
-                        fontFamily: 'monospace',
-                      }}
-                    />
+                    <>
+                      <input
+                        type="text"
+                        value={editedClass?.name || ''}
+                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                        placeholder="Class Name"
+                        style={{
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          color: '#fff',
+                          padding: '6px',
+                          borderRadius: '4px',
+                          fontSize: '14px',
+                          fontWeight: 'bold',
+                          width: '100%',
+                          fontFamily: 'monospace',
+                          marginBottom: '6px',
+                        }}
+                      />
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                        <span style={{ fontSize: '10px', color: '#888' }}>ID:</span>
+                        <input
+                          type="text"
+                          value={editedClass?.id || ''}
+                          onChange={(e) => handleFieldChange('id', e.target.value)}
+                          placeholder="class-id"
+                          style={{
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            color: '#fff',
+                            padding: '4px 6px',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                            flex: 1,
+                          }}
+                        />
+                      </div>
+                    </>
                   ) : (
-                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{displayClass.name}</div>
+                    <>
+                      <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{displayClass.name}</div>
+                      <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>ID: {displayClass.id}</div>
+                    </>
                   )}
-                  <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>ID: {displayClass.id}</div>
                 </div>
                 <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
                   {isEditing ? (
@@ -872,11 +910,31 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                                 alignItems: 'center',
                                 padding: '4px 0',
                                 borderBottom: '1px solid rgba(255, 152, 0, 0.2)',
+                                gap: '8px',
                               }}
                             >
-                              <span style={{ fontSize: '10px' }}>
-                                {reqClass ? reqClass.name : classId}: {xp} XP
+                              <span style={{ fontSize: '10px', flex: 1 }}>
+                                {reqClass ? reqClass.name : classId}:
                               </span>
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={xp}
+                                  onChange={(e) => handleUpdateRequirementXP(classId, Number(e.target.value))}
+                                  style={{
+                                    background: 'rgba(0, 0, 0, 0.5)',
+                                    border: '1px solid #666',
+                                    color: '#fff',
+                                    padding: '3px 6px',
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    width: '60px',
+                                    fontFamily: 'monospace',
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: '10px' }}>{xp} XP</span>
+                              )}
                               {isEditing && (
                                 <button
                                   onClick={() => handleRemoveRequirement(classId)}

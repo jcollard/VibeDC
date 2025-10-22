@@ -1,15 +1,6 @@
 # Unit Class Database
-# Format: Each class entry contains all properties needed to create a UnitClass instance
-# learnableAbilities: List of ability IDs that this class can learn
-# Tier 1 classes have no requirements
-
 classes:
-  # ============================================================================
-  # TIER 1: BASE ARCHETYPES
-  # ============================================================================
-
-  # FIGHTER - Close combat, strength-based tank
-  - id: "fighter-001"
+  - id: "fighter"
     name: "Fighter"
     description: "Close combat, strength based, HP, Defense, access to strong melee weapons. Can equip shields. Can wear heavy armor."
     tags:
@@ -17,7 +8,6 @@ classes:
       - "physical"
       - "tank"
     learnableAbilities:
-      # Actions
       - "charge-001"
       - "bash-001"
       - "shove-001"
@@ -26,12 +16,9 @@ classes:
       - "body-strike-001"
       - "arm-strike-001"
       - "leg-strike-001"
-      # Reactions
       - "parry-001"
-      # Passives
       - "meat-shield-001"
       - "shield-bearer-001"
-      # Movement
       - "journeyman-001"
     modifiers:
       health: 30
@@ -39,8 +26,7 @@ classes:
     multipliers:
       health: 1.25
 
-  # ROGUE - Speed-based, evasion specialist
-  - id: "rogue-001"
+  - id: "rogue"
     name: "Rogue"
     description: "Speed based, speed and evasion bonuses, access to daggers. Can wear medium armor."
     tags:
@@ -48,7 +34,6 @@ classes:
       - "agile"
       - "stealth"
     learnableAbilities:
-      # Actions
       - "throw-stone-001"
       - "sneak-001"
       - "cut-001"
@@ -56,25 +41,19 @@ classes:
       - "disappear-001"
       - "sneak-attack-001"
       - "disarm-001"
-      # Reactions
       - "slippery-001"
       - "repost-001"
-      # Passives
       - "fast-001"
       - "ready-001"
       - "dodge-001"
-      # Movement
       - "extra-movement-001"
     modifiers:
       speed: 2
       movement: 1
       physicalEvade: 10
       magicEvade: 10
-    multipliers:
-      {}
 
-  # APPRENTICE - Simple magic user
-  - id: "apprentice-001"
+  - id: "apprentice"
     name: "Apprentice"
     description: "Simple magic user, MP bonus, low HP, access to simple heal spell, damage spell, a few buffs, and debuffs. Access to staff based weapons. Can only wear light armor."
     tags:
@@ -83,25 +62,21 @@ classes:
       - "caster"
       - "support"
     learnableAbilities:
-      # Actions - Support
       - "heal-001"
       - "minor-shield-001"
       - "strength-001"
       - "reflexes-001"
-      # Actions - Offensive
       - "harm-001"
       - "weakness-001"
       - "sluggish-001"
       - "mesmerize-001"
-      # Reactions
       - "quick-shield-001"
-      # Passives
       - "focused-001"
       - "mana-shield-001"
-      # Movement
       - "meditate-001"
     modifiers:
       mana: 20
       magicPower: 2
     multipliers:
       mana: 1.25
+
