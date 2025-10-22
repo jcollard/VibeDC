@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface SpriteRegistryPanelProps {
@@ -11,6 +11,7 @@ interface SpriteRegistryPanelProps {
  */
 export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClose }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const imageRef = useRef<HTMLImageElement | null>(null);
   const [selectedSheet, setSelectedSheet] = useState<string>('');
   const [spriteSheets, setSpriteSheets] = useState<string[]>([]);
   const [sheetInfo, setSheetInfo] = useState<{
@@ -20,6 +21,10 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   const [imageLoaded, setImageLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string>('');
   const [scale, setScale] = useState<number>(4);
+  const [selectedSprite, setSelectedSprite] = useState<{ id: string; x: number; y: number } | null>(null);
+
+  // Sprite size constants (12x12 pixels per sprite in the sheet)
+  const SPRITE_SIZE = 12;
 
   // Get all unique sprite sheets from the registry
   useEffect(() => {
@@ -53,23 +58,48 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   }, [selectedSheet]);
 
   // Draw the sprite sheet on the canvas
+  const drawCanvas = useCallback(() => {
+    const canvas = canvasRef.current;
+    const img = imageRef.current;
+    if (!canvas || !img) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Apply user-selected scale
+    const width = img.width * scale;
+    const height = img.height * scale;
+
+    canvas.width = width;
+    canvas.height = height;
+
+    // Disable smoothing for pixel-perfect rendering
+    ctx.imageSmoothingEnabled = false;
+
+    // Draw the sprite sheet at the scaled size
+    ctx.drawImage(img, 0, 0, width, height);
+
+    // Draw selection box if a sprite is selected
+    if (selectedSprite) {
+      ctx.strokeStyle = '#ffff00';
+      ctx.lineWidth = 2;
+      const x = selectedSprite.x * SPRITE_SIZE * scale;
+      const y = selectedSprite.y * SPRITE_SIZE * scale;
+      const size = SPRITE_SIZE * scale;
+      ctx.strokeRect(x, y, size, size);
+    }
+  }, [scale, selectedSprite, SPRITE_SIZE]);
+
+  // Load sprite sheet image
   useEffect(() => {
     if (!selectedSheet || !canvasRef.current) {
       console.log('SpriteRegistryPanel: Skipping draw - no sheet or canvas', { selectedSheet, hasCanvas: !!canvasRef.current });
       return;
     }
 
-    const canvas = canvasRef.current;
-    const ctx = canvas.getContext('2d');
-    if (!ctx) {
-      console.error('SpriteRegistryPanel: Failed to get canvas context');
-      return;
-    }
-
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
     setImageLoaded(false);
     setLoadError('');
+    setSelectedSprite(null);
 
     console.log('SpriteRegistryPanel: Loading sprite sheet:', selectedSheet);
 
@@ -77,20 +107,23 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
     const img = new Image();
     img.src = selectedSheet;
     img.onload = () => {
-      console.log('SpriteRegistryPanel: Image loaded successfully', { width: img.width, height: img.height, scale });
+      console.log('SpriteRegistryPanel: Image loaded successfully', { width: img.width, height: img.height });
+      imageRef.current = img;
 
-      // Apply user-selected scale
-      const width = img.width * scale;
-      const height = img.height * scale;
+      // Draw the initial canvas (without selection)
+      const canvas = canvasRef.current;
+      if (canvas) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          const width = img.width * scale;
+          const height = img.height * scale;
+          canvas.width = width;
+          canvas.height = height;
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(img, 0, 0, width, height);
+        }
+      }
 
-      canvas.width = width;
-      canvas.height = height;
-
-      // Disable smoothing for pixel-perfect rendering
-      ctx.imageSmoothingEnabled = false;
-
-      // Draw the sprite sheet at the scaled size
-      ctx.drawImage(img, 0, 0, width, height);
       setImageLoaded(true);
     };
     img.onerror = (e) => {
@@ -99,6 +132,38 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       setImageLoaded(false);
     };
   }, [selectedSheet, scale]);
+
+  // Redraw canvas when scale or selection changes
+  useEffect(() => {
+    if (imageLoaded) {
+      drawCanvas();
+    }
+  }, [scale, selectedSprite, imageLoaded, drawCanvas]);
+
+  // Handle canvas click to select sprite
+  const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current;
+    if (!canvas || !selectedSheet) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+
+    // Calculate which sprite was clicked (accounting for scale)
+    const spriteX = Math.floor(x / (SPRITE_SIZE * scale));
+    const spriteY = Math.floor(y / (SPRITE_SIZE * scale));
+
+    // Find the sprite at this position
+    const sprites = SpriteRegistry.getBySheet(selectedSheet);
+    const clickedSprite = sprites.find(s => s.x === spriteX && s.y === spriteY);
+
+    if (clickedSprite) {
+      setSelectedSprite({ id: clickedSprite.id, x: spriteX, y: spriteY });
+    } else {
+      // Clicked on empty space
+      setSelectedSprite(null);
+    }
+  };
 
   return (
     <div
@@ -251,6 +316,53 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                   </div>
                 </div>
               )}
+
+              {/* Selected Sprite Info */}
+              {selectedSprite && (
+                <div
+                  style={{
+                    padding: '12px',
+                    background: 'rgba(255, 255, 0, 0.1)',
+                    borderRadius: '4px',
+                    border: '2px solid rgba(255, 255, 0, 0.4)',
+                  }}
+                >
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: '#ffff00' }}>
+                    Selected Sprite
+                  </div>
+                  <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
+                    <div><strong>ID:</strong></div>
+                    <div style={{ color: '#aaa', wordBreak: 'break-all', marginBottom: '6px', fontFamily: 'monospace' }}>
+                      {selectedSprite.id}
+                    </div>
+                    <div><strong>Position:</strong> ({selectedSprite.x}, {selectedSprite.y})</div>
+                    {(() => {
+                      const sprite = SpriteRegistry.getById(selectedSprite.id);
+                      return sprite?.tags && sprite.tags.length > 0 ? (
+                        <div style={{ marginTop: '6px' }}>
+                          <div><strong>Tags:</strong></div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
+                            {sprite.tags.map(tag => (
+                              <span
+                                key={tag}
+                                style={{
+                                  padding: '2px 6px',
+                                  background: 'rgba(255, 255, 0, 0.2)',
+                                  border: '1px solid rgba(255, 255, 0, 0.4)',
+                                  borderRadius: '3px',
+                                  fontSize: '9px',
+                                }}
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      ) : null;
+                    })()}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
@@ -309,10 +421,12 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
             {/* Canvas - always rendered for ref */}
             <canvas
               ref={canvasRef}
+              onClick={handleCanvasClick}
               style={{
                 border: '1px solid rgba(255, 255, 255, 0.2)',
                 imageRendering: 'pixelated',
                 display: imageLoaded ? 'block' : 'none',
+                cursor: 'pointer',
               } as React.CSSProperties}
             />
 
