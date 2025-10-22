@@ -17,15 +17,7 @@ import classYaml from './class-database.yaml?raw';
 import encounterYaml from './encounter-database.yaml?raw';
 import spriteYaml from './sprite-definitions.yaml?raw';
 import enemyYaml from './enemy-definitions.yaml?raw';
-
-// Import equipment YAML files
-import swordsYaml from './equipment/swords.yaml?raw';
-import stavesYaml from './equipment/staves.yaml?raw';
-import daggersYaml from './equipment/daggers.yaml?raw';
-import accessoriesYaml from './equipment/accessories.yaml?raw';
-import heavyArmorYaml from './equipment/heavy-armor.yaml?raw';
-import mediumArmorYaml from './equipment/medium-armor.yaml?raw';
-import lightArmorYaml from './equipment/light-armor.yaml?raw';
+import equipmentYaml from './equipment-definitions.yaml?raw';
 
 /**
  * Interface for ability data from YAML
@@ -87,41 +79,26 @@ export function loadAbilities(): void {
 }
 
 /**
- * Load all equipment from multiple YAML database files
+ * Load all equipment from the YAML database file
  */
 export function loadEquipment(): void {
-  const equipmentFiles = [
-    swordsYaml,
-    stavesYaml,
-    daggersYaml,
-    accessoriesYaml,
-    heavyArmorYaml,
-    mediumArmorYaml,
-    lightArmorYaml,
-  ];
+  const data = yaml.load(equipmentYaml) as { equipment: EquipmentData[] };
 
-  let totalLoaded = 0;
+  for (const equipData of data.equipment) {
+    // Convert allowedClasses array to Set
+    const allowedClasses = new Set<string>(equipData.allowedClasses || []);
 
-  for (const equipmentYaml of equipmentFiles) {
-    const data = yaml.load(equipmentYaml) as { equipment: EquipmentData[] };
-
-    for (const equipData of data.equipment) {
-      // Convert allowedClasses array to Set
-      const allowedClasses = new Set<string>(equipData.allowedClasses || []);
-
-      new Equipment(
-        equipData.name,
-        equipData.type,
-        equipData.modifiers,
-        equipData.multipliers,
-        allowedClasses,
-        equipData.id
-      );
-      totalLoaded++;
-    }
+    new Equipment(
+      equipData.name,
+      equipData.type,
+      equipData.modifiers,
+      equipData.multipliers,
+      allowedClasses,
+      equipData.id
+    );
   }
 
-  console.log(`Loaded ${totalLoaded} equipment items from ${equipmentFiles.length} files`);
+  console.log(`Loaded ${data.equipment.length} equipment items`);
 }
 
 /**
