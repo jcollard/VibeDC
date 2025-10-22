@@ -25,6 +25,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   const [isEditingId, setIsEditingId] = useState(false);
   const [editedId, setEditedId] = useState<string>('');
   const [editError, setEditError] = useState<string>('');
+  const [newTag, setNewTag] = useState<string>('');
 
   // Sprite size constants (12x12 pixels per sprite in the sheet)
   const SPRITE_SIZE = 12;
@@ -241,6 +242,74 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       spriteCount: sprites.length,
       tags: Array.from(allTags).sort()
     });
+  };
+
+  // Handle adding a tag
+  const handleAddTag = () => {
+    if (!selectedSprite?.id || !newTag.trim()) return;
+
+    const success = SpriteRegistry.addSpriteTag(selectedSprite.id, newTag.trim());
+
+    if (success) {
+      setNewTag('');
+      // Force re-render by updating selected sprite state
+      const sprite = SpriteRegistry.getById(selectedSprite.id);
+      if (sprite) {
+        // Trigger a state update to refresh the UI
+        setSelectedSprite({ ...selectedSprite });
+      }
+    }
+  };
+
+  // Handle removing a tag
+  const handleRemoveTag = (tag: string) => {
+    if (!selectedSprite?.id) return;
+
+    const success = SpriteRegistry.removeSpriteTag(selectedSprite.id, tag);
+
+    if (success) {
+      // Force re-render by updating selected sprite state
+      setSelectedSprite({ ...selectedSprite });
+    }
+  };
+
+  // Handle deleting a sprite from the registry
+  const handleDeleteSprite = () => {
+    if (!selectedSprite?.id) return;
+
+    // Confirm deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to delete sprite "${selectedSprite.id}"?\n\n` +
+      `Position: (${selectedSprite.x}, ${selectedSprite.y})\n` +
+      `This action cannot be undone (until you reload the page).`
+    );
+
+    if (!confirmed) return;
+
+    const success = SpriteRegistry.unregister(selectedSprite.id);
+
+    if (success) {
+      console.log(`Deleted sprite "${selectedSprite.id}"`);
+
+      // Clear selection
+      setSelectedSprite(null);
+      setIsEditingId(false);
+      setEditError('');
+      setNewTag('');
+
+      // Force refresh of sheet info
+      if (selectedSheet) {
+        const sprites = SpriteRegistry.getBySheet(selectedSheet);
+        const allTags = new Set<string>();
+        sprites.forEach(sprite => {
+          sprite.tags?.forEach(tag => allTags.add(tag));
+        });
+        setSheetInfo({
+          spriteCount: sprites.length,
+          tags: Array.from(allTags).sort()
+        });
+      }
+    }
   };
 
   // Handle exporting sprite definitions to YAML
@@ -570,8 +639,31 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                     border: selectedSprite.id ? '2px solid rgba(255, 255, 0, 0.4)' : '2px solid rgba(255, 128, 0, 0.4)',
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: selectedSprite.id ? '#ffff00' : '#ff8800' }}>
-                    Selected Sprite
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                    <div style={{ fontWeight: 'bold', fontSize: '13px', color: selectedSprite.id ? '#ffff00' : '#ff8800' }}>
+                      Selected Sprite
+                    </div>
+                    {selectedSprite.id && (
+                      <button
+                        onClick={handleDeleteSprite}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#ff4444',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          fontSize: '16px',
+                          lineHeight: '1',
+                          opacity: 0.7,
+                          transition: 'opacity 0.2s',
+                        }}
+                        onMouseEnter={(e) => (e.currentTarget.style.opacity = '1')}
+                        onMouseLeave={(e) => (e.currentTarget.style.opacity = '0.7')}
+                        title="Delete this sprite from the registry"
+                      >
+                        🗑️
+                      </button>
+                    )}
                   </div>
                   <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
                     {selectedSprite.id ? (
@@ -775,27 +867,96 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
 
                     {selectedSprite.id && (() => {
                       const sprite = SpriteRegistry.getById(selectedSprite.id);
-                      return sprite?.tags && sprite.tags.length > 0 ? (
-                        <div style={{ marginTop: '6px' }}>
-                          <div><strong>Tags:</strong></div>
-                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
-                            {sprite.tags.map(tag => (
-                              <span
-                                key={tag}
-                                style={{
-                                  padding: '2px 6px',
-                                  background: 'rgba(255, 255, 0, 0.2)',
-                                  border: '1px solid rgba(255, 255, 0, 0.4)',
-                                  borderRadius: '3px',
-                                  fontSize: '9px',
-                                }}
-                              >
-                                {tag}
-                              </span>
-                            ))}
+                      return (
+                        <div style={{ marginTop: '8px' }}>
+                          <div style={{ marginBottom: '4px' }}>
+                            <strong>Tags:</strong>
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginBottom: '6px' }}>
+                            {sprite?.tags && sprite.tags.length > 0 ? (
+                              sprite.tags.map(tag => (
+                                <span
+                                  key={tag}
+                                  style={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '2px 6px',
+                                    background: 'rgba(255, 255, 0, 0.2)',
+                                    border: '1px solid rgba(255, 255, 0, 0.4)',
+                                    borderRadius: '3px',
+                                    fontSize: '9px',
+                                  }}
+                                >
+                                  {tag}
+                                  <button
+                                    onClick={() => handleRemoveTag(tag)}
+                                    style={{
+                                      background: 'none',
+                                      border: 'none',
+                                      color: '#ff4444',
+                                      cursor: 'pointer',
+                                      padding: '0',
+                                      marginLeft: '2px',
+                                      fontSize: '10px',
+                                      lineHeight: '1',
+                                      fontWeight: 'bold',
+                                    }}
+                                    title={`Remove tag "${tag}"`}
+                                  >
+                                    ×
+                                  </button>
+                                </span>
+                              ))
+                            ) : (
+                              <div style={{ fontSize: '9px', color: '#666', fontStyle: 'italic' }}>
+                                No tags
+                              </div>
+                            )}
+                          </div>
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <input
+                              type="text"
+                              value={newTag}
+                              onChange={(e) => setNewTag(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleAddTag();
+                                }
+                              }}
+                              placeholder="Add tag..."
+                              style={{
+                                flex: 1,
+                                padding: '4px 6px',
+                                background: 'rgba(0, 0, 0, 0.5)',
+                                border: '1px solid #666',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                fontFamily: 'monospace',
+                                fontSize: '10px',
+                              }}
+                            />
+                            <button
+                              onClick={handleAddTag}
+                              disabled={!newTag.trim()}
+                              style={{
+                                padding: '4px 8px',
+                                background: newTag.trim() ? 'rgba(76, 175, 80, 0.3)' : 'rgba(100, 100, 100, 0.3)',
+                                border: newTag.trim() ? '1px solid rgba(76, 175, 80, 0.6)' : '1px solid rgba(100, 100, 100, 0.6)',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                fontSize: '9px',
+                                cursor: newTag.trim() ? 'pointer' : 'not-allowed',
+                                fontFamily: 'monospace',
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              Add
+                            </button>
                           </div>
                         </div>
-                      ) : null;
+                      );
                     })()}
                   </div>
                 </div>

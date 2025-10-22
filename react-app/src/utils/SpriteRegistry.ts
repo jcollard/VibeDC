@@ -178,6 +178,85 @@ export class SpriteRegistry {
   }
 
   /**
+   * Update the tags of a sprite
+   * @param id - The sprite ID
+   * @param tags - The new array of tags
+   * @returns true if successful, false if sprite not found
+   */
+  static updateSpriteTags(id: string, tags: string[]): boolean {
+    const sprite = this.registry.get(id);
+    if (!sprite) {
+      console.warn(`Cannot update sprite tags: '${id}' not found in registry`);
+      return false;
+    }
+
+    // Create updated sprite with new tags (remove empty tags)
+    const cleanedTags = tags.filter(tag => tag.trim().length > 0).map(tag => tag.trim());
+    const updatedSprite = { ...sprite, tags: cleanedTags.length > 0 ? cleanedTags : undefined };
+
+    this.registry.set(id, updatedSprite);
+    console.log(`Updated tags for sprite '${id}':`, cleanedTags);
+    return true;
+  }
+
+  /**
+   * Add a tag to a sprite
+   * @param id - The sprite ID
+   * @param tag - The tag to add
+   * @returns true if successful, false if sprite not found or tag already exists
+   */
+  static addSpriteTag(id: string, tag: string): boolean {
+    const sprite = this.registry.get(id);
+    if (!sprite) {
+      console.warn(`Cannot add tag: sprite '${id}' not found in registry`);
+      return false;
+    }
+
+    const trimmedTag = tag.trim();
+    if (!trimmedTag) {
+      console.warn('Cannot add empty tag');
+      return false;
+    }
+
+    const currentTags = sprite.tags || [];
+    if (currentTags.includes(trimmedTag)) {
+      console.warn(`Tag '${trimmedTag}' already exists on sprite '${id}'`);
+      return false;
+    }
+
+    const updatedSprite = { ...sprite, tags: [...currentTags, trimmedTag] };
+    this.registry.set(id, updatedSprite);
+    console.log(`Added tag '${trimmedTag}' to sprite '${id}'`);
+    return true;
+  }
+
+  /**
+   * Remove a tag from a sprite
+   * @param id - The sprite ID
+   * @param tag - The tag to remove
+   * @returns true if successful, false if sprite not found or tag doesn't exist
+   */
+  static removeSpriteTag(id: string, tag: string): boolean {
+    const sprite = this.registry.get(id);
+    if (!sprite) {
+      console.warn(`Cannot remove tag: sprite '${id}' not found in registry`);
+      return false;
+    }
+
+    const currentTags = sprite.tags || [];
+    if (!currentTags.includes(tag)) {
+      console.warn(`Tag '${tag}' not found on sprite '${id}'`);
+      return false;
+    }
+
+    const updatedTags = currentTags.filter(t => t !== tag);
+    const updatedSprite = { ...sprite, tags: updatedTags.length > 0 ? updatedTags : undefined };
+    this.registry.set(id, updatedSprite);
+    console.log(`Removed tag '${tag}' from sprite '${id}'`);
+    return true;
+  }
+
+  /**
    * Remove a sprite from the registry
    */
   static unregister(id: string): boolean {
