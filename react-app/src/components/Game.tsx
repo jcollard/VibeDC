@@ -7,6 +7,7 @@ import { DeveloperPanel } from './developer/DeveloperPanel';
 import { SpriteRegistryPanel } from './developer/SpriteRegistryPanel';
 import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
 import { AbilityRegistryPanel } from './developer/AbilityRegistryPanel';
+import { EquipmentRegistryPanel } from './developer/EquipmentRegistryPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -50,6 +51,9 @@ export const Game: React.FC = () => {
 
   // Ability registry panel visibility (development only)
   const [abilityRegistryVisible, setAbilityRegistryVisible] = useState<boolean>(false);
+
+  // Equipment registry panel visibility (development only)
+  const [equipmentRegistryVisible, setEquipmentRegistryVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -306,7 +310,7 @@ export const Game: React.FC = () => {
       }
 
       // Ignore game input if any modal panels are open that accept text input
-      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible) {
         return;
       }
 
@@ -331,7 +335,7 @@ export const Game: React.FC = () => {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       // Clear pressed keys when panels are open to prevent stuck keys
-      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible) {
         pressedKeysRef.current.clear();
         return;
       }
@@ -344,7 +348,7 @@ export const Game: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible, abilityRegistryVisible]);
+  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible, abilityRegistryVisible, equipmentRegistryVisible]);
 
   if (loading) {
     return <div style={{
@@ -472,6 +476,10 @@ export const Game: React.FC = () => {
                   setAbilityRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenEquipmentRegistry={() => {
+                  setEquipmentRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenDebugPanel={() => {
                   setDebugPanelVisible(true);
                   setDeveloperPanelVisible(false);
@@ -497,6 +505,13 @@ export const Game: React.FC = () => {
             {import.meta.env.DEV && abilityRegistryVisible && (
               <AbilityRegistryPanel
                 onClose={() => setAbilityRegistryVisible(false)}
+              />
+            )}
+
+            {/* Equipment registry panel - only available in development mode */}
+            {import.meta.env.DEV && equipmentRegistryVisible && (
+              <EquipmentRegistryPanel
+                onClose={() => setEquipmentRegistryVisible(false)}
               />
             )}
           </>

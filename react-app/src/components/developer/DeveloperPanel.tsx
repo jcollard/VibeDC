@@ -6,6 +6,7 @@ interface DeveloperPanelProps {
   onOpenSpriteRegistry?: () => void;
   onOpenEnemyRegistry?: () => void;
   onOpenAbilityRegistry?: () => void;
+  onOpenEquipmentRegistry?: () => void;
   onOpenDebugPanel?: () => void;
 }
 
@@ -19,6 +20,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onOpenSpriteRegistry,
   onOpenEnemyRegistry,
   onOpenAbilityRegistry,
+  onOpenEquipmentRegistry,
   onOpenDebugPanel,
 }) => {
   const panels = [
@@ -49,6 +51,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Ability',
       available: !!onOpenAbilityRegistry,
       onClick: onOpenAbilityRegistry,
+    },
+    {
+      name: 'Equipment Registry',
+      description: 'Browse and edit equipment',
+      shortcut: 'F2 → Equipment',
+      available: !!onOpenEquipmentRegistry,
+      onClick: onOpenEquipmentRegistry,
     },
     {
       name: 'Debug Panel',
