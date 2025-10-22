@@ -142,6 +142,42 @@ export class SpriteRegistry {
   }
 
   /**
+   * Update the ID of a sprite while keeping all other properties
+   * @param oldId - The current ID of the sprite
+   * @param newId - The new ID to assign
+   * @returns true if successful, false if old ID doesn't exist or new ID already exists
+   */
+  static updateSpriteId(oldId: string, newId: string): boolean {
+    // Validate that old ID exists
+    const sprite = this.registry.get(oldId);
+    if (!sprite) {
+      console.warn(`Cannot update sprite ID: '${oldId}' not found in registry`);
+      return false;
+    }
+
+    // Validate that new ID is not already taken (unless it's the same)
+    if (oldId !== newId && this.registry.has(newId)) {
+      console.warn(`Cannot update sprite ID: '${newId}' is already in use`);
+      return false;
+    }
+
+    // If the ID is the same, no change needed
+    if (oldId === newId) {
+      return true;
+    }
+
+    // Create updated sprite with new ID
+    const updatedSprite = { ...sprite, id: newId };
+
+    // Remove old entry and add new one
+    this.registry.delete(oldId);
+    this.registry.set(newId, updatedSprite);
+
+    console.log(`Updated sprite ID from '${oldId}' to '${newId}'`);
+    return true;
+  }
+
+  /**
    * Remove a sprite from the registry
    */
   static unregister(id: string): boolean {

@@ -305,16 +305,3 @@ sprites:
     x: 2
     y: 5
     tags: ["monster", "demon", "boss"]
-
-  # Default fallback sprites
-  - id: "default-humanoid"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 0
-    y: 0
-    tags: ["default", "humanoid"]
-
-  - id: "default-monster"
-    spriteSheet: "/spritesheets/monsters.png"
-    x: 0
-    y: 0
-    tags: ["default", "monster"]

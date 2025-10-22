@@ -22,6 +22,9 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   const [loadError, setLoadError] = useState<string>('');
   const [scale, setScale] = useState<number>(4);
   const [selectedSprite, setSelectedSprite] = useState<{ id: string; x: number; y: number } | null>(null);
+  const [isEditingId, setIsEditingId] = useState(false);
+  const [editedId, setEditedId] = useState<string>('');
+  const [editError, setEditError] = useState<string>('');
 
   // Sprite size constants (12x12 pixels per sprite in the sheet)
   const SPRITE_SIZE = 12;
@@ -140,6 +143,106 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
     }
   }, [scale, selectedSprite, imageLoaded, drawCanvas]);
 
+  // Handle starting edit mode
+  const handleStartEdit = () => {
+    if (selectedSprite?.id) {
+      setEditedId(selectedSprite.id);
+      setIsEditingId(true);
+      setEditError('');
+    }
+  };
+
+  // Handle canceling edit
+  const handleCancelEdit = () => {
+    setIsEditingId(false);
+    setEditedId('');
+    setEditError('');
+  };
+
+  // Handle saving the new ID
+  const handleSaveId = () => {
+    if (!selectedSprite?.id) return;
+
+    const trimmedId = editedId.trim();
+
+    // Validate input
+    if (!trimmedId) {
+      setEditError('ID cannot be empty');
+      return;
+    }
+
+    // Update the sprite ID in the registry
+    const success = SpriteRegistry.updateSpriteId(selectedSprite.id, trimmedId);
+
+    if (success) {
+      // Update the selected sprite with the new ID
+      setSelectedSprite({
+        ...selectedSprite,
+        id: trimmedId
+      });
+      setIsEditingId(false);
+      setEditedId('');
+      setEditError('');
+
+      // Force refresh of sheet info to show updated sprite count
+      const sprites = SpriteRegistry.getBySheet(selectedSheet);
+      const allTags = new Set<string>();
+      sprites.forEach(sprite => {
+        sprite.tags?.forEach(tag => allTags.add(tag));
+      });
+      setSheetInfo({
+        spriteCount: sprites.length,
+        tags: Array.from(allTags).sort()
+      });
+    } else {
+      // Show error - ID already exists
+      setEditError(`ID '${trimmedId}' is already in use`);
+    }
+  };
+
+  // Handle creating a new sprite at undefined position
+  const handleCreateSprite = () => {
+    if (!selectedSprite || !selectedSheet || selectedSprite.id) return;
+
+    const newId = `sprite_${selectedSprite.x}_${selectedSprite.y}`;
+
+    // Check if this ID already exists
+    if (SpriteRegistry.has(newId)) {
+      setEditError(`ID '${newId}' already exists`);
+      return;
+    }
+
+    // Register the new sprite
+    SpriteRegistry.register({
+      id: newId,
+      spriteSheet: selectedSheet,
+      x: selectedSprite.x,
+      y: selectedSprite.y
+    });
+
+    // Update the selected sprite
+    setSelectedSprite({
+      ...selectedSprite,
+      id: newId
+    });
+
+    // Start editing mode so user can rename it
+    setEditedId(newId);
+    setIsEditingId(true);
+    setEditError('');
+
+    // Force refresh of sheet info
+    const sprites = SpriteRegistry.getBySheet(selectedSheet);
+    const allTags = new Set<string>();
+    sprites.forEach(sprite => {
+      sprite.tags?.forEach(tag => allTags.add(tag));
+    });
+    setSheetInfo({
+      spriteCount: sprites.length,
+      tags: Array.from(allTags).sort()
+    });
+  };
+
   // Handle canvas click to select sprite
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
@@ -174,14 +277,37 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
     if (spriteX < 0 || spriteY < 0 || spriteX > maxX || spriteY > maxY) {
       // Clicked outside sprite sheet bounds
       setSelectedSprite(null);
+      setIsEditingId(false);
+      setEditError('');
       return;
     }
 
     // Find the sprite at this position
     const sprites = SpriteRegistry.getBySheet(selectedSheet);
-    const clickedSprite = sprites.find(s => s.x === spriteX && s.y === spriteY);
+    const spritesAtPosition = sprites.filter(s => s.x === spriteX && s.y === spriteY);
 
-    console.log('SpriteRegistryPanel: Found sprite?', clickedSprite?.id || 'undefined');
+    console.log('SpriteRegistryPanel: Sprites at position', { spriteX, spriteY, count: spritesAtPosition.length, ids: spritesAtPosition.map(s => s.id) });
+
+    // If there are multiple sprites at this position, we need to pick one
+    // Strategy: If we're clicking the same position as currently selected, try to find the next sprite in the list
+    let clickedSprite = spritesAtPosition[0]; // Default to first
+
+    if (spritesAtPosition.length > 1) {
+      if (selectedSprite && selectedSprite.x === spriteX && selectedSprite.y === spriteY && selectedSprite.id) {
+        // Clicking the same position - cycle to the next sprite
+        const currentIndex = spritesAtPosition.findIndex(s => s.id === selectedSprite.id);
+        if (currentIndex !== -1) {
+          // Found current sprite, select the next one (wrap around)
+          const nextIndex = (currentIndex + 1) % spritesAtPosition.length;
+          clickedSprite = spritesAtPosition[nextIndex];
+        }
+      }
+      // Otherwise just use the first sprite
+    }
+
+    // Cancel edit mode when selecting a different sprite
+    setIsEditingId(false);
+    setEditError('');
 
     // Always select the sprite position, even if not defined in registry
     setSelectedSprite({
@@ -358,10 +484,121 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                   <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
                     {selectedSprite.id ? (
                       <>
-                        <div><strong>ID:</strong></div>
-                        <div style={{ color: '#aaa', wordBreak: 'break-all', marginBottom: '6px', fontFamily: 'monospace' }}>
-                          {selectedSprite.id}
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <strong>ID:</strong>
+                          {(() => {
+                            const sprites = SpriteRegistry.getBySheet(selectedSheet);
+                            const spritesAtPos = sprites.filter(s => s.x === selectedSprite.x && s.y === selectedSprite.y);
+                            return spritesAtPos.length > 1 ? (
+                              <span style={{
+                                fontSize: '9px',
+                                color: '#ff8800',
+                                padding: '2px 6px',
+                                background: 'rgba(255, 136, 0, 0.2)',
+                                borderRadius: '3px',
+                                border: '1px solid rgba(255, 136, 0, 0.3)',
+                              }} title={`${spritesAtPos.length} sprites at this position. Click to cycle.`}>
+                                {spritesAtPos.findIndex(s => s.id === selectedSprite.id) + 1}/{spritesAtPos.length}
+                              </span>
+                            ) : null;
+                          })()}
                         </div>
+                        {isEditingId ? (
+                          <div style={{ marginBottom: '8px' }}>
+                            <input
+                              type="text"
+                              value={editedId}
+                              onChange={(e) => setEditedId(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleSaveId();
+                                if (e.key === 'Escape') handleCancelEdit();
+                              }}
+                              autoFocus
+                              style={{
+                                width: '100%',
+                                padding: '4px 6px',
+                                background: 'rgba(0, 0, 0, 0.5)',
+                                border: '1px solid #666',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                fontFamily: 'monospace',
+                                fontSize: '11px',
+                                marginTop: '4px',
+                                marginBottom: '6px',
+                              }}
+                            />
+                            {editError && (
+                              <div style={{
+                                color: '#f44',
+                                fontSize: '10px',
+                                marginBottom: '6px',
+                                padding: '4px',
+                                background: 'rgba(255, 68, 68, 0.1)',
+                                borderRadius: '3px',
+                                border: '1px solid rgba(255, 68, 68, 0.3)',
+                              }}>
+                                {editError}
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', gap: '6px' }}>
+                              <button
+                                onClick={handleSaveId}
+                                style={{
+                                  flex: 1,
+                                  padding: '4px 8px',
+                                  background: 'rgba(76, 175, 80, 0.3)',
+                                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  cursor: 'pointer',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                Save
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                style={{
+                                  flex: 1,
+                                  padding: '4px 8px',
+                                  background: 'rgba(255, 68, 68, 0.3)',
+                                  border: '1px solid rgba(255, 68, 68, 0.6)',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  cursor: 'pointer',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', marginBottom: '6px' }}>
+                            <div style={{ color: '#aaa', wordBreak: 'break-all', flex: 1, fontFamily: 'monospace' }}>
+                              {selectedSprite.id}
+                            </div>
+                            <button
+                              onClick={handleStartEdit}
+                              style={{
+                                padding: '3px 8px',
+                                background: 'rgba(255, 255, 0, 0.2)',
+                                border: '1px solid rgba(255, 255, 0, 0.4)',
+                                borderRadius: '3px',
+                                color: '#ffff00',
+                                fontSize: '9px',
+                                cursor: 'pointer',
+                                fontFamily: 'monospace',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title="Edit sprite ID"
+                            >
+                              Edit
+                            </button>
+                          </div>
+                        )}
                       </>
                     ) : (
                       <div style={{
@@ -373,9 +610,25 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                         border: '1px dashed rgba(255, 128, 0, 0.4)'
                       }}>
                         <strong>⚠ Undefined Sprite</strong>
-                        <div style={{ fontSize: '10px', marginTop: '4px', color: '#aaa' }}>
+                        <div style={{ fontSize: '10px', marginTop: '4px', marginBottom: '8px', color: '#aaa' }}>
                           This sprite position is not defined in the registry
                         </div>
+                        <button
+                          onClick={handleCreateSprite}
+                          style={{
+                            width: '100%',
+                            padding: '6px',
+                            background: 'rgba(76, 175, 80, 0.3)',
+                            border: '1px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          Create Sprite
+                        </button>
                       </div>
                     )}
                     <div><strong>Position:</strong> ({selectedSprite.x}, {selectedSprite.y})</div>
