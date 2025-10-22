@@ -241,6 +241,56 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
     console.log('Exported enemy definitions:', allEnemies.length);
   };
 
+  // Handle creating a new enemy
+  const handleCreateNew = () => {
+    // Generate a unique ID for the new enemy
+    let newId = 'new-enemy';
+    let counter = 1;
+    while (EnemyRegistry.has(newId)) {
+      newId = `new-enemy-${counter}`;
+      counter++;
+    }
+
+    // Create a new enemy template with default values
+    const newEnemy: EnemyDefinition = {
+      id: newId,
+      name: 'New Enemy',
+      unitClassId: 'monster',
+      baseHealth: 20,
+      baseMana: 10,
+      basePhysicalPower: 5,
+      baseMagicPower: 5,
+      baseSpeed: 5,
+      baseMovement: 3,
+      basePhysicalEvade: 5,
+      baseMagicEvade: 5,
+      baseCourage: 5,
+      baseAttunement: 5,
+      spriteId: 'monsters-0',
+      tags: [],
+      description: '',
+    };
+
+    // Register the new enemy
+    EnemyRegistry.register(newEnemy);
+
+    // Update local state
+    setEnemies(EnemyRegistry.getAll());
+    setSelectedEnemy(newEnemy);
+
+    // Update tags
+    const tagsSet = new Set<string>();
+    EnemyRegistry.getAll().forEach(enemy => {
+      enemy.tags?.forEach(tag => tagsSet.add(tag));
+    });
+    setAllTags(Array.from(tagsSet).sort());
+
+    // Start editing the new enemy immediately
+    setEditedEnemy({ ...newEnemy });
+    setIsEditing(true);
+    setEditError('');
+  };
+
   // Handle field changes during edit
   const handleFieldChange = (field: keyof EnemyDefinition, value: any) => {
     if (!editedEnemy) return;
@@ -281,6 +331,32 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
       >
         <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Enemy Registry Browser</div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            onClick={handleCreateNew}
+            style={{
+              padding: '6px 12px',
+              background: 'rgba(76, 175, 80, 0.3)',
+              border: '1px solid rgba(76, 175, 80, 0.6)',
+              borderRadius: '4px',
+              color: '#fff',
+              fontSize: '11px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(76, 175, 80, 0.5)';
+              e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.8)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(76, 175, 80, 0.3)';
+              e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.6)';
+            }}
+            title="Create a new enemy template"
+          >
+            + Create New
+          </button>
           <button
             onClick={handleExport}
             style={{
