@@ -136,6 +136,11 @@ export interface CombatUnit {
   get attunement(): number;
 
   /**
+   * The sprite ID used to render this unit
+   */
+  get spriteId(): string;
+
+  /**
    * Converts the unit to a JSON-serializable format
    */
   toJSON(): unknown;

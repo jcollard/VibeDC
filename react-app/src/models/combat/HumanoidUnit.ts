@@ -35,6 +35,7 @@ export interface HumanoidUnitJSON {
   headId: string | null;
   bodyId: string | null;
   accessoryId: string | null;
+  spriteId: string;
 }
 
 /**
@@ -76,6 +77,8 @@ export class HumanoidUnit implements CombatUnit {
   private _body: Equipment | null = null;
   private _accessory: Equipment | null = null;
 
+  private _spriteId: string;
+
   constructor(
     name: string,
     unitClass: UnitClass,
@@ -88,7 +91,8 @@ export class HumanoidUnit implements CombatUnit {
     basePhysicalEvade: number,
     baseMagicEvade: number,
     baseCourage: number,
-    baseAttunement: number
+    baseAttunement: number,
+    spriteId: string = "default-humanoid"
   ) {
     this._name = name;
     this._unitClass = unitClass;
@@ -102,6 +106,7 @@ export class HumanoidUnit implements CombatUnit {
     this.baseMagicEvade = baseMagicEvade;
     this.baseCourage = baseCourage;
     this.baseAttunement = baseAttunement;
+    this._spriteId = spriteId;
   }
 
   get name(): string {
@@ -202,6 +207,10 @@ export class HumanoidUnit implements CombatUnit {
 
   get attunement(): number {
     return this.baseAttunement;
+  }
+
+  get spriteId(): string {
+    return this._spriteId;
   }
 
   // Equipment slot getters
@@ -547,6 +556,7 @@ export class HumanoidUnit implements CombatUnit {
       headId: this._head?.id ?? null,
       bodyId: this._body?.id ?? null,
       accessoryId: this._accessory?.id ?? null,
+      spriteId: this._spriteId,
     };
   }
 
@@ -576,7 +586,8 @@ export class HumanoidUnit implements CombatUnit {
       json.basePhysicalEvade,
       json.baseMagicEvade,
       json.baseCourage,
-      json.baseAttunement
+      json.baseAttunement,
+      json.spriteId ?? "default-humanoid"
     );
 
     // Restore secondary class

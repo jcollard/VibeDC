@@ -2,6 +2,8 @@ import type { Position } from "../../types";
 import type { CombatUnit } from "./CombatUnit";
 import { HumanoidUnit } from "./HumanoidUnit";
 import type { HumanoidUnitJSON } from "./HumanoidUnit";
+import { MonsterUnit } from "./MonsterUnit";
+import type { MonsterUnitJSON } from "./MonsterUnit";
 import { CombatMap, parseASCIIMap } from "./CombatMap";
 import type { CombatMapJSON, ASCIIMapDefinition } from "./CombatMap";
 import type {
@@ -20,9 +22,10 @@ export interface UnitPlacement {
 
 /**
  * JSON representation of a unit placement for serialization.
+ * Supports both HumanoidUnit and MonsterUnit.
  */
 export interface UnitPlacementJSON {
-  unit: HumanoidUnitJSON; // Currently only HumanoidUnit is implemented
+  unit: HumanoidUnitJSON | MonsterUnitJSON;
   position: Position;
 }
 
@@ -139,7 +142,18 @@ export class CombatEncounter {
     );
     const enemyPlacements: UnitPlacement[] = json.enemyPlacements
       .map((placement) => {
-        const unit = HumanoidUnit.fromJSON(placement.unit);
+        // Determine unit type by checking for equipment fields (HumanoidUnit) or lack thereof (MonsterUnit)
+        const unitJson = placement.unit;
+        let unit: CombatUnit | null = null;
+
+        if ('leftHandId' in unitJson || 'rightHandId' in unitJson) {
+          // Has equipment fields - must be HumanoidUnit
+          unit = HumanoidUnit.fromJSON(unitJson as HumanoidUnitJSON);
+        } else {
+          // No equipment fields - must be MonsterUnit
+          unit = MonsterUnit.fromJSON(unitJson as MonsterUnitJSON);
+        }
+
         if (!unit) {
           console.error(`Failed to deserialize unit in encounter ${json.id}`);
           return null;
