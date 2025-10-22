@@ -28,7 +28,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
     {
       name: 'Sprite Registry',
       description: 'Browse and test sprites',
-      shortcut: 'Coming soon',
+      shortcut: 'F2 → Sprite',
       available: !!onOpenSpriteRegistry,
       onClick: onOpenSpriteRegistry,
     },

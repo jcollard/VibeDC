@@ -4,6 +4,7 @@ import { DebugPanel } from './DebugPanel';
 import { MapEditor } from './MapEditor';
 import { CombatView } from './CombatView';
 import { DeveloperPanel } from './developer/DeveloperPanel';
+import { SpriteRegistryPanel } from './developer/SpriteRegistryPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -38,6 +39,9 @@ export const Game: React.FC = () => {
 
   // Developer panel visibility (development only)
   const [developerPanelVisible, setDeveloperPanelVisible] = useState<boolean>(false);
+
+  // Sprite registry panel visibility (development only)
+  const [spriteRegistryVisible, setSpriteRegistryVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -439,13 +443,20 @@ export const Game: React.FC = () => {
                   setDeveloperPanelVisible(false);
                 }}
                 onOpenSpriteRegistry={() => {
-                  // TODO: Open sprite registry panel
-                  console.log('Sprite registry not yet implemented');
+                  setSpriteRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
                 }}
                 onOpenDebugPanel={() => {
                   setDebugPanelVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+              />
+            )}
+
+            {/* Sprite registry panel - only available in development mode */}
+            {import.meta.env.DEV && spriteRegistryVisible && (
+              <SpriteRegistryPanel
+                onClose={() => setSpriteRegistryVisible(false)}
               />
             )}
           </>
