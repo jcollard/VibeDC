@@ -1142,8 +1142,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                           x: sprite.x,
                           y: sprite.y
                         });
-                        // Clear the tag filter to return to sheet view
-                        setSelectedTag('');
+                        // Keep the tag filter active to stay in grid view
                       }}
                       style={{
                         display: 'flex',
