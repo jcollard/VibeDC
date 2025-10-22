@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
 import type { EnemyDefinition } from '../../utils/EnemyRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { SpriteBrowser } from './SpriteBrowser';
 
 interface EnemyRegistryPanelProps {
   onClose?: () => void;
@@ -19,6 +20,7 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
   const [isEditing, setIsEditing] = useState(false);
   const [editedEnemy, setEditedEnemy] = useState<EnemyDefinition | null>(null);
   const [editError, setEditError] = useState<string>('');
+  const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
   const spriteCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // Sprite size constant
@@ -820,21 +822,40 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Sprite ID:</label>
                   {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedEnemy?.spriteId || ''}
-                      onChange={(e) => handleFieldChange('spriteId', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <input
+                        type="text"
+                        value={editedEnemy?.spriteId || ''}
+                        onChange={(e) => handleFieldChange('spriteId', e.target.value)}
+                        style={{
+                          flex: 1,
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                      <button
+                        onClick={() => setSpriteBrowserVisible(true)}
+                        style={{
+                          padding: '6px 12px',
+                          background: 'rgba(76, 175, 80, 0.3)',
+                          border: '1px solid rgba(76, 175, 80, 0.6)',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                          fontFamily: 'monospace',
+                          whiteSpace: 'nowrap',
+                        }}
+                        title="Browse sprites"
+                      >
+                        Browse
+                      </button>
+                    </div>
                   ) : (
                     <div style={{ color: '#fff' }}>{selectedEnemy.spriteId}</div>
                   )}
@@ -1129,6 +1150,18 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
           )}
         </div>
       </div>
+
+      {/* Sprite Browser Modal */}
+      {spriteBrowserVisible && (
+        <SpriteBrowser
+          selectedSpriteId={editedEnemy?.spriteId}
+          onSelectSprite={(spriteId) => {
+            handleFieldChange('spriteId', spriteId);
+            setSpriteBrowserVisible(false);
+          }}
+          onClose={() => setSpriteBrowserVisible(false)}
+        />
+      )}
     </div>
   );
 };
