@@ -1,8 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { UnitClassRegistry, type UnitClassDefinition } from '../../utils/UnitClassRegistry';
 import { UnitClass } from '../../models/combat/UnitClass';
 import { CombatAbility } from '../../models/combat/CombatAbility';
-import yaml from 'js-yaml';
 
 interface ClassRegistryPanelProps {
   onClose?: () => void;
@@ -14,99 +13,245 @@ const statFields = [
   'courage', 'attunement'
 ] as const;
 
+/**
+ * Developer panel for browsing and editing unit classes from the UnitClass registry.
+ * This component is only accessible in development mode.
+ */
 export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
-  const [classes, setClasses] = useState<UnitClass[]>([]);
-  const [selectedClass, setSelectedClass] = useState<UnitClass | null>(null);
+  const [classes, setClasses] = useState<UnitClassDefinition[]>([]);
+  const [selectedClass, setSelectedClass] = useState<UnitClassDefinition | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string>('');
+  const [allTags, setAllTags] = useState<string[]>([]);
   const [isEditing, setIsEditing] = useState(false);
   const [editedClass, setEditedClass] = useState<UnitClassDefinition | null>(null);
-  const [tagFilter, setTagFilter] = useState<string | null>(null);
-  const [allTags, setAllTags] = useState<string[]>([]);
-  const [newTag, setNewTag] = useState('');
-  const [newAbilityId, setNewAbilityId] = useState('');
-  const [newRequirementClassId, setNewRequirementClassId] = useState('');
-  const [newRequirementXP, setNewRequirementXP] = useState('');
+  const [editError, setEditError] = useState<string>('');
   const [availableAbilities, setAvailableAbilities] = useState<CombatAbility[]>([]);
+  const [newTag, setNewTag] = useState('');
 
-  const loadClasses = useCallback(() => {
-    const allClasses = UnitClassRegistry.getAll();
+  // Load all classes and tags
+  useEffect(() => {
+    const allClasses = UnitClassRegistry.getAll().map(c => UnitClassRegistry.toDefinition(c));
     setClasses(allClasses);
 
     // Extract all unique tags
-    const tags = new Set<string>();
-    allClasses.forEach(c => c.tags.forEach(tag => tags.add(tag)));
-    setAllTags(Array.from(tags).sort());
-  }, []);
+    const tagsSet = new Set<string>();
+    allClasses.forEach(unitClass => {
+      unitClass.tags?.forEach(tag => tagsSet.add(tag));
+    });
+    setAllTags(Array.from(tagsSet).sort());
 
-  const loadAbilities = useCallback(() => {
+    // Load available abilities
     setAvailableAbilities(CombatAbility.getAll());
+
+    console.log('ClassRegistryPanel: Loaded classes:', allClasses.length);
   }, []);
 
-  useEffect(() => {
-    loadClasses();
-    loadAbilities();
-  }, [loadClasses, loadAbilities]);
-
-  const filteredClasses = tagFilter
-    ? classes.filter(c => c.tags.includes(tagFilter))
+  // Get filtered classes based on selected tag
+  const filteredClasses = selectedTag
+    ? classes.filter(c => c.tags?.includes(selectedTag))
     : classes;
 
-  const handleSelectClass = (unitClass: UnitClass) => {
-    setSelectedClass(unitClass);
+  // Handle starting edit mode
+  const handleStartEdit = () => {
+    if (selectedClass) {
+      setEditedClass({ ...selectedClass });
+      setIsEditing(true);
+      setEditError('');
+    }
+  };
+
+  // Handle canceling edit
+  const handleCancelEdit = () => {
     setIsEditing(false);
+    setEditedClass(null);
+    setEditError('');
   };
 
-  const handleEdit = () => {
+  // Handle saving edited class
+  const handleSaveEdit = () => {
+    if (!editedClass || !selectedClass) return;
+
+    // Validate required fields
+    if (!editedClass.id.trim()) {
+      setEditError('ID cannot be empty');
+      return;
+    }
+    if (!editedClass.name.trim()) {
+      setEditError('Name cannot be empty');
+      return;
+    }
+    if (!editedClass.description.trim()) {
+      setEditError('Description cannot be empty');
+      return;
+    }
+
+    // If ID changed, check for duplicates
+    if (editedClass.id !== selectedClass.id && UnitClassRegistry.has(editedClass.id)) {
+      setEditError(`ID '${editedClass.id}' is already in use`);
+      return;
+    }
+
+    // Register updated class
+    UnitClassRegistry.register(editedClass);
+
+    // Update local state
+    setSelectedClass(editedClass);
+    const allClasses = UnitClassRegistry.getAll().map(c => UnitClassRegistry.toDefinition(c));
+    setClasses(allClasses);
+
+    // Update tags
+    const tagsSet = new Set<string>();
+    allClasses.forEach(unitClass => {
+      unitClass.tags?.forEach(tag => tagsSet.add(tag));
+    });
+    setAllTags(Array.from(tagsSet).sort());
+
+    setIsEditing(false);
+    setEditedClass(null);
+    setEditError('');
+  };
+
+  // Handle deleting a class
+  const handleDelete = () => {
     if (!selectedClass) return;
-    setEditedClass(UnitClassRegistry.toDefinition(selectedClass));
-    setIsEditing(true);
+
+    const confirmed = window.confirm(
+      `Are you sure you want to delete class "${selectedClass.name}" (${selectedClass.id})?\n\n` +
+      `This action cannot be undone (until you reload the page).`
+    );
+
+    if (!confirmed) return;
+
+    const success = UnitClassRegistry.unregister(selectedClass.id);
+
+    if (success) {
+      console.log(`Deleted class "${selectedClass.id}"`);
+      setSelectedClass(null);
+      setIsEditing(false);
+      setEditedClass(null);
+      const allClasses = UnitClassRegistry.getAll().map(c => UnitClassRegistry.toDefinition(c));
+      setClasses(allClasses);
+
+      // Update tags
+      const tagsSet = new Set<string>();
+      allClasses.forEach(unitClass => {
+        unitClass.tags?.forEach(tag => tagsSet.add(tag));
+      });
+      setAllTags(Array.from(tagsSet).sort());
+    }
   };
 
-  const handleCreate = () => {
-    setEditedClass({
-      id: crypto.randomUUID(),
+  // Handle exporting class definitions to YAML
+  const handleExport = () => {
+    const allClasses = UnitClassRegistry.getAll().map(c => UnitClassRegistry.toDefinition(c));
+
+    // Generate YAML content
+    let yaml = '# Unit Class Database\n';
+    yaml += 'classes:\n';
+
+    allClasses.forEach(unitClass => {
+      yaml += `  - id: "${unitClass.id}"\n`;
+      yaml += `    name: "${unitClass.name}"\n`;
+      yaml += `    description: "${unitClass.description}"\n`;
+
+      if (unitClass.tags && unitClass.tags.length > 0) {
+        yaml += '    tags:\n';
+        unitClass.tags.forEach(tag => {
+          yaml += `      - "${tag}"\n`;
+        });
+      }
+
+      if (unitClass.learnableAbilities && unitClass.learnableAbilities.length > 0) {
+        yaml += '    learnableAbilities:\n';
+        unitClass.learnableAbilities.forEach(id => {
+          yaml += `      - "${id}"\n`;
+        });
+      }
+
+      if (unitClass.modifiers && Object.keys(unitClass.modifiers).length > 0) {
+        yaml += '    modifiers:\n';
+        Object.entries(unitClass.modifiers).forEach(([key, value]) => {
+          yaml += `      ${key}: ${value}\n`;
+        });
+      }
+
+      if (unitClass.multipliers && Object.keys(unitClass.multipliers).length > 0) {
+        yaml += '    multipliers:\n';
+        Object.entries(unitClass.multipliers).forEach(([key, value]) => {
+          yaml += `      ${key}: ${value}\n`;
+        });
+      }
+
+      if (unitClass.requirements && Object.keys(unitClass.requirements).length > 0) {
+        yaml += '    requirements:\n';
+        Object.entries(unitClass.requirements).forEach(([classId, xp]) => {
+          yaml += `      "${classId}": ${xp}\n`;
+        });
+      }
+
+      yaml += '\n';
+    });
+
+    // Create download
+    const blob = new Blob([yaml], { type: 'text/yaml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'class-database-export.yaml';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle creating a new class
+  const handleCreateNew = () => {
+    // Generate a unique ID for the new class
+    let newId = 'new-class';
+    let counter = 1;
+    while (UnitClassRegistry.has(newId)) {
+      newId = `new-class-${counter}`;
+      counter++;
+    }
+
+    // Create a new class template with default values
+    const newClass: UnitClassDefinition = {
+      id: newId,
       name: 'New Class',
-      description: 'A new unit class',
+      description: 'Description of the new class',
       tags: [],
       learnableAbilities: [],
       modifiers: {},
       multipliers: {},
       requirements: {},
+    };
+
+    // Register the new class
+    UnitClassRegistry.register(newClass);
+
+    // Update local state
+    const allClasses = UnitClassRegistry.getAll().map(c => UnitClassRegistry.toDefinition(c));
+    setClasses(allClasses);
+    setSelectedClass(newClass);
+
+    // Update tags
+    const tagsSet = new Set<string>();
+    allClasses.forEach(unitClass => {
+      unitClass.tags?.forEach(tag => tagsSet.add(tag));
     });
-    setSelectedClass(null);
+    setAllTags(Array.from(tagsSet).sort());
+
+    // Start editing the new class immediately
+    setEditedClass({ ...newClass });
     setIsEditing(true);
+    setEditError('');
   };
 
-  const handleSave = () => {
-    if (!editedClass) return;
-
-    UnitClassRegistry.register(editedClass);
-    loadClasses();
-
-    const updated = UnitClassRegistry.getById(editedClass.id);
-    setSelectedClass(updated || null);
-    setIsEditing(false);
-  };
-
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedClass(null);
-  };
-
-  const handleDelete = () => {
-    if (!selectedClass) return;
-    if (!confirm(`Delete class "${selectedClass.name}"?`)) return;
-
-    UnitClassRegistry.unregister(selectedClass.id);
-    loadClasses();
-    setSelectedClass(null);
-    setIsEditing(false);
-  };
-
+  // Handle field changes during edit
   const handleFieldChange = (field: keyof UnitClassDefinition, value: any) => {
     if (!editedClass) return;
     setEditedClass({ ...editedClass, [field]: value });
   };
 
+  // Handle modifier changes
   const handleModifierChange = (stat: string, value: number | undefined) => {
     if (!editedClass) return;
     const modifiers = { ...editedClass.modifiers };
@@ -118,6 +263,7 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
     setEditedClass({ ...editedClass, modifiers });
   };
 
+  // Handle multiplier changes
   const handleMultiplierChange = (stat: string, value: number | undefined) => {
     if (!editedClass) return;
     const multipliers = { ...editedClass.multipliers };
@@ -129,47 +275,63 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
     setEditedClass({ ...editedClass, multipliers });
   };
 
+  // Handle adding a tag
   const handleAddTag = () => {
     if (!editedClass || !newTag.trim()) return;
-    const tags = [...(editedClass.tags || [])];
-    if (!tags.includes(newTag.trim())) {
-      tags.push(newTag.trim());
-      setEditedClass({ ...editedClass, tags });
+    const currentTags = editedClass.tags || [];
+    if (currentTags.includes(newTag.trim())) {
+      setNewTag('');
+      return;
     }
+
+    setEditedClass({
+      ...editedClass,
+      tags: [...currentTags, newTag.trim()]
+    });
     setNewTag('');
   };
 
+  // Handle removing a tag
   const handleRemoveTag = (tag: string) => {
     if (!editedClass) return;
-    const tags = (editedClass.tags || []).filter(t => t !== tag);
-    setEditedClass({ ...editedClass, tags });
+    const currentTags = editedClass.tags || [];
+    setEditedClass({
+      ...editedClass,
+      tags: currentTags.filter(t => t !== tag)
+    });
   };
 
-  const handleAddAbility = () => {
-    if (!editedClass || !newAbilityId.trim()) return;
-    const abilities = [...(editedClass.learnableAbilities || [])];
-    if (!abilities.includes(newAbilityId.trim())) {
-      abilities.push(newAbilityId.trim());
-      setEditedClass({ ...editedClass, learnableAbilities: abilities });
-    }
-    setNewAbilityId('');
+  // Handle adding an ability
+  const handleAddAbility = (abilityId: string) => {
+    if (!editedClass || !abilityId) return;
+    const abilities = editedClass.learnableAbilities || [];
+    if (abilities.includes(abilityId)) return;
+
+    setEditedClass({
+      ...editedClass,
+      learnableAbilities: [...abilities, abilityId]
+    });
   };
 
+  // Handle removing an ability
   const handleRemoveAbility = (abilityId: string) => {
     if (!editedClass) return;
-    const abilities = (editedClass.learnableAbilities || []).filter(a => a !== abilityId);
-    setEditedClass({ ...editedClass, learnableAbilities: abilities });
+    const abilities = editedClass.learnableAbilities || [];
+    setEditedClass({
+      ...editedClass,
+      learnableAbilities: abilities.filter(a => a !== abilityId)
+    });
   };
 
-  const handleAddRequirement = () => {
-    if (!editedClass || !newRequirementClassId.trim() || !newRequirementXP) return;
+  // Handle adding a requirement
+  const handleAddRequirement = (classId: string, xp: number) => {
+    if (!editedClass || !classId) return;
     const requirements = { ...(editedClass.requirements || {}) };
-    requirements[newRequirementClassId.trim()] = Number(newRequirementXP);
+    requirements[classId] = xp;
     setEditedClass({ ...editedClass, requirements });
-    setNewRequirementClassId('');
-    setNewRequirementXP('');
   };
 
+  // Handle removing a requirement
   const handleRemoveRequirement = (classId: string) => {
     if (!editedClass) return;
     const requirements = { ...(editedClass.requirements || {}) };
@@ -177,390 +339,629 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
     setEditedClass({ ...editedClass, requirements });
   };
 
-  const handleExport = () => {
-    const definitions = classes.map(c => UnitClassRegistry.toDefinition(c));
-    const yamlData = yaml.dump({ classes: definitions }, { lineWidth: -1, noRefs: true });
-
-    const blob = new Blob([yamlData], { type: 'text/yaml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'class-registry-export.yaml';
-    a.click();
-    URL.revokeObjectURL(url);
-  };
-
-  const displayClass = isEditing ? editedClass : (selectedClass ? UnitClassRegistry.toDefinition(selectedClass) : null);
+  const displayClass = isEditing ? editedClass : selectedClass;
 
   return (
-    <div style={{
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: 'rgba(0, 0, 0, 0.85)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      zIndex: 2000,
-      padding: '20px',
-    }}>
-      <div style={{
-        backgroundColor: '#1a1a1a',
-        border: '2px solid #4CAF50',
+    <div
+      style={{
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        background: 'rgba(0, 0, 0, 0.9)',
+        border: '2px solid #666',
+        padding: '20px',
         borderRadius: '8px',
-        width: '90%',
-        maxWidth: '1400px',
-        height: '90vh',
+        color: '#fff',
+        fontFamily: 'monospace',
+        fontSize: '12px',
+        zIndex: 2000,
+        width: '1100px',
+        height: '85vh',
         display: 'flex',
         flexDirection: 'column',
-        color: '#e0e0e0',
-      }}>
-        {/* Header */}
-        <div style={{
-          padding: '15px 20px',
-          borderBottom: '2px solid #4CAF50',
+      }}
+    >
+      {/* Header */}
+      <div
+        style={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-        }}>
-          <h2 style={{ margin: 0, color: '#4CAF50' }}>Class Registry</h2>
-          <div style={{ display: 'flex', gap: '10px' }}>
-            <button
-              onClick={handleCreate}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#4CAF50',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Create New
-            </button>
-            <button
-              onClick={handleExport}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#2196F3',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Export to YAML
-            </button>
-            <button
-              onClick={onClose}
-              style={{
-                padding: '8px 16px',
-                backgroundColor: '#f44336',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer',
-              }}
-            >
-              Close
-            </button>
+          marginBottom: '16px',
+          paddingBottom: '12px',
+          borderBottom: '1px solid #666',
+        }}
+      >
+        <div>
+          <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Class Registry</div>
+          <div style={{ fontSize: '11px', color: '#aaa', marginTop: '4px' }}>
+            {classes.length} classes loaded
           </div>
         </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={handleCreateNew}
+            style={{
+              background: 'rgba(76, 175, 80, 0.2)',
+              border: '1px solid rgba(76, 175, 80, 0.5)',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+            }}
+          >
+            Create New
+          </button>
+          <button
+            onClick={handleExport}
+            style={{
+              background: 'rgba(33, 150, 243, 0.2)',
+              border: '1px solid rgba(33, 150, 243, 0.5)',
+              color: '#fff',
+              padding: '8px 12px',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '11px',
+              fontFamily: 'monospace',
+            }}
+          >
+            Export
+          </button>
+          <button
+            onClick={onClose}
+            style={{
+              background: 'transparent',
+              border: 'none',
+              color: '#fff',
+              fontSize: '20px',
+              fontWeight: 'bold',
+              cursor: 'pointer',
+              padding: '0',
+              width: '24px',
+              height: '24px',
+            }}
+            title="Close class registry"
+          >
+            ×
+          </button>
+        </div>
+      </div>
 
-        {/* Main Content */}
-        <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-          {/* Left Panel - List */}
-          <div style={{
-            width: '350px',
-            borderRight: '2px solid #4CAF50',
+      {/* Main Content */}
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden', gap: '16px' }}>
+        {/* Left Panel - Class List */}
+        <div
+          style={{
+            width: '280px',
             display: 'flex',
             flexDirection: 'column',
-          }}>
-            {/* Tag Filter */}
-            <div style={{ padding: '10px', borderBottom: '1px solid #333' }}>
-              <div style={{ fontSize: '12px', marginBottom: '5px', color: '#4CAF50' }}>Filter by Tag:</div>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
+            gap: '12px',
+          }}
+        >
+          {/* Tag Filter */}
+          <div>
+            <div style={{ fontSize: '11px', marginBottom: '6px', color: '#aaa' }}>Filter by tag:</div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+              <button
+                onClick={() => setSelectedTag('')}
+                style={{
+                  background: selectedTag === '' ? 'rgba(156, 39, 176, 0.3)' : 'rgba(128, 128, 128, 0.2)',
+                  border: selectedTag === '' ? '1px solid rgba(156, 39, 176, 0.5)' : '1px solid #444',
+                  color: '#fff',
+                  padding: '4px 8px',
+                  borderRadius: '3px',
+                  cursor: 'pointer',
+                  fontSize: '10px',
+                  fontFamily: 'monospace',
+                }}
+              >
+                All ({classes.length})
+              </button>
+              {allTags.map(tag => (
                 <button
-                  onClick={() => setTagFilter(null)}
+                  key={tag}
+                  onClick={() => setSelectedTag(tag)}
                   style={{
+                    background: selectedTag === tag ? 'rgba(156, 39, 176, 0.3)' : 'rgba(128, 128, 128, 0.2)',
+                    border: selectedTag === tag ? '1px solid rgba(156, 39, 176, 0.5)' : '1px solid #444',
+                    color: '#fff',
                     padding: '4px 8px',
-                    backgroundColor: tagFilter === null ? '#4CAF50' : '#333',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
+                    borderRadius: '3px',
                     cursor: 'pointer',
-                    fontSize: '11px',
+                    fontSize: '10px',
+                    fontFamily: 'monospace',
                   }}
                 >
-                  All ({classes.length})
+                  {tag}
                 </button>
-                {allTags.map(tag => (
-                  <button
-                    key={tag}
-                    onClick={() => setTagFilter(tag)}
-                    style={{
-                      padding: '4px 8px',
-                      backgroundColor: tagFilter === tag ? '#4CAF50' : '#333',
-                      color: 'white',
-                      border: 'none',
-                      borderRadius: '4px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                    }}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Class List */}
-            <div style={{ flex: 1, overflowY: 'auto' }}>
-              {filteredClasses.map(unitClass => (
-                <div
-                  key={unitClass.id}
-                  onClick={() => handleSelectClass(unitClass)}
-                  style={{
-                    padding: '10px',
-                    borderBottom: '1px solid #333',
-                    cursor: 'pointer',
-                    backgroundColor: selectedClass?.id === unitClass.id ? '#2a2a2a' : 'transparent',
-                  }}
-                >
-                  <div style={{ fontWeight: 'bold' }}>{unitClass.name}</div>
-                  <div style={{ fontSize: '11px', color: '#888', marginTop: '2px' }}>
-                    {unitClass.tags.join(', ')}
-                  </div>
-                </div>
               ))}
             </div>
           </div>
 
-          {/* Right Panel - Details */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            {displayClass ? (
-              <>
-                {/* Detail Header */}
-                <div style={{
-                  padding: '15px 20px',
+          {/* Class List */}
+          <div
+            style={{
+              flex: 1,
+              overflowY: 'auto',
+              border: '1px solid #444',
+              borderRadius: '4px',
+            }}
+          >
+            {filteredClasses.map(unitClass => (
+              <div
+                key={unitClass.id}
+                onClick={() => {
+                  setSelectedClass(unitClass);
+                  setIsEditing(false);
+                  setEditedClass(null);
+                  setEditError('');
+                }}
+                style={{
+                  padding: '8px',
                   borderBottom: '1px solid #333',
+                  cursor: 'pointer',
+                  background: selectedClass?.id === unitClass.id ? 'rgba(76, 175, 80, 0.15)' : 'transparent',
+                }}
+              >
+                <div style={{ fontWeight: 'bold', fontSize: '11px' }}>{unitClass.name}</div>
+                {unitClass.tags && unitClass.tags.length > 0 && (
+                  <div style={{ fontSize: '10px', color: '#888', marginTop: '2px' }}>
+                    {unitClass.tags.join(', ')}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Right Panel - Class Details */}
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          {displayClass ? (
+            <>
+              {/* Detail Header */}
+              <div
+                style={{
                   display: 'flex',
                   justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}>
-                  <h3 style={{ margin: 0 }}>
-                    {isEditing ? (
-                      <input
-                        type="text"
-                        value={editedClass?.name || ''}
-                        onChange={(e) => handleFieldChange('name', e.target.value)}
+                  alignItems: 'flex-start',
+                  marginBottom: '12px',
+                  paddingBottom: '8px',
+                  borderBottom: '1px solid #444',
+                }}
+              >
+                <div style={{ flex: 1 }}>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      value={editedClass?.name || ''}
+                      onChange={(e) => handleFieldChange('name', e.target.value)}
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        color: '#fff',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        fontSize: '14px',
+                        fontWeight: 'bold',
+                        width: '100%',
+                        fontFamily: 'monospace',
+                      }}
+                    />
+                  ) : (
+                    <div style={{ fontWeight: 'bold', fontSize: '14px' }}>{displayClass.name}</div>
+                  )}
+                  <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>ID: {displayClass.id}</div>
+                </div>
+                <div style={{ display: 'flex', gap: '6px', marginLeft: '12px' }}>
+                  {isEditing ? (
+                    <>
+                      <button
+                        onClick={handleSaveEdit}
                         style={{
-                          backgroundColor: '#2a2a2a',
-                          color: '#e0e0e0',
-                          border: '1px solid #4CAF50',
+                          background: 'rgba(76, 175, 80, 0.2)',
+                          border: '1px solid rgba(76, 175, 80, 0.5)',
+                          color: '#fff',
+                          padding: '6px 12px',
                           borderRadius: '4px',
-                          padding: '8px',
-                          fontSize: '18px',
-                          width: '300px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
                         }}
-                      />
-                    ) : (
-                      displayClass.name
-                    )}
-                  </h3>
-                  <div style={{ display: 'flex', gap: '10px' }}>
-                    {isEditing ? (
-                      <>
-                        <button
-                          onClick={handleSave}
+                      >
+                        Save
+                      </button>
+                      <button
+                        onClick={handleCancelEdit}
+                        style={{
+                          background: 'rgba(128, 128, 128, 0.2)',
+                          border: '1px solid #666',
+                          color: '#fff',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <button
+                        onClick={handleStartEdit}
+                        style={{
+                          background: 'rgba(33, 150, 243, 0.2)',
+                          border: '1px solid rgba(33, 150, 243, 0.5)',
+                          color: '#fff',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={handleDelete}
+                        style={{
+                          background: 'rgba(244, 67, 54, 0.2)',
+                          border: '1px solid rgba(244, 67, 54, 0.5)',
+                          color: '#fff',
+                          padding: '6px 12px',
+                          borderRadius: '4px',
+                          cursor: 'pointer',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        Delete
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+
+              {/* Error Display */}
+              {editError && (
+                <div
+                  style={{
+                    background: 'rgba(244, 67, 54, 0.2)',
+                    border: '1px solid rgba(244, 67, 54, 0.5)',
+                    color: '#ff6b6b',
+                    padding: '8px',
+                    borderRadius: '4px',
+                    marginBottom: '12px',
+                    fontSize: '11px',
+                  }}
+                >
+                  {editError}
+                </div>
+              )}
+
+              {/* Detail Content - Scrollable */}
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {/* Description */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>Description:</div>
+                  {isEditing ? (
+                    <textarea
+                      value={editedClass?.description || ''}
+                      onChange={(e) => handleFieldChange('description', e.target.value)}
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        color: '#fff',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        width: '100%',
+                        minHeight: '60px',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                        resize: 'vertical',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        padding: '6px',
+                        borderRadius: '4px',
+                        fontSize: '11px',
+                      }}
+                    >
+                      {displayClass.description}
+                    </div>
+                  )}
+                </div>
+
+                {/* Tags */}
+                <div style={{ marginBottom: '16px' }}>
+                  <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>Tags:</div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                    {(displayClass.tags || []).map(tag => (
+                      <span
+                        key={tag}
+                        style={{
+                          background: 'rgba(156, 39, 176, 0.2)',
+                          border: '1px solid rgba(156, 39, 176, 0.4)',
+                          padding: '4px 8px',
+                          borderRadius: '3px',
+                          fontSize: '10px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                        }}
+                      >
+                        {tag}
+                        {isEditing && (
+                          <button
+                            onClick={() => handleRemoveTag(tag)}
+                            style={{
+                              background: 'none',
+                              border: 'none',
+                              color: '#f44336',
+                              cursor: 'pointer',
+                              padding: 0,
+                              fontSize: '14px',
+                            }}
+                          >
+                            ×
+                          </button>
+                        )}
+                      </span>
+                    ))}
+                    {isEditing && (
+                      <div style={{ display: 'flex', gap: '4px' }}>
+                        <input
+                          type="text"
+                          value={newTag}
+                          onChange={(e) => setNewTag(e.target.value)}
+                          onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
+                          placeholder="New tag"
                           style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#4CAF50',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            color: '#fff',
+                            padding: '4px 8px',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            width: '100px',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                        <button
+                          onClick={handleAddTag}
+                          style={{
+                            background: 'rgba(76, 175, 80, 0.2)',
+                            border: '1px solid rgba(76, 175, 80, 0.5)',
+                            color: '#fff',
+                            padding: '4px 8px',
+                            borderRadius: '3px',
                             cursor: 'pointer',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
                           }}
                         >
-                          Save
+                          Add
                         </button>
-                        <button
-                          onClick={handleCancel}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#666',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      </>
-                    ) : (
-                      <>
-                        <button
-                          onClick={handleEdit}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#2196F3',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Edit
-                        </button>
-                        <button
-                          onClick={handleDelete}
-                          style={{
-                            padding: '8px 16px',
-                            backgroundColor: '#f44336',
-                            color: 'white',
-                            border: 'none',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                          }}
-                        >
-                          Delete
-                        </button>
-                      </>
+                      </div>
                     )}
                   </div>
                 </div>
 
-                {/* Detail Content */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '20px' }}>
-                  {/* Description */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '12px', marginBottom: '5px', color: '#4CAF50' }}>Description:</div>
-                    {isEditing ? (
-                      <textarea
-                        value={editedClass?.description || ''}
-                        onChange={(e) => handleFieldChange('description', e.target.value)}
+                {/* Two Column Layout for Stats and Abilities */}
+                <div style={{ display: 'flex', gap: '16px', marginBottom: '16px' }}>
+                  {/* Left Column - Stats */}
+                  <div style={{ flex: 1 }}>
+                    {/* Modifiers */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>Modifiers (Flat):</div>
+                      <div
                         style={{
-                          backgroundColor: '#2a2a2a',
-                          color: '#e0e0e0',
-                          border: '1px solid #4CAF50',
+                          background: 'rgba(76, 175, 80, 0.1)',
+                          border: '1px solid rgba(76, 175, 80, 0.3)',
                           borderRadius: '4px',
                           padding: '8px',
-                          width: '100%',
-                          minHeight: '60px',
-                          fontFamily: 'inherit',
                         }}
-                      />
-                    ) : (
-                      <div style={{ padding: '8px', backgroundColor: '#2a2a2a', borderRadius: '4px' }}>
-                        {displayClass.description}
+                      >
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {statFields.map(stat => (
+                            <div key={stat} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '10px', color: '#aaa', width: '90px' }}>{stat}:</span>
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  value={(editedClass?.modifiers as any)?.[stat] || ''}
+                                  onChange={(e) =>
+                                    handleModifierChange(stat, e.target.value ? Number(e.target.value) : undefined)
+                                  }
+                                  placeholder="0"
+                                  style={{
+                                    background: 'rgba(0, 0, 0, 0.5)',
+                                    border: '1px solid #666',
+                                    color: '#fff',
+                                    padding: '3px 6px',
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    width: '60px',
+                                    fontFamily: 'monospace',
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: '10px' }}>
+                                  {(displayClass.modifiers as any)?.[stat] || 0}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
                       </div>
-                    )}
-                  </div>
+                    </div>
 
-                  {/* Tags */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '12px', marginBottom: '5px', color: '#4CAF50' }}>Tags:</div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '5px' }}>
-                      {(displayClass.tags || []).map(tag => (
-                        <span
-                          key={tag}
-                          style={{
-                            padding: '4px 8px',
-                            backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                            border: '1px solid #4CAF50',
-                            borderRadius: '4px',
-                            fontSize: '11px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px',
-                          }}
-                        >
-                          {tag}
-                          {isEditing && (
-                            <button
-                              onClick={() => handleRemoveTag(tag)}
+                    {/* Multipliers */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>Multipliers (%):</div>
+                      <div
+                        style={{
+                          background: 'rgba(33, 150, 243, 0.1)',
+                          border: '1px solid rgba(33, 150, 243, 0.3)',
+                          borderRadius: '4px',
+                          padding: '8px',
+                        }}
+                      >
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px' }}>
+                          {statFields.map(stat => (
+                            <div key={stat} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                              <span style={{ fontSize: '10px', color: '#aaa', width: '90px' }}>{stat}:</span>
+                              {isEditing ? (
+                                <input
+                                  type="number"
+                                  step="0.1"
+                                  value={(editedClass?.multipliers as any)?.[stat] || ''}
+                                  onChange={(e) =>
+                                    handleMultiplierChange(stat, e.target.value ? Number(e.target.value) : undefined)
+                                  }
+                                  placeholder="1.0"
+                                  style={{
+                                    background: 'rgba(0, 0, 0, 0.5)',
+                                    border: '1px solid #666',
+                                    color: '#fff',
+                                    padding: '3px 6px',
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    width: '60px',
+                                    fontFamily: 'monospace',
+                                  }}
+                                />
+                              ) : (
+                                <span style={{ fontSize: '10px' }}>
+                                  {(displayClass.multipliers as any)?.[stat] || 1.0}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Requirements */}
+                    <div>
+                      <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>Requirements:</div>
+                      <div
+                        style={{
+                          background: 'rgba(255, 152, 0, 0.1)',
+                          border: '1px solid rgba(255, 152, 0, 0.3)',
+                          borderRadius: '4px',
+                          padding: '8px',
+                          minHeight: '60px',
+                        }}
+                      >
+                        {Object.entries(displayClass.requirements || {}).map(([classId, xp]) => {
+                          const reqClass = UnitClass.getById(classId);
+                          return (
+                            <div
+                              key={classId}
                               style={{
-                                background: 'none',
-                                border: 'none',
-                                color: '#f44336',
-                                cursor: 'pointer',
-                                padding: 0,
-                                fontSize: '14px',
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                padding: '4px 0',
+                                borderBottom: '1px solid rgba(255, 152, 0, 0.2)',
                               }}
                             >
-                              ×
-                            </button>
-                          )}
-                        </span>
-                      ))}
-                      {isEditing && (
-                        <div style={{ display: 'flex', gap: '5px' }}>
-                          <input
-                            type="text"
-                            value={newTag}
-                            onChange={(e) => setNewTag(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && handleAddTag()}
-                            placeholder="New tag"
-                            style={{
-                              backgroundColor: '#2a2a2a',
-                              color: '#e0e0e0',
-                              border: '1px solid #4CAF50',
-                              borderRadius: '4px',
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              width: '100px',
-                            }}
-                          />
-                          <button
-                            onClick={handleAddTag}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: '#4CAF50',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: 'pointer',
-                              fontSize: '11px',
-                            }}
-                          >
-                            Add
-                          </button>
-                        </div>
-                      )}
+                              <span style={{ fontSize: '10px' }}>
+                                {reqClass ? reqClass.name : classId}: {xp} XP
+                              </span>
+                              {isEditing && (
+                                <button
+                                  onClick={() => handleRemoveRequirement(classId)}
+                                  style={{
+                                    background: 'none',
+                                    border: 'none',
+                                    color: '#f44336',
+                                    cursor: 'pointer',
+                                    padding: 0,
+                                    fontSize: '14px',
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                        {Object.keys(displayClass.requirements || {}).length === 0 && (
+                          <div style={{ fontSize: '10px', color: '#666' }}>No requirements</div>
+                        )}
+                        {isEditing && (
+                          <div style={{ marginTop: '8px', display: 'flex', gap: '4px' }}>
+                            <select
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleAddRequirement(e.target.value, 100);
+                                  e.target.value = '';
+                                }
+                              }}
+                              style={{
+                                background: 'rgba(0, 0, 0, 0.5)',
+                                border: '1px solid #666',
+                                color: '#fff',
+                                padding: '4px',
+                                borderRadius: '3px',
+                                fontSize: '10px',
+                                flex: 1,
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              <option value="">Add requirement...</option>
+                              {classes
+                                .filter(c => c.id !== displayClass.id)
+                                .map(c => (
+                                  <option key={c.id} value={c.id}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                            </select>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
-                  {/* Learnable Abilities */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '12px', marginBottom: '5px', color: '#4CAF50' }}>
+                  {/* Right Column - Abilities */}
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>
                       Learnable Abilities ({(displayClass.learnableAbilities || []).length}):
                     </div>
-                    <div style={{
-                      maxHeight: '200px',
-                      overflowY: 'auto',
-                      backgroundColor: '#2a2a2a',
-                      borderRadius: '4px',
-                      padding: '8px',
-                    }}>
+                    <div
+                      style={{
+                        background: 'rgba(156, 39, 176, 0.1)',
+                        border: '1px solid rgba(156, 39, 176, 0.3)',
+                        borderRadius: '4px',
+                        padding: '8px',
+                        height: '440px',
+                        overflowY: 'auto',
+                      }}
+                    >
                       {(displayClass.learnableAbilities || []).map(abilityId => {
                         const ability = CombatAbility.getById(abilityId);
                         return (
                           <div
                             key={abilityId}
                             style={{
-                              padding: '4px',
                               display: 'flex',
                               justifyContent: 'space-between',
                               alignItems: 'center',
-                              borderBottom: '1px solid #333',
+                              padding: '4px 0',
+                              borderBottom: '1px solid rgba(156, 39, 176, 0.2)',
                             }}
                           >
-                            <span style={{ fontSize: '11px' }}>
-                              {ability ? ability.name : abilityId}
-                            </span>
+                            <span style={{ fontSize: '10px' }}>{ability ? ability.name : abilityId}</span>
                             {isEditing && (
                               <button
                                 onClick={() => handleRemoveAbility(abilityId)}
@@ -579,271 +980,57 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                           </div>
                         );
                       })}
+                      {(displayClass.learnableAbilities || []).length === 0 && (
+                        <div style={{ fontSize: '10px', color: '#666' }}>No learnable abilities</div>
+                      )}
                       {isEditing && (
-                        <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
+                        <div style={{ marginTop: '8px' }}>
                           <select
-                            value={newAbilityId}
-                            onChange={(e) => setNewAbilityId(e.target.value)}
+                            onChange={(e) => {
+                              if (e.target.value) {
+                                handleAddAbility(e.target.value);
+                                e.target.value = '';
+                              }
+                            }}
                             style={{
-                              backgroundColor: '#2a2a2a',
-                              color: '#e0e0e0',
-                              border: '1px solid #4CAF50',
-                              borderRadius: '4px',
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              flex: 1,
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              color: '#fff',
+                              padding: '4px',
+                              borderRadius: '3px',
+                              fontSize: '10px',
+                              width: '100%',
+                              fontFamily: 'monospace',
                             }}
                           >
-                            <option value="">Select ability...</option>
+                            <option value="">Add ability...</option>
                             {availableAbilities.map(ability => (
                               <option key={ability.id} value={ability.id}>
                                 {ability.name} ({ability.abilityType})
                               </option>
                             ))}
                           </select>
-                          <button
-                            onClick={handleAddAbility}
-                            disabled={!newAbilityId}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: newAbilityId ? '#4CAF50' : '#555',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: newAbilityId ? 'pointer' : 'not-allowed',
-                              fontSize: '11px',
-                            }}
-                          >
-                            Add
-                          </button>
                         </div>
                       )}
                     </div>
-                  </div>
-
-                  {/* Requirements */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{ fontSize: '12px', marginBottom: '5px', color: '#4CAF50' }}>
-                      Requirements:
-                    </div>
-                    <div style={{
-                      backgroundColor: '#2a2a2a',
-                      borderRadius: '4px',
-                      padding: '8px',
-                    }}>
-                      {Object.entries(displayClass.requirements || {}).map(([classId, xp]) => {
-                        const reqClass = UnitClass.getById(classId);
-                        return (
-                          <div
-                            key={classId}
-                            style={{
-                              padding: '4px',
-                              display: 'flex',
-                              justifyContent: 'space-between',
-                              alignItems: 'center',
-                              borderBottom: '1px solid #333',
-                            }}
-                          >
-                            <span style={{ fontSize: '11px' }}>
-                              {reqClass ? reqClass.name : classId}: {xp} XP
-                            </span>
-                            {isEditing && (
-                              <button
-                                onClick={() => handleRemoveRequirement(classId)}
-                                style={{
-                                  background: 'none',
-                                  border: 'none',
-                                  color: '#f44336',
-                                  cursor: 'pointer',
-                                  padding: 0,
-                                  fontSize: '14px',
-                                }}
-                              >
-                                ×
-                              </button>
-                            )}
-                          </div>
-                        );
-                      })}
-                      {Object.keys(displayClass.requirements || {}).length === 0 && (
-                        <div style={{ fontSize: '11px', color: '#888' }}>No requirements</div>
-                      )}
-                      {isEditing && (
-                        <div style={{ display: 'flex', gap: '5px', marginTop: '5px' }}>
-                          <select
-                            value={newRequirementClassId}
-                            onChange={(e) => setNewRequirementClassId(e.target.value)}
-                            style={{
-                              backgroundColor: '#2a2a2a',
-                              color: '#e0e0e0',
-                              border: '1px solid #4CAF50',
-                              borderRadius: '4px',
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              flex: 1,
-                            }}
-                          >
-                            <option value="">Select class...</option>
-                            {classes.map(c => (
-                              <option key={c.id} value={c.id}>
-                                {c.name}
-                              </option>
-                            ))}
-                          </select>
-                          <input
-                            type="number"
-                            value={newRequirementXP}
-                            onChange={(e) => setNewRequirementXP(e.target.value)}
-                            placeholder="XP"
-                            style={{
-                              backgroundColor: '#2a2a2a',
-                              color: '#e0e0e0',
-                              border: '1px solid #4CAF50',
-                              borderRadius: '4px',
-                              padding: '4px 8px',
-                              fontSize: '11px',
-                              width: '80px',
-                            }}
-                          />
-                          <button
-                            onClick={handleAddRequirement}
-                            disabled={!newRequirementClassId || !newRequirementXP}
-                            style={{
-                              padding: '4px 8px',
-                              backgroundColor: (newRequirementClassId && newRequirementXP) ? '#4CAF50' : '#555',
-                              color: 'white',
-                              border: 'none',
-                              borderRadius: '4px',
-                              cursor: (newRequirementClassId && newRequirementXP) ? 'pointer' : 'not-allowed',
-                              fontSize: '11px',
-                            }}
-                          >
-                            Add
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Modifiers */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{
-                      fontSize: '12px',
-                      marginBottom: '5px',
-                      color: 'rgba(76, 175, 80, 0.9)',
-                      fontWeight: 'bold',
-                    }}>
-                      Modifiers (Flat Bonuses):
-                    </div>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(5, 1fr)',
-                      gap: '10px',
-                      padding: '10px',
-                      backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                      border: '1px solid rgba(76, 175, 80, 0.3)',
-                      borderRadius: '4px',
-                    }}>
-                      {statFields.map(stat => (
-                        <div key={stat}>
-                          <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>
-                            {stat}:
-                          </div>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              value={(editedClass?.modifiers as any)?.[stat] || ''}
-                              onChange={(e) => handleModifierChange(stat, e.target.value ? Number(e.target.value) : undefined)}
-                              placeholder="0"
-                              style={{
-                                backgroundColor: '#2a2a2a',
-                                color: '#e0e0e0',
-                                border: '1px solid rgba(76, 175, 80, 0.5)',
-                                borderRadius: '4px',
-                                padding: '4px',
-                                width: '100%',
-                                fontSize: '11px',
-                              }}
-                            />
-                          ) : (
-                            <div style={{ fontSize: '11px', padding: '4px' }}>
-                              {(displayClass.modifiers as any)?.[stat] || 0}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* Multipliers */}
-                  <div style={{ marginBottom: '20px' }}>
-                    <div style={{
-                      fontSize: '12px',
-                      marginBottom: '5px',
-                      color: 'rgba(33, 150, 243, 0.9)',
-                      fontWeight: 'bold',
-                    }}>
-                      Multipliers (Percentage Bonuses):
-                    </div>
-                    <div style={{
-                      display: 'grid',
-                      gridTemplateColumns: 'repeat(5, 1fr)',
-                      gap: '10px',
-                      padding: '10px',
-                      backgroundColor: 'rgba(33, 150, 243, 0.1)',
-                      border: '1px solid rgba(33, 150, 243, 0.3)',
-                      borderRadius: '4px',
-                    }}>
-                      {statFields.map(stat => (
-                        <div key={stat}>
-                          <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>
-                            {stat}:
-                          </div>
-                          {isEditing ? (
-                            <input
-                              type="number"
-                              step="0.1"
-                              value={(editedClass?.multipliers as any)?.[stat] || ''}
-                              onChange={(e) => handleMultiplierChange(stat, e.target.value ? Number(e.target.value) : undefined)}
-                              placeholder="1.0"
-                              style={{
-                                backgroundColor: '#2a2a2a',
-                                color: '#e0e0e0',
-                                border: '1px solid rgba(33, 150, 243, 0.5)',
-                                borderRadius: '4px',
-                                padding: '4px',
-                                width: '100%',
-                                fontSize: '11px',
-                              }}
-                            />
-                          ) : (
-                            <div style={{ fontSize: '11px', padding: '4px' }}>
-                              {(displayClass.multipliers as any)?.[stat] || 1.0}
-                            </div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  {/* ID */}
-                  <div style={{ marginTop: '20px', padding: '10px', backgroundColor: '#2a2a2a', borderRadius: '4px' }}>
-                    <div style={{ fontSize: '10px', color: '#888' }}>ID: {displayClass.id}</div>
                   </div>
                 </div>
-              </>
-            ) : (
-              <div style={{
+              </div>
+            </>
+          ) : (
+            <div
+              style={{
                 flex: 1,
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 color: '#666',
-              }}>
-                Select a class to view details
-              </div>
-            )}
-          </div>
+                fontSize: '12px',
+              }}
+            >
+              Select a class to view details
+            </div>
+          )}
         </div>
       </div>
     </div>
