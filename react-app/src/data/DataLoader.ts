@@ -6,11 +6,14 @@ import { CombatEncounter } from '../models/combat/CombatEncounter';
 import type { CombatEncounterJSON } from '../models/combat/CombatEncounter';
 import type { EquipmentType } from '../models/combat/Equipment';
 import type { AbilityType } from '../models/combat/CombatAbility';
+import { SpriteRegistry } from '../utils/SpriteRegistry';
+import type { SpriteDefinitionJSON } from '../utils/SpriteRegistry';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
 import classYaml from './class-database.yaml?raw';
 import encounterYaml from './encounter-database.yaml?raw';
+import spriteYaml from './sprite-definitions.yaml?raw';
 
 // Import equipment YAML files
 import swordsYaml from './equipment/swords.yaml?raw';
@@ -177,6 +180,19 @@ export function loadEncounters(): void {
 }
 
 /**
+ * Load all sprite definitions from the YAML database
+ */
+export function loadSprites(): void {
+  const data = yaml.load(spriteYaml) as { sprites: SpriteDefinitionJSON[] };
+
+  for (const spriteData of data.sprites) {
+    SpriteRegistry.register(spriteData);
+  }
+
+  console.log(`Loaded ${data.sprites.length} sprite definitions`);
+}
+
+/**
  * Load all game data from YAML files
  * Call this once at application startup
  */
@@ -184,11 +200,13 @@ export function loadAllGameData(): void {
   console.log('Loading game data...');
 
   // Order matters: abilities must be loaded before classes and encounters
+  // Sprites can be loaded at any time (independent)
+  loadSprites();
   loadAbilities();
   loadEquipment();
   loadClasses();
   loadEncounters();
 
   console.log('Game data loaded successfully');
-  console.log(`Total: ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${CombatEncounter.getAll().length} encounters`);
+  console.log(`Total: ${SpriteRegistry.count} sprites, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${CombatEncounter.getAll().length} encounters`);
 }

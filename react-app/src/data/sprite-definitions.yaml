@@ -1,0 +1,320 @@
+# Sprite definitions for combat
+# Maps sprite IDs to their locations in sprite sheets
+
+sprites:
+  # Crystal Warriors sprite sheet (/spritesheets/crystalwarriors.png)
+  # Appears to be 16x16 pixel sprites in a grid layout
+
+  # Row 0 - Warriors facing down
+  - id: "warrior-blue-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 0
+    tags: ["warrior", "player", "humanoid", "down"]
+
+  - id: "warrior-red-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 0
+    tags: ["warrior", "player", "humanoid", "down"]
+
+  - id: "warrior-green-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 2
+    y: 0
+    tags: ["warrior", "player", "humanoid", "down"]
+
+  - id: "warrior-yellow-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 3
+    y: 0
+    tags: ["warrior", "player", "humanoid", "down"]
+
+  # Row 1 - Warriors facing left
+  - id: "warrior-blue-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 1
+    tags: ["warrior", "player", "humanoid", "left"]
+
+  - id: "warrior-red-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 1
+    tags: ["warrior", "player", "humanoid", "left"]
+
+  - id: "warrior-green-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 2
+    y: 1
+    tags: ["warrior", "player", "humanoid", "left"]
+
+  - id: "warrior-yellow-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 3
+    y: 1
+    tags: ["warrior", "player", "humanoid", "left"]
+
+  # Row 2 - Warriors facing right
+  - id: "warrior-blue-right"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 2
+    tags: ["warrior", "player", "humanoid", "right"]
+
+  - id: "warrior-red-right"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 2
+    tags: ["warrior", "player", "humanoid", "right"]
+
+  - id: "warrior-green-right"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 2
+    y: 2
+    tags: ["warrior", "player", "humanoid", "right"]
+
+  - id: "warrior-yellow-right"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 3
+    y: 2
+    tags: ["warrior", "player", "humanoid", "right"]
+
+  # Row 3 - Warriors facing up
+  - id: "warrior-blue-up"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 3
+    tags: ["warrior", "player", "humanoid", "up"]
+
+  - id: "warrior-red-up"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 3
+    tags: ["warrior", "player", "humanoid", "up"]
+
+  - id: "warrior-green-up"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 2
+    y: 3
+    tags: ["warrior", "player", "humanoid", "up"]
+
+  - id: "warrior-yellow-up"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 3
+    y: 3
+    tags: ["warrior", "player", "humanoid", "up"]
+
+  # Monsters sprite sheet (/spritesheets/monsters.png)
+  # Grid of various monster sprites
+
+  # Row 0 - Flying/Aquatic creatures
+  - id: "bat"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 0
+    tags: ["monster", "flying", "beast"]
+
+  - id: "bat-variant"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 0
+    tags: ["monster", "flying", "beast"]
+
+  - id: "fish-blue"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 2
+    y: 0
+    tags: ["monster", "aquatic"]
+
+  - id: "fish-yellow"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 3
+    y: 0
+    tags: ["monster", "aquatic"]
+
+  - id: "octopus"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 4
+    y: 0
+    tags: ["monster", "aquatic"]
+
+  - id: "bird-blue"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 5
+    y: 0
+    tags: ["monster", "flying", "bird"]
+
+  - id: "bird-orange"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 6
+    y: 0
+    tags: ["monster", "flying", "bird"]
+
+  # Row 1 - Small creatures
+  - id: "slime-blue"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 1
+    tags: ["monster", "slime"]
+
+  - id: "slime-green"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 1
+    tags: ["monster", "slime"]
+
+  - id: "slime-purple"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 2
+    y: 1
+    tags: ["monster", "slime"]
+
+  - id: "slime-pink"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 3
+    y: 1
+    tags: ["monster", "slime"]
+
+  - id: "eye-creature"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 4
+    y: 1
+    tags: ["monster", "demon"]
+
+  - id: "imp-red"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 5
+    y: 1
+    tags: ["monster", "demon", "flying"]
+
+  - id: "imp-blue"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 6
+    y: 1
+    tags: ["monster", "demon", "flying"]
+
+  # Row 2 - Beasts
+  - id: "rat"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 2
+    tags: ["monster", "beast", "rodent"]
+
+  - id: "snake-green"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 2
+    tags: ["monster", "beast", "serpent"]
+
+  - id: "snake-brown"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 2
+    y: 2
+    tags: ["monster", "beast", "serpent"]
+
+  - id: "scorpion"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 3
+    y: 2
+    tags: ["monster", "insect"]
+
+  - id: "spider"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 4
+    y: 2
+    tags: ["monster", "insect"]
+
+  - id: "beetle"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 5
+    y: 2
+    tags: ["monster", "insect"]
+
+  # Row 3 - Undead
+  - id: "skeleton"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 3
+    tags: ["monster", "undead", "skeleton"]
+
+  - id: "zombie"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 3
+    tags: ["monster", "undead", "zombie"]
+
+  - id: "ghost"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 2
+    y: 3
+    tags: ["monster", "undead", "spirit"]
+
+  - id: "wraith"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 3
+    y: 3
+    tags: ["monster", "undead", "spirit"]
+
+  - id: "mummy"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 4
+    y: 3
+    tags: ["monster", "undead"]
+
+  # Row 4 - Goblins/Orcs
+  - id: "goblin"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 4
+    tags: ["monster", "goblin", "humanoid"]
+
+  - id: "goblin-warrior"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 4
+    tags: ["monster", "goblin", "humanoid"]
+
+  - id: "orc"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 2
+    y: 4
+    tags: ["monster", "orc", "humanoid"]
+
+  - id: "troll"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 3
+    y: 4
+    tags: ["monster", "troll", "humanoid"]
+
+  # Row 5 - Large creatures
+  - id: "dragon-red"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 5
+    tags: ["monster", "dragon", "boss"]
+
+  - id: "dragon-blue"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 5
+    tags: ["monster", "dragon", "boss"]
+
+  - id: "demon"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 2
+    y: 5
+    tags: ["monster", "demon", "boss"]
+
+  # Default fallback sprites
+  - id: "default-humanoid"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 0
+    tags: ["default", "humanoid"]
+
+  - id: "default-monster"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 0
+    tags: ["default", "monster"]
