@@ -512,44 +512,93 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                   No enemies found
                 </div>
               ) : (
-                filteredEnemies.map(enemy => (
-                  <div
-                    key={enemy.id}
-                    onClick={() => {
-                      setSelectedEnemy(enemy);
-                      setIsEditing(false);
-                      setEditError('');
-                    }}
-                    style={{
-                      padding: '8px',
-                      background: selectedEnemy?.id === enemy.id
-                        ? 'rgba(255, 255, 0, 0.2)'
-                        : 'rgba(255, 255, 255, 0.03)',
-                      border: selectedEnemy?.id === enemy.id
-                        ? '1px solid rgba(255, 255, 0, 0.6)'
-                        : '1px solid rgba(255, 255, 255, 0.05)',
-                      borderRadius: '3px',
-                      cursor: 'pointer',
-                      fontSize: '11px',
-                      transition: 'all 0.2s',
-                    }}
-                    onMouseEnter={(e) => {
-                      if (selectedEnemy?.id !== enemy.id) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      if (selectedEnemy?.id !== enemy.id) {
-                        e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
-                        e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
-                      }
-                    }}
-                  >
-                    <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{enemy.name}</div>
-                    <div style={{ fontSize: '9px', color: '#aaa' }}>{enemy.id}</div>
-                  </div>
-                ))
+                filteredEnemies.map(enemy => {
+                  const sprite = SpriteRegistry.getById(enemy.spriteId);
+                  const listPreviewScale = 4;
+                  const listPreviewSize = SPRITE_SIZE * listPreviewScale;
+
+                  return (
+                    <div
+                      key={enemy.id}
+                      onClick={() => {
+                        setSelectedEnemy(enemy);
+                        setIsEditing(false);
+                        setEditError('');
+                      }}
+                      style={{
+                        padding: '8px',
+                        background: selectedEnemy?.id === enemy.id
+                          ? 'rgba(255, 255, 0, 0.2)'
+                          : 'rgba(255, 255, 255, 0.03)',
+                        border: selectedEnemy?.id === enemy.id
+                          ? '1px solid rgba(255, 255, 0, 0.6)'
+                          : '1px solid rgba(255, 255, 255, 0.05)',
+                        borderRadius: '3px',
+                        cursor: 'pointer',
+                        fontSize: '11px',
+                        transition: 'all 0.2s',
+                        display: 'flex',
+                        gap: '8px',
+                        alignItems: 'center',
+                      }}
+                      onMouseEnter={(e) => {
+                        if (selectedEnemy?.id !== enemy.id) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (selectedEnemy?.id !== enemy.id) {
+                          e.currentTarget.style.background = 'rgba(255, 255, 255, 0.03)';
+                          e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.05)';
+                        }
+                      }}
+                    >
+                      {/* Sprite preview */}
+                      {sprite && (
+                        <canvas
+                          width={listPreviewSize}
+                          height={listPreviewSize}
+                          ref={(canvas) => {
+                            if (canvas) {
+                              const img = new Image();
+                              img.src = sprite.spriteSheet;
+                              img.onload = () => {
+                                const ctx = canvas.getContext('2d');
+                                if (ctx) {
+                                  ctx.clearRect(0, 0, listPreviewSize, listPreviewSize);
+                                  ctx.imageSmoothingEnabled = false;
+                                  ctx.drawImage(
+                                    img,
+                                    sprite.x * SPRITE_SIZE,
+                                    sprite.y * SPRITE_SIZE,
+                                    SPRITE_SIZE,
+                                    SPRITE_SIZE,
+                                    0,
+                                    0,
+                                    listPreviewSize,
+                                    listPreviewSize
+                                  );
+                                }
+                              };
+                            }
+                          }}
+                          style={{
+                            border: '1px solid rgba(255, 255, 255, 0.2)',
+                            imageRendering: 'pixelated',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            flexShrink: 0,
+                          } as React.CSSProperties}
+                        />
+                      )}
+                      {/* Text info */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 'bold', marginBottom: '2px' }}>{enemy.name}</div>
+                        <div style={{ fontSize: '9px', color: '#aaa', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{enemy.id}</div>
+                      </div>
+                    </div>
+                  );
+                })
               )}
             </div>
           </div>
