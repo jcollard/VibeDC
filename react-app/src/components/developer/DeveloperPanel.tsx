@@ -5,6 +5,7 @@ interface DeveloperPanelProps {
   onOpenMapEditor?: () => void;
   onOpenSpriteRegistry?: () => void;
   onOpenEnemyRegistry?: () => void;
+  onOpenAbilityRegistry?: () => void;
   onOpenDebugPanel?: () => void;
 }
 
@@ -17,6 +18,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onOpenMapEditor,
   onOpenSpriteRegistry,
   onOpenEnemyRegistry,
+  onOpenAbilityRegistry,
   onOpenDebugPanel,
 }) => {
   const panels = [
@@ -40,6 +42,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Enemy',
       available: !!onOpenEnemyRegistry,
       onClick: onOpenEnemyRegistry,
+    },
+    {
+      name: 'Ability Registry',
+      description: 'Browse and edit abilities',
+      shortcut: 'F2 → Ability',
+      available: !!onOpenAbilityRegistry,
+      onClick: onOpenAbilityRegistry,
     },
     {
       name: 'Debug Panel',
