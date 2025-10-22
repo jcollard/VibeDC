@@ -1,116 +1,7437 @@
-# Sprite definitions for combat
-# Maps sprite IDs to their locations in sprite sheets
-# Exported from Sprite Registry Panel
+# Sprite definitions for atlas
+# Maps sprite IDs to their locations in the atlas sprite sheet
+# Auto-generated from atlasmap.txt
 
 sprites:
 
-  # Sprite sheet: /spritesheets/crystalwarriors.png
-  - id: "warrior-blue-down"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
+  # cave sprites (16 total)
+  - id: "cave-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 9
+    tags: ["cave"]
+
+  - id: "cave-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 9
+    tags: ["cave"]
+
+  - id: "cave-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 9
+    tags: ["cave"]
+
+  - id: "cave-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 9
+    tags: ["cave"]
+
+  - id: "cave-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 10
+    tags: ["cave"]
+
+  - id: "cave-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 10
+    tags: ["cave"]
+
+  - id: "cave-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 10
+    tags: ["cave"]
+
+  - id: "cave-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 10
+    tags: ["cave"]
+
+  - id: "cave-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 11
+    tags: ["cave"]
+
+  - id: "cave-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 11
+    tags: ["cave"]
+
+  - id: "cave-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 11
+    tags: ["cave"]
+
+  - id: "cave-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 11
+    tags: ["cave"]
+
+  - id: "cave-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 12
+    tags: ["cave"]
+
+  - id: "cave-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 12
+    tags: ["cave"]
+
+  - id: "cave-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 12
+    tags: ["cave"]
+
+  - id: "cave-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 12
+    tags: ["cave"]
+
+
+  # crystalwarriors sprites (20 total)
+  - id: "crystalwarriors-0"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 0
     y: 0
-    tags: ["player", "humanoid"]
+    tags: ["crystalwarriors"]
 
-  - id: "warrior-red-down"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
+  - id: "crystalwarriors-1"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 1
     y: 0
-    tags: ["player", "humanoid"]
+    tags: ["crystalwarriors"]
 
-  - id: "warrior-green-down"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
+  - id: "crystalwarriors-2"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 2
     y: 0
-    tags: ["player", "humanoid"]
+    tags: ["crystalwarriors"]
 
-  - id: "warrior-yellow-down"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
+  - id: "crystalwarriors-3"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 3
     y: 0
-    tags: ["player", "humanoid"]
+    tags: ["crystalwarriors"]
 
-  - id: "warrior-blue-left"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 0
-    y: 1
-    tags: ["player", "humanoid"]
-
-  - id: "warrior-red-left"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 1
-    y: 1
-    tags: ["player", "humanoid"]
-
-  - id: "warrior-green-left"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 2
-    y: 1
-    tags: ["player", "humanoid"]
-
-  - id: "warrior-yellow-left"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 3
-    y: 1
-    tags: ["player", "humanoid"]
-
-  - id: "warrior-blue-right"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 0
-    y: 2
-    tags: ["player", "humanoid"]
-
-  - id: "warrior-red-right"
-    spriteSheet: "/spritesheets/crystalwarriors.png"
-    x: 1
-    y: 2
-    tags: ["player", "humanoid"]
-
-
-  # Sprite sheet: /spritesheets/monsters.png
-  - id: "goblin-idle-0"
-    spriteSheet: "/spritesheets/monsters.png"
-    x: 0
-    y: 0
-    tags: ["monster", "goblin", "idle"]
-
-  - id: "demon-idle-0"
-    spriteSheet: "/spritesheets/monsters.png"
-    x: 1
-    y: 0
-    tags: ["monster", "idle", "demon"]
-
-  - id: "goblin-idle-1"
-    spriteSheet: "/spritesheets/monsters.png"
+  - id: "crystalwarriors-4"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 4
     y: 0
-    tags: ["monster", "goblin", "idle"]
+    tags: ["crystalwarriors"]
 
-  - id: "demon-idle-1"
-    spriteSheet: "/spritesheets/monsters.png"
+  - id: "crystalwarriors-5"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 5
     y: 0
-    tags: ["monster", "idle", "demon"]
+    tags: ["crystalwarriors"]
 
-  - id: "goblin-block"
-    spriteSheet: "/spritesheets/monsters.png"
+  - id: "crystalwarriors-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 0
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 0
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 1
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 2
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 2
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 2
+    tags: ["crystalwarriors"]
+
+  - id: "crystalwarriors-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 2
+    tags: ["crystalwarriors"]
+
+
+  # decals sprites (8 total)
+  - id: "decals-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 9
+    tags: ["decals"]
+
+  - id: "decals-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 9
+    tags: ["decals"]
+
+  - id: "decals-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 9
+    tags: ["decals"]
+
+  - id: "decals-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 9
+    tags: ["decals"]
+
+  - id: "decals-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 10
+    tags: ["decals"]
+
+  - id: "decals-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 10
+    tags: ["decals"]
+
+  - id: "decals-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 10
+    tags: ["decals"]
+
+  - id: "decals-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 10
+    tags: ["decals"]
+
+
+  # frames sprites (44 total)
+  - id: "frames-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 17
+    tags: ["frames"]
+
+  - id: "frames-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 18
+    tags: ["frames"]
+
+  - id: "frames-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 19
+    tags: ["frames"]
+
+  - id: "frames-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 19
+    tags: ["frames"]
+
+  - id: "frames-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 19
+    tags: ["frames"]
+
+  - id: "frames-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 19
+    tags: ["frames"]
+
+  - id: "frames-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 19
+    tags: ["frames"]
+
+  - id: "frames-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 19
+    tags: ["frames"]
+
+  - id: "frames-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 20
+    tags: ["frames"]
+
+  - id: "frames-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 21
+    tags: ["frames"]
+
+  - id: "frames-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 22
+    tags: ["frames"]
+
+  - id: "frames-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 22
+    tags: ["frames"]
+
+  - id: "frames-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 22
+    tags: ["frames"]
+
+  - id: "frames-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 22
+    tags: ["frames"]
+
+  - id: "frames-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 22
+    tags: ["frames"]
+
+  - id: "frames-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 22
+    tags: ["frames"]
+
+
+  # frames2 sprites (6 total)
+  - id: "frames2-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 17
+    tags: ["frames2"]
+
+  - id: "frames2-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 17
+    tags: ["frames2"]
+
+  - id: "frames2-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 17
+    tags: ["frames2"]
+
+  - id: "frames2-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 18
+    tags: ["frames2"]
+
+  - id: "frames2-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 18
+    tags: ["frames2"]
+
+  - id: "frames2-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 18
+    tags: ["frames2"]
+
+
+  # gaming sprites (14 total)
+  - id: "gaming-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 17
+    tags: ["gaming"]
+
+  - id: "gaming-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 18
+    tags: ["gaming"]
+
+  - id: "gaming-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 18
+    tags: ["gaming"]
+
+  - id: "gaming-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 18
+    tags: ["gaming"]
+
+  - id: "gaming-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 18
+    tags: ["gaming"]
+
+  - id: "gaming-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 18
+    tags: ["gaming"]
+
+  - id: "gaming-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 18
+    tags: ["gaming"]
+
+  - id: "gaming-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 18
+    tags: ["gaming"]
+
+
+  # gemwright sprites (21 total)
+  - id: "gemwright-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 17
+    tags: ["gemwright"]
+
+  - id: "gemwright-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 18
+    tags: ["gemwright"]
+
+  - id: "gemwright-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 19
+    tags: ["gemwright"]
+
+  - id: "gemwright-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 19
+    tags: ["gemwright"]
+
+  - id: "gemwright-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 19
+    tags: ["gemwright"]
+
+  - id: "gemwright-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 19
+    tags: ["gemwright"]
+
+  - id: "gemwright-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 19
+    tags: ["gemwright"]
+
+  - id: "gemwright-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 19
+    tags: ["gemwright"]
+
+  - id: "gemwright-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 19
+    tags: ["gemwright"]
+
+
+  # gradients sprites (20 total)
+  - id: "gradients-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 17
+    tags: ["gradients"]
+
+  - id: "gradients-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 17
+    tags: ["gradients"]
+
+  - id: "gradients-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 17
+    tags: ["gradients"]
+
+  - id: "gradients-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 17
+    tags: ["gradients"]
+
+  - id: "gradients-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 18
+    tags: ["gradients"]
+
+  - id: "gradients-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 18
+    tags: ["gradients"]
+
+  - id: "gradients-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 18
+    tags: ["gradients"]
+
+  - id: "gradients-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 18
+    tags: ["gradients"]
+
+  - id: "gradients-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 19
+    tags: ["gradients"]
+
+  - id: "gradients-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 19
+    tags: ["gradients"]
+
+  - id: "gradients-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 19
+    tags: ["gradients"]
+
+  - id: "gradients-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 19
+    tags: ["gradients"]
+
+  - id: "gradients-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 20
+    tags: ["gradients"]
+
+  - id: "gradients-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 20
+    tags: ["gradients"]
+
+  - id: "gradients-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 20
+    tags: ["gradients"]
+
+  - id: "gradients-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 20
+    tags: ["gradients"]
+
+  - id: "gradients-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 21
+    tags: ["gradients"]
+
+  - id: "gradients-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 21
+    tags: ["gradients"]
+
+  - id: "gradients-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 21
+    tags: ["gradients"]
+
+  - id: "gradients-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 21
+    tags: ["gradients"]
+
+
+  # icons sprites (33 total)
+  - id: "icons-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 17
+    tags: ["icons"]
+
+  - id: "icons-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 17
+    tags: ["icons"]
+
+  - id: "icons-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 17
+    tags: ["icons"]
+
+  - id: "icons-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 17
+    tags: ["icons"]
+
+  - id: "icons-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 17
+    tags: ["icons"]
+
+  - id: "icons-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 17
+    tags: ["icons"]
+
+  - id: "icons-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 18
+    tags: ["icons"]
+
+  - id: "icons-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 18
+    tags: ["icons"]
+
+  - id: "icons-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 18
+    tags: ["icons"]
+
+  - id: "icons-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 18
+    tags: ["icons"]
+
+  - id: "icons-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 18
+    tags: ["icons"]
+
+  - id: "icons-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 18
+    tags: ["icons"]
+
+  - id: "icons-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 19
+    tags: ["icons"]
+
+  - id: "icons-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 19
+    tags: ["icons"]
+
+  - id: "icons-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 19
+    tags: ["icons"]
+
+  - id: "icons-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 19
+    tags: ["icons"]
+
+  - id: "icons-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 19
+    tags: ["icons"]
+
+  - id: "icons-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 19
+    tags: ["icons"]
+
+  - id: "icons-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 20
+    tags: ["icons"]
+
+  - id: "icons-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 20
+    tags: ["icons"]
+
+  - id: "icons-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 20
+    tags: ["icons"]
+
+  - id: "icons-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 20
+    tags: ["icons"]
+
+  - id: "icons-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 20
+    tags: ["icons"]
+
+  - id: "icons-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 20
+    tags: ["icons"]
+
+  - id: "icons-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 21
+    tags: ["icons"]
+
+  - id: "icons-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 21
+    tags: ["icons"]
+
+  - id: "icons-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 21
+    tags: ["icons"]
+
+  - id: "icons-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 21
+    tags: ["icons"]
+
+  - id: "icons-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 21
+    tags: ["icons"]
+
+  - id: "icons-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 22
+    tags: ["icons"]
+
+  - id: "icons-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 22
+    tags: ["icons"]
+
+  - id: "icons-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 22
+    tags: ["icons"]
+
+  - id: "icons-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 22
+    tags: ["icons"]
+
+
+  # jimbly-ui sprites (22 total)
+  - id: "jimbly-ui-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 30
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 30
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 30
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 30
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 31
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 31
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 31
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 31
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 32
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 32
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 32
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 33
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 33
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 33
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 34
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 34
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 34
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 34
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 35
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 35
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 35
+    tags: ["jimbly-ui"]
+
+  - id: "jimbly-ui-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 35
+    tags: ["jimbly-ui"]
+
+
+  # keys sprites (11 total)
+  - id: "keys-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 17
+    tags: ["keys"]
+
+  - id: "keys-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 17
+    tags: ["keys"]
+
+  - id: "keys-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 37
+    y: 17
+    tags: ["keys"]
+
+  - id: "keys-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 38
+    y: 17
+    tags: ["keys"]
+
+  - id: "keys-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 18
+    tags: ["keys"]
+
+  - id: "keys-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 18
+    tags: ["keys"]
+
+  - id: "keys-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 37
+    y: 18
+    tags: ["keys"]
+
+  - id: "keys-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 19
+    tags: ["keys"]
+
+  - id: "keys-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 19
+    tags: ["keys"]
+
+  - id: "keys-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 37
+    y: 19
+    tags: ["keys"]
+
+  - id: "keys-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 20
+    tags: ["keys"]
+
+
+  # minimap sprites (46 total)
+  - id: "minimap-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 23
+    tags: ["minimap"]
+
+  - id: "minimap-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 23
+    tags: ["minimap"]
+
+  - id: "minimap-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 23
+    tags: ["minimap"]
+
+  - id: "minimap-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 23
+    tags: ["minimap"]
+
+  - id: "minimap-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 23
+    tags: ["minimap"]
+
+  - id: "minimap-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 23
+    tags: ["minimap"]
+
+  - id: "minimap-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 24
+    tags: ["minimap"]
+
+  - id: "minimap-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 25
+    tags: ["minimap"]
+
+  - id: "minimap-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 26
+    tags: ["minimap"]
+
+  - id: "minimap-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 26
+    tags: ["minimap"]
+
+  - id: "minimap-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 26
+    tags: ["minimap"]
+
+  - id: "minimap-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 26
+    tags: ["minimap"]
+
+  - id: "minimap-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 26
+    tags: ["minimap"]
+
+  - id: "minimap-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 26
+    tags: ["minimap"]
+
+  - id: "minimap-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 27
+    tags: ["minimap"]
+
+  - id: "minimap-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 28
+    tags: ["minimap"]
+
+  - id: "minimap-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 29
+    tags: ["minimap"]
+
+  - id: "minimap-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 29
+    tags: ["minimap"]
+
+
+  # monsters sprites (64 total)
+  - id: "monsters-0"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 8
     y: 0
-    tags: ["goblin", "monster", "block"]
+    tags: ["monsters"]
 
-  - id: "demon-block"
-    spriteSheet: "/spritesheets/monsters.png"
+  - id: "monsters-1"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 9
     y: 0
-    tags: ["demon", "monster", "block"]
+    tags: ["monsters"]
 
-  - id: "goblin-hit"
-    spriteSheet: "/spritesheets/monsters.png"
+  - id: "monsters-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-4"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 12
     y: 0
-    tags: ["goblin", "monster", "hit"]
+    tags: ["monsters"]
 
-  - id: "demon-hit"
-    spriteSheet: "/spritesheets/monsters.png"
+  - id: "monsters-5"
+    spriteSheet: "/spritesheets/atlas.png"
     x: 13
     y: 0
-    tags: ["demon", "monster", "hit"]
+    tags: ["monsters"]
+
+  - id: "monsters-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 0
+    tags: ["monsters"]
+
+  - id: "monsters-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 1
+    tags: ["monsters"]
+
+  - id: "monsters-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 2
+    tags: ["monsters"]
+
+  - id: "monsters-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 3
+    tags: ["monsters"]
+
+  - id: "monsters-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 3
+    tags: ["monsters"]
+
+
+  # monsters2 sprites (145 total)
+  - id: "monsters2-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 4
+    tags: ["monsters2"]
+
+  - id: "monsters2-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 5
+    tags: ["monsters2"]
+
+  - id: "monsters2-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-64"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-65"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-66"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-67"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-68"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-69"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-70"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-71"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-72"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-73"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-74"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-75"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-76"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-77"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-78"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-79"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-80"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-81"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-82"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-83"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-84"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 6
+    tags: ["monsters2"]
+
+  - id: "monsters2-85"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-86"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-87"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-88"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-89"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-90"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-91"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-92"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-93"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-94"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-95"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-96"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-97"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-98"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-99"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-100"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-101"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-102"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-103"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-104"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-105"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-106"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-107"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-108"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-109"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-110"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-111"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-112"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 7
+    tags: ["monsters2"]
+
+  - id: "monsters2-113"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-114"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-115"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-116"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-117"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-118"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-119"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-120"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-121"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-122"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-123"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-124"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-125"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-126"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-127"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-128"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-129"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-130"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-131"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-132"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-133"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-134"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-135"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-136"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-137"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-138"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-139"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-140"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-141"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-142"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-143"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 8
+    tags: ["monsters2"]
+
+  - id: "monsters2-144"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 8
+    tags: ["monsters2"]
+
+
+  # particles sprites (16 total)
+  - id: "particles-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 23
+    tags: ["particles"]
+
+  - id: "particles-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 23
+    tags: ["particles"]
+
+  - id: "particles-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 23
+    tags: ["particles"]
+
+  - id: "particles-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 23
+    tags: ["particles"]
+
+  - id: "particles-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 24
+    tags: ["particles"]
+
+  - id: "particles-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 24
+    tags: ["particles"]
+
+  - id: "particles-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 24
+    tags: ["particles"]
+
+  - id: "particles-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 24
+    tags: ["particles"]
+
+  - id: "particles-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 25
+    tags: ["particles"]
+
+  - id: "particles-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 25
+    tags: ["particles"]
+
+  - id: "particles-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 25
+    tags: ["particles"]
+
+  - id: "particles-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 25
+    tags: ["particles"]
+
+  - id: "particles-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 26
+    tags: ["particles"]
+
+  - id: "particles-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 26
+    tags: ["particles"]
+
+  - id: "particles-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 26
+    tags: ["particles"]
+
+  - id: "particles-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 26
+    tags: ["particles"]
+
+
+  # rock-tiles sprites (245 total)
+  - id: "rock-tiles-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 30
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 31
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 31
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 31
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 31
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 31
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 31
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 32
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 33
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 33
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 33
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 33
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 33
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 33
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 34
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 35
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 36
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 37
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 38
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-64"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-65"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-66"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-67"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-68"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-69"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-70"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-71"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-72"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 39
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-73"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-74"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-75"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-76"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-77"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-78"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-79"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-80"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-81"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 40
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-82"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-83"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-84"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-85"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-86"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-87"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-88"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-89"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-90"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 41
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-91"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-92"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-93"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-94"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-95"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-96"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-97"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-98"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-99"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 42
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-100"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-101"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-102"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-103"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-104"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-105"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-106"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-107"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-108"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 43
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-109"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-110"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-111"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-112"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-113"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-114"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-115"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-116"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-117"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 44
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-118"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 45
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-119"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 45
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-120"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 45
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-121"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-122"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-123"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-124"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-125"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-126"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-127"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-128"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-129"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 46
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-130"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 47
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-131"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 47
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-132"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-133"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-134"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-135"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-136"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-137"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-138"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-139"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-140"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 48
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-141"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-142"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-143"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-144"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-145"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-146"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-147"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-148"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-149"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 49
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-150"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-151"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-152"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-153"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-154"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-155"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-156"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-157"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-158"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 50
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-159"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 51
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-160"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 51
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-161"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 51
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-162"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 51
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-163"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 51
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-164"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 51
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-165"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-166"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-167"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-168"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-169"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-170"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-171"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-172"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-173"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 52
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-174"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-175"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-176"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-177"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-178"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-179"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-180"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-181"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-182"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 53
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-183"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 54
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-184"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 54
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-185"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 54
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-186"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 54
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-187"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 54
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-188"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 55
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-189"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 55
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-190"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 55
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-191"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 55
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-192"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 55
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-193"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 55
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-194"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-195"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-196"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-197"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-198"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-199"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-200"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-201"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 56
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-202"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-203"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-204"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-205"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-206"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-207"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-208"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-209"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-210"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 57
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-211"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-212"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-213"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-214"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-215"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-216"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-217"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-218"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-219"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 58
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-220"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-221"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-222"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-223"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-224"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-225"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-226"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-227"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-228"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 59
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-229"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-230"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-231"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-232"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-233"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-234"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-235"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-236"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 60
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-237"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-238"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-239"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-240"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-241"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-242"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-243"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 61
+    tags: ["rock-tiles"]
+
+  - id: "rock-tiles-244"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 61
+    tags: ["rock-tiles"]
+
+
+  # roofences sprites (16 total)
+  - id: "roofences-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 23
+    tags: ["roofences"]
+
+  - id: "roofences-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 23
+    tags: ["roofences"]
+
+  - id: "roofences-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 23
+    tags: ["roofences"]
+
+  - id: "roofences-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 23
+    tags: ["roofences"]
+
+  - id: "roofences-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 24
+    tags: ["roofences"]
+
+  - id: "roofences-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 24
+    tags: ["roofences"]
+
+  - id: "roofences-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 24
+    tags: ["roofences"]
+
+  - id: "roofences-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 24
+    tags: ["roofences"]
+
+  - id: "roofences-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 25
+    tags: ["roofences"]
+
+  - id: "roofences-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 25
+    tags: ["roofences"]
+
+  - id: "roofences-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 25
+    tags: ["roofences"]
+
+  - id: "roofences-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 25
+    tags: ["roofences"]
+
+  - id: "roofences-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 26
+    tags: ["roofences"]
+
+  - id: "roofences-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 26
+    tags: ["roofences"]
+
+  - id: "roofences-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 26
+    tags: ["roofences"]
+
+  - id: "roofences-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 26
+    tags: ["roofences"]
+
+
+  # rykhath-tiles sprites (60 total)
+  - id: "rykhath-tiles-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 62
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 63
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 64
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 65
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 66
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 67
+    tags: ["rykhath-tiles"]
+
+  - id: "rykhath-tiles-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 67
+    tags: ["rykhath-tiles"]
+
+
+  # tiles sprites (64 total)
+  - id: "tiles-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 30
+    tags: ["tiles"]
+
+  - id: "tiles-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 31
+    tags: ["tiles"]
+
+  - id: "tiles-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 32
+    tags: ["tiles"]
+
+  - id: "tiles-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 33
+    tags: ["tiles"]
+
+  - id: "tiles-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 34
+    tags: ["tiles"]
+
+  - id: "tiles-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 35
+    tags: ["tiles"]
+
+  - id: "tiles-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 36
+    tags: ["tiles"]
+
+  - id: "tiles-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 37
+    tags: ["tiles"]
+
+  - id: "tiles-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 37
+    tags: ["tiles"]
+
+
+  # tiles2 sprites (7 total)
+  - id: "tiles2-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 30
+    tags: ["tiles2"]
+
+  - id: "tiles2-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 30
+    tags: ["tiles2"]
+
+  - id: "tiles2-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 30
+    tags: ["tiles2"]
+
+  - id: "tiles2-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 31
+    tags: ["tiles2"]
+
+  - id: "tiles2-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 31
+    tags: ["tiles2"]
+
+  - id: "tiles2-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 32
+    tags: ["tiles2"]
+
+  - id: "tiles2-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 32
+    tags: ["tiles2"]
+
+
+  # traps sprites (11 total)
+  - id: "traps-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 23
+    tags: ["traps"]
+
+  - id: "traps-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 23
+    tags: ["traps"]
+
+  - id: "traps-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 23
+    tags: ["traps"]
+
+  - id: "traps-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 23
+    tags: ["traps"]
+
+  - id: "traps-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 24
+    tags: ["traps"]
+
+  - id: "traps-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 24
+    tags: ["traps"]
+
+  - id: "traps-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 24
+    tags: ["traps"]
+
+  - id: "traps-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 24
+    tags: ["traps"]
+
+  - id: "traps-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 24
+    tags: ["traps"]
+
+  - id: "traps-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 25
+    tags: ["traps"]
+
+  - id: "traps-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 25
+    tags: ["traps"]
+
+
+  # ui sprites (105 total)
+  - id: "ui-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 9
+    tags: ["ui"]
+
+  - id: "ui-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 10
+    tags: ["ui"]
+
+  - id: "ui-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 11
+    tags: ["ui"]
+
+  - id: "ui-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 12
+    tags: ["ui"]
+
+  - id: "ui-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-64"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-65"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-66"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-67"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-68"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-69"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-70"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-71"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-72"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-73"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-74"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-75"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-76"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-77"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 13
+    tags: ["ui"]
+
+  - id: "ui-78"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-79"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-80"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-81"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-82"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-83"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-84"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-85"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 8
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-86"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 9
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-87"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 10
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-88"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-89"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-90"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-91"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 14
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-92"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 15
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-93"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 14
+    tags: ["ui"]
+
+  - id: "ui-94"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 0
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-95"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 1
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-96"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 2
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-97"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 3
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-98"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-99"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-100"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-101"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-102"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 11
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-103"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 12
+    y: 15
+    tags: ["ui"]
+
+  - id: "ui-104"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 13
+    y: 15
+    tags: ["ui"]
+
+
+  # ui-icons sprites (20 total)
+  - id: "ui-icons-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 23
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 23
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 23
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 23
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 24
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 24
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 24
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 24
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 25
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 25
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 25
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 25
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 26
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 26
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 26
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 26
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 27
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 27
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 27
+    tags: ["ui-icons"]
+
+  - id: "ui-icons-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 27
+    tags: ["ui-icons"]
+
+
+  # ui-navbuttons sprites (12 total)
+  - id: "ui-navbuttons-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 23
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 23
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 23
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 24
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 24
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 24
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 25
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 25
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 25
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 27
+    y: 26
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 28
+    y: 26
+    tags: ["ui-navbuttons"]
+
+  - id: "ui-navbuttons-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 29
+    y: 26
+    tags: ["ui-navbuttons"]
+
+
+  # ui-scifi sprites (16 total)
+  - id: "ui-scifi-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 23
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 23
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 23
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 23
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 24
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 24
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 24
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 24
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 25
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 25
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 25
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 25
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 30
+    y: 26
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 31
+    y: 26
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 32
+    y: 26
+    tags: ["ui-scifi"]
+
+  - id: "ui-scifi-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 33
+    y: 26
+    tags: ["ui-scifi"]
+
+
+  # ui-simple sprites (27 total)
+  - id: "ui-simple-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 37
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 38
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 39
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 40
+    y: 23
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 24
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 24
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 24
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 38
+    y: 24
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 39
+    y: 24
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 40
+    y: 24
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 37
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 38
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 39
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 40
+    y: 25
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 34
+    y: 26
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 35
+    y: 26
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 36
+    y: 26
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 37
+    y: 26
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 38
+    y: 26
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 39
+    y: 26
+    tags: ["ui-simple"]
+
+  - id: "ui-simple-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 40
+    y: 26
+    tags: ["ui-simple"]
+
+
+  # wallstiles sprites (64 total)
+  - id: "wallstiles-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 30
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 31
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 32
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 33
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 34
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 35
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 36
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 16
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 37
+    tags: ["wallstiles"]
+
+  - id: "wallstiles-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 37
+    tags: ["wallstiles"]
+
+
+  # wood sprites (16 total)
+  - id: "wood-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 30
+    tags: ["wood"]
+
+  - id: "wood-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 30
+    tags: ["wood"]
+
+  - id: "wood-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 30
+    tags: ["wood"]
+
+  - id: "wood-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 30
+    tags: ["wood"]
+
+  - id: "wood-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 31
+    tags: ["wood"]
+
+  - id: "wood-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 31
+    tags: ["wood"]
+
+  - id: "wood-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 31
+    tags: ["wood"]
+
+  - id: "wood-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 31
+    tags: ["wood"]
+
+  - id: "wood-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 32
+    tags: ["wood"]
+
+  - id: "wood-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 32
+    tags: ["wood"]
+
+  - id: "wood-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 32
+    tags: ["wood"]
+
+  - id: "wood-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 32
+    tags: ["wood"]
+
+  - id: "wood-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 4
+    y: 33
+    tags: ["wood"]
+
+  - id: "wood-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 5
+    y: 33
+    tags: ["wood"]
+
+  - id: "wood-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 6
+    y: 33
+    tags: ["wood"]
+
+  - id: "wood-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 7
+    y: 33
+    tags: ["wood"]
+
+
+  # world-tiles sprites (80 total)
+  - id: "world-tiles-0"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-1"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-2"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-3"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-4"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-5"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-6"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-7"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-8"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-9"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 9
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-10"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-11"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-12"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-13"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-14"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-15"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-16"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-17"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-18"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-19"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 10
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-20"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-21"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-22"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-23"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-24"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-25"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-26"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-27"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-28"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-29"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 11
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-30"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-31"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-32"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-33"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-34"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-35"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-36"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-37"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-38"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-39"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 12
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-40"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-41"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-42"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-43"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-44"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-45"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-46"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-47"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-48"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-49"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 13
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-50"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-51"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-52"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-53"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-54"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-55"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-56"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-57"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-58"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-59"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 14
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-60"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-61"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-62"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-63"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-64"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-65"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-66"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-67"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-68"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-69"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 15
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-70"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 17
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-71"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 18
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-72"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 19
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-73"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 20
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-74"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 21
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-75"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 22
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-76"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 23
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-77"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 24
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-78"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 25
+    y: 16
+    tags: ["world-tiles"]
+
+  - id: "world-tiles-79"
+    spriteSheet: "/spritesheets/atlas.png"
+    x: 26
+    y: 16
+    tags: ["world-tiles"]
+

@@ -1,0 +1,116 @@
+# Sprite definitions for combat
+# Maps sprite IDs to their locations in sprite sheets
+# Exported from Sprite Registry Panel
+
+sprites:
+
+  # Sprite sheet: /spritesheets/crystalwarriors.png
+  - id: "warrior-blue-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 0
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-red-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 0
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-green-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 2
+    y: 0
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-yellow-down"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 3
+    y: 0
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-blue-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 1
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-red-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 1
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-green-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 2
+    y: 1
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-yellow-left"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 3
+    y: 1
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-blue-right"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 0
+    y: 2
+    tags: ["player", "humanoid"]
+
+  - id: "warrior-red-right"
+    spriteSheet: "/spritesheets/crystalwarriors.png"
+    x: 1
+    y: 2
+    tags: ["player", "humanoid"]
+
+
+  # Sprite sheet: /spritesheets/monsters.png
+  - id: "goblin-idle-0"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 0
+    y: 0
+    tags: ["monster", "goblin", "idle"]
+
+  - id: "demon-idle-0"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 1
+    y: 0
+    tags: ["monster", "idle", "demon"]
+
+  - id: "goblin-idle-1"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 4
+    y: 0
+    tags: ["monster", "goblin", "idle"]
+
+  - id: "demon-idle-1"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 5
+    y: 0
+    tags: ["monster", "idle", "demon"]
+
+  - id: "goblin-block"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 8
+    y: 0
+    tags: ["goblin", "monster", "block"]
+
+  - id: "demon-block"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 9
+    y: 0
+    tags: ["demon", "monster", "block"]
+
+  - id: "goblin-hit"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 12
+    y: 0
+    tags: ["goblin", "monster", "hit"]
+
+  - id: "demon-hit"
+    spriteSheet: "/spritesheets/monsters.png"
+    x: 13
+    y: 0
+    tags: ["demon", "monster", "hit"]
