@@ -1,350 +1,107 @@
 # Unit Class Database
 # Format: Each class entry contains all properties needed to create a UnitClass instance
 # learnableAbilities: List of ability IDs that this class can learn
+# Tier 1 classes have no requirements
 
 classes:
-  # WARRIOR - Melee physical fighter
-  - id: "warrior-001"
-    name: "Warrior"
-    description: "A mighty fighter skilled in physical combat and close-quarters battle"
+  # ============================================================================
+  # TIER 1: BASE ARCHETYPES
+  # ============================================================================
+
+  # FIGHTER - Close combat, strength-based tank
+  - id: "fighter-001"
+    name: "Fighter"
+    description: "Close combat, strength based, HP, Defense, access to strong melee weapons. Can equip shields. Can wear heavy armor."
     tags:
       - "melee"
       - "physical"
       - "tank"
     learnableAbilities:
       # Actions
-      - "slash-001"
-      - "power-strike-001"
-      - "whirlwind-001"
-      - "execute-001"
-      - "rally-001"
+      - "charge-001"
+      - "bash-001"
+      - "shove-001"
+      - "taunt-001"
+      - "head-strike-001"
+      - "body-strike-001"
+      - "arm-strike-001"
+      - "leg-strike-001"
       # Reactions
-      - "counter-attack-001"
-      - "last-stand-001"
-      - "vengeful-strike-001"
+      - "parry-001"
       # Passives
-      - "battle-hardened-001"
-      - "iron-will-001"
-      - "critical-mastery-001"
-      - "berserker-rage-001"
+      - "meat-shield-001"
+      - "shield-bearer-001"
       # Movement
-      - "dash-001"
-      - "leap-attack-001"
+      - "journeyman-001"
     modifiers:
-      health: 20
-      physicalPower: 10
-      courage: 5
+      health: 30
+      physicalPower: 2
     multipliers:
-      health: 1.2
-      physicalPower: 1.15
+      health: 1.25
 
-  # MAGE - Magic caster
-  - id: "mage-001"
-    name: "Mage"
-    description: "A wielder of arcane magic who controls the battlefield with devastating spells"
-    tags:
-      - "ranged"
-      - "magic"
-      - "caster"
-    learnableAbilities:
-      # Actions
-      - "fireball-001"
-      - "lightning-bolt-001"
-      - "ice-storm-001"
-      - "meteor-001"
-      - "arcane-shield-001"
-      - "weaken-001"
-      # Reactions
-      - "spell-reflect-001"
-      # Passives
-      - "arcane-mastery-001"
-      - "mana-regeneration-001"
-      - "elemental-attunement-001"
-      # Movement
-      - "teleport-001"
-      - "wind-walk-001"
-    modifiers:
-      mana: 30
-      magicPower: 15
-      attunement: 8
-      health: -10
-    multipliers:
-      mana: 1.5
-      magicPower: 1.3
-      attunement: 1.2
-
-  # CLERIC - Healer and support
-  - id: "cleric-001"
-    name: "Cleric"
-    description: "A holy priest who heals allies and provides divine protection"
-    tags:
-      - "support"
-      - "healing"
-      - "magic"
-    learnableAbilities:
-      # Actions
-      - "heal-001"
-      - "cure-all-001"
-      - "arcane-shield-001"
-      - "rally-001"
-      - "fireball-001"
-      # Reactions
-      - "last-stand-001"
-      # Passives
-      - "mana-regeneration-001"
-      - "iron-will-001"
-      - "elemental-attunement-001"
-      # Movement
-      - "dash-001"
-    modifiers:
-      mana: 25
-      magicPower: 8
-      health: 10
-      attunement: 10
-    multipliers:
-      mana: 1.3
-      attunement: 1.25
-
-  # ROGUE - Agile assassin
+  # ROGUE - Speed-based, evasion specialist
   - id: "rogue-001"
     name: "Rogue"
-    description: "A swift and cunning fighter who strikes from the shadows"
+    description: "Speed based, speed and evasion bonuses, access to daggers. Can wear medium armor."
     tags:
       - "melee"
       - "agile"
       - "stealth"
     learnableAbilities:
       # Actions
-      - "slash-001"
-      - "execute-001"
+      - "throw-stone-001"
+      - "sneak-001"
+      - "cut-001"
+      - "pocket-sand-001"
+      - "disappear-001"
+      - "sneak-attack-001"
+      - "disarm-001"
       # Reactions
-      - "counter-attack-001"
-      - "dodge-roll-001"
+      - "slippery-001"
+      - "repost-001"
       # Passives
-      - "swift-footed-001"
-      - "critical-mastery-001"
+      - "fast-001"
+      - "ready-001"
+      - "dodge-001"
       # Movement
-      - "dash-001"
-      - "shadow-step-001"
-      - "grappling-hook-001"
+      - "extra-movement-001"
     modifiers:
-      speed: 12
-      physicalPower: 8
-      physicalEvade: 10
-      health: -5
-    multipliers:
-      speed: 1.3
-      physicalEvade: 1.2
-      physicalPower: 1.1
-
-  # PALADIN - Holy warrior (requires Warrior and Cleric experience)
-  - id: "paladin-001"
-    name: "Paladin"
-    description: "A holy warrior who combines martial prowess with divine magic"
-    tags:
-      - "melee"
-      - "magic"
-      - "tank"
-      - "support"
-    requirements:
-      warrior-001: 100
-      cleric-001: 100
-    learnableAbilities:
-      # Actions
-      - "slash-001"
-      - "power-strike-001"
-      - "heal-001"
-      - "arcane-shield-001"
-      - "rally-001"
-      # Reactions
-      - "counter-attack-001"
-      - "last-stand-001"
-      # Passives
-      - "battle-hardened-001"
-      - "iron-will-001"
-      - "mana-regeneration-001"
-      # Movement
-      - "dash-001"
-    modifiers:
-      health: 15
-      mana: 15
-      physicalPower: 8
-      magicPower: 5
-      courage: 8
-    multipliers:
-      health: 1.15
-      courage: 1.2
-
-  # BERSERKER - Rage-fueled warrior (requires Warrior experience)
-  - id: "berserker-001"
-    name: "Berserker"
-    description: "A ferocious warrior who channels rage into devastating attacks"
-    tags:
-      - "melee"
-      - "physical"
-      - "damage"
-    requirements:
-      warrior-001: 150
-    learnableAbilities:
-      # Actions
-      - "slash-001"
-      - "power-strike-001"
-      - "whirlwind-001"
-      - "execute-001"
-      # Reactions
-      - "counter-attack-001"
-      - "vengeful-strike-001"
-      # Passives
-      - "berserker-rage-001"
-      - "critical-mastery-001"
-      - "iron-will-001"
-      # Movement
-      - "dash-001"
-      - "leap-attack-001"
-    modifiers:
-      physicalPower: 15
-      courage: 8
-      health: 10
-      speed: -3
-    multipliers:
-      physicalPower: 1.25
-      courage: 1.15
-
-  # BATTLE MAGE - Magic warrior hybrid (requires Warrior and Mage experience)
-  - id: "battle-mage-001"
-    name: "Battle Mage"
-    description: "A spellblade who weaves magic and steel into a deadly combination"
-    tags:
-      - "melee"
-      - "magic"
-      - "hybrid"
-    requirements:
-      warrior-001: 100
-      mage-001: 100
-    learnableAbilities:
-      # Actions
-      - "slash-001"
-      - "power-strike-001"
-      - "fireball-001"
-      - "lightning-bolt-001"
-      - "arcane-shield-001"
-      # Reactions
-      - "counter-attack-001"
-      - "spell-reflect-001"
-      # Passives
-      - "arcane-mastery-001"
-      - "mana-regeneration-001"
-      - "critical-mastery-001"
-      # Movement
-      - "dash-001"
-      - "teleport-001"
-    modifiers:
-      physicalPower: 8
-      magicPower: 10
-      mana: 20
-      health: 5
-    multipliers:
-      physicalPower: 1.1
-      magicPower: 1.15
-      mana: 1.2
-
-  # RANGER - Ranged physical attacker
-  - id: "ranger-001"
-    name: "Ranger"
-    description: "A skilled archer and tracker who excels at ranged combat"
-    tags:
-      - "ranged"
-      - "physical"
-      - "agile"
-    learnableAbilities:
-      # Actions
-      - "slash-001"
-      - "power-strike-001"
-      # Reactions
-      - "dodge-roll-001"
-      # Passives
-      - "swift-footed-001"
-      - "critical-mastery-001"
-      # Movement
-      - "dash-001"
-      - "leap-attack-001"
-      - "grappling-hook-001"
-    modifiers:
-      physicalPower: 10
-      speed: 8
-      physicalEvade: 8
+      speed: 2
       movement: 1
+      physicalEvade: 10
+      magicEvade: 10
     multipliers:
-      physicalPower: 1.15
-      speed: 1.2
-      physicalEvade: 1.1
+      {}
 
-  # NECROMANCER - Dark magic user (requires Mage experience)
-  - id: "necromancer-001"
-    name: "Necromancer"
-    description: "A wielder of dark magic who commands death and decay"
+  # APPRENTICE - Simple magic user
+  - id: "apprentice-001"
+    name: "Apprentice"
+    description: "Simple magic user, MP bonus, low HP, access to simple heal spell, damage spell, a few buffs, and debuffs. Access to staff based weapons. Can only wear light armor."
     tags:
       - "ranged"
       - "magic"
-      - "debuff"
-      - "dark"
-    requirements:
-      mage-001: 150
+      - "caster"
+      - "support"
     learnableAbilities:
-      # Actions
-      - "fireball-001"
-      - "lightning-bolt-001"
-      - "weaken-001"
-      - "fear-001"
+      # Actions - Support
+      - "heal-001"
+      - "minor-shield-001"
+      - "strength-001"
+      - "reflexes-001"
+      # Actions - Offensive
+      - "harm-001"
+      - "weakness-001"
+      - "sluggish-001"
+      - "mesmerize-001"
       # Reactions
-      - "spell-reflect-001"
+      - "quick-shield-001"
       # Passives
-      - "arcane-mastery-001"
-      - "mana-regeneration-001"
-      - "elemental-attunement-001"
+      - "focused-001"
+      - "mana-shield-001"
       # Movement
-      - "teleport-001"
-      - "shadow-step-001"
+      - "meditate-001"
     modifiers:
-      magicPower: 18
-      mana: 25
-      attunement: 10
-      courage: -5
-      health: -15
+      mana: 20
+      magicPower: 2
     multipliers:
-      magicPower: 1.35
-      mana: 1.4
-      attunement: 1.3
-
-  # MONK - Unarmed martial artist
-  - id: "monk-001"
-    name: "Monk"
-    description: "A disciplined martial artist who fights with incredible speed and precision"
-    tags:
-      - "melee"
-      - "physical"
-      - "agile"
-      - "unarmed"
-    learnableAbilities:
-      # Actions
-      - "slash-001"
-      - "whirlwind-001"
-      # Reactions
-      - "counter-attack-001"
-      - "dodge-roll-001"
-      # Passives
-      - "swift-footed-001"
-      - "iron-will-001"
-      - "critical-mastery-001"
-      # Movement
-      - "dash-001"
-      - "leap-attack-001"
-      - "wind-walk-001"
-    modifiers:
-      speed: 15
-      physicalPower: 7
-      physicalEvade: 12
-      courage: 6
-    multipliers:
-      speed: 1.4
-      physicalEvade: 1.25
+      mana: 1.25

@@ -31,11 +31,11 @@ describe('DataLoader', () => {
       loadAbilities();
 
       // Check for a known ability from ability-database.yaml
-      const slash = CombatAbility.getById('slash-001');
-      expect(slash).toBeDefined();
-      expect(slash!.name).toBe('Slash');
-      expect(slash!.abilityType).toBe('Action');
-      expect(slash!.experiencePrice).toBeGreaterThan(0);
+      const charge = CombatAbility.getById('charge-001');
+      expect(charge).toBeDefined();
+      expect(charge!.name).toBe('Charge');
+      expect(charge!.abilityType).toBe('Action');
+      expect(charge!.experiencePrice).toBeGreaterThan(0);
     });
 
     it('should load different ability types', () => {
@@ -58,18 +58,18 @@ describe('DataLoader', () => {
       loadAbilities();
 
       // Verify abilities are accessible by ID
-      const fireball = CombatAbility.getById('fireball-001');
-      expect(fireball).toBeDefined();
-      expect(fireball!.name).toBe('Fireball');
+      const heal = CombatAbility.getById('heal-001');
+      expect(heal).toBeDefined();
+      expect(heal!.name).toBe('Heal');
     });
 
     it('should load abilities with tags', () => {
       loadAbilities();
 
-      const slash = CombatAbility.getById('slash-001');
-      expect(slash).toBeDefined();
-      expect(slash!.tags).toBeInstanceOf(Array);
-      expect(slash!.tags.length).toBeGreaterThan(0);
+      const charge = CombatAbility.getById('charge-001');
+      expect(charge).toBeDefined();
+      expect(charge!.tags).toBeInstanceOf(Array);
+      expect(charge!.tags.length).toBeGreaterThan(0);
     });
 
     it('should handle abilities without tags', () => {
@@ -160,55 +160,55 @@ describe('DataLoader', () => {
 
       const allClasses = UnitClass.getAll();
       expect(allClasses.length).toBeGreaterThan(0);
-      expect(allClasses.length).toBe(10); // We have 10 classes in the database
+      expect(allClasses.length).toBe(3); // We have 3 Tier 1 classes in the database
     });
 
     it('should load classes with correct properties', () => {
       loadClasses();
 
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.name).toBe('Warrior');
-      expect(warrior!.description).toContain('fighter');
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.name).toBe('Fighter');
+      expect(fighter!.description).toContain('combat');
     });
 
     it('should load classes with tags', () => {
       loadClasses();
 
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.tags).toBeInstanceOf(Array);
-      expect(warrior!.tags).toContain('melee');
-      expect(warrior!.tags).toContain('physical');
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.tags).toBeInstanceOf(Array);
+      expect(fighter!.tags).toContain('melee');
+      expect(fighter!.tags).toContain('physical');
     });
 
     it('should load classes with modifiers', () => {
       loadClasses();
 
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.modifiers).toBeDefined();
-      expect(warrior!.modifiers.healthModifier).toBeGreaterThan(0);
-      expect(warrior!.modifiers.physicalPowerModifier).toBeGreaterThan(0);
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.modifiers).toBeDefined();
+      expect(fighter!.modifiers.healthModifier).toBeGreaterThan(0);
+      expect(fighter!.modifiers.physicalPowerModifier).toBeGreaterThan(0);
     });
 
     it('should load classes with multipliers', () => {
       loadClasses();
 
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.modifiers.healthMultiplier).toBeGreaterThan(1.0);
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.modifiers.healthMultiplier).toBeGreaterThan(1.0);
     });
 
     it('should resolve ability references correctly', () => {
       loadClasses();
 
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.learnableAbilities.length).toBeGreaterThan(0);
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.learnableAbilities.length).toBeGreaterThan(0);
 
       // All abilities should be resolved (not undefined)
-      warrior!.learnableAbilities.forEach(ability => {
+      fighter!.learnableAbilities.forEach(ability => {
         expect(ability).toBeDefined();
         expect(ability.name).toBeDefined();
       });
@@ -217,34 +217,33 @@ describe('DataLoader', () => {
     it('should load classes with no requirements', () => {
       loadClasses();
 
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.requirements.size).toBe(0);
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.requirements.size).toBe(0);
     });
 
     it('should load classes with requirements', () => {
       loadClasses();
 
-      const paladin = UnitClass.getById('paladin-001');
-      expect(paladin).toBeDefined();
-      expect(paladin!.requirements.size).toBe(2);
-      expect(paladin!.requirements.get('warrior-001')).toBe(100);
-      expect(paladin!.requirements.get('cleric-001')).toBe(100);
+      // All Tier 1 classes have no requirements
+      const allClasses = UnitClass.getAll();
+      allClasses.forEach(unitClass => {
+        expect(unitClass.requirements.size).toBe(0);
+      });
     });
 
     it('should load classes with single requirement', () => {
       loadClasses();
 
-      const berserker = UnitClass.getById('berserker-001');
-      expect(berserker).toBeDefined();
-      expect(berserker!.requirements.size).toBe(1);
-      expect(berserker!.requirements.get('warrior-001')).toBe(150);
+      // All Tier 1 classes have no requirements (skipping this test for now)
+      const allClasses = UnitClass.getAll();
+      expect(allClasses.length).toBe(3);
     });
 
     it('should load all base classes without requirements', () => {
       loadClasses();
 
-      const baseClasses = ['warrior-001', 'mage-001', 'cleric-001', 'rogue-001', 'ranger-001', 'monk-001'];
+      const baseClasses = ['fighter-001', 'rogue-001', 'apprentice-001'];
 
       baseClasses.forEach(classId => {
         const unitClass = UnitClass.getById(classId);
@@ -256,18 +255,10 @@ describe('DataLoader', () => {
     it('should load all advanced classes with requirements', () => {
       loadClasses();
 
-      const advancedClasses = [
-        { id: 'paladin-001', reqCount: 2 },
-        { id: 'berserker-001', reqCount: 1 },
-        { id: 'battle-mage-001', reqCount: 2 },
-        { id: 'necromancer-001', reqCount: 1 },
-      ];
-
-      advancedClasses.forEach(({ id, reqCount }) => {
-        const unitClass = UnitClass.getById(id);
-        expect(unitClass).toBeDefined();
-        expect(unitClass!.requirements.size).toBe(reqCount);
-      });
+      // No advanced classes yet - all Tier 1 classes have no requirements
+      const allClasses = UnitClass.getAll();
+      const classesWithRequirements = allClasses.filter(c => c.requirements.size > 0);
+      expect(classesWithRequirements.length).toBe(0);
     });
 
     it('should verify all class abilities exist', () => {
@@ -304,12 +295,12 @@ describe('DataLoader', () => {
       expect(abilities.length).toBeGreaterThan(0);
 
       // Verify classes have resolved ability references
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.learnableAbilities.length).toBeGreaterThan(0);
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.learnableAbilities.length).toBeGreaterThan(0);
 
       // All abilities should be valid objects
-      warrior!.learnableAbilities.forEach(ability => {
+      fighter!.learnableAbilities.forEach(ability => {
         expect(ability.name).toBeDefined();
       });
     });
@@ -320,7 +311,7 @@ describe('DataLoader', () => {
       // Verify we have enough data for a working game
       expect(CombatAbility.getAll().length).toBeGreaterThanOrEqual(30);
       expect(Equipment.getAll().length).toBeGreaterThanOrEqual(20);
-      expect(UnitClass.getAll().length).toBe(10);
+      expect(UnitClass.getAll().length).toBe(3); // 3 Tier 1 classes
     });
 
     it('should allow multiple loads without errors', () => {
@@ -433,30 +424,29 @@ describe('DataLoader', () => {
       loadAllGameData();
     });
 
-    it('should load Warrior class correctly', () => {
-      const warrior = UnitClass.getById('warrior-001');
-      expect(warrior).toBeDefined();
-      expect(warrior!.name).toBe('Warrior');
-      expect(warrior!.tags).toContain('melee');
-      expect(warrior!.requirements.size).toBe(0);
-      expect(warrior!.learnableAbilities.length).toBeGreaterThan(0);
+    it('should load Fighter class correctly', () => {
+      const fighter = UnitClass.getById('fighter-001');
+      expect(fighter).toBeDefined();
+      expect(fighter!.name).toBe('Fighter');
+      expect(fighter!.tags).toContain('melee');
+      expect(fighter!.requirements.size).toBe(0);
+      expect(fighter!.learnableAbilities.length).toBeGreaterThan(0);
     });
 
-    it('should load Paladin class with requirements', () => {
-      const paladin = UnitClass.getById('paladin-001');
-      expect(paladin).toBeDefined();
-      expect(paladin!.name).toBe('Paladin');
-      expect(paladin!.requirements.size).toBe(2);
-      expect(paladin!.requirements.get('warrior-001')).toBe(100);
-      expect(paladin!.requirements.get('cleric-001')).toBe(100);
+    it('should load Apprentice class correctly', () => {
+      const apprentice = UnitClass.getById('apprentice-001');
+      expect(apprentice).toBeDefined();
+      expect(apprentice!.name).toBe('Apprentice');
+      expect(apprentice!.requirements.size).toBe(0);
+      expect(apprentice!.tags).toContain('magic');
     });
 
-    it('should load Slash ability correctly', () => {
-      const slash = CombatAbility.getById('slash-001');
-      expect(slash).toBeDefined();
-      expect(slash!.name).toBe('Slash');
-      expect(slash!.abilityType).toBe('Action');
-      expect(slash!.tags.length).toBeGreaterThan(0);
+    it('should load Charge ability correctly', () => {
+      const charge = CombatAbility.getById('charge-001');
+      expect(charge).toBeDefined();
+      expect(charge!.name).toBe('Charge');
+      expect(charge!.abilityType).toBe('Action');
+      expect(charge!.tags.length).toBeGreaterThan(0);
     });
 
     it('should load Iron Sword equipment correctly', () => {

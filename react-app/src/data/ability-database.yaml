@@ -1,342 +1,383 @@
-# Combat Abilities Database
+# Combat Ability Database
 # Format: Each ability entry contains all properties needed to create a CombatAbility instance
-# AbilityType: Action, Reaction, Passive, Movement
+# NOTE: Some abilities reference mechanics not yet implemented (Knockback, Confusion, Stun, Bleeding, etc.)
+#       These are placeholders and will need implementation later
 
 abilities:
-  # ACTION ABILITIES - Warrior/Physical
-  - id: "slash-001"
-    name: "Slash"
-    description: "A basic sword attack that deals physical damage to a single target"
+  # ============================================================================
+  # FIGHTER ABILITIES
+  # ============================================================================
+
+  # Fighter Actions
+  - id: "charge-001"
+    name: "Charge"
+    description: "Deals damage to an adjacent unit and has a chance to knock them back (never misses)"
     abilityType: "Action"
     experiencePrice: 50
     tags:
-      - "attack"
       - "physical"
-      - "single-target"
+      - "melee"
+      - "knockback"
+      - "auto-hit"
 
-  - id: "power-strike-001"
-    name: "Power Strike"
-    description: "A heavy attack that deals increased physical damage but costs more time"
-    abilityType: "Action"
-    experiencePrice: 150
-    tags:
-      - "attack"
-      - "physical"
-      - "heavy"
-
-  - id: "whirlwind-001"
-    name: "Whirlwind"
-    description: "Spin attack that hits all adjacent enemies"
-    abilityType: "Action"
-    experiencePrice: 300
-    tags:
-      - "attack"
-      - "physical"
-      - "aoe"
-
-  - id: "execute-001"
-    name: "Execute"
-    description: "Finishing move that deals massive damage to low-health targets"
-    abilityType: "Action"
-    experiencePrice: 400
-    tags:
-      - "attack"
-      - "physical"
-      - "finisher"
-
-  # ACTION ABILITIES - Mage/Magic
-  - id: "fireball-001"
-    name: "Fireball"
-    description: "Hurl a ball of fire that deals magic damage to a single target"
+  - id: "bash-001"
+    name: "Bash"
+    description: "Bash an enemy with your shield interrupting their current action (requires shield equipped)"
     abilityType: "Action"
     experiencePrice: 100
     tags:
-      - "attack"
-      - "magic"
-      - "fire"
-      - "single-target"
+      - "physical"
+      - "melee"
+      - "interrupt"
+      - "shield-required"
 
-  - id: "lightning-bolt-001"
-    name: "Lightning Bolt"
-    description: "Strike an enemy with lightning for high magic damage"
+  - id: "shove-001"
+    name: "Shove"
+    description: "Shoves an enemy knocking them back 1 space"
     abilityType: "Action"
-    experiencePrice: 150
+    experiencePrice: 100
     tags:
-      - "attack"
-      - "magic"
-      - "lightning"
+      - "physical"
+      - "melee"
+      - "knockback"
 
-  - id: "ice-storm-001"
-    name: "Ice Storm"
-    description: "Summon a storm of ice that damages and slows all enemies in an area"
+  - id: "taunt-001"
+    name: "Taunt"
+    description: "Taunt an enemy causing them to move toward you"
     abilityType: "Action"
-    experiencePrice: 350
+    experiencePrice: 300
     tags:
-      - "attack"
-      - "magic"
-      - "ice"
-      - "aoe"
-      - "debuff"
+      - "special"
+      - "control"
 
-  - id: "meteor-001"
-    name: "Meteor"
-    description: "Call down a meteor that deals devastating magic damage to all enemies"
+  - id: "head-strike-001"
+    name: "Head Strike"
+    description: "Aim for an enemy's head dealing damage and has a chance to inflict confusion"
+    abilityType: "Action"
+    experiencePrice: 300
+    tags:
+      - "physical"
+      - "weapon-range"
+      - "confusion"
+
+  - id: "body-strike-001"
+    name: "Body Strike"
+    description: "Aim for an enemy's body dealing damage and has a chance to stun them"
     abilityType: "Action"
     experiencePrice: 500
     tags:
-      - "attack"
-      - "magic"
-      - "fire"
-      - "aoe"
-      - "ultimate"
+      - "physical"
+      - "weapon-range"
+      - "stun"
 
-  # ACTION ABILITIES - Support/Healing
-  - id: "heal-001"
-    name: "Heal"
-    description: "Restore health to a single ally"
-    abilityType: "Action"
-    experiencePrice: 150
-    tags:
-      - "healing"
-      - "support"
-      - "single-target"
-
-  - id: "cure-all-001"
-    name: "Cure All"
-    description: "Heal all allies and remove negative status effects"
+  - id: "arm-strike-001"
+    name: "Arm Strike"
+    description: "Aim for an enemy's arm dealing damage and has a chance to disable physical attacks"
     abilityType: "Action"
     experiencePrice: 400
     tags:
-      - "healing"
-      - "support"
-      - "aoe"
-      - "cleanse"
-
-  - id: "rally-001"
-    name: "Rally"
-    description: "Boost the physical power and courage of all allies"
-    abilityType: "Action"
-    experiencePrice: 250
-    tags:
-      - "buff"
-      - "support"
-      - "aoe"
-
-  - id: "arcane-shield-001"
-    name: "Arcane Shield"
-    description: "Grant a magical barrier to an ally that absorbs damage"
-    abilityType: "Action"
-    experiencePrice: 200
-    tags:
-      - "buff"
-      - "support"
-      - "defensive"
-      - "single-target"
-
-  # ACTION ABILITIES - Debuff/Control
-  - id: "weaken-001"
-    name: "Weaken"
-    description: "Reduce an enemy's physical and magic power"
-    abilityType: "Action"
-    experiencePrice: 120
-    tags:
-      - "debuff"
-      - "single-target"
-
-  - id: "fear-001"
-    name: "Fear"
-    description: "Terrify an enemy, reducing their courage and potentially making them flee"
-    abilityType: "Action"
-    experiencePrice: 180
-    tags:
-      - "debuff"
-      - "courage"
-      - "control"
-
-  # REACTION ABILITIES
-  - id: "counter-attack-001"
-    name: "Counter Attack"
-    description: "Automatically counterattack when hit by a physical attack"
-    abilityType: "Reaction"
-    experiencePrice: 200
-    tags:
-      - "counter"
       - "physical"
+      - "weapon-range"
+      - "disable"
 
-  - id: "spell-reflect-001"
-    name: "Spell Reflect"
-    description: "Reflect the next magic attack back at the caster"
-    abilityType: "Reaction"
-    experiencePrice: 300
+  - id: "leg-strike-001"
+    name: "Leg Strike"
+    description: "Aim for an enemy's leg dealing damage and has a chance to reduce their Speed"
+    abilityType: "Action"
+    experiencePrice: 200
     tags:
-      - "counter"
-      - "magic"
-      - "reflect"
+      - "physical"
+      - "weapon-range"
+      - "slow"
 
-  - id: "dodge-roll-001"
-    name: "Dodge Roll"
-    description: "Roll away when attacked, greatly increasing evasion"
+  # Fighter Reactions
+  - id: "parry-001"
+    name: "Parry"
+    description: "Increases your physical evasion based on your weapon"
     abilityType: "Reaction"
-    experiencePrice: 250
+    experiencePrice: 500
     tags:
       - "defensive"
       - "evasion"
 
-  - id: "last-stand-001"
-    name: "Last Stand"
-    description: "When reduced to 0 health, survive with 1 HP once per battle"
-    abilityType: "Reaction"
-    experiencePrice: 400
+  # Fighter Passives
+  - id: "meat-shield-001"
+    name: "Meat Shield"
+    description: "Increases HP by 50"
+    abilityType: "Passive"
+    experiencePrice: 500
     tags:
       - "defensive"
-      - "survival"
-      - "ultimate"
-
-  - id: "vengeful-strike-001"
-    name: "Vengeful Strike"
-    description: "When an ally is defeated, gain increased physical power for the next attack"
-    abilityType: "Reaction"
-    experiencePrice: 220
-    tags:
-      - "counter"
-      - "buff"
-      - "physical"
-
-  # PASSIVE ABILITIES
-  - id: "battle-hardened-001"
-    name: "Battle Hardened"
-    description: "Permanently increase maximum health by 20%"
-    abilityType: "Passive"
-    experiencePrice: 180
-    tags:
-      - "buff"
       - "health"
-      - "defensive"
 
-  - id: "arcane-mastery-001"
-    name: "Arcane Mastery"
-    description: "Permanently increase magic power by 15%"
+  - id: "shield-bearer-001"
+    name: "Shield Bearer"
+    description: "Allows user to equip shield even if their class does not permit it"
     abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "equipment"
+      - "shield"
+
+  # Fighter Movement
+  - id: "journeyman-001"
+    name: "Journeyman"
+    description: "Gain XP for every step you take"
+    abilityType: "Movement"
+    experiencePrice: 250
+    tags:
+      - "experience"
+      - "passive-gain"
+
+  # ============================================================================
+  # ROGUE ABILITIES
+  # ============================================================================
+
+  # Rogue Actions
+  - id: "throw-stone-001"
+    name: "Throw Stone"
+    description: "Basic ranged attack"
+    abilityType: "Action"
+    experiencePrice: 50
+    tags:
+      - "physical"
+      - "ranged"
+
+  - id: "sneak-001"
+    name: "Sneak"
+    description: "Take a move action ignoring enemies"
+    abilityType: "Action"
+    experiencePrice: 100
+    tags:
+      - "movement"
+      - "stealth"
+
+  - id: "cut-001"
+    name: "Cut"
+    description: "Deal damage and has a chance to cause Bleeding"
+    abilityType: "Action"
     experiencePrice: 200
     tags:
-      - "buff"
-      - "magic"
+      - "physical"
+      - "weapon-range"
+      - "bleeding"
 
-  - id: "swift-footed-001"
-    name: "Swift Footed"
-    description: "Permanently increase speed and movement"
-    abilityType: "Passive"
-    experiencePrice: 150
+  - id: "pocket-sand-001"
+    name: "Pocket Sand"
+    description: "Throw sand in an enemy's eyes causing Blindness"
+    abilityType: "Action"
+    experiencePrice: 200
     tags:
-      - "buff"
+      - "special"
+      - "ranged"
+      - "blindness"
+
+  - id: "disappear-001"
+    name: "Disappear"
+    description: "Teleport to a random tile that is far from enemies"
+    abilityType: "Action"
+    experiencePrice: 100
+    tags:
+      - "movement"
+      - "teleport"
+
+  - id: "sneak-attack-001"
+    name: "Sneak Attack"
+    description: "Attack from behind (never misses if enemy is facing away, otherwise automatic miss)"
+    abilityType: "Action"
+    experiencePrice: 500
+    tags:
+      - "physical"
+      - "weapon-range"
+      - "backstab"
+      - "conditional"
+
+  - id: "disarm-001"
+    name: "Disarm"
+    description: "Chance to disarm the target"
+    abilityType: "Action"
+    experiencePrice: 400
+    tags:
+      - "physical"
+      - "weapon-range"
+      - "disarm"
+
+  # Rogue Reactions
+  - id: "slippery-001"
+    name: "Slippery"
+    description: "After taking damage, gain Haste"
+    abilityType: "Reaction"
+    experiencePrice: 500
+    tags:
+      - "defensive"
+      - "haste"
+
+  - id: "repost-001"
+    name: "Repost"
+    description: "After being attacked, perform an attack on the enemy"
+    abilityType: "Reaction"
+    experiencePrice: 250
+    tags:
+      - "offensive"
+      - "counter"
+
+  # Rogue Passives
+  - id: "fast-001"
+    name: "Fast"
+    description: "+3 Speed"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
       - "speed"
+
+  - id: "ready-001"
+    name: "Ready"
+    description: "Start combat with your action timer set to 50"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "initiative"
+
+  - id: "dodge-001"
+    name: "Dodge"
+    description: "Increases Physical Evasion"
+    abilityType: "Passive"
+    experiencePrice: 500
+    tags:
+      - "defensive"
+      - "evasion"
+
+  # Rogue Movement
+  - id: "extra-movement-001"
+    name: "+1 Movement"
+    description: "Increases movement by 1"
+    abilityType: "Movement"
+    experiencePrice: 200
+    tags:
       - "movement"
 
-  - id: "iron-will-001"
-    name: "Iron Will"
-    description: "Permanently increase courage and resistance to fear effects"
-    abilityType: "Passive"
-    experiencePrice: 170
-    tags:
-      - "buff"
-      - "courage"
-      - "resistance"
+  # ============================================================================
+  # APPRENTICE ABILITIES
+  # ============================================================================
 
-  - id: "mana-regeneration-001"
-    name: "Mana Regeneration"
-    description: "Recover a small amount of mana at the start of each turn"
+  # Apprentice Actions - Support
+  - id: "heal-001"
+    name: "Heal"
+    description: "Heals a unit (6 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 100
+    tags:
+      - "magic"
+      - "healing"
+      - "ranged"
+
+  - id: "minor-shield-001"
+    name: "Minor Shield"
+    description: "Grants a minor shield to a unit that absorbs up to 20 damage from the next attack"
+    abilityType: "Action"
+    experiencePrice: 200
+    tags:
+      - "magic"
+      - "buff"
+      - "shield"
+      - "ranged"
+
+  - id: "strength-001"
+    name: "Strength"
+    description: "Increases a unit's Physical Attack (6 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 200
+    tags:
+      - "magic"
+      - "buff"
+      - "ranged"
+
+  - id: "reflexes-001"
+    name: "Reflexes"
+    description: "Increases a unit's Physical and Magical Evasion (10 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 400
+    tags:
+      - "magic"
+      - "buff"
+      - "ranged"
+
+  # Apprentice Actions - Offensive
+  - id: "harm-001"
+    name: "Harm"
+    description: "Harms a unit (6 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 100
+    tags:
+      - "magic"
+      - "damage"
+      - "ranged"
+
+  - id: "weakness-001"
+    name: "Weakness"
+    description: "Decreases a unit's Physical Attack (6 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 200
+    tags:
+      - "magic"
+      - "debuff"
+      - "ranged"
+
+  - id: "sluggish-001"
+    name: "Sluggish"
+    description: "Decreases a unit's Speed (10 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 300
+    tags:
+      - "magic"
+      - "debuff"
+      - "ranged"
+
+  - id: "mesmerize-001"
+    name: "Mesmerize"
+    description: "Mesmerizes a unit resetting its Action Timer (10 mana, range 3, single target)"
+    abilityType: "Action"
+    experiencePrice: 500
+    tags:
+      - "magic"
+      - "control"
+      - "ranged"
+
+  # Apprentice Reactions
+  - id: "quick-shield-001"
+    name: "Quick Shield"
+    description: "Before taking physical damage, casts Minor Shield to absorb the blow (uses MP)"
+    abilityType: "Reaction"
+    experiencePrice: 200
+    tags:
+      - "magic"
+      - "defensive"
+      - "shield"
+
+  # Apprentice Passives
+  - id: "focused-001"
+    name: "Focused"
+    description: "Increases MP by 50"
     abilityType: "Passive"
-    experiencePrice: 220
+    experiencePrice: 500
+    tags:
+      - "mana"
+
+  - id: "mana-shield-001"
+    name: "Mana Shield"
+    description: "Damage is dealt to Mana rather than Health"
+    abilityType: "Passive"
+    experiencePrice: 500
+    tags:
+      - "mana"
+      - "defensive"
+
+  # Apprentice Movement
+  - id: "meditate-001"
+    name: "Meditate"
+    description: "When this unit does not move, they gain 10% of their mana"
+    abilityType: "Movement"
+    experiencePrice: 200
     tags:
       - "mana"
       - "regeneration"
-
-  - id: "critical-mastery-001"
-    name: "Critical Mastery"
-    description: "Increase the chance and damage of critical hits"
-    abilityType: "Passive"
-    experiencePrice: 300
-    tags:
-      - "buff"
-      - "critical"
-      - "physical"
-
-  - id: "elemental-attunement-001"
-    name: "Elemental Attunement"
-    description: "Permanently increase attunement and magic evade"
-    abilityType: "Passive"
-    experiencePrice: 190
-    tags:
-      - "buff"
-      - "attunement"
-      - "magic"
-
-  - id: "berserker-rage-001"
-    name: "Berserker Rage"
-    description: "Gain increased physical power when health is low"
-    abilityType: "Passive"
-    experiencePrice: 250
-    tags:
-      - "buff"
-      - "physical"
-      - "conditional"
-
-  # MOVEMENT ABILITIES
-  - id: "dash-001"
-    name: "Dash"
-    description: "Quickly move to an adjacent tile"
-    abilityType: "Movement"
-    experiencePrice: 100
-    tags:
-      - "mobility"
-      - "quick"
-
-  - id: "teleport-001"
-    name: "Teleport"
-    description: "Instantly move to any visible location within range"
-    abilityType: "Movement"
-    experiencePrice: 300
-    tags:
-      - "mobility"
-      - "magic"
-      - "teleport"
-
-  - id: "leap-attack-001"
-    name: "Leap Attack"
-    description: "Jump to a distant location and attack upon landing"
-    abilityType: "Movement"
-    experiencePrice: 250
-    tags:
-      - "mobility"
-      - "attack"
-      - "physical"
-
-  - id: "shadow-step-001"
-    name: "Shadow Step"
-    description: "Move through shadows to appear behind an enemy"
-    abilityType: "Movement"
-    experiencePrice: 280
-    tags:
-      - "mobility"
-      - "stealth"
-      - "magic"
-
-  - id: "grappling-hook-001"
-    name: "Grappling Hook"
-    description: "Pull yourself to a distant location or pull an enemy toward you"
-    abilityType: "Movement"
-    experiencePrice: 200
-    tags:
-      - "mobility"
-      - "utility"
-      - "pull"
-
-  - id: "wind-walk-001"
-    name: "Wind Walk"
-    description: "Become incorporeal and move through obstacles briefly"
-    abilityType: "Movement"
-    experiencePrice: 350
-    tags:
-      - "mobility"
-      - "magic"
-      - "intangible"
