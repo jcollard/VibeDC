@@ -143,7 +143,8 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   // Handle canvas click to select sprite
   const handleCanvasClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = canvasRef.current;
-    if (!canvas || !selectedSheet) return;
+    const img = imageRef.current;
+    if (!canvas || !selectedSheet || !img) return;
 
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
@@ -153,16 +154,41 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
     const spriteX = Math.floor(x / (SPRITE_SIZE * scale));
     const spriteY = Math.floor(y / (SPRITE_SIZE * scale));
 
+    console.log('SpriteRegistryPanel: Click detected', {
+      clientX: e.clientX,
+      clientY: e.clientY,
+      rectLeft: rect.left,
+      rectTop: rect.top,
+      canvasX: x,
+      canvasY: y,
+      spriteX,
+      spriteY,
+      scale,
+      SPRITE_SIZE
+    });
+
+    // Check if click is within the sprite sheet bounds
+    const maxX = Math.floor(img.width / SPRITE_SIZE) - 1;
+    const maxY = Math.floor(img.height / SPRITE_SIZE) - 1;
+
+    if (spriteX < 0 || spriteY < 0 || spriteX > maxX || spriteY > maxY) {
+      // Clicked outside sprite sheet bounds
+      setSelectedSprite(null);
+      return;
+    }
+
     // Find the sprite at this position
     const sprites = SpriteRegistry.getBySheet(selectedSheet);
     const clickedSprite = sprites.find(s => s.x === spriteX && s.y === spriteY);
 
-    if (clickedSprite) {
-      setSelectedSprite({ id: clickedSprite.id, x: spriteX, y: spriteY });
-    } else {
-      // Clicked on empty space
-      setSelectedSprite(null);
-    }
+    console.log('SpriteRegistryPanel: Found sprite?', clickedSprite?.id || 'undefined');
+
+    // Always select the sprite position, even if not defined in registry
+    setSelectedSprite({
+      id: clickedSprite?.id || '',
+      x: spriteX,
+      y: spriteY
+    });
   };
 
   return (
@@ -180,9 +206,8 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
         fontFamily: 'monospace',
         fontSize: '12px',
         zIndex: 2000,
-        minWidth: '700px',
-        maxWidth: '900px',
-        maxHeight: '80vh',
+        width: '900px',
+        height: '80vh',
         display: 'flex',
         flexDirection: 'column',
       }}
@@ -230,7 +255,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       {/* Two-column layout */}
       <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0 }}>
         {/* Left column - Information and controls */}
-        <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: '12px', minHeight: 0, overflow: 'auto' }}>
           {/* Sprite sheet selector */}
           <div>
             <label style={{ display: 'block', marginBottom: '6px', fontSize: '11px', color: '#aaa' }}>
@@ -322,21 +347,39 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
                 <div
                   style={{
                     padding: '12px',
-                    background: 'rgba(255, 255, 0, 0.1)',
+                    background: selectedSprite.id ? 'rgba(255, 255, 0, 0.1)' : 'rgba(255, 128, 0, 0.1)',
                     borderRadius: '4px',
-                    border: '2px solid rgba(255, 255, 0, 0.4)',
+                    border: selectedSprite.id ? '2px solid rgba(255, 255, 0, 0.4)' : '2px solid rgba(255, 128, 0, 0.4)',
                   }}
                 >
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: '#ffff00' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: selectedSprite.id ? '#ffff00' : '#ff8800' }}>
                     Selected Sprite
                   </div>
                   <div style={{ fontSize: '11px', lineHeight: '1.6' }}>
-                    <div><strong>ID:</strong></div>
-                    <div style={{ color: '#aaa', wordBreak: 'break-all', marginBottom: '6px', fontFamily: 'monospace' }}>
-                      {selectedSprite.id}
-                    </div>
+                    {selectedSprite.id ? (
+                      <>
+                        <div><strong>ID:</strong></div>
+                        <div style={{ color: '#aaa', wordBreak: 'break-all', marginBottom: '6px', fontFamily: 'monospace' }}>
+                          {selectedSprite.id}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{
+                        color: '#ff8800',
+                        marginBottom: '6px',
+                        padding: '6px',
+                        background: 'rgba(255, 128, 0, 0.1)',
+                        borderRadius: '3px',
+                        border: '1px dashed rgba(255, 128, 0, 0.4)'
+                      }}>
+                        <strong>⚠ Undefined Sprite</strong>
+                        <div style={{ fontSize: '10px', marginTop: '4px', color: '#aaa' }}>
+                          This sprite position is not defined in the registry
+                        </div>
+                      </div>
+                    )}
                     <div><strong>Position:</strong> ({selectedSprite.x}, {selectedSprite.y})</div>
-                    {(() => {
+                    {selectedSprite.id && (() => {
                       const sprite = SpriteRegistry.getById(selectedSprite.id);
                       return sprite?.tags && sprite.tags.length > 0 ? (
                         <div style={{ marginTop: '6px' }}>
