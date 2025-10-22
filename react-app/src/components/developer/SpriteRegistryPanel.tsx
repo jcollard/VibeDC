@@ -19,6 +19,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   }>({ spriteCount: 0, tags: [] });
   const [imageLoaded, setImageLoaded] = useState(false);
   const [loadError, setLoadError] = useState<string>('');
+  const [scale, setScale] = useState<number>(4);
 
   // Get all unique sprite sheets from the registry
   useEffect(() => {
@@ -76,19 +77,11 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
     const img = new Image();
     img.src = selectedSheet;
     img.onload = () => {
-      console.log('SpriteRegistryPanel: Image loaded successfully', { width: img.width, height: img.height });
-      // Resize canvas to fit image (with max dimensions)
-      const maxWidth = 400;
-      const maxHeight = 400;
-      let width = img.width;
-      let height = img.height;
+      console.log('SpriteRegistryPanel: Image loaded successfully', { width: img.width, height: img.height, scale });
 
-      // Scale down if needed
-      if (width > maxWidth || height > maxHeight) {
-        const scale = Math.min(maxWidth / width, maxHeight / height);
-        width = width * scale;
-        height = height * scale;
-      }
+      // Apply user-selected scale
+      const width = img.width * scale;
+      const height = img.height * scale;
 
       canvas.width = width;
       canvas.height = height;
@@ -96,7 +89,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       // Disable smoothing for pixel-perfect rendering
       ctx.imageSmoothingEnabled = false;
 
-      // Draw the sprite sheet
+      // Draw the sprite sheet at the scaled size
       ctx.drawImage(img, 0, 0, width, height);
       setImageLoaded(true);
     };
@@ -105,7 +98,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       setLoadError(`Failed to load: ${selectedSheet}`);
       setImageLoaded(false);
     };
-  }, [selectedSheet]);
+  }, [selectedSheet, scale]);
 
   return (
     <div
@@ -125,7 +118,8 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
         minWidth: '700px',
         maxWidth: '900px',
         maxHeight: '80vh',
-        overflow: 'auto',
+        display: 'flex',
+        flexDirection: 'column',
       }}
     >
       {/* Header */}
@@ -169,7 +163,7 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
       </div>
 
       {/* Two-column layout */}
-      <div style={{ display: 'flex', gap: '20px' }}>
+      <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0 }}>
         {/* Left column - Information and controls */}
         <div style={{ flex: '0 0 280px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
           {/* Sprite sheet selector */}
@@ -267,46 +261,94 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
             flex: 1,
             display: 'flex',
             flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            minHeight: '400px',
+            minHeight: 0,
+            minWidth: 0,
             background: 'rgba(0, 0, 0, 0.3)',
             borderRadius: '4px',
             border: '1px solid rgba(255, 255, 255, 0.1)',
             padding: '20px',
-            position: 'relative',
           }}
         >
-          {/* Always render canvas so ref is available */}
-          <canvas
-            ref={canvasRef}
-            style={{
-              border: '1px solid rgba(255, 255, 255, 0.2)',
-              imageRendering: 'pixelated',
-              display: imageLoaded ? 'block' : 'none',
-            } as React.CSSProperties}
-          />
+          {/* Scale selector at the top */}
+          <div style={{ marginBottom: '12px', display: 'flex', justifyContent: 'flex-end' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <label style={{ fontSize: '11px', color: '#aaa' }}>Scale:</label>
+              <select
+                value={scale}
+                onChange={(e) => setScale(Number(e.target.value))}
+                style={{
+                  padding: '4px 8px',
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  border: '1px solid #666',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontFamily: 'monospace',
+                  fontSize: '11px',
+                  cursor: 'pointer',
+                }}
+              >
+                <option value="1">1x</option>
+                <option value="2">2x</option>
+                <option value="3">3x</option>
+                <option value="4">4x</option>
+              </select>
+            </div>
+          </div>
 
-          {/* Status messages overlay */}
-          {!selectedSheet && (
-            <div style={{ color: '#666', fontSize: '14px', position: imageLoaded ? 'absolute' : 'static' }}>
-              Select a sprite sheet to preview
-            </div>
-          )}
-          {selectedSheet && loadError && (
-            <div style={{ color: '#f44', fontSize: '12px', textAlign: 'center', position: 'absolute' }}>
-              <div style={{ marginBottom: '8px' }}>Error loading sprite sheet</div>
-              <div style={{ fontSize: '10px', color: '#aaa' }}>{loadError}</div>
-              <div style={{ fontSize: '10px', color: '#aaa', marginTop: '8px' }}>
-                Check browser console for details
+          {/* Preview area */}
+          <div
+            style={{
+              flex: 1,
+              minHeight: 0,
+              minWidth: 0,
+              position: 'relative',
+              overflow: 'auto',
+              padding: '10px',
+            }}
+          >
+            {/* Canvas - always rendered for ref */}
+            <canvas
+              ref={canvasRef}
+              style={{
+                border: '1px solid rgba(255, 255, 255, 0.2)',
+                imageRendering: 'pixelated',
+                display: imageLoaded ? 'block' : 'none',
+              } as React.CSSProperties}
+            />
+
+            {/* Status messages - centered when canvas not visible */}
+            {!imageLoaded && (
+              <div
+                style={{
+                  position: 'absolute',
+                  top: '50%',
+                  left: '50%',
+                  transform: 'translate(-50%, -50%)',
+                  textAlign: 'center',
+                }}
+              >
+                {!selectedSheet && (
+                  <div style={{ color: '#666', fontSize: '14px' }}>
+                    Select a sprite sheet to preview
+                  </div>
+                )}
+                {selectedSheet && loadError && (
+                  <div style={{ color: '#f44', fontSize: '12px' }}>
+                    <div style={{ marginBottom: '8px' }}>Error loading sprite sheet</div>
+                    <div style={{ fontSize: '10px', color: '#aaa' }}>{loadError}</div>
+                    <div style={{ fontSize: '10px', color: '#aaa', marginTop: '8px' }}>
+                      Check browser console for details
+                    </div>
+                  </div>
+                )}
+                {selectedSheet && !loadError && (
+                  <div style={{ color: '#666', fontSize: '14px' }}>
+                    Loading sprite sheet...
+                  </div>
+                )}
               </div>
-            </div>
-          )}
-          {selectedSheet && !imageLoaded && !loadError && (
-            <div style={{ color: '#666', fontSize: '14px', position: 'absolute' }}>
-              Loading sprite sheet...
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
     </div>
