@@ -4,11 +4,9 @@ encounters:
     name: "Forest Ambush"
     description: "A group of bandits ambush travelers on the forest road."
 
-    # Combat map definition (ASCII format)
+    # Combat map using tileset reference
     map:
-      tileTypes:
-        - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
-        - { char: ".", terrain: "floor", walkable: true, spriteId: "grass" }
+      tilesetId: "forest"
       grid: |
         ##########
         #........#
@@ -48,9 +46,7 @@ encounters:
     description: "Protect the merchant for 10 turns while enemies attack."
 
     map:
-      tileTypes:
-        - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
-        - { char: ".", terrain: "floor", walkable: true, spriteId: "cobblestone" }
+      tilesetId: "town-cobblestone"
       grid: |
         ########
         #......#
@@ -100,10 +96,7 @@ encounters:
     description: "A pack of hungry wolves attacks!"
 
     map:
-      tileTypes:
-        - { char: "#", terrain: "wall", walkable: false, spriteId: "rock-wall" }
-        - { char: ".", terrain: "floor", walkable: true, spriteId: "dirt" }
-        - { char: "~", terrain: "water", walkable: false, spriteId: "water" }
+      tilesetId: "cave"
       grid: |
         ##########
         #........#

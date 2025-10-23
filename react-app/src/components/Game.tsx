@@ -9,6 +9,7 @@ import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
 import { AbilityRegistryPanel } from './developer/AbilityRegistryPanel';
 import { EquipmentRegistryPanel } from './developer/EquipmentRegistryPanel';
 import { ClassRegistryPanel } from './developer/ClassRegistryPanel';
+import { TilesetRegistryPanel } from './developer/TilesetRegistryPanel';
 import { EncounterRegistryPanel } from './developer/EncounterRegistryPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
@@ -59,6 +60,9 @@ export const Game: React.FC = () => {
 
   // Class registry panel visibility (development only)
   const [classRegistryVisible, setClassRegistryVisible] = useState<boolean>(false);
+
+  // Tileset registry panel visibility (development only)
+  const [tilesetRegistryVisible, setTilesetRegistryVisible] = useState<boolean>(false);
 
   // Encounter registry panel visibility (development only)
   const [encounterRegistryVisible, setEncounterRegistryVisible] = useState<boolean>(false);
@@ -492,6 +496,10 @@ export const Game: React.FC = () => {
                   setClassRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenTilesetRegistry={() => {
+                  setTilesetRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenEncounterRegistry={() => {
                   setEncounterRegistryVisible(true);
                   setDeveloperPanelVisible(false);
@@ -535,6 +543,13 @@ export const Game: React.FC = () => {
             {import.meta.env.DEV && classRegistryVisible && (
               <ClassRegistryPanel
                 onClose={() => setClassRegistryVisible(false)}
+              />
+            )}
+
+            {/* Tileset registry panel - only available in development mode */}
+            {import.meta.env.DEV && tilesetRegistryVisible && (
+              <TilesetRegistryPanel
+                onClose={() => setTilesetRegistryVisible(false)}
               />
             )}
 

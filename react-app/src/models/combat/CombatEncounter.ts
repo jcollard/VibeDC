@@ -1,6 +1,7 @@
 import type { Position } from "../../types";
 import type { CombatUnit } from "./CombatUnit";
 import { EnemyRegistry } from "../../utils/EnemyRegistry";
+import { TilesetRegistry } from "../../utils/TilesetRegistry";
 import { CombatMap, parseASCIIMap } from "./CombatMap";
 import type { CombatMapJSON, ASCIIMapDefinition } from "./CombatMap";
 import type {
@@ -141,10 +142,23 @@ export class CombatEncounter {
    * Creates a CombatEncounter from a JSON representation.
    */
   static fromJSON(json: CombatEncounterJSON): CombatEncounter {
-    // Parse map - support both ASCII and JSON grid formats
+    // Parse map - support tileset reference, ASCII, and JSON grid formats
     let map: CombatMap;
-    if ('tileTypes' in json.map && 'grid' in json.map) {
-      // ASCII format
+    if ('tilesetId' in json.map && 'grid' in json.map) {
+      // Tileset reference format - look up the tileset
+      const tilesetId = (json.map as any).tilesetId;
+      const tileset = TilesetRegistry.getById(tilesetId);
+      if (!tileset) {
+        throw new Error(`Tileset '${tilesetId}' not found in registry for encounter '${json.id}'`);
+      }
+      // Create an ASCII map definition using the tileset's tileTypes
+      const asciiDef: ASCIIMapDefinition = {
+        tileTypes: tileset.tileTypes,
+        grid: (json.map as any).grid,
+      };
+      map = parseASCIIMap(asciiDef);
+    } else if ('tileTypes' in json.map && 'grid' in json.map) {
+      // ASCII format with inline tileTypes
       map = parseASCIIMap(json.map as ASCIIMapDefinition);
     } else {
       // JSON grid format

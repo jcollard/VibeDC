@@ -8,6 +8,7 @@ interface DeveloperPanelProps {
   onOpenAbilityRegistry?: () => void;
   onOpenEquipmentRegistry?: () => void;
   onOpenClassRegistry?: () => void;
+  onOpenTilesetRegistry?: () => void;
   onOpenEncounterRegistry?: () => void;
   onOpenDebugPanel?: () => void;
 }
@@ -24,6 +25,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onOpenAbilityRegistry,
   onOpenEquipmentRegistry,
   onOpenClassRegistry,
+  onOpenTilesetRegistry,
   onOpenEncounterRegistry,
   onOpenDebugPanel,
 }) => {
@@ -69,6 +71,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Class',
       available: !!onOpenClassRegistry,
       onClick: onOpenClassRegistry,
+    },
+    {
+      name: 'Tileset Registry',
+      description: 'Browse and edit tilesets',
+      shortcut: 'F2 → Tileset',
+      available: !!onOpenTilesetRegistry,
+      onClick: onOpenTilesetRegistry,
     },
     {
       name: 'Encounter Registry',

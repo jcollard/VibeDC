@@ -10,6 +10,8 @@ import { SpriteRegistry } from '../utils/SpriteRegistry';
 import type { SpriteDefinitionJSON } from '../utils/SpriteRegistry';
 import { EnemyRegistry } from '../utils/EnemyRegistry';
 import type { EnemyDefinitionJSON } from '../utils/EnemyRegistry';
+import { TilesetRegistry } from '../utils/TilesetRegistry';
+import type { TilesetDefinitionJSON } from '../utils/TilesetRegistry';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
@@ -18,6 +20,7 @@ import encounterYaml from './encounter-database.yaml?raw';
 import spriteYaml from './sprite-definitions.yaml?raw';
 import enemyYaml from './enemy-definitions.yaml?raw';
 import equipmentYaml from './equipment-definitions.yaml?raw';
+import tilesetYaml from './tileset-database.yaml?raw';
 
 /**
  * Interface for ability data from YAML
@@ -141,8 +144,22 @@ export function loadClasses(): void {
 }
 
 /**
+ * Load tileset definitions from the YAML database
+ * Must be called before loadEncounters() since encounters reference tilesets
+ */
+export function loadTilesets(): void {
+  const data = yaml.load(tilesetYaml) as { tilesets: TilesetDefinitionJSON[] };
+
+  for (const tilesetData of data.tilesets) {
+    TilesetRegistry.register(tilesetData);
+  }
+
+  console.log(`Loaded ${data.tilesets.length} tilesets`);
+}
+
+/**
  * Load all combat encounters from the YAML database
- * Must be called after loadAbilities(), loadEquipment(), and loadClasses()
+ * Must be called after loadTilesets(), loadAbilities(), loadEquipment(), and loadClasses()
  * since encounters reference these entities
  */
 export function loadEncounters(): void {
@@ -196,13 +213,15 @@ export function loadAllGameData(): void {
   // - Sprites should be loaded first (referenced by enemies)
   // - Abilities must be loaded before classes and encounters
   // - Enemies should be loaded after classes (they reference unit classes)
+  // - Tilesets must be loaded before encounters (encounters reference tilesets)
   loadSprites();
   loadAbilities();
   loadEquipment();
   loadClasses();
   loadEnemies();
+  loadTilesets();
   loadEncounters();
 
   console.log('Game data loaded successfully');
-  console.log(`Total: ${SpriteRegistry.count} sprites, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${CombatEncounter.getAll().length} encounters`);
+  console.log(`Total: ${SpriteRegistry.count} sprites, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${TilesetRegistry.count} tilesets, ${CombatEncounter.getAll().length} encounters`);
 }
