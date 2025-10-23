@@ -397,6 +397,10 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
 
     offscreenCtx.imageSmoothingEnabled = false;
 
+    // Fill with black background to ensure no transparency artifacts
+    offscreenCtx.fillStyle = '#000';
+    offscreenCtx.fillRect(0, 0, width, height);
+
     // Track loaded images to know when all are ready
     const imagesToLoad = new Set<string>();
     const loadedImages = new Map<string, HTMLImageElement>();
