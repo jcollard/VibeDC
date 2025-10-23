@@ -116,17 +116,24 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
         }
       };
 
-      // Clear old encounter from registry
-      CombatEncounter.clearRegistry();
+      // Remove the old encounter from registry if ID changed
+      // (The new one will be auto-registered by the constructor)
+      if (selectedEncounter && selectedEncounter.id !== editedEncounter.id) {
+        // Manually remove from the registry since there's no unregister method
+        // The constructor will add the new one with the new ID
+        (CombatEncounter as any).registry.delete(selectedEncounter.id);
+      }
 
-      // Reload all encounters from their original source
-      // Then update with our edited one
+      // Create the updated encounter (will auto-register with potentially new ID)
       const updatedEncounter = CombatEncounter.fromJSON(encounterWithTileset as any);
 
+      // Update UI state
       setSelectedEncounter(updatedEncounter);
       setIsEditing(false);
       setEditedEncounter(null);
-      loadEncounters();
+
+      // Refresh the encounter list to show the updated registry
+      setEncounters(CombatEncounter.getAll());
     } catch (error) {
       console.error('Failed to save encounter:', error);
       alert(`Failed to save encounter: ${error}`);
@@ -293,6 +300,33 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     } catch (error) {
       console.error('Failed to duplicate encounter:', error);
       alert(`Failed to duplicate encounter: ${error}`);
+    }
+  };
+
+  const handleDelete = () => {
+    if (!selectedEncounter) return;
+
+    // Confirm deletion
+    const confirmed = window.confirm(
+      `Are you sure you want to delete the encounter "${selectedEncounter.name}" (${selectedEncounter.id})?\n\nThis action cannot be undone.`
+    );
+
+    if (!confirmed) return;
+
+    try {
+      // Remove the encounter from the registry
+      (CombatEncounter as any).registry.delete(selectedEncounter.id);
+
+      // Clear selection
+      setSelectedEncounter(null);
+
+      // Refresh the encounter list
+      setEncounters(CombatEncounter.getAll());
+
+      console.log(`Deleted encounter: ${selectedEncounter.id}`);
+    } catch (error) {
+      console.error('Failed to delete encounter:', error);
+      alert(`Failed to delete encounter: ${error}`);
     }
   };
 
@@ -535,6 +569,22 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                           title="Duplicate this encounter"
                         >
                           Duplicate
+                        </button>
+                        <button
+                          onClick={handleDelete}
+                          style={{
+                            padding: '4px 12px',
+                            background: 'rgba(244, 67, 54, 0.3)',
+                            border: '1px solid rgba(244, 67, 54, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                          title="Delete this encounter"
+                        >
+                          Delete
                         </button>
                       </>
                     ) : (
