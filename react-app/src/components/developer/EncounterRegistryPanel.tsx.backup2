@@ -101,10 +101,6 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
 
   const handleEdit = () => {
     if (!selectedEncounter) return;
-
-    // Store a deep copy of the original encounter state for cancel/revert
-    originalEncounterRef.current = selectedEncounter.toJSON();
-
     setIsEditing(true);
     setEditedEncounter(selectedEncounter.toJSON());
     setSelectedTileIndex(null); // Clear tile selection when starting to edit
@@ -115,32 +111,9 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   };
 
   const handleCancelEdit = () => {
-    // Restore the original encounter state
-    if (originalEncounterRef.current && selectedEncounter) {
-      const originalData = originalEncounterRef.current;
-
-      // Recreate the encounter from the stored JSON to restore all properties including the map
-      const restoredEncounter = CombatEncounter.fromJSON(originalData);
-
-      // Update the selectedEncounter with the restored data
-      (selectedEncounter as any).id = restoredEncounter.id;
-      (selectedEncounter as any).name = restoredEncounter.name;
-      (selectedEncounter as any).description = restoredEncounter.description;
-      (selectedEncounter as any).enemyPlacements = restoredEncounter.enemyPlacements;
-      (selectedEncounter as any).playerDeploymentZones = restoredEncounter.playerDeploymentZones;
-      (selectedEncounter as any).tilesetId = restoredEncounter.tilesetId;
-      (selectedEncounter as any).map = restoredEncounter.map;
-      (selectedEncounter as any).victoryConditions = restoredEncounter.victoryConditions;
-      (selectedEncounter as any).defeatConditions = restoredEncounter.defeatConditions;
-
-      // Clear the original state
-      originalEncounterRef.current = null;
-    }
-
     setIsEditing(false);
     setEditedEncounter(null);
     setSelectedTileIndex(null);
-    setMapRenderKey(prev => prev + 1); // Force re-render with restored map
   };
 
   const handleSaveEdit = () => {
