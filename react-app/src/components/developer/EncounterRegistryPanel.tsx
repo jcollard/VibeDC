@@ -67,6 +67,44 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   const handleSaveEdit = () => {
     if (!editedEncounter) return;
 
+    // Validation: Check for ID conflicts
+    const existingEncounter = CombatEncounter.getById(editedEncounter.id);
+    if (existingEncounter && selectedEncounter && existingEncounter.id !== selectedEncounter.id) {
+      alert(`Error: An encounter with ID "${editedEncounter.id}" already exists. Please use a different ID.`);
+      return;
+    }
+
+    // Validation: Check for duplicate deployment zone positions
+    const deploymentPositions = new Set<string>();
+    for (const zone of editedEncounter.playerDeploymentZones) {
+      const posKey = `${zone.x},${zone.y}`;
+      if (deploymentPositions.has(posKey)) {
+        alert(`Error: Duplicate deployment zone at position (${zone.x}, ${zone.y}). Each deployment zone must have a unique position.`);
+        return;
+      }
+      deploymentPositions.add(posKey);
+    }
+
+    // Validation: Check for duplicate enemy positions
+    const enemyPositions = new Set<string>();
+    for (const placement of editedEncounter.enemyPlacements) {
+      const posKey = `${placement.position.x},${placement.position.y}`;
+      if (enemyPositions.has(posKey)) {
+        alert(`Error: Duplicate enemy placement at position (${placement.position.x}, ${placement.position.y}). Each enemy must have a unique position.`);
+        return;
+      }
+      enemyPositions.add(posKey);
+    }
+
+    // Validation: Check for positions that overlap between enemies and deployment zones
+    for (const zone of editedEncounter.playerDeploymentZones) {
+      const posKey = `${zone.x},${zone.y}`;
+      if (enemyPositions.has(posKey)) {
+        alert(`Error: Position (${zone.x}, ${zone.y}) is used by both a deployment zone and an enemy. Positions cannot overlap.`);
+        return;
+      }
+    }
+
     try {
       // Update the encounter's map to include the edited tileset ID
       // We need to create a map object that includes the tilesetId
@@ -217,6 +255,45 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
       ...editedEncounter,
       playerDeploymentZones: newZones,
     });
+  };
+
+  const handleDuplicate = () => {
+    if (!selectedEncounter) return;
+
+    // Generate a unique ID for the duplicated encounter
+    let newId = `${selectedEncounter.id}-copy`;
+    let counter = 1;
+    while (CombatEncounter.getById(newId)) {
+      newId = `${selectedEncounter.id}-copy-${counter}`;
+      counter++;
+    }
+
+    // Create the duplicated encounter data
+    const duplicatedEncounter = {
+      ...selectedEncounter.toJSON(),
+      id: newId,
+      name: `${selectedEncounter.name} (Copy)`,
+      map: {
+        tilesetId: selectedEncounter.tilesetId || 'forest',
+        grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
+      }
+    };
+
+    try {
+      // Create the new encounter
+      const newEncounter = CombatEncounter.fromJSON(duplicatedEncounter as any);
+
+      // Refresh the encounter list
+      loadEncounters();
+
+      // Select the newly created encounter
+      setSelectedEncounter(newEncounter);
+
+      console.log(`Duplicated encounter: ${selectedEncounter.id} -> ${newId}`);
+    } catch (error) {
+      console.error('Failed to duplicate encounter:', error);
+      alert(`Failed to duplicate encounter: ${error}`);
+    }
   };
 
   const filteredEncounters = selectedTag
@@ -427,21 +504,39 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                   )}
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {!isEditing ? (
-                      <button
-                        onClick={handleEdit}
-                        style={{
-                          padding: '4px 12px',
-                          background: 'rgba(76, 175, 80, 0.3)',
-                          border: '1px solid rgba(76, 175, 80, 0.6)',
-                          borderRadius: '3px',
-                          color: '#fff',
-                          fontSize: '10px',
-                          cursor: 'pointer',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        Edit
-                      </button>
+                      <>
+                        <button
+                          onClick={handleEdit}
+                          style={{
+                            padding: '4px 12px',
+                            background: 'rgba(76, 175, 80, 0.3)',
+                            border: '1px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={handleDuplicate}
+                          style={{
+                            padding: '4px 12px',
+                            background: 'rgba(255, 193, 7, 0.3)',
+                            border: '1px solid rgba(255, 193, 7, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                          title="Duplicate this encounter"
+                        >
+                          Duplicate
+                        </button>
+                      </>
                     ) : (
                       <>
                         <button
