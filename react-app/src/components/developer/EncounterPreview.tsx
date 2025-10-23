@@ -90,6 +90,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [lastDragPos, setLastDragPos] = useState<{ x: number; y: number } | null>(null);
+  const lastHoverPosRef = useRef<{ x: number; y: number } | null>(null);
 
   // Use controlled state if provided, otherwise use local state
   const [selectedTileIndexLocal, setSelectedTileIndexLocal] = useState<number | null>(null);
@@ -279,7 +280,11 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
 
     // Check if within map bounds
     if (gridX >= 0 && gridX < encounter.map.width && gridY >= 0 && gridY < encounter.map.height) {
-      setHoverGridPos({ x: gridX, y: gridY });
+      // Only update hover position if it actually changed (prevents unnecessary redraws)
+      if (!lastHoverPosRef.current || lastHoverPosRef.current.x !== gridX || lastHoverPosRef.current.y !== gridY) {
+        lastHoverPosRef.current = { x: gridX, y: gridY };
+        setHoverGridPos({ x: gridX, y: gridY });
+      }
 
       // If dragging, place tiles along the line from last position to current position
       if (isDragging && (onBatchTilePlacement || onTilePlacement)) {
@@ -324,6 +329,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         setLastDragPos({ x: gridX, y: gridY });
       }
     } else {
+      lastHoverPosRef.current = null;
       setHoverGridPos(null);
     }
   };
@@ -355,6 +361,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
 
   // Handle mouse leave
   const handleCanvasMouseLeave = () => {
+    lastHoverPosRef.current = null;
     setHoverGridPos(null);
     setIsDragging(false);
     setLastDragPos(null);
@@ -705,7 +712,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         default: return '#444';
       }
     }
-  }, [encounter, selectedEnemyIndex, selectedZoneIndex, hoverGridPos, selectedTileIndex, mapUpdateTrigger]);
+  }, [encounter, selectedEnemyIndex, selectedZoneIndex, selectedTileIndex, mapUpdateTrigger, hoverGridPos]);
 
   const handleDeleteClick = () => {
     if (selectedEnemyIndex !== null && onEnemyRemove) {
