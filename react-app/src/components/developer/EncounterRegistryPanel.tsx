@@ -196,11 +196,45 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   };
 
   const handleAddEnemyPlacement = () => {
-    if (!editedEncounter) return;
+    if (!editedEncounter || !selectedEncounter) return;
+
+    // Find the first empty walkable tile
+    let foundPosition: { x: number; y: number } | null = null;
+
+    for (let y = 0; y < selectedEncounter.map.height; y++) {
+      for (let x = 0; x < selectedEncounter.map.width; x++) {
+        const cell = selectedEncounter.map.getCell({ x, y });
+
+        // Check if cell is walkable
+        if (!cell?.walkable) continue;
+
+        // Check if position is occupied by an enemy
+        const isOccupiedByEnemy = editedEncounter.enemyPlacements.some(
+          placement => placement.position.x === x && placement.position.y === y
+        );
+        if (isOccupiedByEnemy) continue;
+
+        // Check if position is occupied by a deployment zone
+        const isOccupiedByDeployment = editedEncounter.playerDeploymentZones.some(
+          zone => zone.x === x && zone.y === y
+        );
+        if (isOccupiedByDeployment) continue;
+
+        // Found an empty walkable tile!
+        foundPosition = { x, y };
+        break;
+      }
+      if (foundPosition) break;
+    }
+
+    // If no empty position found, default to (0, 0)
+    const position = foundPosition || { x: 0, y: 0 };
+
     const newPlacement: EnemyPlacement = {
       enemyId: EnemyRegistry.getAllIds()[0] || 'goblin',
-      position: { x: 0, y: 0 },
+      position: position,
     };
+
     setEditedEncounter({
       ...editedEncounter,
       enemyPlacements: [...editedEncounter.enemyPlacements, newPlacement],
