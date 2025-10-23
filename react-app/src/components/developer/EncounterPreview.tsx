@@ -1,16 +1,17 @@
 import { useEffect, useRef } from 'react';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { EnemyRegistry } from '../../utils/EnemyRegistry';
 
-interface PreviewEncounterProps {
+interface EncounterPreviewProps {
   encounter: CombatEncounter;
 }
 
 /**
- * PreviewEncounter displays a visual preview of the combat encounter map.
- * Shows the map grid with sprites rendered at 2x scale.
+ * EncounterPreview displays a visual preview of the combat encounter map.
+ * Shows the map grid with sprites rendered at 2x scale, including enemy sprites.
  */
-export const PreviewEncounter: React.FC<PreviewEncounterProps> = ({ encounter }) => {
+export const EncounterPreview: React.FC<EncounterPreviewProps> = ({ encounter }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
   useEffect(() => {
@@ -36,7 +37,7 @@ export const PreviewEncounter: React.FC<PreviewEncounterProps> = ({ encounter })
     const imagesToLoad = new Set<string>();
     const loadedImages = new Map<string, HTMLImageElement>();
 
-    // Collect all unique sprite sheets needed
+    // Collect all unique sprite sheets needed (from map tiles)
     for (let y = 0; y < encounter.map.height; y++) {
       for (let x = 0; x < encounter.map.width; x++) {
         const cell = encounter.map.getCell({ x, y });
@@ -45,6 +46,17 @@ export const PreviewEncounter: React.FC<PreviewEncounterProps> = ({ encounter })
           if (sprite && !imagesToLoad.has(sprite.spriteSheet)) {
             imagesToLoad.add(sprite.spriteSheet);
           }
+        }
+      }
+    }
+
+    // Collect sprite sheets from enemy placements
+    for (const placement of encounter.enemyPlacements) {
+      const enemyDef = EnemyRegistry.getById(placement.enemyId);
+      if (enemyDef?.spriteId) {
+        const sprite = SpriteRegistry.getById(enemyDef.spriteId);
+        if (sprite && !imagesToLoad.has(sprite.spriteSheet)) {
+          imagesToLoad.add(sprite.spriteSheet);
         }
       }
     }
@@ -128,32 +140,60 @@ export const PreviewEncounter: React.FC<PreviewEncounterProps> = ({ encounter })
         }
       }
 
-      // Draw enemy placements
-      ctx.fillStyle = 'rgba(244, 67, 54, 0.4)';
-      ctx.strokeStyle = 'rgba(244, 67, 54, 0.8)';
-      ctx.lineWidth = 2;
+      // Draw enemy placements with sprites
       for (const placement of encounter.enemyPlacements) {
         const screenX = placement.position.x * SCALED_SIZE;
         const screenY = placement.position.y * SCALED_SIZE;
-        ctx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
-        ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
 
-        // Draw 'E' marker
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('E', screenX + SCALED_SIZE / 2, screenY + SCALED_SIZE / 2);
+        const enemyDef = EnemyRegistry.getById(placement.enemyId);
+        if (enemyDef?.spriteId) {
+          const sprite = SpriteRegistry.getById(enemyDef.spriteId);
+          if (sprite) {
+            const img = loadedImages.get(sprite.spriteSheet);
+            if (img) {
+              // Draw the enemy sprite
+              ctx.drawImage(
+                img,
+                sprite.x * SPRITE_SIZE,
+                sprite.y * SPRITE_SIZE,
+                SPRITE_SIZE,
+                SPRITE_SIZE,
+                screenX,
+                screenY,
+                SCALED_SIZE,
+                SCALED_SIZE
+              );
+            } else {
+              // Sprite sheet not loaded, draw red placeholder with 'E'
+              drawEnemyPlaceholder(screenX, screenY);
+            }
+          } else {
+            // Sprite not found, draw red placeholder with 'E'
+            drawEnemyPlaceholder(screenX, screenY);
+          }
+        } else {
+          // No sprite defined for enemy, draw red placeholder with 'E'
+          drawEnemyPlaceholder(screenX, screenY);
+        }
+
+        // Draw red border around enemy position
+        ctx.strokeStyle = 'rgba(244, 67, 54, 0.8)';
+        ctx.lineWidth = 2;
+        ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
       }
 
       // Draw deployment zones
-      ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
-      ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
-      ctx.lineWidth = 2;
       for (const zone of encounter.playerDeploymentZones) {
         const screenX = zone.x * SCALED_SIZE;
         const screenY = zone.y * SCALED_SIZE;
+
+        // Draw green overlay
+        ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
         ctx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+
+        // Draw green border
+        ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
+        ctx.lineWidth = 2;
         ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
 
         // Draw 'P' marker
@@ -174,6 +214,17 @@ export const PreviewEncounter: React.FC<PreviewEncounterProps> = ({ encounter })
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('?', x + SCALED_SIZE / 2, y + SCALED_SIZE / 2);
+    }
+
+    function drawEnemyPlaceholder(x: number, y: number) {
+      if (!ctx) return;
+      ctx.fillStyle = 'rgba(244, 67, 54, 0.4)';
+      ctx.fillRect(x, y, SCALED_SIZE, SCALED_SIZE);
+      ctx.fillStyle = '#fff';
+      ctx.font = 'bold 16px monospace';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('E', x + SCALED_SIZE / 2, y + SCALED_SIZE / 2);
     }
 
     function getTerrainColor(terrain: string): string {
@@ -225,7 +276,7 @@ export const PreviewEncounter: React.FC<PreviewEncounterProps> = ({ encounter })
       </div>
       <div style={{ fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
         <span style={{ color: '#4caf50' }}>■ P</span> = Player deployment zones |{' '}
-        <span style={{ color: '#f44336' }}>■ E</span> = Enemy placements
+        <span style={{ color: '#f44336' }}>Red border</span> = Enemy placements (with sprite)
       </div>
     </div>
   );
