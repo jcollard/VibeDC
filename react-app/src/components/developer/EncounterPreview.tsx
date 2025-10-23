@@ -83,6 +83,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
   const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
+  const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
 
   // Use controlled state if provided, otherwise use local state
   const [selectedTileIndexLocal, setSelectedTileIndexLocal] = useState<number | null>(null);
@@ -114,7 +115,29 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
 
     // Priority 1: If a tile is selected, place it (overrides enemy/zone selection)
     if (selectedTileIndex !== null) {
-      // Place the tile regardless of what's at this position
+      // Check if there's an enemy or zone at this position
+      const hasEnemy = encounter.enemyPlacements.some(
+        placement => placement.position.x === gridX && placement.position.y === gridY
+      );
+      const hasZone = encounter.playerDeploymentZones.some(
+        zone => zone.x === gridX && zone.y === gridY
+      );
+
+      // Get the tileset to check if the tile is walkable
+      if (encounter.tilesetId) {
+        const tileset = TilesetRegistry.getById(encounter.tilesetId);
+        if (tileset) {
+          const tileType = tileset.tileTypes[selectedTileIndex];
+
+          // Don't allow placing non-walkable tiles where enemies or zones are
+          if (!tileType.walkable && (hasEnemy || hasZone)) {
+            // Could add visual feedback here (e.g., flash the cell red)
+            return; // Don't place the tile
+          }
+        }
+      }
+
+      // Place the tile
       if (onTilePlacement) {
         onTilePlacement(gridX, gridY, selectedTileIndex);
       }
@@ -194,6 +217,40 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         }
       }
     }
+  };
+
+  // Handle mouse move for tile preview
+  const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isEditing || !canvasRef.current || selectedTileIndex === null) {
+      setHoverGridPos(null);
+      return;
+    }
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const SPRITE_SIZE = 12;
+    const SCALE = 2;
+    const SCALED_SIZE = SPRITE_SIZE * SCALE;
+
+    // Get mouse position relative to canvas
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+
+    // Convert to grid coordinates
+    const gridX = Math.floor(mouseX / SCALED_SIZE);
+    const gridY = Math.floor(mouseY / SCALED_SIZE);
+
+    // Check if within map bounds
+    if (gridX >= 0 && gridX < encounter.map.width && gridY >= 0 && gridY < encounter.map.height) {
+      setHoverGridPos({ x: gridX, y: gridY });
+    } else {
+      setHoverGridPos(null);
+    }
+  };
+
+  // Handle mouse leave
+  const handleCanvasMouseLeave = () => {
+    setHoverGridPos(null);
   };
 
   useEffect(() => {
@@ -399,6 +456,55 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         ctx.textBaseline = 'middle';
         ctx.fillText('P', screenX + SCALED_SIZE / 2, screenY + SCALED_SIZE / 2);
       }
+
+      // Draw hover preview for tile placement
+      if (hoverGridPos && selectedTileIndex !== null && encounter.tilesetId) {
+        const tileset = TilesetRegistry.getById(encounter.tilesetId);
+        if (tileset) {
+          const tileType = tileset.tileTypes[selectedTileIndex];
+          if (tileType) {
+            const screenX = hoverGridPos.x * SCALED_SIZE;
+            const screenY = hoverGridPos.y * SCALED_SIZE;
+
+            // Check if placement would be valid (for non-walkable tiles)
+            const hasEnemy = encounter.enemyPlacements.some(
+              p => p.position.x === hoverGridPos.x && p.position.y === hoverGridPos.y
+            );
+            const hasZone = encounter.playerDeploymentZones.some(
+              z => z.x === hoverGridPos.x && z.y === hoverGridPos.y
+            );
+            const isValidPlacement = tileType.walkable || (!hasEnemy && !hasZone);
+
+            // Draw preview tile with transparency
+            if (tileType.spriteId) {
+              const sprite = SpriteRegistry.getById(tileType.spriteId);
+              if (sprite) {
+                const img = loadedImages.get(sprite.spriteSheet);
+                if (img) {
+                  ctx.globalAlpha = isValidPlacement ? 0.5 : 0.3;
+                  ctx.drawImage(
+                    img,
+                    sprite.x * SPRITE_SIZE,
+                    sprite.y * SPRITE_SIZE,
+                    SPRITE_SIZE,
+                    SPRITE_SIZE,
+                    screenX,
+                    screenY,
+                    SCALED_SIZE,
+                    SCALED_SIZE
+                  );
+                  ctx.globalAlpha = 1.0;
+                }
+              }
+            }
+
+            // Draw border (green if valid, red if invalid)
+            ctx.strokeStyle = isValidPlacement ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)';
+            ctx.lineWidth = 2;
+            ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+          }
+        }
+      }
     }
 
     function drawPlaceholder(x: number, y: number, color: string) {
@@ -433,7 +539,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         default: return '#444';
       }
     }
-  }, [encounter, selectedEnemyIndex, selectedZoneIndex]);
+  }, [encounter, selectedEnemyIndex, selectedZoneIndex, hoverGridPos, selectedTileIndex]);
 
   const handleDeleteClick = () => {
     if (selectedEnemyIndex !== null && onEnemyRemove) {
@@ -476,6 +582,8 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
           <canvas
             ref={canvasRef}
             onClick={handleCanvasClick}
+            onMouseMove={handleCanvasMouseMove}
+            onMouseLeave={handleCanvasMouseLeave}
             style={{
               imageRendering: 'pixelated',
               display: 'block',
