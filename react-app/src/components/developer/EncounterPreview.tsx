@@ -8,6 +8,8 @@ interface EncounterPreviewProps {
   isEditing?: boolean;
   onEnemyMove?: (enemyIndex: number, newX: number, newY: number) => void;
   onDeploymentZoneMove?: (zoneIndex: number, newX: number, newY: number) => void;
+  onEnemyRemove?: (enemyIndex: number) => void;
+  onDeploymentZoneRemove?: (zoneIndex: number) => void;
 }
 
 /**
@@ -19,7 +21,9 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   encounter,
   isEditing = false,
   onEnemyMove,
-  onDeploymentZoneMove
+  onDeploymentZoneMove,
+  onEnemyRemove,
+  onDeploymentZoneRemove
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
@@ -362,6 +366,16 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     }
   }, [encounter, selectedEnemyIndex, selectedZoneIndex]);
 
+  const handleDeleteClick = () => {
+    if (selectedEnemyIndex !== null && onEnemyRemove) {
+      onEnemyRemove(selectedEnemyIndex);
+      setSelectedEnemyIndex(null);
+    } else if (selectedZoneIndex !== null && onDeploymentZoneRemove) {
+      onDeploymentZoneRemove(selectedZoneIndex);
+      setSelectedZoneIndex(null);
+    }
+  };
+
   return (
     <div
       style={{
@@ -377,27 +391,49 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
       <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#4fc3f7' }}>
         Map Preview
       </div>
-      <div
-        style={{
-          background: '#000',
-          border: '1px solid rgba(255, 255, 255, 0.3)',
-          borderRadius: '3px',
-          padding: '8px',
-          display: 'inline-block',
-          overflow: 'auto',
-          maxWidth: '100%',
-          maxHeight: '400px',
-        }}
-      >
-        <canvas
-          ref={canvasRef}
-          onClick={handleCanvasClick}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
+        <div
           style={{
-            imageRendering: 'pixelated',
-            display: 'block',
-            cursor: isEditing ? 'pointer' : 'default',
-          } as React.CSSProperties}
-        />
+            background: '#000',
+            border: '1px solid rgba(255, 255, 255, 0.3)',
+            borderRadius: '3px',
+            padding: '8px',
+            display: 'inline-block',
+            overflow: 'auto',
+            maxWidth: '100%',
+            maxHeight: '400px',
+          }}
+        >
+          <canvas
+            ref={canvasRef}
+            onClick={handleCanvasClick}
+            style={{
+              imageRendering: 'pixelated',
+              display: 'block',
+              cursor: isEditing ? 'pointer' : 'default',
+            } as React.CSSProperties}
+          />
+        </div>
+        {isEditing && (selectedEnemyIndex !== null || selectedZoneIndex !== null) && (
+          <button
+            onClick={handleDeleteClick}
+            style={{
+              padding: '8px 12px',
+              background: 'rgba(244, 67, 54, 0.9)',
+              color: '#fff',
+              border: 'none',
+              borderRadius: '4px',
+              cursor: 'pointer',
+              fontSize: '20px',
+              lineHeight: '1',
+              minWidth: '40px',
+              height: '40px',
+            }}
+            title={selectedEnemyIndex !== null ? 'Delete selected enemy' : 'Delete selected deployment zone'}
+          >
+            🗑️
+          </button>
+        )}
       </div>
       <div style={{ fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
         <span style={{ color: '#4caf50' }}>■ P</span> = Player deployment zones |{' '}

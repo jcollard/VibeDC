@@ -828,6 +828,22 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                       playerDeploymentZones: newZones,
                     });
                   }}
+                  onEnemyRemove={(enemyIndex) => {
+                    if (!editedEncounter) return;
+                    const newPlacements = editedEncounter.enemyPlacements.filter((_, i) => i !== enemyIndex);
+                    setEditedEncounter({
+                      ...editedEncounter,
+                      enemyPlacements: newPlacements,
+                    });
+                  }}
+                  onDeploymentZoneRemove={(zoneIndex) => {
+                    if (!editedEncounter) return;
+                    const newZones = editedEncounter.playerDeploymentZones.filter((_, i) => i !== zoneIndex);
+                    setEditedEncounter({
+                      ...editedEncounter,
+                      playerDeploymentZones: newZones,
+                    });
+                  }}
                 />
               ) : (
                 <EncounterPreview encounter={selectedEncounter} />
