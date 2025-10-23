@@ -9,7 +9,12 @@
       "Bash(npm init -y)",
       "Bash(npm install firebase-admin firebase-functions@latest)",
       "Bash(npm install --save-dev typescript @types/node)",
-      "Bash(tree -L 3 -I node_modules \"/c/Users/User/git/CaptainCoderOrg/VibeDC/react-app/src\")"
+      "Bash(tree -L 3 -I node_modules \"/c/Users/User/git/CaptainCoderOrg/VibeDC/react-app/src\")",
+      "Bash(npm run build)",
+      "Bash(node generate-sprites.js)",
+      "Bash(npm test -- CombatEncounter.test.ts)",
+      "Bash(npm test)",
+      "Bash(npm test -- DataLoader.test.ts)"
     ],
     "deny": [],
     "ask": []
