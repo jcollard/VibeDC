@@ -7,6 +7,7 @@ classes:
       - "melee"
       - "physical"
       - "tank"
+      - "player"
     learnableAbilities:
       - "charge-001"
       - "bash-001"
@@ -33,6 +34,7 @@ classes:
       - "melee"
       - "agile"
       - "stealth"
+      - "player"
     learnableAbilities:
       - "throw-stone-001"
       - "sneak-001"
@@ -61,6 +63,7 @@ classes:
       - "magic"
       - "caster"
       - "support"
+      - "player"
     learnableAbilities:
       - "heal-001"
       - "minor-shield-001"
@@ -79,4 +82,10 @@ classes:
       magicPower: 2
     multipliers:
       mana: 1.25
+
+  - id: "monster"
+    name: "Monster"
+    description: "Generic class for monster enemies"
+    tags:
+      - "monster"
 

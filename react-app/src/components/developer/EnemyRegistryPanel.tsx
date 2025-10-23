@@ -833,8 +833,7 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Unit Class:</label>
                   {isEditing ? (
-                    <input
-                      type="text"
+                    <select
                       value={editedEnemy?.unitClassId || ''}
                       onChange={(e) => handleFieldChange('unitClassId', e.target.value)}
                       style={{
@@ -847,9 +846,18 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                         fontFamily: 'monospace',
                         fontSize: '11px',
                       }}
-                    />
+                    >
+                      <option value="">Select a class...</option>
+                      {availableClasses.map(unitClass => (
+                        <option key={unitClass.id} value={unitClass.id}>
+                          {unitClass.name}
+                        </option>
+                      ))}
+                    </select>
                   ) : (
-                    <div style={{ color: '#fff' }}>{selectedEnemy.unitClassId}</div>
+                    <div style={{ color: '#fff' }}>
+                      {UnitClass.getById(selectedEnemy.unitClassId)?.name || selectedEnemy.unitClassId}
+                    </div>
                   )}
                 </div>
 
