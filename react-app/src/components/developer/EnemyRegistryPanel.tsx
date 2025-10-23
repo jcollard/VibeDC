@@ -3,8 +3,10 @@ import { EnemyRegistry } from '../../utils/EnemyRegistry';
 import type { EnemyDefinition, UnitType } from '../../utils/EnemyRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { SpriteBrowser } from './SpriteBrowser';
+import { EquipmentBrowser } from './EquipmentBrowser';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { UnitClass } from '../../models/combat/UnitClass';
+import { Equipment } from '../../models/combat/Equipment';
 import { TagFilter } from './TagFilter';
 
 interface EnemyRegistryPanelProps {
@@ -24,6 +26,8 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
   const [editedEnemy, setEditedEnemy] = useState<EnemyDefinition | null>(null);
   const [editError, setEditError] = useState<string>('');
   const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
+  const [equipmentBrowserVisible, setEquipmentBrowserVisible] = useState(false);
+  const [equipmentBrowserSlot, setEquipmentBrowserSlot] = useState<'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory' | null>(null);
   const spriteCanvasRef = useRef<HTMLCanvasElement>(null);
   const [availableAbilities, setAvailableAbilities] = useState<CombatAbility[]>([]);
   const [availableClasses, setAvailableClasses] = useState<UnitClass[]>([]);
@@ -1195,24 +1199,50 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                     <div>
                       <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Left Hand:</label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedEnemy?.leftHandId || ''}
-                          onChange={(e) => handleFieldChange('leftHandId', e.target.value || undefined)}
-                          placeholder="equipment-id"
-                          style={{
-                            width: '100%',
-                            padding: '4px',
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            border: '1px solid #666',
-                            borderRadius: '3px',
-                            color: '#fff',
-                            fontFamily: 'monospace',
-                            fontSize: '10px',
-                          }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={editedEnemy?.leftHandId || ''}
+                            onChange={(e) => handleFieldChange('leftHandId', e.target.value || undefined)}
+                            placeholder="equipment-id"
+                            style={{
+                              flex: 1,
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontFamily: 'monospace',
+                              fontSize: '10px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              setEquipmentBrowserSlot('leftHand');
+                              setEquipmentBrowserVisible(true);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(33, 150, 243, 0.2)',
+                              border: '1px solid rgba(33, 150, 243, 0.4)',
+                              borderRadius: '3px',
+                              color: '#42a5f5',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                            title="Browse equipment"
+                          >
+                            ...
+                          </button>
+                        </div>
                       ) : (
-                        <div style={{ color: '#fff' }}>{selectedEnemy.leftHandId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                        <div style={{ color: '#fff', fontSize: '10px' }}>
+                          {selectedEnemy.leftHandId
+                            ? Equipment.getById(selectedEnemy.leftHandId)?.name || selectedEnemy.leftHandId
+                            : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                          }
+                        </div>
                       )}
                     </div>
 
@@ -1220,24 +1250,50 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                     <div>
                       <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Right Hand:</label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedEnemy?.rightHandId || ''}
-                          onChange={(e) => handleFieldChange('rightHandId', e.target.value || undefined)}
-                          placeholder="equipment-id"
-                          style={{
-                            width: '100%',
-                            padding: '4px',
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            border: '1px solid #666',
-                            borderRadius: '3px',
-                            color: '#fff',
-                            fontFamily: 'monospace',
-                            fontSize: '10px',
-                          }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={editedEnemy?.rightHandId || ''}
+                            onChange={(e) => handleFieldChange('rightHandId', e.target.value || undefined)}
+                            placeholder="equipment-id"
+                            style={{
+                              flex: 1,
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontFamily: 'monospace',
+                              fontSize: '10px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              setEquipmentBrowserSlot('rightHand');
+                              setEquipmentBrowserVisible(true);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(33, 150, 243, 0.2)',
+                              border: '1px solid rgba(33, 150, 243, 0.4)',
+                              borderRadius: '3px',
+                              color: '#42a5f5',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                            title="Browse equipment"
+                          >
+                            ...
+                          </button>
+                        </div>
                       ) : (
-                        <div style={{ color: '#fff' }}>{selectedEnemy.rightHandId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                        <div style={{ color: '#fff', fontSize: '10px' }}>
+                          {selectedEnemy.rightHandId
+                            ? Equipment.getById(selectedEnemy.rightHandId)?.name || selectedEnemy.rightHandId
+                            : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                          }
+                        </div>
                       )}
                     </div>
 
@@ -1245,24 +1301,50 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                     <div>
                       <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Head:</label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedEnemy?.headId || ''}
-                          onChange={(e) => handleFieldChange('headId', e.target.value || undefined)}
-                          placeholder="equipment-id"
-                          style={{
-                            width: '100%',
-                            padding: '4px',
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            border: '1px solid #666',
-                            borderRadius: '3px',
-                            color: '#fff',
-                            fontFamily: 'monospace',
-                            fontSize: '10px',
-                          }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={editedEnemy?.headId || ''}
+                            onChange={(e) => handleFieldChange('headId', e.target.value || undefined)}
+                            placeholder="equipment-id"
+                            style={{
+                              flex: 1,
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontFamily: 'monospace',
+                              fontSize: '10px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              setEquipmentBrowserSlot('head');
+                              setEquipmentBrowserVisible(true);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(33, 150, 243, 0.2)',
+                              border: '1px solid rgba(33, 150, 243, 0.4)',
+                              borderRadius: '3px',
+                              color: '#42a5f5',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                            title="Browse equipment"
+                          >
+                            ...
+                          </button>
+                        </div>
                       ) : (
-                        <div style={{ color: '#fff' }}>{selectedEnemy.headId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                        <div style={{ color: '#fff', fontSize: '10px' }}>
+                          {selectedEnemy.headId
+                            ? Equipment.getById(selectedEnemy.headId)?.name || selectedEnemy.headId
+                            : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                          }
+                        </div>
                       )}
                     </div>
 
@@ -1270,24 +1352,50 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                     <div>
                       <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Body:</label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedEnemy?.bodyId || ''}
-                          onChange={(e) => handleFieldChange('bodyId', e.target.value || undefined)}
-                          placeholder="equipment-id"
-                          style={{
-                            width: '100%',
-                            padding: '4px',
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            border: '1px solid #666',
-                            borderRadius: '3px',
-                            color: '#fff',
-                            fontFamily: 'monospace',
-                            fontSize: '10px',
-                          }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={editedEnemy?.bodyId || ''}
+                            onChange={(e) => handleFieldChange('bodyId', e.target.value || undefined)}
+                            placeholder="equipment-id"
+                            style={{
+                              flex: 1,
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontFamily: 'monospace',
+                              fontSize: '10px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              setEquipmentBrowserSlot('body');
+                              setEquipmentBrowserVisible(true);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(33, 150, 243, 0.2)',
+                              border: '1px solid rgba(33, 150, 243, 0.4)',
+                              borderRadius: '3px',
+                              color: '#42a5f5',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                            title="Browse equipment"
+                          >
+                            ...
+                          </button>
+                        </div>
                       ) : (
-                        <div style={{ color: '#fff' }}>{selectedEnemy.bodyId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                        <div style={{ color: '#fff', fontSize: '10px' }}>
+                          {selectedEnemy.bodyId
+                            ? Equipment.getById(selectedEnemy.bodyId)?.name || selectedEnemy.bodyId
+                            : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                          }
+                        </div>
                       )}
                     </div>
 
@@ -1295,24 +1403,50 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                     <div style={{ gridColumn: 'span 2' }}>
                       <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Accessory:</label>
                       {isEditing ? (
-                        <input
-                          type="text"
-                          value={editedEnemy?.accessoryId || ''}
-                          onChange={(e) => handleFieldChange('accessoryId', e.target.value || undefined)}
-                          placeholder="equipment-id"
-                          style={{
-                            width: '100%',
-                            padding: '4px',
-                            background: 'rgba(0, 0, 0, 0.5)',
-                            border: '1px solid #666',
-                            borderRadius: '3px',
-                            color: '#fff',
-                            fontFamily: 'monospace',
-                            fontSize: '10px',
-                          }}
-                        />
+                        <div style={{ display: 'flex', gap: '4px' }}>
+                          <input
+                            type="text"
+                            value={editedEnemy?.accessoryId || ''}
+                            onChange={(e) => handleFieldChange('accessoryId', e.target.value || undefined)}
+                            placeholder="equipment-id"
+                            style={{
+                              flex: 1,
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontFamily: 'monospace',
+                              fontSize: '10px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              setEquipmentBrowserSlot('accessory');
+                              setEquipmentBrowserVisible(true);
+                            }}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(33, 150, 243, 0.2)',
+                              border: '1px solid rgba(33, 150, 243, 0.4)',
+                              borderRadius: '3px',
+                              color: '#42a5f5',
+                              fontSize: '10px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                            title="Browse equipment"
+                          >
+                            ...
+                          </button>
+                        </div>
                       ) : (
-                        <div style={{ color: '#fff' }}>{selectedEnemy.accessoryId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                        <div style={{ color: '#fff', fontSize: '10px' }}>
+                          {selectedEnemy.accessoryId
+                            ? Equipment.getById(selectedEnemy.accessoryId)?.name || selectedEnemy.accessoryId
+                            : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                          }
+                        </div>
                       )}
                     </div>
                   </div>
@@ -1597,6 +1731,28 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
             setSpriteBrowserVisible(false);
           }}
           onClose={() => setSpriteBrowserVisible(false)}
+        />
+      )}
+
+      {/* Equipment Browser Modal */}
+      {equipmentBrowserVisible && equipmentBrowserSlot && (
+        <EquipmentBrowser
+          selectedEquipmentId={editedEnemy?.[`${equipmentBrowserSlot}Id` as keyof EnemyDefinition] as string | undefined}
+          onSelectEquipment={(equipmentId) => {
+            handleFieldChange(`${equipmentBrowserSlot}Id`, equipmentId || undefined);
+            setEquipmentBrowserVisible(false);
+            setEquipmentBrowserSlot(null);
+          }}
+          onClose={() => {
+            setEquipmentBrowserVisible(false);
+            setEquipmentBrowserSlot(null);
+          }}
+          filterType={
+            equipmentBrowserSlot === 'head' ? 'Head' :
+            equipmentBrowserSlot === 'body' ? 'Body' :
+            equipmentBrowserSlot === 'accessory' ? 'Accessory' :
+            undefined // leftHand and rightHand can be any hand-held equipment
+          }
         />
       )}
     </div>

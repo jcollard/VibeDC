@@ -22,6 +22,10 @@ enemies:
     passiveAbilityId: "fast-001"
     movementAbilityId: "meditate-001"
     secondaryClassId: "fighter"
+    leftHandId: "flame-blade-001"
+    headId: "crown-of-courage-001"
+    bodyId: "dragon-scale-armor-001"
+    accessoryId: "strength-ring-001"
     tags: ["dragon", "boss", "strong", "magic", "legendary"]
     description: "An elder dragon of immense power and wisdom"
 
