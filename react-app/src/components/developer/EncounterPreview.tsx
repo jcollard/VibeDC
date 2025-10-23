@@ -7,6 +7,7 @@ interface EncounterPreviewProps {
   encounter: CombatEncounter;
   isEditing?: boolean;
   onEnemyMove?: (enemyIndex: number, newX: number, newY: number) => void;
+  onDeploymentZoneMove?: (zoneIndex: number, newX: number, newY: number) => void;
 }
 
 /**
@@ -17,10 +18,12 @@ interface EncounterPreviewProps {
 export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   encounter,
   isEditing = false,
-  onEnemyMove
+  onEnemyMove,
+  onDeploymentZoneMove
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
+  const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
 
   // Handle canvas click
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -50,12 +53,26 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
       placement => placement.position.x === gridX && placement.position.y === gridY
     );
 
+    // Check if clicked on a deployment zone
+    const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(
+      zone => zone.x === gridX && zone.y === gridY
+    );
+
     if (clickedEnemyIndex !== -1) {
-      // Clicked on an enemy - toggle selection
+      // Clicked on an enemy - toggle selection, deselect zone
+      setSelectedZoneIndex(null);
       if (selectedEnemyIndex === clickedEnemyIndex) {
         setSelectedEnemyIndex(null); // Deselect
       } else {
         setSelectedEnemyIndex(clickedEnemyIndex); // Select
+      }
+    } else if (clickedZoneIndex !== -1) {
+      // Clicked on a deployment zone - toggle selection, deselect enemy
+      setSelectedEnemyIndex(null);
+      if (selectedZoneIndex === clickedZoneIndex) {
+        setSelectedZoneIndex(null); // Deselect
+      } else {
+        setSelectedZoneIndex(clickedZoneIndex); // Select
       }
     } else if (selectedEnemyIndex !== null) {
       // Clicked on empty space with an enemy selected - try to move
@@ -63,7 +80,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
 
       if (cell?.walkable) {
         // Check if position is already occupied by another enemy
-        const isOccupied = encounter.enemyPlacements.some(
+        const isOccupiedByEnemy = encounter.enemyPlacements.some(
           (placement, index) =>
             index !== selectedEnemyIndex &&
             placement.position.x === gridX &&
@@ -71,13 +88,36 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         );
 
         // Check if position is occupied by a deployment zone
-        const isDeploymentZone = encounter.playerDeploymentZones.some(
+        const isOccupiedByZone = encounter.playerDeploymentZones.some(
           zone => zone.x === gridX && zone.y === gridY
         );
 
-        if (!isOccupied && !isDeploymentZone && onEnemyMove) {
+        if (!isOccupiedByEnemy && !isOccupiedByZone && onEnemyMove) {
           onEnemyMove(selectedEnemyIndex, gridX, gridY);
           setSelectedEnemyIndex(null); // Deselect after moving
+        }
+      }
+    } else if (selectedZoneIndex !== null) {
+      // Clicked on empty space with a deployment zone selected - try to move
+      const cell = encounter.map.getCell({ x: gridX, y: gridY });
+
+      if (cell?.walkable) {
+        // Check if position is already occupied by an enemy
+        const isOccupiedByEnemy = encounter.enemyPlacements.some(
+          placement => placement.position.x === gridX && placement.position.y === gridY
+        );
+
+        // Check if position is occupied by another deployment zone
+        const isOccupiedByZone = encounter.playerDeploymentZones.some(
+          (zone, index) =>
+            index !== selectedZoneIndex &&
+            zone.x === gridX &&
+            zone.y === gridY
+        );
+
+        if (!isOccupiedByEnemy && !isOccupiedByZone && onDeploymentZoneMove) {
+          onDeploymentZoneMove(selectedZoneIndex, gridX, gridY);
+          setSelectedZoneIndex(null); // Deselect after moving
         }
       }
     }
@@ -259,17 +299,24 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
       }
 
       // Draw deployment zones
-      for (const zone of encounter.playerDeploymentZones) {
+      for (let i = 0; i < encounter.playerDeploymentZones.length; i++) {
+        const zone = encounter.playerDeploymentZones[i];
         const screenX = zone.x * SCALED_SIZE;
         const screenY = zone.y * SCALED_SIZE;
+        const isSelected = selectedZoneIndex === i;
 
         // Draw green overlay
         ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
         ctx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
 
-        // Draw green border
-        ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
-        ctx.lineWidth = 2;
+        // Draw border (cyan if selected, green if not)
+        if (isSelected) {
+          ctx.strokeStyle = 'rgba(0, 229, 255, 1.0)';
+          ctx.lineWidth = 3;
+        } else {
+          ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
+          ctx.lineWidth = 2;
+        }
         ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
 
         // Draw 'P' marker
@@ -313,7 +360,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         default: return '#444';
       }
     }
-  }, [encounter, selectedEnemyIndex]);
+  }, [encounter, selectedEnemyIndex, selectedZoneIndex]);
 
   return (
     <div
@@ -354,11 +401,12 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
       </div>
       <div style={{ fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
         <span style={{ color: '#4caf50' }}>■ P</span> = Player deployment zones |{' '}
-        <span style={{ color: '#f44336' }}>Red border</span> = Enemy placements (with sprite)
+        <span style={{ color: '#f44336' }}>Red border</span> = Enemy placements
         {isEditing && (
           <>
             {' | '}
-            <span style={{ color: '#ffc107' }}>Yellow border</span> = Selected enemy (click empty walkable tile to move)
+            <span style={{ color: '#ffc107' }}>Yellow</span> = Selected enemy |{' '}
+            <span style={{ color: '#00e5ff' }}>Cyan</span> = Selected zone (click empty walkable tile to move)
           </>
         )}
       </div>
