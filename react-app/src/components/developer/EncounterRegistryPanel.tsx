@@ -1,11 +1,54 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatEncounterJSON, EnemyPlacement } from '../../models/combat/CombatEncounter';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
+import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { TilesetRegistry } from '../../utils/TilesetRegistry';
 import { TagFilter } from './TagFilter';
 import { EncounterPreview } from './EncounterPreview';
 import * as yaml from 'js-yaml';
+
+// Helper component to render a sprite on a canvas
+const SpriteCanvas: React.FC<{ spriteSheet: string; spriteX: number; spriteY: number; size: number }> = ({
+  spriteSheet,
+  spriteX,
+  spriteY,
+  size,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const SPRITE_SIZE = 12;
+    canvas.width = size;
+    canvas.height = size;
+    ctx.imageSmoothingEnabled = false;
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(
+        img,
+        spriteX * SPRITE_SIZE,
+        spriteY * SPRITE_SIZE,
+        SPRITE_SIZE,
+        SPRITE_SIZE,
+        0,
+        0,
+        size,
+        size
+      );
+    };
+    img.src = spriteSheet;
+  }, [spriteSheet, spriteX, spriteY, size]);
+
+  return <canvas ref={canvasRef} style={{ imageRendering: 'pixelated' }} />;
+};
 
 interface EncounterRegistryPanelProps {
   onClose?: () => void;
@@ -241,37 +284,6 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     });
   };
 
-  const handleRemoveEnemyPlacement = (index: number) => {
-    if (!editedEncounter) return;
-    const newPlacements = editedEncounter.enemyPlacements.filter((_, i) => i !== index);
-    setEditedEncounter({
-      ...editedEncounter,
-      enemyPlacements: newPlacements,
-    });
-  };
-
-  const handleUpdateEnemyPlacement = (index: number, field: 'enemyId' | 'x' | 'y', value: string | number) => {
-    if (!editedEncounter) return;
-    const newPlacements = [...editedEncounter.enemyPlacements];
-    if (field === 'enemyId') {
-      newPlacements[index] = { ...newPlacements[index], enemyId: value as string };
-    } else if (field === 'x') {
-      newPlacements[index] = {
-        ...newPlacements[index],
-        position: { ...newPlacements[index].position, x: Number(value) }
-      };
-    } else if (field === 'y') {
-      newPlacements[index] = {
-        ...newPlacements[index],
-        position: { ...newPlacements[index].position, y: Number(value) }
-      };
-    }
-    setEditedEncounter({
-      ...editedEncounter,
-      enemyPlacements: newPlacements,
-    });
-  };
-
   const handleAddDeploymentZone = () => {
     if (!editedEncounter || !selectedEncounter) return;
 
@@ -404,8 +416,6 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
         return true;
       })
     : encounters;
-
-  const availableEnemies = EnemyRegistry.getAllIds();
 
   return (
     <div
@@ -986,126 +996,87 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                     <button
                       onClick={handleAddEnemyPlacement}
                       style={{
-                        padding: '2px 8px',
+                        padding: '4px 8px',
                         background: 'rgba(244, 67, 54, 0.3)',
                         border: '1px solid rgba(244, 67, 54, 0.6)',
                         borderRadius: '3px',
                         color: '#fff',
-                        fontSize: '10px',
+                        fontSize: '11px',
                         cursor: 'pointer',
-                        fontFamily: 'monospace',
                       }}
                     >
                       + Add Enemy
                     </button>
                   )}
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', fontSize: '10px' }}>
-                  {(isEditing ? editedEncounter?.enemyPlacements : selectedEncounter.enemyPlacements)?.map((placement, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        padding: '6px 8px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '3px',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                      }}
-                    >
-                      {isEditing ? (
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <span style={{ fontSize: '11px', fontWeight: 'bold' }}>Enemy {index + 1}</span>
-                            <button
-                              onClick={() => handleRemoveEnemyPlacement(index)}
-                              style={{
-                                marginLeft: 'auto',
-                                padding: '2px 6px',
-                                background: 'rgba(244, 67, 54, 0.3)',
-                                border: '1px solid rgba(244, 67, 54, 0.6)',
-                                borderRadius: '3px',
-                                color: '#fff',
-                                fontSize: '9px',
-                                cursor: 'pointer',
-                                fontFamily: 'monospace',
-                              }}
-                            >
-                              Remove
-                            </button>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
-                              Enemy:
-                              <select
-                                value={placement.enemyId}
-                                onChange={(e) => handleUpdateEnemyPlacement(index, 'enemyId', e.target.value)}
-                                style={{
-                                  flex: 1,
-                                  background: 'rgba(0, 0, 0, 0.3)',
-                                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                                  color: '#fff',
-                                  padding: '2px 4px',
-                                  fontSize: '10px',
-                                  fontFamily: 'monospace',
-                                  borderRadius: '3px',
-                                }}
-                              >
-                                {availableEnemies.map(enemyId => (
-                                  <option key={enemyId} value={enemyId}>
-                                    {enemyId}
-                                  </option>
-                                ))}
-                              </select>
-                            </label>
-                          </div>
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              X:
-                              <input
-                                type="number"
-                                value={placement.position.x}
-                                onChange={(e) => handleUpdateEnemyPlacement(index, 'x', e.target.value)}
-                                style={{
-                                  width: '50px',
-                                  background: 'rgba(0, 0, 0, 0.3)',
-                                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                                  color: '#fff',
-                                  padding: '2px 4px',
-                                  fontSize: '10px',
-                                  fontFamily: 'monospace',
-                                  borderRadius: '3px',
-                                }}
-                              />
-                            </label>
-                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                              Y:
-                              <input
-                                type="number"
-                                value={placement.position.y}
-                                onChange={(e) => handleUpdateEnemyPlacement(index, 'y', e.target.value)}
-                                style={{
-                                  width: '50px',
-                                  background: 'rgba(0, 0, 0, 0.3)',
-                                  border: '1px solid rgba(255, 255, 255, 0.3)',
-                                  color: '#fff',
-                                  padding: '2px 4px',
-                                  fontSize: '10px',
-                                  fontFamily: 'monospace',
-                                  borderRadius: '3px',
-                                }}
-                              />
-                            </label>
-                          </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+                  {(isEditing ? editedEncounter?.enemyPlacements : selectedEncounter.enemyPlacements)?.map((placement, index) => {
+                    const enemy = EnemyRegistry.getById(placement.enemyId);
+                    const sprite = enemy?.spriteId ? SpriteRegistry.getById(enemy.spriteId) : null;
+
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderRadius: '4px',
+                          border: '1px solid rgba(255, 255, 255, 0.1)',
+                          display: 'flex',
+                          flexDirection: 'column',
+                          alignItems: 'center',
+                          gap: '4px',
+                          minWidth: '80px',
+                        }}
+                      >
+                        {/* Enemy Sprite */}
+                        <div
+                          style={{
+                            width: '48px',
+                            height: '48px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            borderRadius: '3px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                          }}
+                        >
+                          {sprite ? (
+                            <SpriteCanvas
+                              spriteSheet={sprite.spriteSheet}
+                              spriteX={sprite.x}
+                              spriteY={sprite.y}
+                              size={48}
+                            />
+                          ) : (
+                            <span style={{ color: '#f44336', fontSize: '24px', fontWeight: 'bold' }}>E</span>
+                          )}
                         </div>
-                      ) : (
-                        <div>
-                          <div style={{ fontWeight: 'bold' }}>Enemy {index + 1}: {placement.enemyId}</div>
-                          <div style={{ color: '#aaa', marginTop: '2px' }}>
-                            Position: ({placement.position.x}, {placement.position.y})
-                          </div>
+
+                        {/* Enemy Name */}
+                        <div style={{
+                          fontSize: '11px',
+                          fontWeight: 'bold',
+                          textAlign: 'center',
+                          maxWidth: '80px',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}>
+                          {enemy?.name || placement.enemyId}
                         </div>
-                      )}
-                    </div>
-                  ))}
+
+                        {/* Position */}
+                        <div style={{
+                          fontSize: '9px',
+                          color: '#aaa',
+                          fontFamily: 'monospace',
+                        }}>
+                          ({placement.position.x}, {placement.position.y})
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
