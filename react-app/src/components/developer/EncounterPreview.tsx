@@ -1,18 +1,87 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
 
 interface EncounterPreviewProps {
   encounter: CombatEncounter;
+  isEditing?: boolean;
+  onEnemyMove?: (enemyIndex: number, newX: number, newY: number) => void;
 }
 
 /**
  * EncounterPreview displays a visual preview of the combat encounter map.
  * Shows the map grid with sprites rendered at 2x scale, including enemy sprites.
+ * In edit mode, allows clicking to select and move enemies.
  */
-export const EncounterPreview: React.FC<EncounterPreviewProps> = ({ encounter }) => {
+export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
+  encounter,
+  isEditing = false,
+  onEnemyMove
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
+
+  // Handle canvas click
+  const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isEditing || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const SPRITE_SIZE = 12;
+    const SCALE = 2;
+    const SCALED_SIZE = SPRITE_SIZE * SCALE;
+
+    // Get click position relative to canvas
+    const clickX = event.clientX - rect.left;
+    const clickY = event.clientY - rect.top;
+
+    // Convert to grid coordinates
+    const gridX = Math.floor(clickX / SCALED_SIZE);
+    const gridY = Math.floor(clickY / SCALED_SIZE);
+
+    // Check if click is within map bounds
+    if (gridX < 0 || gridX >= encounter.map.width || gridY < 0 || gridY >= encounter.map.height) {
+      return;
+    }
+
+    // Check if clicked on an enemy
+    const clickedEnemyIndex = encounter.enemyPlacements.findIndex(
+      placement => placement.position.x === gridX && placement.position.y === gridY
+    );
+
+    if (clickedEnemyIndex !== -1) {
+      // Clicked on an enemy - toggle selection
+      if (selectedEnemyIndex === clickedEnemyIndex) {
+        setSelectedEnemyIndex(null); // Deselect
+      } else {
+        setSelectedEnemyIndex(clickedEnemyIndex); // Select
+      }
+    } else if (selectedEnemyIndex !== null) {
+      // Clicked on empty space with an enemy selected - try to move
+      const cell = encounter.map.getCell({ x: gridX, y: gridY });
+
+      if (cell?.walkable) {
+        // Check if position is already occupied by another enemy
+        const isOccupied = encounter.enemyPlacements.some(
+          (placement, index) =>
+            index !== selectedEnemyIndex &&
+            placement.position.x === gridX &&
+            placement.position.y === gridY
+        );
+
+        // Check if position is occupied by a deployment zone
+        const isDeploymentZone = encounter.playerDeploymentZones.some(
+          zone => zone.x === gridX && zone.y === gridY
+        );
+
+        if (!isOccupied && !isDeploymentZone && onEnemyMove) {
+          onEnemyMove(selectedEnemyIndex, gridX, gridY);
+          setSelectedEnemyIndex(null); // Deselect after moving
+        }
+      }
+    }
+  };
 
   useEffect(() => {
     if (!canvasRef.current) return;
@@ -141,9 +210,11 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({ encounter })
       }
 
       // Draw enemy placements with sprites
-      for (const placement of encounter.enemyPlacements) {
+      for (let i = 0; i < encounter.enemyPlacements.length; i++) {
+        const placement = encounter.enemyPlacements[i];
         const screenX = placement.position.x * SCALED_SIZE;
         const screenY = placement.position.y * SCALED_SIZE;
+        const isSelected = selectedEnemyIndex === i;
 
         const enemyDef = EnemyRegistry.getById(placement.enemyId);
         if (enemyDef?.spriteId) {
@@ -176,9 +247,14 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({ encounter })
           drawEnemyPlaceholder(screenX, screenY);
         }
 
-        // Draw red border around enemy position
-        ctx.strokeStyle = 'rgba(244, 67, 54, 0.8)';
-        ctx.lineWidth = 2;
+        // Draw border around enemy position (yellow if selected, red if not)
+        if (isSelected) {
+          ctx.strokeStyle = 'rgba(255, 193, 7, 1.0)';
+          ctx.lineWidth = 3;
+        } else {
+          ctx.strokeStyle = 'rgba(244, 67, 54, 0.8)';
+          ctx.lineWidth = 2;
+        }
         ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
       }
 
@@ -237,7 +313,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({ encounter })
         default: return '#444';
       }
     }
-  }, [encounter]);
+  }, [encounter, selectedEnemyIndex]);
 
   return (
     <div
@@ -268,15 +344,23 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({ encounter })
       >
         <canvas
           ref={canvasRef}
+          onClick={handleCanvasClick}
           style={{
             imageRendering: 'pixelated',
             display: 'block',
+            cursor: isEditing ? 'pointer' : 'default',
           } as React.CSSProperties}
         />
       </div>
       <div style={{ fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
         <span style={{ color: '#4caf50' }}>■ P</span> = Player deployment zones |{' '}
         <span style={{ color: '#f44336' }}>Red border</span> = Enemy placements (with sprite)
+        {isEditing && (
+          <>
+            {' | '}
+            <span style={{ color: '#ffc107' }}>Yellow border</span> = Selected enemy (click empty walkable tile to move)
+          </>
+        )}
       </div>
     </div>
   );

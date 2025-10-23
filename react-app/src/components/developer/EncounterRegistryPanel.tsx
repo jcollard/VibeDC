@@ -730,7 +730,32 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
               </div>
 
               {/* Map Preview */}
-              <EncounterPreview encounter={selectedEncounter} />
+              {isEditing && editedEncounter ? (
+                <EncounterPreview
+                  encounter={CombatEncounter.fromJSON({
+                    ...editedEncounter,
+                    map: {
+                      tilesetId: editedTilesetId,
+                      grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
+                    }
+                  } as any)}
+                  isEditing={isEditing}
+                  onEnemyMove={(enemyIndex, newX, newY) => {
+                    if (!editedEncounter) return;
+                    const newPlacements = [...editedEncounter.enemyPlacements];
+                    newPlacements[enemyIndex] = {
+                      ...newPlacements[enemyIndex],
+                      position: { x: newX, y: newY }
+                    };
+                    setEditedEncounter({
+                      ...editedEncounter,
+                      enemyPlacements: newPlacements,
+                    });
+                  }}
+                />
+              ) : (
+                <EncounterPreview encounter={selectedEncounter} />
+              )}
 
               {/* Player Deployment Zones */}
               <div
