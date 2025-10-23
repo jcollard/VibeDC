@@ -4,6 +4,7 @@
 enemies:
   - id: "ancient-dragon"
     name: "Ancient Dragon"
+    unitType: "humanoid"
     unitClassId: "monster"
     baseHealth: 150
     baseMana: 100
@@ -20,11 +21,13 @@ enemies:
     reactionAbilityId: "parry-001"
     passiveAbilityId: "fast-001"
     movementAbilityId: "meditate-001"
+    secondaryClassId: "fighter"
     tags: ["dragon", "boss", "strong", "magic", "legendary"]
     description: "An elder dragon of immense power and wisdom"
 
   - id: "blob"
     name: "Blob"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 18
     baseMana: 12
@@ -42,6 +45,7 @@ enemies:
 
   - id: "dire-wolf"
     name: "Dire Wolf"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 35
     baseMana: 8
@@ -59,6 +63,7 @@ enemies:
 
   - id: "fire-elemental"
     name: "Fire Elemental"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 30
     baseMana: 40
@@ -76,6 +81,7 @@ enemies:
 
   - id: "goblin"
     name: "Goblin"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 20
     baseMana: 10
@@ -93,6 +99,7 @@ enemies:
 
   - id: "ice-elemental"
     name: "Ice Elemental"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 32
     baseMana: 38
@@ -110,6 +117,7 @@ enemies:
 
   - id: "orc-berserker"
     name: "Orc Berserker"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 50
     baseMana: 5
@@ -127,6 +135,7 @@ enemies:
 
   - id: "orc-warrior"
     name: "Orc Warrior"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 40
     baseMana: 10
@@ -144,6 +153,7 @@ enemies:
 
   - id: "skeleton"
     name: "Skeleton"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 22
     baseMana: 0
@@ -161,6 +171,7 @@ enemies:
 
   - id: "skeleton-archer"
     name: "Skeleton Archer"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 20
     baseMana: 0
@@ -178,6 +189,7 @@ enemies:
 
   - id: "wolf"
     name: "Wolf"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 25
     baseMana: 5
@@ -195,6 +207,7 @@ enemies:
 
   - id: "young-dragon"
     name: "Young Dragon"
+    unitType: "monster"
     unitClassId: "monster"
     baseHealth: 80
     baseMana: 50

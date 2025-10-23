@@ -1,6 +1,12 @@
 import { MonsterUnit } from '../models/combat/MonsterUnit';
+import { HumanoidUnit } from '../models/combat/HumanoidUnit';
 import type { CombatUnit } from '../models/combat/CombatUnit';
 import { UnitClass } from '../models/combat/UnitClass';
+
+/**
+ * Unit type enum for distinguishing between different unit implementations
+ */
+export type UnitType = 'monster' | 'humanoid';
 
 /**
  * Definition for an enemy template
@@ -15,6 +21,11 @@ export interface EnemyDefinition {
    * Display name for the enemy
    */
   name: string;
+
+  /**
+   * Type of unit (monster or humanoid)
+   */
+  unitType: UnitType;
 
   /**
    * Unit class ID for this enemy
@@ -49,6 +60,20 @@ export interface EnemyDefinition {
   movementAbilityId?: string;
 
   /**
+   * Optional secondary class ID (humanoid only)
+   */
+  secondaryClassId?: string;
+
+  /**
+   * Optional equipment IDs (humanoid only)
+   */
+  leftHandId?: string;
+  rightHandId?: string;
+  headId?: string;
+  bodyId?: string;
+  accessoryId?: string;
+
+  /**
    * Optional tags for categorization
    */
   tags?: string[];
@@ -65,6 +90,7 @@ export interface EnemyDefinition {
 export interface EnemyDefinitionJSON {
   id: string;
   name: string;
+  unitType: UnitType;
   unitClassId: string;
   baseHealth: number;
   baseMana: number;
@@ -81,6 +107,12 @@ export interface EnemyDefinitionJSON {
   reactionAbilityId?: string;
   passiveAbilityId?: string;
   movementAbilityId?: string;
+  secondaryClassId?: string;
+  leftHandId?: string;
+  rightHandId?: string;
+  headId?: string;
+  bodyId?: string;
+  accessoryId?: string;
   tags?: string[];
   description?: string;
 }
@@ -137,7 +169,7 @@ export class EnemyRegistry {
   /**
    * Create a CombatUnit instance from an enemy definition
    * @param id The enemy template ID
-   * @returns A new MonsterUnit instance, or undefined if enemy not found
+   * @returns A new MonsterUnit or HumanoidUnit instance, or undefined if enemy not found
    */
   static createEnemy(id: string): CombatUnit | undefined {
     const definition = this.registry.get(id);
@@ -152,33 +184,70 @@ export class EnemyRegistry {
       return undefined;
     }
 
-    const monster = new MonsterUnit(
-      definition.name,
-      unitClass,
-      definition.baseHealth,
-      definition.baseMana,
-      definition.basePhysicalPower,
-      definition.baseMagicPower,
-      definition.baseSpeed,
-      definition.baseMovement,
-      definition.basePhysicalEvade,
-      definition.baseMagicEvade,
-      definition.baseCourage,
-      definition.baseAttunement,
-      definition.spriteId
-    );
+    // Create the appropriate unit type
+    const unit: CombatUnit = definition.unitType === 'humanoid'
+      ? new HumanoidUnit(
+          definition.name,
+          unitClass,
+          definition.baseHealth,
+          definition.baseMana,
+          definition.basePhysicalPower,
+          definition.baseMagicPower,
+          definition.baseSpeed,
+          definition.baseMovement,
+          definition.basePhysicalEvade,
+          definition.baseMagicEvade,
+          definition.baseCourage,
+          definition.baseAttunement,
+          definition.spriteId
+        )
+      : new MonsterUnit(
+          definition.name,
+          unitClass,
+          definition.baseHealth,
+          definition.baseMana,
+          definition.basePhysicalPower,
+          definition.baseMagicPower,
+          definition.baseSpeed,
+          definition.baseMovement,
+          definition.basePhysicalEvade,
+          definition.baseMagicEvade,
+          definition.baseCourage,
+          definition.baseAttunement,
+          definition.spriteId
+        );
+
+    // Set up humanoid-specific properties
+    if (definition.unitType === 'humanoid' && unit instanceof HumanoidUnit) {
+      // Set secondary class if specified
+      if (definition.secondaryClassId) {
+        const secondaryClass = UnitClass.getById(definition.secondaryClassId);
+        if (secondaryClass) {
+          unit.setSecondaryClass(secondaryClass);
+        } else {
+          console.warn(`Secondary class '${definition.secondaryClassId}' not found for enemy '${id}'`);
+        }
+      }
+
+      // TODO: Equip items when Equipment registry is available
+      // if (definition.leftHandId) {
+      //   const equipment = Equipment.getById(definition.leftHandId);
+      //   if (equipment) unit.equipLeftHand(equipment);
+      // }
+      // ... similar for other equipment slots
+    }
 
     // TODO: Add learned abilities when AbilityRegistry is available
     // if (definition.learnedAbilityIds) {
     //   for (const abilityId of definition.learnedAbilityIds) {
     //     const ability = AbilityRegistry.getById(abilityId);
     //     if (ability) {
-    //       monster.learnAbility(ability);
+    //       unit.learnAbility(ability);
     //     }
     //   }
     // }
 
-    return monster;
+    return unit;
   }
 
   /**

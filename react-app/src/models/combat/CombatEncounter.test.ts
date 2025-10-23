@@ -96,6 +96,7 @@ describe('CombatEncounter', () => {
       EnemyRegistry.register({
         id: 'test-goblin',
         name: 'Goblin',
+        unitType: 'monster',
         unitClassId: testClass.id,
         baseHealth: 20,
         baseMana: 10,
@@ -242,6 +243,7 @@ describe('CombatEncounter', () => {
       EnemyRegistry.register({
         id: 'test-enemy',
         name: 'Test Enemy',
+        unitType: 'monster',
         unitClassId: testClass.id,
         baseHealth: 30,
         baseMana: 10,

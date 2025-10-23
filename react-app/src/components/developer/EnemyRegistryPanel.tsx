@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef } from 'react';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
-import type { EnemyDefinition } from '../../utils/EnemyRegistry';
+import type { EnemyDefinition, UnitType } from '../../utils/EnemyRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { SpriteBrowser } from './SpriteBrowser';
 import { CombatAbility } from '../../models/combat/CombatAbility';
+import { UnitClass } from '../../models/combat/UnitClass';
 import { TagFilter } from './TagFilter';
 
 interface EnemyRegistryPanelProps {
@@ -25,6 +26,7 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
   const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
   const spriteCanvasRef = useRef<HTMLCanvasElement>(null);
   const [availableAbilities, setAvailableAbilities] = useState<CombatAbility[]>([]);
+  const [availableClasses, setAvailableClasses] = useState<UnitClass[]>([]);
 
   // Sprite size constant
   const SPRITE_SIZE = 12;
@@ -42,8 +44,9 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
     });
     setAllTags(Array.from(tagsSet).sort());
 
-    // Load available abilities
+    // Load available abilities and classes
     setAvailableAbilities(CombatAbility.getAll());
+    setAvailableClasses(UnitClass.getAll());
 
     console.log('EnemyRegistryPanel: Loaded enemies:', allEnemies.length);
   }, []);
@@ -200,6 +203,7 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
     for (const enemy of sortedEnemies) {
       yaml += `  - id: "${enemy.id}"\n`;
       yaml += `    name: "${enemy.name}"\n`;
+      yaml += `    unitType: "${enemy.unitType}"\n`;
       yaml += `    unitClassId: "${enemy.unitClassId}"\n`;
       yaml += `    baseHealth: ${enemy.baseHealth}\n`;
       yaml += `    baseMana: ${enemy.baseMana}\n`;
@@ -225,6 +229,29 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
       if (enemy.movementAbilityId) {
         yaml += `    movementAbilityId: "${enemy.movementAbilityId}"\n`;
       }
+
+      // Humanoid-specific fields
+      if (enemy.unitType === 'humanoid') {
+        if (enemy.secondaryClassId) {
+          yaml += `    secondaryClassId: "${enemy.secondaryClassId}"\n`;
+        }
+        if (enemy.leftHandId) {
+          yaml += `    leftHandId: "${enemy.leftHandId}"\n`;
+        }
+        if (enemy.rightHandId) {
+          yaml += `    rightHandId: "${enemy.rightHandId}"\n`;
+        }
+        if (enemy.headId) {
+          yaml += `    headId: "${enemy.headId}"\n`;
+        }
+        if (enemy.bodyId) {
+          yaml += `    bodyId: "${enemy.bodyId}"\n`;
+        }
+        if (enemy.accessoryId) {
+          yaml += `    accessoryId: "${enemy.accessoryId}"\n`;
+        }
+      }
+
       if (enemy.tags && enemy.tags.length > 0) {
         yaml += `    tags: [${enemy.tags.map(t => `"${t}"`).join(', ')}]\n`;
       }
@@ -263,6 +290,7 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
     const newEnemy: EnemyDefinition = {
       id: newId,
       name: 'New Enemy',
+      unitType: 'monster',
       unitClassId: 'monster',
       baseHealth: 20,
       baseMana: 10,
@@ -773,6 +801,34 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                   )}
                 </div>
 
+                {/* Unit Type */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Unit Type:</label>
+                  {isEditing ? (
+                    <select
+                      value={editedEnemy?.unitType || 'monster'}
+                      onChange={(e) => handleFieldChange('unitType', e.target.value as UnitType)}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        borderRadius: '3px',
+                        color: '#fff',
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                      }}
+                    >
+                      <option value="monster">Monster</option>
+                      <option value="humanoid">Humanoid</option>
+                    </select>
+                  ) : (
+                    <div style={{ color: '#fff', textTransform: 'capitalize' }}>
+                      {selectedEnemy.unitType}
+                    </div>
+                  )}
+                </div>
+
                 {/* Unit Class */}
                 <div>
                   <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Unit Class:</label>
@@ -1071,6 +1127,189 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                   )}
                 </div>
               </div>
+
+              {/* Humanoid-Specific Fields */}
+              {(isEditing ? editedEnemy?.unitType : selectedEnemy.unitType) === 'humanoid' && (
+                <div style={{
+                  background: 'rgba(33, 150, 243, 0.1)',
+                  border: '1px solid rgba(33, 150, 243, 0.3)',
+                  borderRadius: '4px',
+                  padding: '12px',
+                  marginTop: '12px',
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'rgba(33, 150, 243, 0.9)' }}>
+                    Humanoid Properties
+                  </div>
+
+                  {/* Secondary Class */}
+                  <div style={{ marginBottom: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                      Secondary Class:
+                    </label>
+                    {isEditing ? (
+                      <select
+                        value={editedEnemy?.secondaryClassId || ''}
+                        onChange={(e) => handleFieldChange('secondaryClassId', e.target.value || undefined)}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        <option value="">None</option>
+                        {availableClasses.map(unitClass => (
+                          <option key={unitClass.id} value={unitClass.id}>
+                            {unitClass.name}
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <div style={{ fontSize: '11px', color: '#fff' }}>
+                        {selectedEnemy.secondaryClassId
+                          ? UnitClass.getById(selectedEnemy.secondaryClassId)?.name || selectedEnemy.secondaryClassId
+                          : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+                        }
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Equipment Slots */}
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '4px' }}>
+                    Equipment Slots:
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '10px' }}>
+                    {/* Left Hand */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Left Hand:</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedEnemy?.leftHandId || ''}
+                          onChange={(e) => handleFieldChange('leftHandId', e.target.value || undefined)}
+                          placeholder="equipment-id"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontFamily: 'monospace',
+                            fontSize: '10px',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ color: '#fff' }}>{selectedEnemy.leftHandId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                      )}
+                    </div>
+
+                    {/* Right Hand */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Right Hand:</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedEnemy?.rightHandId || ''}
+                          onChange={(e) => handleFieldChange('rightHandId', e.target.value || undefined)}
+                          placeholder="equipment-id"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontFamily: 'monospace',
+                            fontSize: '10px',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ color: '#fff' }}>{selectedEnemy.rightHandId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                      )}
+                    </div>
+
+                    {/* Head */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Head:</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedEnemy?.headId || ''}
+                          onChange={(e) => handleFieldChange('headId', e.target.value || undefined)}
+                          placeholder="equipment-id"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontFamily: 'monospace',
+                            fontSize: '10px',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ color: '#fff' }}>{selectedEnemy.headId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                      )}
+                    </div>
+
+                    {/* Body */}
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Body:</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedEnemy?.bodyId || ''}
+                          onChange={(e) => handleFieldChange('bodyId', e.target.value || undefined)}
+                          placeholder="equipment-id"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontFamily: 'monospace',
+                            fontSize: '10px',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ color: '#fff' }}>{selectedEnemy.bodyId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                      )}
+                    </div>
+
+                    {/* Accessory */}
+                    <div style={{ gridColumn: 'span 2' }}>
+                      <label style={{ display: 'block', marginBottom: '2px', color: '#999' }}>Accessory:</label>
+                      {isEditing ? (
+                        <input
+                          type="text"
+                          value={editedEnemy?.accessoryId || ''}
+                          onChange={(e) => handleFieldChange('accessoryId', e.target.value || undefined)}
+                          placeholder="equipment-id"
+                          style={{
+                            width: '100%',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontFamily: 'monospace',
+                            fontSize: '10px',
+                          }}
+                        />
+                      ) : (
+                        <div style={{ color: '#fff' }}>{selectedEnemy.accessoryId || <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              )}
 
               {/* Description */}
               <div>

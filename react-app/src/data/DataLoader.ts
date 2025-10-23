@@ -196,6 +196,10 @@ export function loadEnemies(): void {
   const data = yaml.load(enemyYaml) as { enemies: EnemyDefinitionJSON[] };
 
   for (const enemyData of data.enemies) {
+    // Provide default unitType for backward compatibility
+    if (!enemyData.unitType) {
+      enemyData.unitType = 'monster';
+    }
     EnemyRegistry.register(enemyData);
   }
 
