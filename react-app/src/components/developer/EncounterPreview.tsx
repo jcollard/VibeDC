@@ -112,7 +112,16 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
       return;
     }
 
-    // Check if clicked on an enemy
+    // Priority 1: If a tile is selected, place it (overrides enemy/zone selection)
+    if (selectedTileIndex !== null) {
+      // Place the tile regardless of what's at this position
+      if (onTilePlacement) {
+        onTilePlacement(gridX, gridY, selectedTileIndex);
+      }
+      return; // Don't process enemy/zone clicks
+    }
+
+    // Priority 2: Check if clicked on an enemy (only if no tile selected)
     const clickedEnemyIndex = encounter.enemyPlacements.findIndex(
       placement => placement.position.x === gridX && placement.position.y === gridY
     );
@@ -123,27 +132,20 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     );
 
     if (clickedEnemyIndex !== -1) {
-      // Clicked on an enemy - toggle selection, deselect zone and tile
+      // Clicked on an enemy - toggle selection, deselect zone
       setSelectedZoneIndex(null);
-      setSelectedTileIndex(null);
       if (selectedEnemyIndex === clickedEnemyIndex) {
         setSelectedEnemyIndex(null); // Deselect
       } else {
         setSelectedEnemyIndex(clickedEnemyIndex); // Select
       }
     } else if (clickedZoneIndex !== -1) {
-      // Clicked on a deployment zone - toggle selection, deselect enemy and tile
+      // Clicked on a deployment zone - toggle selection, deselect enemy
       setSelectedEnemyIndex(null);
-      setSelectedTileIndex(null);
       if (selectedZoneIndex === clickedZoneIndex) {
         setSelectedZoneIndex(null); // Deselect
       } else {
         setSelectedZoneIndex(clickedZoneIndex); // Select
-      }
-    } else if (selectedTileIndex !== null) {
-      // Clicked on empty space with a tile selected - place the tile
-      if (onTilePlacement) {
-        onTilePlacement(gridX, gridY, selectedTileIndex);
       }
     } else if (selectedEnemyIndex !== null) {
       // Clicked on empty space with an enemy selected - try to move
