@@ -625,31 +625,35 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
       <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#4fc3f7' }}>
         Map Preview
       </div>
-      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start' }}>
-        <div
+
+      {/* Canvas - full width */}
+      <div
+        style={{
+          background: '#000',
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          borderRadius: '3px',
+          padding: '8px',
+          display: 'inline-block',
+          overflow: 'auto',
+          maxWidth: '100%',
+          maxHeight: '600px',
+        }}
+      >
+        <canvas
+          ref={canvasRef}
+          onClick={handleCanvasClick}
+          onMouseMove={handleCanvasMouseMove}
+          onMouseLeave={handleCanvasMouseLeave}
           style={{
-            background: '#000',
-            border: '1px solid rgba(255, 255, 255, 0.3)',
-            borderRadius: '3px',
-            padding: '8px',
-            display: 'inline-block',
-            overflow: 'auto',
-            maxWidth: '100%',
-            maxHeight: '400px',
-          }}
-        >
-          <canvas
-            ref={canvasRef}
-            onClick={handleCanvasClick}
-            onMouseMove={handleCanvasMouseMove}
-            onMouseLeave={handleCanvasMouseLeave}
-            style={{
-              imageRendering: 'pixelated',
-              display: 'block',
-              cursor: isEditing ? 'pointer' : 'default',
-            } as React.CSSProperties}
-          />
-        </div>
+            imageRendering: 'pixelated',
+            display: 'block',
+            cursor: isEditing ? 'pointer' : 'default',
+          } as React.CSSProperties}
+        />
+      </div>
+
+      {/* Controls below the map */}
+      <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-start', flexWrap: 'wrap' }}>
         {isEditing && selectedEnemyIndex !== null && (
           <div
             style={{
@@ -796,8 +800,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
               border: '1px solid rgba(33, 150, 243, 0.3)',
               borderRadius: '4px',
               padding: '12px',
-              minWidth: '200px',
-              maxWidth: '250px',
+              flex: '1',
               display: 'flex',
               flexDirection: 'column',
               gap: '8px',
@@ -806,7 +809,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
             <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#2196f3' }}>
               Tile Palette
             </div>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '400px', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '200px', overflowY: 'auto' }}>
               {(() => {
                 if (!encounter.tilesetId) return null;
                 const tileset = TilesetRegistry.getById(encounter.tilesetId);
