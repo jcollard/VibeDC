@@ -379,12 +379,23 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     const SCALED_SIZE = SPRITE_SIZE * SCALE;
 
     // Set canvas size based on map dimensions
-    canvas.width = encounter.map.width * SCALED_SIZE;
-    canvas.height = encounter.map.height * SCALED_SIZE;
+    const width = encounter.map.width * SCALED_SIZE;
+    const height = encounter.map.height * SCALED_SIZE;
 
-    // Clear canvas
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    ctx.imageSmoothingEnabled = false;
+    // Only resize if dimensions changed (avoids clearing canvas unnecessarily)
+    if (canvas.width !== width || canvas.height !== height) {
+      canvas.width = width;
+      canvas.height = height;
+    }
+
+    // Create offscreen canvas for double buffering (eliminates flicker)
+    const offscreenCanvas = document.createElement('canvas');
+    offscreenCanvas.width = width;
+    offscreenCanvas.height = height;
+    const offscreenCtx = offscreenCanvas.getContext('2d');
+    if (!offscreenCtx) return;
+
+    offscreenCtx.imageSmoothingEnabled = false;
 
     // Track loaded images to know when all are ready
     const imagesToLoad = new Set<string>();
@@ -458,7 +469,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     }
 
     function renderMap() {
-      if (!ctx) return;
+      if (!offscreenCtx) return;
 
       // Render each cell
       for (let y = 0; y < encounter.map.height; y++) {
@@ -499,7 +510,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
             // Use sprite from current tileset
             const img = loadedImages.get(tileSprite.spriteSheet);
             if (img) {
-              ctx.drawImage(
+              offscreenCtx.drawImage(
                 img,
                 tileSprite.x * SPRITE_SIZE,
                 tileSprite.y * SPRITE_SIZE,
@@ -519,7 +530,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
               const img = loadedImages.get(sprite.spriteSheet);
               if (img) {
                 // Draw the sprite from the sprite sheet
-                ctx.drawImage(
+                offscreenCtx.drawImage(
                   img,
                   sprite.x * SPRITE_SIZE,
                   sprite.y * SPRITE_SIZE,
@@ -541,14 +552,14 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
           } else {
             // No sprite, draw based on terrain type
             const color = getTerrainColor(cell.terrain);
-            ctx.fillStyle = color;
-            ctx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+            offscreenCtx.fillStyle = color;
+            offscreenCtx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
           }
 
           // Draw grid lines
-          ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-          ctx.lineWidth = 1;
-          ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+          offscreenCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+          offscreenCtx.lineWidth = 1;
+          offscreenCtx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
         }
       }
 
@@ -566,7 +577,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
             const img = loadedImages.get(sprite.spriteSheet);
             if (img) {
               // Draw the enemy sprite
-              ctx.drawImage(
+              offscreenCtx.drawImage(
                 img,
                 sprite.x * SPRITE_SIZE,
                 sprite.y * SPRITE_SIZE,
@@ -592,13 +603,13 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
 
         // Draw border around enemy position (yellow if selected, red if not)
         if (isSelected) {
-          ctx.strokeStyle = 'rgba(255, 193, 7, 1.0)';
-          ctx.lineWidth = 3;
+          offscreenCtx.strokeStyle = 'rgba(255, 193, 7, 1.0)';
+          offscreenCtx.lineWidth = 3;
         } else {
-          ctx.strokeStyle = 'rgba(244, 67, 54, 0.8)';
-          ctx.lineWidth = 2;
+          offscreenCtx.strokeStyle = 'rgba(244, 67, 54, 0.8)';
+          offscreenCtx.lineWidth = 2;
         }
-        ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+        offscreenCtx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
       }
 
       // Draw deployment zones
@@ -609,25 +620,25 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         const isSelected = selectedZoneIndex === i;
 
         // Draw green overlay
-        ctx.fillStyle = 'rgba(76, 175, 80, 0.4)';
-        ctx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+        offscreenCtx.fillStyle = 'rgba(76, 175, 80, 0.4)';
+        offscreenCtx.fillRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
 
         // Draw border (cyan if selected, green if not)
         if (isSelected) {
-          ctx.strokeStyle = 'rgba(0, 229, 255, 1.0)';
-          ctx.lineWidth = 3;
+          offscreenCtx.strokeStyle = 'rgba(0, 229, 255, 1.0)';
+          offscreenCtx.lineWidth = 3;
         } else {
-          ctx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
-          ctx.lineWidth = 2;
+          offscreenCtx.strokeStyle = 'rgba(76, 175, 80, 0.8)';
+          offscreenCtx.lineWidth = 2;
         }
-        ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+        offscreenCtx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
 
         // Draw 'P' marker
-        ctx.fillStyle = '#fff';
-        ctx.font = 'bold 16px monospace';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('P', screenX + SCALED_SIZE / 2, screenY + SCALED_SIZE / 2);
+        offscreenCtx.fillStyle = '#fff';
+        offscreenCtx.font = 'bold 16px monospace';
+        offscreenCtx.textAlign = 'center';
+        offscreenCtx.textBaseline = 'middle';
+        offscreenCtx.fillText('P', screenX + SCALED_SIZE / 2, screenY + SCALED_SIZE / 2);
       }
 
       // Draw hover preview for tile placement
@@ -654,8 +665,8 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
               if (sprite) {
                 const img = loadedImages.get(sprite.spriteSheet);
                 if (img) {
-                  ctx.globalAlpha = isValidPlacement ? 0.5 : 0.3;
-                  ctx.drawImage(
+                  offscreenCtx.globalAlpha = isValidPlacement ? 0.5 : 0.3;
+                  offscreenCtx.drawImage(
                     img,
                     sprite.x * SPRITE_SIZE,
                     sprite.y * SPRITE_SIZE,
@@ -666,40 +677,45 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
                     SCALED_SIZE,
                     SCALED_SIZE
                   );
-                  ctx.globalAlpha = 1.0;
+                  offscreenCtx.globalAlpha = 1.0;
                 }
               }
             }
 
             // Draw border (green if valid, red if invalid)
-            ctx.strokeStyle = isValidPlacement ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)';
-            ctx.lineWidth = 2;
-            ctx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
+            offscreenCtx.strokeStyle = isValidPlacement ? 'rgba(76, 175, 80, 0.8)' : 'rgba(244, 67, 54, 0.8)';
+            offscreenCtx.lineWidth = 2;
+            offscreenCtx.strokeRect(screenX, screenY, SCALED_SIZE, SCALED_SIZE);
           }
         }
+      }
+
+      // Copy the offscreen canvas to the visible canvas in one operation (eliminates flicker)
+      if (ctx) {
+        ctx.drawImage(offscreenCanvas, 0, 0);
       }
     }
 
     function drawPlaceholder(x: number, y: number, color: string) {
-      if (!ctx) return;
-      ctx.fillStyle = color;
-      ctx.fillRect(x, y, SCALED_SIZE, SCALED_SIZE);
-      ctx.fillStyle = '#fff';
-      ctx.font = '12px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('?', x + SCALED_SIZE / 2, y + SCALED_SIZE / 2);
+      if (!offscreenCtx) return;
+      offscreenCtx.fillStyle = color;
+      offscreenCtx.fillRect(x, y, SCALED_SIZE, SCALED_SIZE);
+      offscreenCtx.fillStyle = '#fff';
+      offscreenCtx.font = '12px monospace';
+      offscreenCtx.textAlign = 'center';
+      offscreenCtx.textBaseline = 'middle';
+      offscreenCtx.fillText('?', x + SCALED_SIZE / 2, y + SCALED_SIZE / 2);
     }
 
     function drawEnemyPlaceholder(x: number, y: number) {
-      if (!ctx) return;
-      ctx.fillStyle = 'rgba(244, 67, 54, 0.4)';
-      ctx.fillRect(x, y, SCALED_SIZE, SCALED_SIZE);
-      ctx.fillStyle = '#fff';
-      ctx.font = 'bold 16px monospace';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('E', x + SCALED_SIZE / 2, y + SCALED_SIZE / 2);
+      if (!offscreenCtx) return;
+      offscreenCtx.fillStyle = 'rgba(244, 67, 54, 0.4)';
+      offscreenCtx.fillRect(x, y, SCALED_SIZE, SCALED_SIZE);
+      offscreenCtx.fillStyle = '#fff';
+      offscreenCtx.font = 'bold 16px monospace';
+      offscreenCtx.textAlign = 'center';
+      offscreenCtx.textBaseline = 'middle';
+      offscreenCtx.fillText('E', x + SCALED_SIZE / 2, y + SCALED_SIZE / 2);
     }
 
     function getTerrainColor(terrain: string): string {
