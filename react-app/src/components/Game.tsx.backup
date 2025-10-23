@@ -322,7 +322,7 @@ export const Game: React.FC = () => {
       }
 
       // Ignore game input if any modal panels are open that accept text input
-      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible) {
         return;
       }
 
@@ -347,7 +347,7 @@ export const Game: React.FC = () => {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       // Clear pressed keys when panels are open to prevent stuck keys
-      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible) {
         pressedKeysRef.current.clear();
         return;
       }
@@ -360,7 +360,7 @@ export const Game: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible, abilityRegistryVisible, equipmentRegistryVisible, classRegistryVisible, tilesetRegistryVisible, encounterRegistryVisible]);
+  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible, abilityRegistryVisible, equipmentRegistryVisible, classRegistryVisible]);
 
   if (loading) {
     return <div style={{

@@ -1,18 +1,67 @@
 encounters:
-  - id: forest-ambush
-    name: Forest Ambush
+  - id: dungeon
+    name: Dungeon
     description: A group of bandits ambush travelers on the forest road.
     map:
       tilesetId: dungeon-stone
       grid: |-
         ##########
-        #........#
         #...#....#
         #........#
-        ######...#
+        #...#....#
+        ######..##
+        #........#
+        #........#
         #........#
         #........#
         ##########
+    victoryConditions:
+      - type: AllEnemiesDefeated
+        description: All enemies defeated
+    defeatConditions:
+      - type: AllPlayersDefeated
+        description: All players defeated
+    playerDeploymentZones:
+      - x: 1
+        'y': 8
+      - x: 3
+        'y': 6
+      - x: 3
+        'y': 8
+      - x: 1
+        'y': 6
+    enemyPlacements:
+      - enemyId: goblin
+        position:
+          x: 1
+          'y': 3
+      - enemyId: goblin
+        position:
+          x: 2
+          'y': 2
+      - enemyId: ancient-dragon
+        position:
+          x: 3
+          'y': 1
+  - id: forest
+    name: Forest
+    description: A group of bandits ambush travelers on the forest road.
+    map:
+      tilesetId: forest
+      grid: |-
+        ###############
+        #...#....#....#
+        #........#....#
+        #...#....#....#
+        ######..##....#
+        #........#....#
+        #........#....#
+        ##########....#
+        #.............#
+        #.............#
+        #.............#
+        #.............#
+        ###############
     victoryConditions:
       - type: AllEnemiesDefeated
         description: All enemies defeated
@@ -39,5 +88,5 @@ encounters:
           'y': 2
       - enemyId: ancient-dragon
         position:
-          x: 7
-          'y': 4
+          x: 1
+          'y': 5
