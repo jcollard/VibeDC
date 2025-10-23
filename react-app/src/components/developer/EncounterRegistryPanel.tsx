@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatEncounterJSON, EnemyPlacement } from '../../models/combat/CombatEncounter';
+import { CombatMap } from '../../models/combat/CombatMap';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { TilesetRegistry } from '../../utils/TilesetRegistry';
@@ -353,6 +354,75 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     });
 
     // Force a re-render by incrementing the render key
+    setMapRenderKey(prev => prev + 1);
+  };
+
+  const handleResizeMap = (newWidth: number, newHeight: number) => {
+    if (!editedEncounter || !selectedEncounter) return;
+
+    const oldMap = selectedEncounter.map;
+    const oldWidth = oldMap.width;
+    const oldHeight = oldMap.height;
+
+    // No change needed
+    if (newWidth === oldWidth && newHeight === oldHeight) return;
+
+    // Clamp values
+    newWidth = Math.max(3, Math.min(50, newWidth));
+    newHeight = Math.max(3, Math.min(50, newHeight));
+
+    // Get the tileset to determine default tile
+    const tileset = editedTilesetId ? TilesetRegistry.getById(editedTilesetId) : null;
+    const floorTile = tileset?.tileTypes.find(tt => tt.walkable === true) || {
+      terrain: 'floor' as const,
+      walkable: true,
+      spriteId: undefined,
+    };
+
+    // Create new grid preserving existing tiles
+    const newGrid: any[][] = [];
+    for (let y = 0; y < newHeight; y++) {
+      const row: any[] = [];
+      for (let x = 0; x < newWidth; x++) {
+        if (x < oldWidth && y < oldHeight) {
+          // Preserve existing cell
+          const cell = oldMap.getCell({ x, y });
+          row.push(cell || { terrain: floorTile.terrain, walkable: floorTile.walkable, spriteId: floorTile.spriteId });
+        } else {
+          // New cell - use floor tile
+          row.push({ terrain: floorTile.terrain, walkable: floorTile.walkable, spriteId: floorTile.spriteId });
+        }
+      }
+      newGrid.push(row);
+    }
+
+    // Create new map with the resized grid
+    const newMap = new CombatMap(newWidth, newHeight, newGrid);
+
+    // Update selectedEncounter's map
+    (selectedEncounter as any).map = newMap;
+
+    // Remove enemies and zones that are now out of bounds
+    if (editedEncounter) {
+      const validEnemies = editedEncounter.enemyPlacements.filter(
+        p => p.position.x < newWidth && p.position.y < newHeight
+      );
+      const validZones = editedEncounter.playerDeploymentZones.filter(
+        z => z.x < newWidth && z.y < newHeight
+      );
+
+      setEditedEncounter({
+        ...editedEncounter,
+        enemyPlacements: validEnemies,
+        playerDeploymentZones: validZones,
+      });
+
+      // Also update selectedEncounter
+      (selectedEncounter as any).enemyPlacements = validEnemies;
+      (selectedEncounter as any).playerDeploymentZones = validZones;
+    }
+
+    // Force re-render
     setMapRenderKey(prev => prev + 1);
   };
 
@@ -861,6 +931,70 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                     </select>
                     <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
                       Note: Changing the tileset will be reflected in the exported YAML. The current map grid will be preserved.
+                    </div>
+                  </div>
+                )}
+
+                {/* Map dimensions in edit mode */}
+                {isEditing && selectedEncounter && (
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+                      Map Dimensions:
+                    </label>
+                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', color: '#888' }}>
+                          Width:
+                        </label>
+                        <input
+                          type="number"
+                          min="3"
+                          max="50"
+                          value={selectedEncounter.map.width}
+                          onChange={(e) => {
+                            const newWidth = parseInt(e.target.value) || 3;
+                            handleResizeMap(newWidth, selectedEncounter.map.height);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '6px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            color: '#fff',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                            borderRadius: '3px',
+                          }}
+                        />
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <label style={{ display: 'block', marginBottom: '2px', fontSize: '10px', color: '#888' }}>
+                          Height:
+                        </label>
+                        <input
+                          type="number"
+                          min="3"
+                          max="50"
+                          value={selectedEncounter.map.height}
+                          onChange={(e) => {
+                            const newHeight = parseInt(e.target.value) || 3;
+                            handleResizeMap(selectedEncounter.map.width, newHeight);
+                          }}
+                          style={{
+                            width: '100%',
+                            padding: '6px',
+                            background: 'rgba(0, 0, 0, 0.3)',
+                            border: '1px solid rgba(255, 255, 255, 0.3)',
+                            color: '#fff',
+                            fontSize: '11px',
+                            fontFamily: 'monospace',
+                            borderRadius: '3px',
+                          }}
+                        />
+                      </div>
+                    </div>
+                    <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                      Resizing preserves existing tiles. New tiles will be floor tiles.
                     </div>
                   </div>
                 )}
