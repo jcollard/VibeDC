@@ -869,7 +869,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                   selectedTileIndex={selectedTileIndex}
                   onSelectedTileIndexChange={setSelectedTileIndex}
                   onEnemyMove={(enemyIndex, newX, newY) => {
-                    if (!editedEncounter) return;
+                    if (!editedEncounter || !selectedEncounter) return;
                     const newPlacements = [...editedEncounter.enemyPlacements];
                     newPlacements[enemyIndex] = {
                       ...newPlacements[enemyIndex],
@@ -879,34 +879,46 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                       ...editedEncounter,
                       enemyPlacements: newPlacements,
                     });
+                    // Also update selectedEncounter for preview
+                    (selectedEncounter as any).enemyPlacements = newPlacements;
+                    setMapRenderKey(prev => prev + 1);
                   }}
                   onDeploymentZoneMove={(zoneIndex, newX, newY) => {
-                    if (!editedEncounter) return;
+                    if (!editedEncounter || !selectedEncounter) return;
                     const newZones = [...editedEncounter.playerDeploymentZones];
                     newZones[zoneIndex] = { x: newX, y: newY };
                     setEditedEncounter({
                       ...editedEncounter,
                       playerDeploymentZones: newZones,
                     });
+                    // Also update selectedEncounter for preview
+                    (selectedEncounter as any).playerDeploymentZones = newZones;
+                    setMapRenderKey(prev => prev + 1);
                   }}
                   onEnemyRemove={(enemyIndex) => {
-                    if (!editedEncounter) return;
+                    if (!editedEncounter || !selectedEncounter) return;
                     const newPlacements = editedEncounter.enemyPlacements.filter((_, i) => i !== enemyIndex);
                     setEditedEncounter({
                       ...editedEncounter,
                       enemyPlacements: newPlacements,
                     });
+                    // Also update selectedEncounter for preview
+                    (selectedEncounter as any).enemyPlacements = newPlacements;
+                    setMapRenderKey(prev => prev + 1);
                   }}
                   onDeploymentZoneRemove={(zoneIndex) => {
-                    if (!editedEncounter) return;
+                    if (!editedEncounter || !selectedEncounter) return;
                     const newZones = editedEncounter.playerDeploymentZones.filter((_, i) => i !== zoneIndex);
                     setEditedEncounter({
                       ...editedEncounter,
                       playerDeploymentZones: newZones,
                     });
+                    // Also update selectedEncounter for preview
+                    (selectedEncounter as any).playerDeploymentZones = newZones;
+                    setMapRenderKey(prev => prev + 1);
                   }}
                   onEnemyChange={(enemyIndex, newEnemyId) => {
-                    if (!editedEncounter) return;
+                    if (!editedEncounter || !selectedEncounter) return;
                     const newPlacements = [...editedEncounter.enemyPlacements];
                     newPlacements[enemyIndex] = {
                       ...newPlacements[enemyIndex],
@@ -916,6 +928,9 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                       ...editedEncounter,
                       enemyPlacements: newPlacements,
                     });
+                    // Also update selectedEncounter for preview
+                    (selectedEncounter as any).enemyPlacements = newPlacements;
+                    setMapRenderKey(prev => prev + 1);
                   }}
                   onAddEnemy={handleAddEnemyPlacement}
                   onAddZone={handleAddDeploymentZone}
