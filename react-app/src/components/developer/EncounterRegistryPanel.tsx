@@ -341,7 +341,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     setMapRenderKey(prev => prev + 1);
   };
 
-  const handleTilePlacement = (x: number, y: number, tileTypeIndex: number) => {
+  const handleTilePlacement = (x: number, y: number, tileTypeIndex: number, skipRerender?: boolean) => {
     if (!editedEncounter || !selectedEncounter) return;
 
     // Get the tileset to find the tile type
@@ -359,7 +359,22 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
       spriteId: tileType.spriteId,
     });
 
-    // Force a re-render by incrementing the render key
+    // Force a re-render by incrementing the render key (unless skipped for batching)
+    if (!skipRerender) {
+      setMapRenderKey(prev => prev + 1);
+    }
+  };
+
+  // Batch update for multiple tile placements (used during drag)
+  const handleBatchTilePlacement = (tiles: Array<{ x: number; y: number; tileTypeIndex: number }>) => {
+    if (!editedEncounter || !selectedEncounter) return;
+
+    // Place all tiles without re-rendering
+    for (const tile of tiles) {
+      handleTilePlacement(tile.x, tile.y, tile.tileTypeIndex, true);
+    }
+
+    // Single re-render after all tiles are placed
     setMapRenderKey(prev => prev + 1);
   };
 
@@ -1015,12 +1030,13 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
               {/* Map Preview */}
               {isEditing && editedEncounter ? (
                 <EncounterPreview
-                  key={mapRenderKey}
                   encounter={selectedEncounter}
                   isEditing={isEditing}
                   onTilePlacement={handleTilePlacement}
+                  onBatchTilePlacement={handleBatchTilePlacement}
                   selectedTileIndex={selectedTileIndex}
                   onSelectedTileIndexChange={setSelectedTileIndex}
+                  mapUpdateTrigger={mapRenderKey}
                   onEnemyMove={(enemyIndex, newX, newY) => {
                     if (!editedEncounter || !selectedEncounter) return;
                     const newPlacements = [...editedEncounter.enemyPlacements];

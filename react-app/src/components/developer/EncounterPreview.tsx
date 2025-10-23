@@ -57,8 +57,10 @@ interface EncounterPreviewProps {
   onAddEnemy?: () => void;
   onAddZone?: () => void;
   onTilePlacement?: (x: number, y: number, tileTypeIndex: number) => void;
+  onBatchTilePlacement?: (tiles: Array<{ x: number; y: number; tileTypeIndex: number }>) => void;
   selectedTileIndex?: number | null;
   onSelectedTileIndexChange?: (index: number | null) => void;
+  mapUpdateTrigger?: number;
 }
 
 /**
@@ -77,18 +79,53 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   onAddEnemy,
   onAddZone,
   onTilePlacement,
+  onBatchTilePlacement,
   selectedTileIndex: selectedTileIndexProp,
-  onSelectedTileIndexChange
+  onSelectedTileIndexChange,
+  mapUpdateTrigger
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
   const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
   const [hoverGridPos, setHoverGridPos] = useState<{ x: number; y: number } | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastDragPos, setLastDragPos] = useState<{ x: number; y: number } | null>(null);
 
   // Use controlled state if provided, otherwise use local state
   const [selectedTileIndexLocal, setSelectedTileIndexLocal] = useState<number | null>(null);
   const selectedTileIndex = selectedTileIndexProp !== undefined ? selectedTileIndexProp : selectedTileIndexLocal;
   const setSelectedTileIndex = onSelectedTileIndexChange || setSelectedTileIndexLocal;
+
+  // Helper function to get all grid cells between two points (Bresenham's line algorithm)
+  const getLineBetween = (x0: number, y0: number, x1: number, y1: number): Array<{ x: number; y: number }> => {
+    const points: Array<{ x: number; y: number }> = [];
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+
+    let x = x0;
+    let y = y0;
+
+    while (true) {
+      points.push({ x, y });
+
+      if (x === x1 && y === y1) break;
+
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y += sy;
+      }
+    }
+
+    return points;
+  };
 
   // Handle canvas click
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -219,7 +256,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     }
   };
 
-  // Handle mouse move for tile preview
+  // Handle mouse move for tile preview and drag placement
   const handleCanvasMouseMove = (event: React.MouseEvent<HTMLCanvasElement>) => {
     if (!isEditing || !canvasRef.current || selectedTileIndex === null) {
       setHoverGridPos(null);
@@ -243,14 +280,84 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     // Check if within map bounds
     if (gridX >= 0 && gridX < encounter.map.width && gridY >= 0 && gridY < encounter.map.height) {
       setHoverGridPos({ x: gridX, y: gridY });
+
+      // If dragging, place tiles along the line from last position to current position
+      if (isDragging && (onBatchTilePlacement || onTilePlacement)) {
+        const tileset = encounter.tilesetId ? TilesetRegistry.getById(encounter.tilesetId) : null;
+        if (tileset) {
+          const tileType = tileset.tileTypes[selectedTileIndex];
+          if (tileType) {
+            // Get all cells between last drag position and current position
+            const cellsToFill = lastDragPos
+              ? getLineBetween(lastDragPos.x, lastDragPos.y, gridX, gridY)
+              : [{ x: gridX, y: gridY }];
+
+            // Collect valid tiles to place
+            const tilesToPlace: Array<{ x: number; y: number; tileTypeIndex: number }> = [];
+            for (const cell of cellsToFill) {
+              const hasEnemy = encounter.enemyPlacements.some(
+                p => p.position.x === cell.x && p.position.y === cell.y
+              );
+              const hasZone = encounter.playerDeploymentZones.some(
+                z => z.x === cell.x && z.y === cell.y
+              );
+              const isValidPlacement = tileType.walkable || (!hasEnemy && !hasZone);
+
+              if (isValidPlacement) {
+                tilesToPlace.push({ x: cell.x, y: cell.y, tileTypeIndex: selectedTileIndex });
+              }
+            }
+
+            // Use batch placement if available (reduces re-renders), otherwise place one by one
+            if (tilesToPlace.length > 0) {
+              if (onBatchTilePlacement) {
+                onBatchTilePlacement(tilesToPlace);
+              } else if (onTilePlacement) {
+                for (const tile of tilesToPlace) {
+                  onTilePlacement(tile.x, tile.y, tile.tileTypeIndex);
+                }
+              }
+            }
+          }
+        }
+        // Update last drag position
+        setLastDragPos({ x: gridX, y: gridY });
+      }
     } else {
       setHoverGridPos(null);
     }
   };
 
+  // Handle mouse down to start dragging
+  const handleCanvasMouseDown = (event: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isEditing || selectedTileIndex === null || !canvasRef.current) return;
+
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const SPRITE_SIZE = 12;
+    const SCALE = 2;
+    const SCALED_SIZE = SPRITE_SIZE * SCALE;
+
+    const mouseX = event.clientX - rect.left;
+    const mouseY = event.clientY - rect.top;
+    const gridX = Math.floor(mouseX / SCALED_SIZE);
+    const gridY = Math.floor(mouseY / SCALED_SIZE);
+
+    setIsDragging(true);
+    setLastDragPos({ x: gridX, y: gridY });
+  };
+
+  // Handle mouse up to stop dragging
+  const handleCanvasMouseUp = () => {
+    setIsDragging(false);
+    setLastDragPos(null);
+  };
+
   // Handle mouse leave
   const handleCanvasMouseLeave = () => {
     setHoverGridPos(null);
+    setIsDragging(false);
+    setLastDragPos(null);
   };
 
   useEffect(() => {
@@ -598,7 +705,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         default: return '#444';
       }
     }
-  }, [encounter, selectedEnemyIndex, selectedZoneIndex, hoverGridPos, selectedTileIndex]);
+  }, [encounter, selectedEnemyIndex, selectedZoneIndex, hoverGridPos, selectedTileIndex, mapUpdateTrigger]);
 
   const handleDeleteClick = () => {
     if (selectedEnemyIndex !== null && onEnemyRemove) {
@@ -642,6 +749,8 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
         <canvas
           ref={canvasRef}
           onClick={handleCanvasClick}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseUp={handleCanvasMouseUp}
           onMouseMove={handleCanvasMouseMove}
           onMouseLeave={handleCanvasMouseLeave}
           style={{
