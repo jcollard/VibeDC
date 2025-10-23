@@ -329,10 +329,16 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
       position: position,
     };
 
+    const newPlacements = [...editedEncounter.enemyPlacements, newPlacement];
+
     setEditedEncounter({
       ...editedEncounter,
-      enemyPlacements: [...editedEncounter.enemyPlacements, newPlacement],
+      enemyPlacements: newPlacements,
     });
+
+    // Also update selectedEncounter for preview
+    (selectedEncounter as any).enemyPlacements = newPlacements;
+    setMapRenderKey(prev => prev + 1);
   };
 
   const handleTilePlacement = (x: number, y: number, tileTypeIndex: number) => {
@@ -461,10 +467,16 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     // If no empty position found, default to (0, 0)
     const position = foundPosition || { x: 0, y: 0 };
 
+    const newZones = [...editedEncounter.playerDeploymentZones, position];
+
     setEditedEncounter({
       ...editedEncounter,
-      playerDeploymentZones: [...editedEncounter.playerDeploymentZones, position],
+      playerDeploymentZones: newZones,
     });
+
+    // Also update selectedEncounter for preview
+    (selectedEncounter as any).playerDeploymentZones = newZones;
+    setMapRenderKey(prev => prev + 1);
   };
 
   const handleDuplicate = () => {
