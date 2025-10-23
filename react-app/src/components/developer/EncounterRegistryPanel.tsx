@@ -325,25 +325,6 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     });
   };
 
-  const handleRemoveDeploymentZone = (index: number) => {
-    if (!editedEncounter) return;
-    const newZones = editedEncounter.playerDeploymentZones.filter((_, i) => i !== index);
-    setEditedEncounter({
-      ...editedEncounter,
-      playerDeploymentZones: newZones,
-    });
-  };
-
-  const handleUpdateDeploymentZone = (index: number, field: 'x' | 'y', value: number) => {
-    if (!editedEncounter) return;
-    const newZones = [...editedEncounter.playerDeploymentZones];
-    newZones[index] = { ...newZones[index], [field]: value };
-    setEditedEncounter({
-      ...editedEncounter,
-      playerDeploymentZones: newZones,
-    });
-  };
-
   const handleDuplicate = () => {
     if (!selectedEncounter) return;
 
@@ -866,6 +847,8 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                       enemyPlacements: newPlacements,
                     });
                   }}
+                  onAddEnemy={handleAddEnemyPlacement}
+                  onAddZone={handleAddDeploymentZone}
                 />
               ) : (
                 <EncounterPreview encounter={selectedEncounter} />
@@ -880,100 +863,58 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                   border: '1px solid rgba(76, 175, 80, 0.3)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
-                    Player Deployment Zones ({isEditing ? editedEncounter?.playerDeploymentZones.length : selectedEncounter.deploymentSlotCount})
-                  </div>
-                  {isEditing && (
-                    <button
-                      onClick={handleAddDeploymentZone}
-                      style={{
-                        padding: '2px 8px',
-                        background: 'rgba(76, 175, 80, 0.3)',
-                        border: '1px solid rgba(76, 175, 80, 0.6)',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      + Add Zone
-                    </button>
-                  )}
+                <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '8px' }}>
+                  Player Deployment Zones ({isEditing ? editedEncounter?.playerDeploymentZones.length : selectedEncounter.deploymentSlotCount})
                 </div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px' }}>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {(isEditing ? editedEncounter?.playerDeploymentZones : selectedEncounter.playerDeploymentZones)?.map((zone, index) => (
                     <div
                       key={index}
                       style={{
-                        padding: '4px 8px',
+                        padding: '8px',
                         background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '3px',
+                        borderRadius: '4px',
+                        border: '1px solid rgba(255, 255, 255, 0.1)',
                         display: 'flex',
+                        flexDirection: 'column',
                         alignItems: 'center',
-                        gap: '8px',
+                        gap: '4px',
+                        minWidth: '80px',
                       }}
                     >
-                      {isEditing ? (
-                        <>
-                          <span>Zone {index + 1}:</span>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            X:
-                            <input
-                              type="number"
-                              value={zone.x}
-                              onChange={(e) => handleUpdateDeploymentZone(index, 'x', Number(e.target.value))}
-                              style={{
-                                width: '50px',
-                                background: 'rgba(0, 0, 0, 0.3)',
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                                color: '#fff',
-                                padding: '2px 4px',
-                                fontSize: '10px',
-                                fontFamily: 'monospace',
-                                borderRadius: '3px',
-                              }}
-                            />
-                          </label>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            Y:
-                            <input
-                              type="number"
-                              value={zone.y}
-                              onChange={(e) => handleUpdateDeploymentZone(index, 'y', Number(e.target.value))}
-                              style={{
-                                width: '50px',
-                                background: 'rgba(0, 0, 0, 0.3)',
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                                color: '#fff',
-                                padding: '2px 4px',
-                                fontSize: '10px',
-                                fontFamily: 'monospace',
-                                borderRadius: '3px',
-                              }}
-                            />
-                          </label>
-                          <button
-                            onClick={() => handleRemoveDeploymentZone(index)}
-                            style={{
-                              marginLeft: 'auto',
-                              padding: '2px 6px',
-                              background: 'rgba(244, 67, 54, 0.3)',
-                              border: '1px solid rgba(244, 67, 54, 0.6)',
-                              borderRadius: '3px',
-                              color: '#fff',
-                              fontSize: '9px',
-                              cursor: 'pointer',
-                              fontFamily: 'monospace',
-                            }}
-                          >
-                            Remove
-                          </button>
-                        </>
-                      ) : (
-                        <span>Zone {index + 1}: ({zone.x}, {zone.y})</span>
-                      )}
+                      {/* Zone Icon */}
+                      <div
+                        style={{
+                          width: '48px',
+                          height: '48px',
+                          background: 'rgba(76, 175, 80, 0.3)',
+                          borderRadius: '3px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          border: '2px solid rgba(76, 175, 80, 0.6)',
+                        }}
+                      >
+                        <span style={{ color: '#fff', fontSize: '24px', fontWeight: 'bold' }}>P</span>
+                      </div>
+
+                      {/* Zone Label */}
+                      <div style={{
+                        fontSize: '11px',
+                        fontWeight: 'bold',
+                        textAlign: 'center',
+                      }}>
+                        Zone {index + 1}
+                      </div>
+
+                      {/* Position */}
+                      <div style={{
+                        fontSize: '9px',
+                        color: '#aaa',
+                        fontFamily: 'monospace',
+                      }}>
+                        ({zone.x}, {zone.y})
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -988,26 +929,8 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                   border: '1px solid rgba(244, 67, 54, 0.3)',
                 }}
               >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
-                  <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
-                    Enemy Placements ({isEditing ? editedEncounter?.enemyPlacements.length : selectedEncounter.enemyCount})
-                  </div>
-                  {isEditing && (
-                    <button
-                      onClick={handleAddEnemyPlacement}
-                      style={{
-                        padding: '4px 8px',
-                        background: 'rgba(244, 67, 54, 0.3)',
-                        border: '1px solid rgba(244, 67, 54, 0.6)',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontSize: '11px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      + Add Enemy
-                    </button>
-                  )}
+                <div style={{ fontWeight: 'bold', fontSize: '13px', marginBottom: '8px' }}>
+                  Enemy Placements ({isEditing ? editedEncounter?.enemyPlacements.length : selectedEncounter.enemyCount})
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
                   {(isEditing ? editedEncounter?.enemyPlacements : selectedEncounter.enemyPlacements)?.map((placement, index) => {

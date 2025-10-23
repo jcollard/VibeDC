@@ -26,7 +26,7 @@ encounters:
         'y': 6
       - x: 4
         'y': 6
-      - x: 5
+      - x: 7
         'y': 6
     enemyPlacements:
       - enemyId: goblin
@@ -35,9 +35,9 @@ encounters:
           'y': 2
       - enemyId: goblin
         position:
-          x: 5
-          'y': 3
-      - enemyId: goblin
-        position:
           x: 7
           'y': 2
+      - enemyId: ancient-dragon
+        position:
+          x: 7
+          'y': 4

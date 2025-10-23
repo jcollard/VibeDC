@@ -11,6 +11,8 @@ interface EncounterPreviewProps {
   onEnemyRemove?: (enemyIndex: number) => void;
   onDeploymentZoneRemove?: (zoneIndex: number) => void;
   onEnemyChange?: (enemyIndex: number, newEnemyId: string) => void;
+  onAddEnemy?: () => void;
+  onAddZone?: () => void;
 }
 
 /**
@@ -25,7 +27,9 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   onDeploymentZoneMove,
   onEnemyRemove,
   onDeploymentZoneRemove,
-  onEnemyChange
+  onEnemyChange,
+  onAddEnemy,
+  onAddZone
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
@@ -513,6 +517,46 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
           >
             🗑️
           </button>
+        )}
+        {isEditing && selectedEnemyIndex === null && selectedZoneIndex === null && (onAddEnemy || onAddZone) && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+            {onAddEnemy && (
+              <button
+                onClick={onAddEnemy}
+                style={{
+                  padding: '8px 12px',
+                  background: 'rgba(244, 67, 54, 0.3)',
+                  color: '#fff',
+                  border: '1px solid rgba(244, 67, 54, 0.6)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                }}
+                title="Add a new enemy to the encounter"
+              >
+                + Add Enemy
+              </button>
+            )}
+            {onAddZone && (
+              <button
+                onClick={onAddZone}
+                style={{
+                  padding: '8px 12px',
+                  background: 'rgba(76, 175, 80, 0.3)',
+                  color: '#fff',
+                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                  borderRadius: '4px',
+                  cursor: 'pointer',
+                  fontSize: '11px',
+                  fontWeight: 'bold',
+                }}
+                title="Add a new deployment zone to the encounter"
+              >
+                + Add Zone
+              </button>
+            )}
+          </div>
         )}
       </div>
       <div style={{ fontSize: '9px', color: '#aaa', fontStyle: 'italic' }}>
