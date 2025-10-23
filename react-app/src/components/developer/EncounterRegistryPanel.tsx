@@ -4,6 +4,7 @@ import type { CombatEncounterJSON, EnemyPlacement } from '../../models/combat/Co
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
 import { TilesetRegistry } from '../../utils/TilesetRegistry';
 import { TagFilter } from './TagFilter';
+import { PreviewEncounter } from './PreviewEncounter';
 import * as yaml from 'js-yaml';
 
 interface EncounterRegistryPanelProps {
@@ -727,6 +728,9 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                   </div>
                 )}
               </div>
+
+              {/* Map Preview */}
+              <PreviewEncounter encounter={selectedEncounter} />
 
               {/* Player Deployment Zones */}
               <div
