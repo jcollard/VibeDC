@@ -3,11 +3,11 @@ encounters:
     name: Forest Ambush
     description: A group of bandits ambush travelers on the forest road.
     map:
-      tilesetId: forest
+      tilesetId: dungeon-stone
       grid: |-
         ##########
         #........#
-        #...T....#
+        #...#....#
         #........#
         #........#
         #........#

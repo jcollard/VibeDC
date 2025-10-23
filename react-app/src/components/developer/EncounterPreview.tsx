@@ -276,7 +276,22 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     const imagesToLoad = new Set<string>();
     const loadedImages = new Map<string, HTMLImageElement>();
 
-    // Collect all unique sprite sheets needed (from map tiles)
+    // Collect all unique sprite sheets needed from the current tileset
+    if (encounter.tilesetId) {
+      const tileset = TilesetRegistry.getById(encounter.tilesetId);
+      if (tileset) {
+        for (const tileType of tileset.tileTypes) {
+          if (tileType.spriteId) {
+            const sprite = SpriteRegistry.getById(tileType.spriteId);
+            if (sprite && !imagesToLoad.has(sprite.spriteSheet)) {
+              imagesToLoad.add(sprite.spriteSheet);
+            }
+          }
+        }
+      }
+    }
+
+    // Also collect sprite sheets from cell.spriteId (for fallback rendering)
     for (let y = 0; y < encounter.map.height; y++) {
       for (let x = 0; x < encounter.map.width; x++) {
         const cell = encounter.map.getCell({ x, y });
@@ -340,7 +355,51 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
           const screenX = x * SCALED_SIZE;
           const screenY = y * SCALED_SIZE;
 
-          if (cell.spriteId) {
+          // Check if this cell matches a tile type in the current tileset
+          // We match by terrain and walkable only (not spriteId) since different
+          // tilesets may use different sprites for the same logical tile
+          let cellMatchesTileset = false;
+          let tileSprite = null;
+          if (encounter.tilesetId) {
+            const tileset = TilesetRegistry.getById(encounter.tilesetId);
+            if (tileset) {
+              // Find a matching tile type by terrain and walkable
+              const matchingTileType = tileset.tileTypes.find(tt =>
+                tt.terrain === cell.terrain &&
+                tt.walkable === cell.walkable
+              );
+              if (matchingTileType) {
+                cellMatchesTileset = true;
+                // Use the sprite from the current tileset's tile type
+                if (matchingTileType.spriteId) {
+                  tileSprite = SpriteRegistry.getById(matchingTileType.spriteId);
+                }
+              }
+            }
+          }
+
+          // If cell doesn't match any tile in the tileset, show red error
+          if (encounter.tilesetId && !cellMatchesTileset) {
+            drawPlaceholder(screenX, screenY, '#c44');
+          } else if (tileSprite) {
+            // Use sprite from current tileset
+            const img = loadedImages.get(tileSprite.spriteSheet);
+            if (img) {
+              ctx.drawImage(
+                img,
+                tileSprite.x * SPRITE_SIZE,
+                tileSprite.y * SPRITE_SIZE,
+                SPRITE_SIZE,
+                SPRITE_SIZE,
+                screenX,
+                screenY,
+                SCALED_SIZE,
+                SCALED_SIZE
+              );
+            } else {
+              drawPlaceholder(screenX, screenY, '#666');
+            }
+          } else if (cell.spriteId) {
             const sprite = SpriteRegistry.getById(cell.spriteId);
             if (sprite) {
               const img = loadedImages.get(sprite.spriteSheet);

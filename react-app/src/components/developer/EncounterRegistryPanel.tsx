@@ -833,7 +833,14 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                     </label>
                     <select
                       value={editedTilesetId}
-                      onChange={(e) => setEditedTilesetId(e.target.value)}
+                      onChange={(e) => {
+                        setEditedTilesetId(e.target.value);
+                        if (selectedEncounter) {
+                          (selectedEncounter as any).tilesetId = e.target.value;
+                        }
+                        setMapRenderKey(prev => prev + 1);
+                        setSelectedTileIndex(null); // Clear tile selection when changing tileset
+                      }}
                       style={{
                         width: '100%',
                         padding: '6px',
