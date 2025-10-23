@@ -2,6 +2,49 @@ import { useEffect, useRef, useState } from 'react';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
+import { TilesetRegistry } from '../../utils/TilesetRegistry';
+
+// Helper component to render a sprite on a canvas
+const SpriteCanvas: React.FC<{ spriteSheet: string; spriteX: number; spriteY: number; size: number }> = ({
+  spriteSheet,
+  spriteX,
+  spriteY,
+  size,
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    const SPRITE_SIZE = 12;
+    canvas.width = size;
+    canvas.height = size;
+    ctx.imageSmoothingEnabled = false;
+
+    const img = new Image();
+    img.onload = () => {
+      ctx.clearRect(0, 0, size, size);
+      ctx.drawImage(
+        img,
+        spriteX * SPRITE_SIZE,
+        spriteY * SPRITE_SIZE,
+        SPRITE_SIZE,
+        SPRITE_SIZE,
+        0,
+        0,
+        size,
+        size
+      );
+    };
+    img.src = spriteSheet;
+  }, [spriteSheet, spriteX, spriteY, size]);
+
+  return <canvas ref={canvasRef} style={{ imageRendering: 'pixelated' }} />;
+};
 
 interface EncounterPreviewProps {
   encounter: CombatEncounter;
@@ -34,6 +77,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
   const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
+  const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
 
   // Handle canvas click
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -556,6 +600,111 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
                 + Add Zone
               </button>
             )}
+          </div>
+        )}
+        {/* Tile Palette */}
+        {isEditing && selectedEnemyIndex === null && selectedZoneIndex === null && (
+          <div
+            style={{
+              background: 'rgba(33, 150, 243, 0.1)',
+              border: '1px solid rgba(33, 150, 243, 0.3)',
+              borderRadius: '4px',
+              padding: '12px',
+              minWidth: '200px',
+              maxWidth: '250px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#2196f3' }}>
+              Tile Palette
+            </div>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', maxHeight: '400px', overflowY: 'auto' }}>
+              {(() => {
+                if (!encounter.tilesetId) return null;
+                const tileset = TilesetRegistry.getById(encounter.tilesetId);
+                if (!tileset) return null;
+
+                return tileset.tileTypes.map((tileType, index) => {
+                  const sprite = tileType.spriteId ? SpriteRegistry.getById(tileType.spriteId) : null;
+
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => {
+                        setSelectedTileIndex(selectedTileIndex === index ? null : index);
+                      }}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        borderRadius: '3px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        cursor: 'pointer',
+                        border: selectedTileIndex === index ? '2px solid rgba(33, 150, 243, 1.0)' : '1px solid rgba(255, 255, 255, 0.1)',
+                        imageRendering: 'pixelated' as const,
+                      }}
+                    >
+                      {sprite ? (
+                        <SpriteCanvas
+                          spriteSheet={sprite.spriteSheet}
+                          spriteX={sprite.x}
+                          spriteY={sprite.y}
+                          size={24}
+                        />
+                      ) : (
+                        <span style={{ fontSize: '16px' }}>{tileType.char}</span>
+                      )}
+                    </div>
+                  );
+                });
+              })()}
+            </div>
+            {selectedTileIndex !== null && (() => {
+              if (!encounter.tilesetId) return null;
+              const tileset = TilesetRegistry.getById(encounter.tilesetId);
+              const tileType = tileset?.tileTypes[selectedTileIndex];
+              if (!tileType) return null;
+
+              return (
+                <div style={{
+                  marginTop: '8px',
+                  padding: '8px',
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  borderRadius: '3px',
+                  fontSize: '11px',
+                }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#2196f3' }}>
+                    Selected Tile
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <span style={{ color: '#aaa' }}>Char:</span>{' '}
+                    <span style={{ color: '#fff', fontFamily: 'monospace' }}>{tileType.char}</span>
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <span style={{ color: '#aaa' }}>Terrain:</span>{' '}
+                    <span style={{ color: '#fff' }}>{tileType.terrain}</span>
+                  </div>
+                  <div style={{ marginBottom: '4px' }}>
+                    <span style={{ color: '#aaa' }}>Walkable:</span>{' '}
+                    <span style={{ color: tileType.walkable ? '#4caf50' : '#f44336' }}>
+                      {tileType.walkable ? 'Yes' : 'No'}
+                    </span>
+                  </div>
+                  {tileType.spriteId && (
+                    <div>
+                      <span style={{ color: '#aaa' }}>Sprite ID:</span>{' '}
+                      <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: '10px' }}>
+                        {tileType.spriteId}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         )}
       </div>
