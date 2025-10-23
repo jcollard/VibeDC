@@ -3,6 +3,7 @@ import { TilesetRegistry } from '../../utils/TilesetRegistry';
 import type { TilesetDefinition, TilesetDefinitionJSON } from '../../utils/TilesetRegistry';
 import type { TileDefinition } from '../../models/combat/CombatMap';
 import { TagFilter } from './TagFilter';
+import { SpriteBrowser } from './SpriteBrowser';
 import * as yaml from 'js-yaml';
 
 interface TilesetRegistryPanelProps {
@@ -20,6 +21,8 @@ export const TilesetRegistryPanel: React.FC<TilesetRegistryPanelProps> = ({ onCl
   const [editedTileset, setEditedTileset] = useState<TilesetDefinitionJSON | null>(null);
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [allTags, setAllTags] = useState<string[]>([]);
+  const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
+  const [editingTileIndex, setEditingTileIndex] = useState<number | null>(null);
 
   // Load tilesets from registry
   useEffect(() => {
@@ -613,25 +616,47 @@ export const TilesetRegistryPanel: React.FC<TilesetRegistryPanelProps> = ({ onCl
                               Remove
                             </button>
                           </div>
-                          <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                            Sprite ID:
-                            <input
-                              type="text"
-                              value={tile.spriteId || ''}
-                              onChange={(e) => handleUpdateTileType(index, 'spriteId', e.target.value)}
-                              placeholder="(optional)"
-                              style={{
-                                flex: 1,
-                                background: 'rgba(0, 0, 0, 0.3)',
-                                border: '1px solid rgba(255, 255, 255, 0.3)',
-                                color: '#fff',
-                                padding: '2px 4px',
-                                fontSize: '10px',
-                                fontFamily: 'monospace',
-                                borderRadius: '3px',
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            <label style={{ display: 'flex', alignItems: 'center', gap: '4px', flex: 1 }}>
+                              Sprite ID:
+                              <input
+                                type="text"
+                                value={tile.spriteId || ''}
+                                onChange={(e) => handleUpdateTileType(index, 'spriteId', e.target.value)}
+                                placeholder="(optional)"
+                                style={{
+                                  flex: 1,
+                                  background: 'rgba(0, 0, 0, 0.3)',
+                                  border: '1px solid rgba(255, 255, 255, 0.3)',
+                                  color: '#fff',
+                                  padding: '2px 4px',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                  borderRadius: '3px',
+                                }}
+                              />
+                            </label>
+                            <button
+                              onClick={() => {
+                                setEditingTileIndex(index);
+                                setSpriteBrowserVisible(true);
                               }}
-                            />
-                          </label>
+                              style={{
+                                padding: '2px 8px',
+                                background: 'rgba(76, 175, 80, 0.3)',
+                                border: '1px solid rgba(76, 175, 80, 0.6)',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                fontSize: '10px',
+                                cursor: 'pointer',
+                                fontFamily: 'monospace',
+                                whiteSpace: 'nowrap',
+                              }}
+                              title="Browse sprites"
+                            >
+                              Browse
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 100px', gap: '8px', alignItems: 'center' }}>
@@ -667,6 +692,24 @@ export const TilesetRegistryPanel: React.FC<TilesetRegistryPanelProps> = ({ onCl
           )}
         </div>
       </div>
+
+      {/* Sprite Browser Modal */}
+      {spriteBrowserVisible && editingTileIndex !== null && editedTileset && (
+        <SpriteBrowser
+          selectedSpriteId={editedTileset.tileTypes[editingTileIndex]?.spriteId}
+          onSelectSprite={(spriteId) => {
+            if (editingTileIndex !== null) {
+              handleUpdateTileType(editingTileIndex, 'spriteId', spriteId);
+            }
+            setSpriteBrowserVisible(false);
+            setEditingTileIndex(null);
+          }}
+          onClose={() => {
+            setSpriteBrowserVisible(false);
+            setEditingTileIndex(null);
+          }}
+        />
+      )}
     </div>
   );
 };
