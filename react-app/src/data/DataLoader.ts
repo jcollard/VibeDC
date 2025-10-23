@@ -10,6 +10,8 @@ import { SpriteRegistry } from '../utils/SpriteRegistry';
 import type { SpriteDefinitionJSON } from '../utils/SpriteRegistry';
 import { EnemyRegistry } from '../utils/EnemyRegistry';
 import type { EnemyDefinitionJSON } from '../utils/EnemyRegistry';
+import { PartyMemberRegistry } from '../utils/PartyMemberRegistry';
+import type { PartyMemberDefinitionJSON } from '../utils/PartyMemberRegistry';
 import { TilesetRegistry } from '../utils/TilesetRegistry';
 import type { TilesetDefinitionJSON } from '../utils/TilesetRegistry';
 
@@ -19,6 +21,7 @@ import classYaml from './class-database.yaml?raw';
 import encounterYaml from './encounter-database.yaml?raw';
 import spriteYaml from './sprite-definitions.yaml?raw';
 import enemyYaml from './enemy-definitions.yaml?raw';
+import partyYaml from './party-definitions.yaml?raw';
 import equipmentYaml from './equipment-definitions.yaml?raw';
 import tilesetYaml from './tileset-database.yaml?raw';
 
@@ -207,6 +210,19 @@ export function loadEnemies(): void {
 }
 
 /**
+ * Load all party member definitions from the YAML database
+ */
+export function loadPartyMembers(): void {
+  const data = yaml.load(partyYaml) as { partyMembers: PartyMemberDefinitionJSON[] };
+
+  for (const partyData of data.partyMembers) {
+    PartyMemberRegistry.register(partyData);
+  }
+
+  console.log(`Loaded ${data.partyMembers.length} party member definitions`);
+}
+
+/**
  * Load all game data from YAML files
  * Call this once at application startup
  */
@@ -214,15 +230,17 @@ export function loadAllGameData(): void {
   console.log('Loading game data...');
 
   // Order matters:
-  // - Sprites should be loaded first (referenced by enemies)
+  // - Sprites should be loaded first (referenced by enemies and party members)
   // - Abilities must be loaded before classes and encounters
-  // - Enemies should be loaded after classes (they reference unit classes)
+  // - Equipment must be loaded before party members (they reference equipment)
+  // - Enemies and party members should be loaded after classes (they reference unit classes)
   // - Tilesets must be loaded before encounters (encounters reference tilesets)
   loadSprites();
   loadAbilities();
   loadEquipment();
   loadClasses();
   loadEnemies();
+  loadPartyMembers();
   loadTilesets();
   loadEncounters();
 

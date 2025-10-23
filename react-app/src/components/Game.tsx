@@ -6,6 +6,7 @@ import { CombatView } from './CombatView';
 import { DeveloperPanel } from './developer/DeveloperPanel';
 import { SpriteRegistryPanel } from './developer/SpriteRegistryPanel';
 import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
+import { PartyMemberRegistryPanel } from './developer/PartyMemberRegistryPanel';
 import { AbilityRegistryPanel } from './developer/AbilityRegistryPanel';
 import { EquipmentRegistryPanel } from './developer/EquipmentRegistryPanel';
 import { ClassRegistryPanel } from './developer/ClassRegistryPanel';
@@ -51,6 +52,9 @@ export const Game: React.FC = () => {
 
   // Enemy registry panel visibility (development only)
   const [enemyRegistryVisible, setEnemyRegistryVisible] = useState<boolean>(false);
+
+  // Party member registry panel visibility (development only)
+  const [partyMemberRegistryVisible, setPartyMemberRegistryVisible] = useState<boolean>(false);
 
   // Ability registry panel visibility (development only)
   const [abilityRegistryVisible, setAbilityRegistryVisible] = useState<boolean>(false);
@@ -322,7 +326,7 @@ export const Game: React.FC = () => {
       }
 
       // Ignore game input if any modal panels are open that accept text input
-      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || partyMemberRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
         return;
       }
 
@@ -347,7 +351,7 @@ export const Game: React.FC = () => {
 
     const handleKeyUp = (e: KeyboardEvent) => {
       // Clear pressed keys when panels are open to prevent stuck keys
-      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
+      if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || partyMemberRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
         pressedKeysRef.current.clear();
         return;
       }
@@ -360,7 +364,7 @@ export const Game: React.FC = () => {
       window.removeEventListener('keydown', handleKeyDown);
       window.removeEventListener('keyup', handleKeyUp);
     };
-  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible, abilityRegistryVisible, equipmentRegistryVisible, classRegistryVisible, tilesetRegistryVisible, encounterRegistryVisible]);
+  }, [handleAction, inputConfig, mapEditorVisible, spriteRegistryVisible, enemyRegistryVisible, partyMemberRegistryVisible, abilityRegistryVisible, equipmentRegistryVisible, classRegistryVisible, tilesetRegistryVisible, encounterRegistryVisible]);
 
   if (loading) {
     return <div style={{
@@ -484,6 +488,10 @@ export const Game: React.FC = () => {
                   setEnemyRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenPartyMemberRegistry={() => {
+                  setPartyMemberRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenAbilityRegistry={() => {
                   setAbilityRegistryVisible(true);
                   setDeveloperPanelVisible(false);
@@ -522,6 +530,13 @@ export const Game: React.FC = () => {
             {import.meta.env.DEV && enemyRegistryVisible && (
               <EnemyRegistryPanel
                 onClose={() => setEnemyRegistryVisible(false)}
+              />
+            )}
+
+            {/* Party member registry panel - only available in development mode */}
+            {import.meta.env.DEV && partyMemberRegistryVisible && (
+              <PartyMemberRegistryPanel
+                onClose={() => setPartyMemberRegistryVisible(false)}
               />
             )}
 

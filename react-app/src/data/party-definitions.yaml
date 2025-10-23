@@ -1,0 +1,71 @@
+# Party Member definitions for testing
+# Exported from Party Member Registry Panel
+
+partyMembers:
+  - id: "knight-001"
+    name: "Sir Roland"
+    unitClassId: "fighter"
+    baseHealth: 45
+    baseMana: 15
+    basePhysicalPower: 18
+    baseMagicPower: 5
+    baseSpeed: 8
+    baseMovement: 4
+    basePhysicalEvade: 10
+    baseMagicEvade: 7
+    baseCourage: 16
+    baseAttunement: 6
+    spriteId: "crystalwarriors-0"
+    secondaryClassId: "squire"
+    leftHandId: "iron-sword-001"
+    rightHandId: "wooden-shield-001"
+    headId: "iron-helm-001"
+    bodyId: "iron-armor-001"
+    tags: ["warrior", "tank", "melee"]
+    description: "A noble knight with strong defensive capabilities"
+    totalExperience: 100
+
+  - id: "mage-001"
+    name: "Aria the Wise"
+    unitClassId: "apprentice"
+    baseHealth: 25
+    baseMana: 50
+    basePhysicalPower: 6
+    baseMagicPower: 22
+    baseSpeed: 9
+    baseMovement: 3
+    basePhysicalEvade: 8
+    baseMagicEvade: 18
+    baseCourage: 10
+    baseAttunement: 20
+    spriteId: "crystalwarriors-10"
+    leftHandId: "oak-staff-001"
+    headId: "wizard-hat-001"
+    bodyId: "mage-robe-001"
+    accessoryId: "mana-amulet-001"
+    tags: ["mage", "magic", "ranged"]
+    description: "A powerful mage specializing in elemental magic"
+    totalExperience: 120
+
+  - id: "rogue-001"
+    name: "Shadow"
+    unitClassId: "rogue"
+    baseHealth: 32
+    baseMana: 20
+    basePhysicalPower: 14
+    baseMagicPower: 8
+    baseSpeed: 16
+    baseMovement: 5
+    basePhysicalEvade: 20
+    baseMagicEvade: 12
+    baseCourage: 12
+    baseAttunement: 10
+    spriteId: "crystalwarriors-4"
+    leftHandId: "steel-dagger-001"
+    rightHandId: "steel-dagger-001"
+    bodyId: "leather-armor-001"
+    accessoryId: "swift-boots-001"
+    tags: ["rogue", "fast", "melee", "dual-wield"]
+    description: "A swift rogue who strikes from the shadows"
+    totalExperience: 90
+

@@ -5,6 +5,7 @@ interface DeveloperPanelProps {
   onOpenMapEditor?: () => void;
   onOpenSpriteRegistry?: () => void;
   onOpenEnemyRegistry?: () => void;
+  onOpenPartyMemberRegistry?: () => void;
   onOpenAbilityRegistry?: () => void;
   onOpenEquipmentRegistry?: () => void;
   onOpenClassRegistry?: () => void;
@@ -22,6 +23,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onOpenMapEditor,
   onOpenSpriteRegistry,
   onOpenEnemyRegistry,
+  onOpenPartyMemberRegistry,
   onOpenAbilityRegistry,
   onOpenEquipmentRegistry,
   onOpenClassRegistry,
@@ -50,6 +52,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Enemy',
       available: !!onOpenEnemyRegistry,
       onClick: onOpenEnemyRegistry,
+    },
+    {
+      name: 'Party Member Registry',
+      description: 'Browse and edit party members',
+      shortcut: 'F2 → Party',
+      available: !!onOpenPartyMemberRegistry,
+      onClick: onOpenPartyMemberRegistry,
     },
     {
       name: 'Ability Registry',
