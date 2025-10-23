@@ -56,6 +56,9 @@ interface EncounterPreviewProps {
   onEnemyChange?: (enemyIndex: number, newEnemyId: string) => void;
   onAddEnemy?: () => void;
   onAddZone?: () => void;
+  onTilePlacement?: (x: number, y: number, tileTypeIndex: number) => void;
+  selectedTileIndex?: number | null;
+  onSelectedTileIndexChange?: (index: number | null) => void;
 }
 
 /**
@@ -72,12 +75,19 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   onDeploymentZoneRemove,
   onEnemyChange,
   onAddEnemy,
-  onAddZone
+  onAddZone,
+  onTilePlacement,
+  selectedTileIndex: selectedTileIndexProp,
+  onSelectedTileIndexChange
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
   const [selectedZoneIndex, setSelectedZoneIndex] = useState<number | null>(null);
-  const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
+
+  // Use controlled state if provided, otherwise use local state
+  const [selectedTileIndexLocal, setSelectedTileIndexLocal] = useState<number | null>(null);
+  const selectedTileIndex = selectedTileIndexProp !== undefined ? selectedTileIndexProp : selectedTileIndexLocal;
+  const setSelectedTileIndex = onSelectedTileIndexChange || setSelectedTileIndexLocal;
 
   // Handle canvas click
   const handleCanvasClick = (event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -113,20 +123,27 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
     );
 
     if (clickedEnemyIndex !== -1) {
-      // Clicked on an enemy - toggle selection, deselect zone
+      // Clicked on an enemy - toggle selection, deselect zone and tile
       setSelectedZoneIndex(null);
+      setSelectedTileIndex(null);
       if (selectedEnemyIndex === clickedEnemyIndex) {
         setSelectedEnemyIndex(null); // Deselect
       } else {
         setSelectedEnemyIndex(clickedEnemyIndex); // Select
       }
     } else if (clickedZoneIndex !== -1) {
-      // Clicked on a deployment zone - toggle selection, deselect enemy
+      // Clicked on a deployment zone - toggle selection, deselect enemy and tile
       setSelectedEnemyIndex(null);
+      setSelectedTileIndex(null);
       if (selectedZoneIndex === clickedZoneIndex) {
         setSelectedZoneIndex(null); // Deselect
       } else {
         setSelectedZoneIndex(clickedZoneIndex); // Select
+      }
+    } else if (selectedTileIndex !== null) {
+      // Clicked on empty space with a tile selected - place the tile
+      if (onTilePlacement) {
+        onTilePlacement(gridX, gridY, selectedTileIndex);
       }
     } else if (selectedEnemyIndex !== null) {
       // Clicked on empty space with an enemy selected - try to move

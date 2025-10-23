@@ -66,6 +66,8 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [allTags, setAllTags] = useState<string[]>([]);
   const [editedTilesetId, setEditedTilesetId] = useState<string>('');
+  const [mapRenderKey, setMapRenderKey] = useState(0);
+  const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
 
   // Load encounters from registry
   useEffect(() => {
@@ -97,6 +99,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     if (!selectedEncounter) return;
     setIsEditing(true);
     setEditedEncounter(selectedEncounter.toJSON());
+    setSelectedTileIndex(null); // Clear tile selection when starting to edit
 
     // Load the encounter's tileset if it has one, otherwise default to first available
     const tilesets = TilesetRegistry.getAll();
@@ -106,6 +109,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   const handleCancelEdit = () => {
     setIsEditing(false);
     setEditedEncounter(null);
+    setSelectedTileIndex(null);
   };
 
   const handleSaveEdit = () => {
@@ -150,26 +154,30 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     }
 
     try {
-      // Update the encounter's map to include the edited tileset ID
-      // We need to create a map object that includes the tilesetId
-      const encounterWithTileset = {
+      // Always reconstruct the encounter from JSON to ensure consistency
+      // This avoids mixing plain objects with class instances
+      const oldId = selectedEncounter?.id;
+      const idChanged = selectedEncounter && selectedEncounter.id !== editedEncounter.id;
+
+      // Build the complete encounter data including the map
+      const encounterData = {
         ...editedEncounter,
         map: {
           tilesetId: editedTilesetId,
-          grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########' // Placeholder grid
+          grid: selectedEncounter ? mapGridToASCII(selectedEncounter) : '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
         }
       };
 
-      // Remove the old encounter from registry if ID changed
-      // (The new one will be auto-registered by the constructor)
-      if (selectedEncounter && selectedEncounter.id !== editedEncounter.id) {
-        // Manually remove from the registry since there's no unregister method
-        // The constructor will add the new one with the new ID
+      // If ID changed, remove the old entry from registry
+      if (idChanged) {
+        (CombatEncounter as any).registry.delete(oldId);
+      } else if (selectedEncounter) {
+        // If ID didn't change, also remove the old entry so we can recreate it
         (CombatEncounter as any).registry.delete(selectedEncounter.id);
       }
 
-      // Create the updated encounter (will auto-register with potentially new ID)
-      const updatedEncounter = CombatEncounter.fromJSON(encounterWithTileset as any);
+      // Create new encounter from JSON (this will auto-register it)
+      const updatedEncounter = CombatEncounter.fromJSON(encounterData as any);
 
       // Update UI state
       setSelectedEncounter(updatedEncounter);
@@ -184,22 +192,64 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     }
   };
 
+  // Helper function to convert map grid to ASCII string
+  const mapGridToASCII = (encounter: CombatEncounter): string => {
+    const tileset = encounter.tilesetId ? TilesetRegistry.getById(encounter.tilesetId) : null;
+    if (!tileset) {
+      // Fallback if no tileset
+      return '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########';
+    }
+
+    const rows: string[] = [];
+    for (let y = 0; y < encounter.map.height; y++) {
+      let row = '';
+      for (let x = 0; x < encounter.map.width; x++) {
+        const cell = encounter.map.getCell({ x, y });
+        if (!cell) {
+          row += '.'; // Default to floor
+          continue;
+        }
+
+        // Find the matching tile type character
+        const tileType = tileset.tileTypes.find(tt =>
+          tt.terrain === cell.terrain &&
+          tt.walkable === cell.walkable &&
+          tt.spriteId === cell.spriteId
+        );
+
+        if (tileType) {
+          row += tileType.char;
+        } else {
+          // Fallback: try to match by terrain and walkable only
+          const fallbackTileType = tileset.tileTypes.find(tt =>
+            tt.terrain === cell.terrain &&
+            tt.walkable === cell.walkable
+          );
+          row += fallbackTileType ? fallbackTileType.char : '.';
+        }
+      }
+      rows.push(row);
+    }
+    return rows.join('\n');
+  };
+
   const handleExport = () => {
     // Build encounters data with tileset references
     const encountersData = {
       encounters: encounters.map(e => {
-        const json = e.toJSON();
-
         // Use the encounter's tileset if available, otherwise use a default
         const tilesetId = e.tilesetId || 'forest';
 
-        // Create a simple grid representation
-        // In a real implementation, you'd want to serialize the actual map grid
+        // Serialize the actual map grid
         const mapData = {
           tilesetId: tilesetId,
-          grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
+          grid: mapGridToASCII(e)
         };
 
+        // Convert encounter to JSON, which handles converting all nested objects properly
+        const json = JSON.parse(JSON.stringify(e));
+
+        // Return the data structure for YAML export
         return {
           id: json.id,
           name: json.name,
@@ -284,6 +334,28 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     });
   };
 
+  const handleTilePlacement = (x: number, y: number, tileTypeIndex: number) => {
+    if (!editedEncounter || !selectedEncounter) return;
+
+    // Get the tileset to find the tile type
+    const tileset = TilesetRegistry.getById(editedTilesetId);
+    if (!tileset) return;
+
+    const tileType = tileset.tileTypes[tileTypeIndex];
+    if (!tileType) return;
+
+    // Update the map cell
+    const updatedMap = selectedEncounter.map;
+    updatedMap.setCell({ x, y }, {
+      terrain: tileType.terrain,
+      walkable: tileType.walkable,
+      spriteId: tileType.spriteId,
+    });
+
+    // Force a re-render by incrementing the render key
+    setMapRenderKey(prev => prev + 1);
+  };
+
   const handleAddDeploymentZone = () => {
     if (!editedEncounter || !selectedEncounter) return;
 
@@ -343,7 +415,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
       name: `${selectedEncounter.name} (Copy)`,
       map: {
         tilesetId: selectedEncounter.tilesetId || 'forest',
-        grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
+        grid: mapGridToASCII(selectedEncounter)
       }
     };
 
@@ -790,14 +862,12 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
               {/* Map Preview */}
               {isEditing && editedEncounter ? (
                 <EncounterPreview
-                  encounter={CombatEncounter.fromJSON({
-                    ...editedEncounter,
-                    map: {
-                      tilesetId: editedTilesetId,
-                      grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
-                    }
-                  } as any)}
+                  key={mapRenderKey}
+                  encounter={selectedEncounter}
                   isEditing={isEditing}
+                  onTilePlacement={handleTilePlacement}
+                  selectedTileIndex={selectedTileIndex}
+                  onSelectedTileIndexChange={setSelectedTileIndex}
                   onEnemyMove={(enemyIndex, newX, newY) => {
                     if (!editedEncounter) return;
                     const newPlacements = [...editedEncounter.enemyPlacements];
@@ -1013,21 +1083,25 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                 }}
               >
                 <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>
-                  Victory Conditions ({selectedEncounter.victoryConditions.length})
+                  Victory Conditions ({(isEditing ? editedEncounter?.victoryConditions : selectedEncounter.victoryConditions)?.length || 0})
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px' }}>
-                  {selectedEncounter.victoryConditions.map((condition, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        padding: '4px 8px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '3px',
-                      }}
-                    >
-                      {condition.toJSON().type}: {condition.toJSON().description || 'No description'}
-                    </div>
-                  ))}
+                  {(isEditing ? editedEncounter?.victoryConditions : selectedEncounter.victoryConditions)?.map((condition, index) => {
+                    // Handle both plain objects (from editedEncounter) and class instances (from selectedEncounter)
+                    const conditionData = typeof condition.toJSON === 'function' ? condition.toJSON() : condition;
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderRadius: '3px',
+                        }}
+                      >
+                        {conditionData.type}: {conditionData.description || 'No description'}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
@@ -1041,21 +1115,25 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                 }}
               >
                 <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>
-                  Defeat Conditions ({selectedEncounter.defeatConditions.length})
+                  Defeat Conditions ({(isEditing ? editedEncounter?.defeatConditions : selectedEncounter.defeatConditions)?.length || 0})
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', fontSize: '10px' }}>
-                  {selectedEncounter.defeatConditions.map((condition, index) => (
-                    <div
-                      key={index}
-                      style={{
-                        padding: '4px 8px',
-                        background: 'rgba(255, 255, 255, 0.05)',
-                        borderRadius: '3px',
-                      }}
-                    >
-                      {condition.toJSON().type}: {condition.toJSON().description || 'No description'}
-                    </div>
-                  ))}
+                  {(isEditing ? editedEncounter?.defeatConditions : selectedEncounter.defeatConditions)?.map((condition, index) => {
+                    // Handle both plain objects (from editedEncounter) and class instances (from selectedEncounter)
+                    const conditionData = typeof condition.toJSON === 'function' ? condition.toJSON() : condition;
+                    return (
+                      <div
+                        key={index}
+                        style={{
+                          padding: '4px 8px',
+                          background: 'rgba(255, 255, 255, 0.05)',
+                          borderRadius: '3px',
+                        }}
+                      >
+                        {conditionData.type}: {conditionData.description || 'No description'}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
             </>
