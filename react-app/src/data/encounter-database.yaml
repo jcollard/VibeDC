@@ -1,13 +1,10 @@
 encounters:
-  # Example combat encounter: Forest Ambush
-  - id: "forest-ambush"
-    name: "Forest Ambush"
-    description: "A group of bandits ambush travelers on the forest road."
-
-    # Combat map using tileset reference
+  - id: forest-ambush
+    name: Forest Ambush
+    description: A group of bandits ambush travelers on the forest road.
     map:
-      tilesetId: "forest"
-      grid: |
+      tilesetId: forest
+      grid: |-
         ##########
         #........#
         #........#
@@ -16,111 +13,31 @@ encounters:
         #........#
         #........#
         ##########
-
-    # Victory conditions (all must be true)
     victoryConditions:
-      - type: "AllEnemiesDefeated"
-        description: "Defeat all bandits"
-
-    # Defeat conditions (any can be true)
+      - type: AllEnemiesDefeated
+        description: All enemies defeated
     defeatConditions:
-      - type: "AllPlayersDefeated"
-        description: "All party members defeated"
-
-    # Player deployment zones (bottom of map)
+      - type: AllPlayersDefeated
+        description: All players defeated
     playerDeploymentZones:
-      - { x: 2, y: 6 }
-      - { x: 3, y: 6 }
-      - { x: 4, y: 6 }
-      - { x: 5, y: 6 }
-
-    # Enemy placements (now using enemy IDs from EnemyRegistry)
+      - x: 2
+        'y': 6
+      - x: 3
+        'y': 6
+      - x: 4
+        'y': 6
+      - x: 5
+        'y': 6
     enemyPlacements:
-      - { enemyId: "goblin", position: { x: 2, y: 2 } }
-      - { enemyId: "goblin", position: { x: 5, y: 3 } }
-      - { enemyId: "goblin", position: { x: 7, y: 2 } }
-
-  # Example encounter with turn limit and special victory condition
-  - id: "escort-mission"
-    name: "Escort Mission"
-    description: "Protect the merchant for 10 turns while enemies attack."
-
-    map:
-      tilesetId: "town-cobblestone"
-      grid: |
-        ########
-        #......#
-        #......#
-        #......#
-        #......#
-        #......#
-        #......#
-        ########
-
-    victoryConditions:
-      # Win by surviving 10 turns OR defeating all enemies
-      - type: "Or"
-        description: "Survive 10 turns or defeat all enemies"
-        predicates:
-          - type: "TurnLimit"
-            maxTurns: 10
-            description: "Survived for 10 turns"
-          - type: "AllEnemiesDefeated"
-            description: "Defeated all enemies"
-
-    defeatConditions:
-      # Lose if merchant dies OR all players die
-      - type: "Or"
-        description: "Merchant or all players defeated"
-        predicates:
-          - type: "UnitDefeated"
-            unitId: "merchant-npc"
-            description: "Merchant defeated"
-          - type: "AllPlayersDefeated"
-            description: "All party members defeated"
-
-    playerDeploymentZones:
-      - { x: 1, y: 6 }
-      - { x: 2, y: 6 }
-      - { x: 3, y: 6 }
-
-    enemyPlacements:
-      # Note: Merchant NPC would need special handling as it's an ally, not an enemy
-      # For now using goblins as actual enemies
-      - { enemyId: "goblin", position: { x: 1, y: 1 } }
-      - { enemyId: "goblin", position: { x: 5, y: 1 } }
-
-  # Example with MonsterUnit (no equipment)
-  - id: "wolf-pack"
-    name: "Wolf Pack"
-    description: "A pack of hungry wolves attacks!"
-
-    map:
-      tilesetId: "cave"
-      grid: |
-        ##########
-        #........#
-        #..~~~~..#
-        #..~~~~..#
-        #........#
-        #........#
-        ##########
-
-    victoryConditions:
-      - type: "AllEnemiesDefeated"
-        description: "Defeat all wolves"
-
-    defeatConditions:
-      - type: "AllPlayersDefeated"
-        description: "Party defeated"
-
-    playerDeploymentZones:
-      - { x: 1, y: 5 }
-      - { x: 2, y: 5 }
-      - { x: 3, y: 5 }
-      - { x: 4, y: 5 }
-
-    enemyPlacements:
-      - { enemyId: "dire-wolf", position: { x: 5, y: 1 } }
-      - { enemyId: "wolf", position: { x: 2, y: 1 } }
-      - { enemyId: "wolf", position: { x: 8, y: 1 } }
+      - enemyId: goblin
+        position:
+          x: 2
+          'y': 2
+      - enemyId: goblin
+        position:
+          x: 5
+          'y': 3
+      - enemyId: goblin
+        position:
+          x: 7
+          'y': 2

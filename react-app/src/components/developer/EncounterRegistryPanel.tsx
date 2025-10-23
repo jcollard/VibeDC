@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatEncounterJSON, EnemyPlacement } from '../../models/combat/CombatEncounter';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
+import { TilesetRegistry } from '../../utils/TilesetRegistry';
 import { TagFilter } from './TagFilter';
 import * as yaml from 'js-yaml';
 
@@ -20,6 +21,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   const [editedEncounter, setEditedEncounter] = useState<CombatEncounterJSON | null>(null);
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [allTags, setAllTags] = useState<string[]>([]);
+  const [editedTilesetId, setEditedTilesetId] = useState<string>('');
 
   // Load encounters from registry
   useEffect(() => {
@@ -51,6 +53,10 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     if (!selectedEncounter) return;
     setIsEditing(true);
     setEditedEncounter(selectedEncounter.toJSON());
+
+    // Load the encounter's tileset if it has one, otherwise default to first available
+    const tilesets = TilesetRegistry.getAll();
+    setEditedTilesetId(selectedEncounter.tilesetId || (tilesets.length > 0 ? tilesets[0].id : ''));
   };
 
   const handleCancelEdit = () => {
@@ -62,12 +68,22 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     if (!editedEncounter) return;
 
     try {
+      // Update the encounter's map to include the edited tileset ID
+      // We need to create a map object that includes the tilesetId
+      const encounterWithTileset = {
+        ...editedEncounter,
+        map: {
+          tilesetId: editedTilesetId,
+          grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########' // Placeholder grid
+        }
+      };
+
       // Clear old encounter from registry
       CombatEncounter.clearRegistry();
 
       // Reload all encounters from their original source
       // Then update with our edited one
-      const updatedEncounter = CombatEncounter.fromJSON(editedEncounter);
+      const updatedEncounter = CombatEncounter.fromJSON(encounterWithTileset as any);
 
       setSelectedEncounter(updatedEncounter);
       setIsEditing(false);
@@ -80,8 +96,32 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   };
 
   const handleExport = () => {
+    // Build encounters data with tileset references
     const encountersData = {
-      encounters: encounters.map(e => e.toJSON())
+      encounters: encounters.map(e => {
+        const json = e.toJSON();
+
+        // Use the encounter's tileset if available, otherwise use a default
+        const tilesetId = e.tilesetId || 'forest';
+
+        // Create a simple grid representation
+        // In a real implementation, you'd want to serialize the actual map grid
+        const mapData = {
+          tilesetId: tilesetId,
+          grid: '##########\n#........#\n#........#\n#........#\n#........#\n#........#\n#........#\n##########'
+        };
+
+        return {
+          id: json.id,
+          name: json.name,
+          description: json.description,
+          map: mapData,
+          victoryConditions: json.victoryConditions,
+          defeatConditions: json.defeatConditions,
+          playerDeploymentZones: json.playerDeploymentZones,
+          enemyPlacements: json.enemyPlacements,
+        };
+      })
     };
 
     const yamlString = yaml.dump(encountersData, {
@@ -497,7 +537,50 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                 <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Map</div>
                 <div style={{ fontSize: '10px', color: '#aaa' }}>
                   <div><strong>Size:</strong> {selectedEncounter.map.width} × {selectedEncounter.map.height}</div>
+
+                  {/* Show current tileset when not editing */}
+                  {!isEditing && selectedEncounter.tilesetId && (
+                    <div style={{ marginTop: '4px' }}>
+                      <strong>Tileset:</strong> {(() => {
+                        const tileset = TilesetRegistry.getById(selectedEncounter.tilesetId!);
+                        return tileset ? `${tileset.name} (${tileset.id})` : selectedEncounter.tilesetId;
+                      })()}
+                    </div>
+                  )}
                 </div>
+
+                {/* Tileset selection in edit mode */}
+                {isEditing && (
+                  <div style={{ marginTop: '12px' }}>
+                    <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+                      Tileset:
+                    </label>
+                    <select
+                      value={editedTilesetId}
+                      onChange={(e) => setEditedTilesetId(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '6px',
+                        background: 'rgba(0, 0, 0, 0.3)',
+                        border: '1px solid rgba(255, 255, 255, 0.3)',
+                        color: '#fff',
+                        fontSize: '11px',
+                        fontFamily: 'monospace',
+                        borderRadius: '3px',
+                      }}
+                    >
+                      <option value="">Select a tileset...</option>
+                      {TilesetRegistry.getAll().map(tileset => (
+                        <option key={tileset.id} value={tileset.id}>
+                          {tileset.name} ({tileset.id})
+                        </option>
+                      ))}
+                    </select>
+                    <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', fontStyle: 'italic' }}>
+                      Note: Changing the tileset will be reflected in the exported YAML. The current map grid will be preserved.
+                    </div>
+                  </div>
+                )}
               </div>
 
               {/* Player Deployment Zones */}

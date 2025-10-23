@@ -43,6 +43,7 @@ export class CombatEncounter {
   readonly defeatConditions: CombatPredicate[];
   readonly playerDeploymentZones: Position[];
   readonly enemyPlacements: EnemyPlacement[];
+  readonly tilesetId?: string; // Optional tileset ID for map reference
 
   constructor(
     id: string,
@@ -52,7 +53,8 @@ export class CombatEncounter {
     victoryConditions: CombatPredicate[],
     defeatConditions: CombatPredicate[],
     playerDeploymentZones: Position[],
-    enemyPlacements: EnemyPlacement[]
+    enemyPlacements: EnemyPlacement[],
+    tilesetId?: string
   ) {
     this.id = id;
     this.name = name;
@@ -62,6 +64,7 @@ export class CombatEncounter {
     this.defeatConditions = defeatConditions;
     this.playerDeploymentZones = playerDeploymentZones;
     this.enemyPlacements = enemyPlacements;
+    this.tilesetId = tilesetId;
 
     CombatEncounter.registry.set(id, this);
   }
@@ -144,9 +147,11 @@ export class CombatEncounter {
   static fromJSON(json: CombatEncounterJSON): CombatEncounter {
     // Parse map - support tileset reference, ASCII, and JSON grid formats
     let map: CombatMap;
+    let tilesetId: string | undefined;
+
     if ('tilesetId' in json.map && 'grid' in json.map) {
       // Tileset reference format - look up the tileset
-      const tilesetId = (json.map as any).tilesetId;
+      tilesetId = (json.map as any).tilesetId as string;
       const tileset = TilesetRegistry.getById(tilesetId);
       if (!tileset) {
         throw new Error(`Tileset '${tilesetId}' not found in registry for encounter '${json.id}'`);
@@ -197,7 +202,8 @@ export class CombatEncounter {
       victoryConditions,
       defeatConditions,
       json.playerDeploymentZones,
-      enemyPlacements
+      enemyPlacements,
+      tilesetId
     );
   }
 
