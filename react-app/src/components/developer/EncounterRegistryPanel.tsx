@@ -844,6 +844,18 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                       playerDeploymentZones: newZones,
                     });
                   }}
+                  onEnemyChange={(enemyIndex, newEnemyId) => {
+                    if (!editedEncounter) return;
+                    const newPlacements = [...editedEncounter.enemyPlacements];
+                    newPlacements[enemyIndex] = {
+                      ...newPlacements[enemyIndex],
+                      enemyId: newEnemyId,
+                    };
+                    setEditedEncounter({
+                      ...editedEncounter,
+                      enemyPlacements: newPlacements,
+                    });
+                  }}
                 />
               ) : (
                 <EncounterPreview encounter={selectedEncounter} />

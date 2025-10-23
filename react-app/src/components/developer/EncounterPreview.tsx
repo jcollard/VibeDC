@@ -10,6 +10,7 @@ interface EncounterPreviewProps {
   onDeploymentZoneMove?: (zoneIndex: number, newX: number, newY: number) => void;
   onEnemyRemove?: (enemyIndex: number) => void;
   onDeploymentZoneRemove?: (zoneIndex: number) => void;
+  onEnemyChange?: (enemyIndex: number, newEnemyId: string) => void;
 }
 
 /**
@@ -23,7 +24,8 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
   onEnemyMove,
   onDeploymentZoneMove,
   onEnemyRemove,
-  onDeploymentZoneRemove
+  onDeploymentZoneRemove,
+  onEnemyChange
 }) => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [selectedEnemyIndex, setSelectedEnemyIndex] = useState<number | null>(null);
@@ -414,7 +416,85 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
             } as React.CSSProperties}
           />
         </div>
-        {isEditing && (selectedEnemyIndex !== null || selectedZoneIndex !== null) && (
+        {isEditing && selectedEnemyIndex !== null && (
+          <div
+            style={{
+              background: 'rgba(255, 193, 7, 0.1)',
+              border: '1px solid rgba(255, 193, 7, 0.3)',
+              borderRadius: '4px',
+              padding: '12px',
+              minWidth: '200px',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+            }}
+          >
+            <div style={{ fontWeight: 'bold', fontSize: '13px', color: '#ffc107' }}>
+              Selected Enemy
+            </div>
+            <div style={{ fontSize: '11px' }}>
+              <div style={{ marginBottom: '4px' }}>
+                <span style={{ color: '#aaa' }}>Name:</span>{' '}
+                <span style={{ color: '#fff' }}>
+                  {EnemyRegistry.getById(encounter.enemyPlacements[selectedEnemyIndex].enemyId)?.name || 'Unknown'}
+                </span>
+              </div>
+              <div style={{ marginBottom: '8px' }}>
+                <span style={{ color: '#aaa' }}>ID:</span>{' '}
+                <span style={{ color: '#fff', fontFamily: 'monospace', fontSize: '10px' }}>
+                  {encounter.enemyPlacements[selectedEnemyIndex].enemyId}
+                </span>
+              </div>
+              <div style={{ marginBottom: '4px' }}>
+                <label style={{ color: '#aaa', display: 'block', marginBottom: '4px' }}>
+                  Change Enemy:
+                </label>
+                <select
+                  value={encounter.enemyPlacements[selectedEnemyIndex].enemyId}
+                  onChange={(e) => {
+                    if (onEnemyChange) {
+                      onEnemyChange(selectedEnemyIndex, e.target.value);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    padding: '4px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    color: '#fff',
+                    border: '1px solid rgba(255, 255, 255, 0.3)',
+                    borderRadius: '3px',
+                    fontSize: '11px',
+                  }}
+                >
+                  {EnemyRegistry.getAllIds().map((enemyId) => {
+                    const enemy = EnemyRegistry.getById(enemyId);
+                    return (
+                      <option key={enemyId} value={enemyId}>
+                        {enemy?.name || enemyId}
+                      </option>
+                    );
+                  })}
+                </select>
+              </div>
+            </div>
+            <button
+              onClick={handleDeleteClick}
+              style={{
+                padding: '6px 12px',
+                background: 'rgba(244, 67, 54, 0.9)',
+                color: '#fff',
+                border: 'none',
+                borderRadius: '4px',
+                cursor: 'pointer',
+                fontSize: '11px',
+                fontWeight: 'bold',
+              }}
+            >
+              🗑️ Delete Enemy
+            </button>
+          </div>
+        )}
+        {isEditing && selectedZoneIndex !== null && (
           <button
             onClick={handleDeleteClick}
             style={{
@@ -429,7 +509,7 @@ export const EncounterPreview: React.FC<EncounterPreviewProps> = ({
               minWidth: '40px',
               height: '40px',
             }}
-            title={selectedEnemyIndex !== null ? 'Delete selected enemy' : 'Delete selected deployment zone'}
+            title="Delete selected deployment zone"
           >
             🗑️
           </button>
