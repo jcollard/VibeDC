@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TilesetRegistry } from '../../utils/TilesetRegistry';
 import type { TilesetDefinition, TilesetDefinitionJSON } from '../../utils/TilesetRegistry';
 import type { TileDefinition } from '../../models/combat/CombatMap';
+import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { TagFilter } from './TagFilter';
 import { SpriteBrowser } from './SpriteBrowser';
 import * as yaml from 'js-yaml';
@@ -659,23 +660,98 @@ export const TilesetRegistryPanel: React.FC<TilesetRegistryPanelProps> = ({ onCl
                           </div>
                         </div>
                       ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '40px 1fr 80px 100px', gap: '8px', alignItems: 'center' }}>
-                          <div style={{
-                            fontWeight: 'bold',
-                            fontSize: '14px',
-                            textAlign: 'center',
-                            background: 'rgba(255, 255, 255, 0.1)',
-                            padding: '4px',
-                            borderRadius: '3px',
-                          }}>
-                            '{tile.char}'
-                          </div>
+                        <div style={{ display: 'grid', gridTemplateColumns: '48px 1fr 80px', gap: '8px', alignItems: 'center' }}>
+                          {/* Sprite preview or character */}
+                          {tile.spriteId ? (() => {
+                            const sprite = SpriteRegistry.getById(tile.spriteId);
+                            const SPRITE_SIZE = 12;
+                            const scale = 4;
+                            const canvasSize = SPRITE_SIZE * scale;
+
+                            if (!sprite) {
+                              return (
+                                <div style={{
+                                  width: `${canvasSize}px`,
+                                  height: `${canvasSize}px`,
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  background: 'rgba(255, 0, 0, 0.1)',
+                                  border: '1px solid rgba(255, 0, 0, 0.3)',
+                                  borderRadius: '3px',
+                                  fontSize: '8px',
+                                  color: '#f44',
+                                }}>
+                                  ?
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <canvas
+                                width={canvasSize}
+                                height={canvasSize}
+                                ref={(canvas) => {
+                                  if (canvas && sprite) {
+                                    const img = new Image();
+                                    img.src = sprite.spriteSheet;
+                                    img.onload = () => {
+                                      const ctx = canvas.getContext('2d');
+                                      if (ctx) {
+                                        ctx.clearRect(0, 0, canvasSize, canvasSize);
+                                        ctx.imageSmoothingEnabled = false;
+                                        ctx.drawImage(
+                                          img,
+                                          sprite.x * SPRITE_SIZE,
+                                          sprite.y * SPRITE_SIZE,
+                                          SPRITE_SIZE,
+                                          SPRITE_SIZE,
+                                          0,
+                                          0,
+                                          canvasSize,
+                                          canvasSize
+                                        );
+                                      }
+                                    };
+                                  }
+                                }}
+                                style={{
+                                  border: '1px solid rgba(255, 255, 255, 0.2)',
+                                  imageRendering: 'pixelated',
+                                  background: 'rgba(0, 0, 0, 0.3)',
+                                } as React.CSSProperties}
+                              />
+                            );
+                          })() : (
+                            <div style={{
+                              width: '48px',
+                              height: '48px',
+                              fontWeight: 'bold',
+                              fontSize: '24px',
+                              textAlign: 'center',
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'center',
+                              background: 'rgba(255, 255, 255, 0.1)',
+                              border: '1px solid rgba(255, 255, 255, 0.2)',
+                              borderRadius: '3px',
+                            }}>
+                              {tile.char}
+                            </div>
+                          )}
+
+                          {/* Terrain and sprite info */}
                           <div>
                             <div style={{ fontWeight: 'bold', color: '#4fc3f7' }}>{tile.terrain}</div>
+                            <div style={{ fontSize: '9px', color: '#aaa', marginTop: '2px' }}>
+                              char: '{tile.char}'
+                            </div>
                             {tile.spriteId && (
                               <div style={{ fontSize: '9px', color: '#aaa' }}>sprite: {tile.spriteId}</div>
                             )}
                           </div>
+
+                          {/* Walkable status */}
                           <div style={{
                             color: tile.walkable ? '#4caf50' : '#f44336',
                             fontWeight: 'bold',

@@ -1,54 +1,45 @@
-# Tileset definitions for combat encounters
-# Tilesets define reusable collections of tile types for ASCII map parsing
-
 tilesets:
-  # Basic stone dungeon tileset
-  - id: "dungeon-stone"
-    name: "Stone Dungeon"
-    description: "Standard stone dungeon with walls, floors, and water"
+  - id: dungeon-stone
+    name: Stone Dungeon
+    description: Standard stone dungeon with walls, floors, and water
     tileTypes:
-      - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
-      - { char: ".", terrain: "floor", walkable: true, spriteId: "stone-floor" }
-      - { char: "~", terrain: "water", walkable: false, spriteId: "water" }
-      - { char: "^", terrain: "pit", walkable: false, spriteId: "pit" }
-      - { char: "O", terrain: "floor", walkable: true, spriteId: "pillar" }
-    tags: ["dungeon", "stone", "indoor"]
-
-  # Forest/outdoor tileset
-  - id: "forest"
-    name: "Forest"
-    description: "Outdoor forest area with grass and trees"
+      - char: '#'
+        terrain: wall
+        walkable: false
+        spriteId: world-tiles-0
+      - char: .
+        terrain: floor
+        walkable: true
+        spriteId: world-tiles-34
+      - char: '~'
+        terrain: water
+        walkable: false
+        spriteId: gradients-6
+      - char: ^
+        terrain: pit
+        walkable: false
+        spriteId: traps-10
+    tags:
+      - dungeon
+      - stone
+      - indoor
+  - id: forest
+    name: Forest
+    description: Outdoor forest area with grass and trees
     tileTypes:
-      - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
-      - { char: ".", terrain: "floor", walkable: true, spriteId: "grass" }
-      - { char: "T", terrain: "wall", walkable: false, spriteId: "tree" }
-    tags: ["outdoor", "forest", "grass"]
-
-  # Town/cobblestone tileset
-  - id: "town-cobblestone"
-    name: "Town Cobblestone"
-    description: "Town or city streets with cobblestone"
-    tileTypes:
-      - { char: "#", terrain: "wall", walkable: false, spriteId: "stone-wall" }
-      - { char: ".", terrain: "floor", walkable: true, spriteId: "cobblestone" }
-    tags: ["outdoor", "town", "cobblestone"]
-
-  # Cave tileset
-  - id: "cave"
-    name: "Cave"
-    description: "Natural cave with rock walls and dirt floor"
-    tileTypes:
-      - { char: "#", terrain: "wall", walkable: false, spriteId: "rock-wall" }
-      - { char: ".", terrain: "floor", walkable: true, spriteId: "dirt" }
-      - { char: "~", terrain: "water", walkable: false, spriteId: "water" }
-    tags: ["cave", "underground", "natural"]
-
-  # Lava cave tileset
-  - id: "lava-cave"
-    name: "Lava Cave"
-    description: "Dangerous cave with lava pools"
-    tileTypes:
-      - { char: "#", terrain: "wall", walkable: false, spriteId: "cave-wall" }
-      - { char: ".", terrain: "floor", walkable: true, spriteId: "stone-bridge" }
-      - { char: "L", terrain: "lava", walkable: false, spriteId: "lava" }
-    tags: ["cave", "lava", "dangerous"]
+      - char: '#'
+        terrain: wall
+        walkable: false
+        spriteId: rock-tiles-196
+      - char: .
+        terrain: floor
+        walkable: true
+        spriteId: rock-tiles-180
+      - char: T
+        terrain: wall
+        walkable: false
+        spriteId: rock-tiles-195
+    tags:
+      - outdoor
+      - forest
+      - grass
