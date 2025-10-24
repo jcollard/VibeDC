@@ -95,15 +95,15 @@ export interface NineSliceSprites {
  * Default 9-slice sprites for dialog boxes
  */
 export const DEFAULT_DIALOG_SPRITES: NineSliceSprites = {
-  topLeft: 'ui-52',
-  topCenter: 'ui-53',
-  topRight: 'ui-54',
-  middleLeft: 'ui-69',
-  middleCenter: 'ui-70',
-  middleRight: 'ui-71',
-  bottomLeft: 'ui-85',
-  bottomCenter: 'ui-86',
-  bottomRight: 'ui-87',
+  topLeft: 'ui-56',
+  topCenter: 'ui-57',
+  topRight: 'ui-58',
+  middleLeft: 'ui-73',
+  middleCenter: 'ui-74',
+  middleRight: 'ui-75',
+  bottomLeft: 'ui-89',
+  bottomCenter: 'ui-90',
+  bottomRight: 'ui-91',
 };
 
 /**
