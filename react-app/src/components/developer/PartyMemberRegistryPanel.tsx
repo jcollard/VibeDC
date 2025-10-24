@@ -342,7 +342,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   onKeyDown={handleKeyDown}
                   autoFocus
                   style={{
-                    flex: 1,
+                    width: '100%',
                     padding: '4px',
                     background: 'rgba(0, 0, 0, 0.5)',
                     border: '1px solid #666',
@@ -361,7 +361,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   onKeyDown={handleKeyDown}
                   autoFocus
                   style={{
-                    flex: 1,
+                    width: '60px',
                     padding: '4px',
                     background: 'rgba(0, 0, 0, 0.5)',
                     border: '1px solid #666',
@@ -379,7 +379,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   onKeyDown={handleKeyDown}
                   autoFocus
                   style={{
-                    flex: 1,
+                    width: '100%',
                     padding: '4px',
                     background: 'rgba(0, 0, 0, 0.5)',
                     border: '1px solid #666',
@@ -404,7 +404,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   autoFocus
                   rows={2}
                   style={{
-                    flex: 1,
+                    width: '100%',
                     padding: '4px',
                     background: 'rgba(0, 0, 0, 0.5)',
                     border: '1px solid #666',
@@ -428,6 +428,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   fontSize: '12px',
                   cursor: 'pointer',
                   fontFamily: 'monospace',
+                  flexShrink: 0,
                 }}
               >
                 ✓
@@ -444,6 +445,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   fontSize: '12px',
                   cursor: 'pointer',
                   fontFamily: 'monospace',
+                  flexShrink: 0,
                 }}
               >
                 ✗
@@ -453,7 +455,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
             <div
               onClick={() => startEditing(fieldName, currentValue)}
               style={{
-                flex: 1,
+                display: 'inline-block',
                 color: '#fff',
                 fontSize: '11px',
                 padding: '4px',
@@ -462,6 +464,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                 borderRadius: '2px',
                 cursor: 'pointer',
                 transition: 'background 0.2s',
+                minWidth: type === 'number' ? '60px' : '120px',
+                maxWidth: type === 'textarea' ? '100%' : type === 'select' ? '200px' : '180px',
               }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
@@ -504,6 +508,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
             setEquipmentBrowserVisible(true);
           }}
           style={{
+            display: 'inline-block',
             color: '#fff',
             fontSize: '11px',
             padding: '4px',
@@ -512,6 +517,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
             borderRadius: '2px',
             cursor: 'pointer',
             transition: 'background 0.2s',
+            minWidth: '120px',
+            maxWidth: '200px',
           }}
           onMouseEnter={(e) => {
             e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
@@ -769,19 +776,19 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               Select a party member to view details
             </div>
           ) : (
-            <div style={{ padding: '20px' }}>
+            <div style={{ padding: '12px' }}>
               {/* Action buttons */}
-              <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
+              <div style={{ display: 'flex', gap: '8px', marginBottom: '12px' }}>
                 <button
                   onClick={handleDelete}
                   style={{
-                    padding: '8px 16px',
+                    padding: '4px 12px',
                     background: 'rgba(244, 67, 54, 0.3)',
                     border: '1px solid rgba(244, 67, 54, 0.6)',
-                    borderRadius: '4px',
+                    borderRadius: '2px',
                     color: '#fff',
                     cursor: 'pointer',
-                    fontSize: '12px',
+                    fontSize: '11px',
                   }}
                 >
                   Delete
@@ -789,20 +796,20 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               </div>
 
               {/* Sprite preview */}
-              <div style={{ marginBottom: '20px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+              <div style={{ marginBottom: '12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
                   <div style={{ fontSize: '11px', color: '#aaa' }}>
                     Sprite Preview
                   </div>
                   <button
                     onClick={() => setSpriteBrowserVisible(true)}
                     style={{
-                      padding: '6px 12px',
+                      padding: '4px 8px',
                       background: 'rgba(76, 175, 80, 0.3)',
                       border: '1px solid rgba(76, 175, 80, 0.6)',
-                      borderRadius: '3px',
+                      borderRadius: '2px',
                       color: '#8bc34a',
-                      fontSize: '11px',
+                      fontSize: '10px',
                       cursor: 'pointer',
                       fontFamily: 'monospace',
                     }}
@@ -820,13 +827,13 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                     background: 'rgba(0, 0, 0, 0.3)',
                   } as React.CSSProperties}
                 />
-                <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
                   {selectedMember.spriteId}
                 </div>
               </div>
 
               {/* Party member fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '11px' }}>
                 {renderInlineEdit('id', 'ID')}
                 {renderInlineEdit('name', 'Name')}
                 {renderInlineEdit(
@@ -850,39 +857,39 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               </div>
 
               {/* Base Stats */}
-              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
                 Base Stats
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', fontSize: '11px' }}>
-                {renderInlineEdit('baseHealth', 'Health', 'number')}
-                {renderInlineEdit('baseMana', 'Mana', 'number')}
-                {renderInlineEdit('basePhysicalPower', 'Phys Power', 'number')}
-                {renderInlineEdit('baseMagicPower', 'Magic Power', 'number')}
-                {renderInlineEdit('baseSpeed', 'Speed', 'number')}
-                {renderInlineEdit('baseMovement', 'Movement', 'number')}
-                {renderInlineEdit('basePhysicalEvade', 'Phys Evade', 'number')}
-                {renderInlineEdit('baseMagicEvade', 'Magic Evade', 'number')}
-                {renderInlineEdit('baseCourage', 'Courage', 'number')}
-                {renderInlineEdit('baseAttunement', 'Attunement', 'number')}
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '11px' }}>
+                {renderInlineEdit('baseHealth', 'HP', 'number')}
+                {renderInlineEdit('baseMana', 'MP', 'number')}
+                {renderInlineEdit('basePhysicalPower', 'P.Pow', 'number')}
+                {renderInlineEdit('baseMagicPower', 'M.Pow', 'number')}
+                {renderInlineEdit('baseSpeed', 'Spd', 'number')}
+                {renderInlineEdit('baseMovement', 'Move', 'number')}
+                {renderInlineEdit('basePhysicalEvade', 'P.Evd', 'number')}
+                {renderInlineEdit('baseMagicEvade', 'M.Evd', 'number')}
+                {renderInlineEdit('baseCourage', 'Cour', 'number')}
+                {renderInlineEdit('baseAttunement', 'Attn', 'number')}
               </div>
 
               {/* Equipment Section */}
-              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
                 Equipment
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '11px' }}>
                 {renderEquipmentField('leftHand', 'Left Hand')}
                 {renderEquipmentField('rightHand', 'Right Hand')}
                 {renderEquipmentField('head', 'Head')}
                 {renderEquipmentField('body', 'Body')}
-                {renderEquipmentField('accessory', 'Accessory', 'span 2')}
+                {renderEquipmentField('accessory', 'Accessory')}
               </div>
 
               {/* Abilities Section */}
-              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
                 Abilities
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '11px' }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '11px' }}>
                 {renderInlineEdit(
                   'reactionAbilityId',
                   'Reaction Ability',
@@ -913,13 +920,13 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               </div>
 
               {/* Tags Section - Custom rendering for tag display */}
-              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
                 Tags
               </div>
               <div style={{ fontSize: '11px' }}>
                 <label style={{ display: 'block', marginBottom: '2px', color: '#aaa', fontSize: '10px' }}>Tags:</label>
                 {editingField === 'tags' ? (
-                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px', maxWidth: '400px' }}>
                     <input
                       type="text"
                       value={Array.isArray(editingValue) ? editingValue.join(', ') : ''}
@@ -935,7 +942,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                       placeholder="tag1, tag2, tag3"
                       autoFocus
                       style={{
-                        flex: 1,
+                        width: '100%',
                         padding: '4px',
                         background: 'rgba(0, 0, 0, 0.5)',
                         border: '1px solid #666',
@@ -957,6 +964,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                         fontSize: '12px',
                         cursor: 'pointer',
                         fontFamily: 'monospace',
+                        flexShrink: 0,
                       }}
                     >
                       ✓
@@ -973,6 +981,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                         fontSize: '12px',
                         cursor: 'pointer',
                         fontFamily: 'monospace',
+                        flexShrink: 0,
                       }}
                     >
                       ✗
@@ -982,6 +991,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                   <div
                     onClick={() => startEditing('tags', selectedMember.tags || [])}
                     style={{
+                      display: 'inline-block',
                       padding: '4px',
                       background: 'rgba(255, 255, 255, 0.05)',
                       border: '1px solid rgba(255, 255, 255, 0.1)',
@@ -989,8 +999,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                       cursor: 'pointer',
                       transition: 'background 0.2s',
                       minHeight: '24px',
-                      display: 'flex',
-                      alignItems: 'center',
+                      minWidth: '120px',
+                      maxWidth: '400px',
                     }}
                     onMouseEnter={(e) => {
                       e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
@@ -1031,10 +1041,10 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               </div>
 
               {/* Description Section */}
-              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
                 Description
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '11px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px', fontSize: '11px' }}>
                 {renderInlineEdit('description', 'Description', 'textarea')}
               </div>
 
