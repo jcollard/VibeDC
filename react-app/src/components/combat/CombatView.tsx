@@ -9,6 +9,8 @@ import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { CinematicManager } from '../../models/combat/CinematicSequence';
 import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
+import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
+import { SequenceChain } from '../../models/combat/SequenceChain';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -164,11 +166,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     loadSprites().catch(console.error);
   }, [combatState.map, combatState.phase, encounter]);
 
-  // Start the map fade-in cinematic when encounter loads
+  // Start the intro cinematic sequence when encounter loads
   useEffect(() => {
     if (spritesLoaded && fontsLoaded) {
-      const fadeInSequence = new MapFadeInSequence(2.0);
-      cinematicManagerRef.current.play(fadeInSequence, combatState, encounter);
+      // Chain together: map fade-in, then title fade-in
+      const introSequence = new SequenceChain([
+        new MapFadeInSequence(2.0),
+        new TitleFadeInSequence('Deploy Units', 1.0)
+      ]);
+      cinematicManagerRef.current.play(introSequence, combatState, encounter);
     }
   }, [spritesLoaded, fontsLoaded, combatState, encounter]);
 
