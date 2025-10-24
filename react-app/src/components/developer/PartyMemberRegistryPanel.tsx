@@ -4,6 +4,7 @@ import type { PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { SpriteBrowser } from './SpriteBrowser';
 import { EquipmentBrowser } from './EquipmentBrowser';
+import { AbilityBrowser } from './AbilityBrowser';
 import { UnitClass } from '../../models/combat/UnitClass';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { Equipment } from '../../models/combat/Equipment';
@@ -30,6 +31,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
   const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
   const [equipmentBrowserVisible, setEquipmentBrowserVisible] = useState(false);
   const [equipmentBrowserSlot, setEquipmentBrowserSlot] = useState<'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory' | null>(null);
+  const [abilityBrowserVisible, setAbilityBrowserVisible] = useState(false);
   const spriteCanvasRef = useRef<HTMLCanvasElement>(null);
   const [availableClasses, setAvailableClasses] = useState<UnitClass[]>([]);
   const [availableAbilities, setAvailableAbilities] = useState<CombatAbility[]>([]);
@@ -289,6 +291,25 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
     setPartyMembers(updatedMembers);
     setSelectedMember(updatedMember);
     setSpriteBrowserVisible(false);
+  };
+
+  // Handle ability browser selection
+  const handleAbilitySelect = (abilityId: string) => {
+    if (!selectedMember) return;
+
+    const currentAbilities = selectedMember.learnedAbilityIds || [];
+    const updatedAbilities = [...currentAbilities, abilityId];
+
+    const updatedMember: PartyMemberDefinition = {
+      ...selectedMember,
+      learnedAbilityIds: updatedAbilities,
+    };
+
+    PartyMemberRegistry.register(updatedMember);
+    const updatedMembers = PartyMemberRegistry.getAll();
+    setPartyMembers(updatedMembers);
+    setSelectedMember(updatedMember);
+    setAbilityBrowserVisible(false);
   };
 
   // Render sprite preview
@@ -1631,22 +1652,7 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#2196F3', display: 'flex', alignItems: 'center', gap: '8px' }}>
                 <span>Learned Abilities</span>
                 <button
-                  onClick={() => {
-                    const currentAbilities = selectedMember.learnedAbilityIds || [];
-                    const usedAbilityIds = new Set(currentAbilities);
-                    const firstUnusedAbility = availableAbilities.find(a => !usedAbilityIds.has(a.id));
-
-                    if (firstUnusedAbility) {
-                      const updatedAbilities = [...currentAbilities, firstUnusedAbility.id];
-                      const updatedMember: PartyMemberDefinition = {
-                        ...selectedMember,
-                        learnedAbilityIds: updatedAbilities,
-                      };
-                      PartyMemberRegistry.register(updatedMember);
-                      setPartyMembers(PartyMemberRegistry.getAll());
-                      setSelectedMember(updatedMember);
-                    }
-                  }}
+                  onClick={() => setAbilityBrowserVisible(true)}
                   style={{
                     padding: '2px 6px',
                     background: 'rgba(33, 150, 243, 0.3)',
@@ -1825,6 +1831,14 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
             equipmentBrowserSlot === 'accessory' ? 'Accessory' :
             undefined
           }
+        />
+      )}
+
+      {/* Ability Browser Modal */}
+      {abilityBrowserVisible && (
+        <AbilityBrowser
+          onSelectAbility={handleAbilitySelect}
+          onClose={() => setAbilityBrowserVisible(false)}
         />
       )}
     </div>
