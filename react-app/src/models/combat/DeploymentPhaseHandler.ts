@@ -55,9 +55,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
   // Animation state
   private elapsedTime = 0; // Time in seconds since phase started
-  private readonly cycleTime = 1.0; // Time for full cycle (0.5s fade in + 0.5s fade out)
+  private readonly cycleTime = 2.0; // Time for full cycle (1s fade in + 1s fade out)
   private readonly minAlpha = 0.0;
-  private readonly maxAlpha = 0.5;
+  private readonly maxAlpha = 0.25;
 
   // Selection state
   private selectedZoneIndex: number | null = null;
