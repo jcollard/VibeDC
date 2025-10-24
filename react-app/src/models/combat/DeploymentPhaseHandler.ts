@@ -448,16 +448,16 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * Render the "Deploy Units" header message
    */
   private renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasSize: number, headerFont: string): void {
-    // Draw semi-transparent black background
+    // Draw semi-transparent black background at top of screen
     ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 20, canvasSize, 80);
+    ctx.fillRect(0, 0, canvasSize, 80);
 
     // Render "Deploy Units" text with shadow
     renderTextWithShadow(
       ctx,
       'Deploy Units',
       canvasSize / 2,
-      60,
+      40,
       `bold 48px "${headerFont}", monospace`,
       '#ffffff',
       2,
@@ -543,7 +543,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     font: string
   ): void {
     const fontSize = 36;
-    const yPosition = 108; // 8px below title background (which ends at y=100)
+    const yPosition = 88; // 8px below title background (which ends at y=80)
     const message = 'You have been waylaid by enemies and must defend yourself.';
 
     // Set up text rendering

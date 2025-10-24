@@ -2,8 +2,23 @@
 # Exported from Party Member Registry Panel
 
 partyMembers:
+  - id: "figher"
+    name: "Barret"
+    unitClassId: "fighter"
+    baseHealth: 30
+    baseMana: 20
+    basePhysicalPower: 10
+    baseMagicPower: 10
+    baseSpeed: 10
+    baseMovement: 4
+    basePhysicalEvade: 10
+    baseMagicEvade: 10
+    baseCourage: 10
+    baseAttunement: 10
+    spriteId: "crystalwarriors-14"
+
   - id: "knight-001"
-    name: "Sir Roland"
+    name: "Roland"
     unitClassId: "fighter"
     baseHealth: 45
     baseMana: 15
@@ -33,7 +48,7 @@ partyMembers:
       rogue: 350
 
   - id: "mage-001"
-    name: "Aria the Wise"
+    name: "Aria"
     unitClassId: "apprentice"
     baseHealth: 25
     baseMana: 50

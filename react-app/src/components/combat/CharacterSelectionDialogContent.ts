@@ -45,12 +45,6 @@ export class CharacterSelectionDialogContent extends DialogContent {
     const TITLE_SPACING = 8; // Space after title
     const NAME_OFFSET = 8; // Horizontal space between sprite and name
 
-    // DEBUG: Draw rectangle around content bounds
-    const bounds = this.getBounds();
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeRect(x, y, bounds.width, bounds.height);
-
     // Render title
     ctx.fillStyle = '#000000';
     ctx.font = `bold ${TITLE_FONT_SIZE}px "${this.font}", monospace`;

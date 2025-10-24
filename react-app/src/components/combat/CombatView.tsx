@@ -174,8 +174,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   useEffect(() => {
     if (spritesLoaded && fontsLoaded && !introCinematicPlayedRef.current) {
       // Calculate message positions
-      // Waylaid message: 8px below Deploy Units title (which has background ending at y=100)
-      const waylaidMessageY = 108;
+      // Title and waylaid message at very top of screen
+      const titleY = 0;
+      const waylaidMessageY = 88; // 8px below title background (which ends at y=80)
       // Deployment instruction: 8px below map bottom
       const mapHeight = combatState.map.height * TILE_SIZE;
       const offsetY = (CANVAS_SIZE - mapHeight) / 2;
@@ -184,7 +185,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Run all intro animations in parallel
       const introSequence = new SequenceParallel([
         new MapFadeInSequence(2.0),
-        new TitleFadeInSequence('Deploy Units', 1.0, 48, 20),
+        new TitleFadeInSequence('Deploy Units', 1.0, 48, titleY),
         new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, deploymentInstructionY),
         new MessageFadeInSequence('You have been waylaid by enemies and must defend yourself.', 1.0, dialogFont, 36, waylaidMessageY)
       ]);
