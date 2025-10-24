@@ -20,6 +20,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   private readonly minAlpha = 0.25;
   private readonly maxAlpha = 0.75;
 
+  // Selection state
+  private selectedZoneIndex: number | null = null;
+
   /**
    * Update animation state
    * @param state - Current combat state
@@ -29,6 +32,49 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   update(state: CombatState, _encounter: CombatEncounter, deltaTime: number): CombatState | null {
     this.elapsedTime += deltaTime;
     return state; // No state changes, just internal animation
+  }
+
+  /**
+   * Handle click on the canvas to select deployment zones
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param tileSize - Size of each tile in pixels
+   * @param offsetX - X offset of the map on canvas
+   * @param offsetY - Y offset of the map on canvas
+   * @param encounter - Current encounter
+   * @returns True if a zone was clicked
+   */
+  handleClick(
+    canvasX: number,
+    canvasY: number,
+    tileSize: number,
+    offsetX: number,
+    offsetY: number,
+    encounter: CombatEncounter
+  ): boolean {
+    // Convert canvas coordinates to tile coordinates
+    const tileX = Math.floor((canvasX - offsetX) / tileSize);
+    const tileY = Math.floor((canvasY - offsetY) / tileSize);
+
+    // Check if click is on a deployment zone
+    const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(
+      zone => zone.x === tileX && zone.y === tileY
+    );
+
+    if (clickedZoneIndex !== -1) {
+      // Toggle selection: if already selected, deselect; otherwise select
+      this.selectedZoneIndex = this.selectedZoneIndex === clickedZoneIndex ? null : clickedZoneIndex;
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Get the currently selected zone index
+   */
+  getSelectedZoneIndex(): number | null {
+    return this.selectedZoneIndex;
   }
 
   /**
@@ -121,7 +167,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     const currentAlpha = this.calculateAlpha();
 
     // Render each deployment zone
-    for (const zone of encounter.playerDeploymentZones) {
+    encounter.playerDeploymentZones.forEach((zone, index) => {
       const x = zone.x * tileSize + offsetX;
       const y = zone.y * tileSize + offsetY;
 
@@ -142,18 +188,20 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
       ctx.restore();
 
-      // Draw the border sprite with full opacity
-      const borderSrcX = borderSprite.x * spriteSize;
-      const borderSrcY = borderSprite.y * spriteSize;
-      const borderSrcWidth = (borderSprite.width || 1) * spriteSize;
-      const borderSrcHeight = (borderSprite.height || 1) * spriteSize;
+      // Draw the border sprite only if this zone is selected
+      if (this.selectedZoneIndex === index) {
+        const borderSrcX = borderSprite.x * spriteSize;
+        const borderSrcY = borderSprite.y * spriteSize;
+        const borderSrcWidth = (borderSprite.width || 1) * spriteSize;
+        const borderSrcHeight = (borderSprite.height || 1) * spriteSize;
 
-      ctx.drawImage(
-        borderImage,
-        borderSrcX, borderSrcY, borderSrcWidth, borderSrcHeight,
-        x, y, tileSize, tileSize
-      );
-    }
+        ctx.drawImage(
+          borderImage,
+          borderSrcX, borderSrcY, borderSrcWidth, borderSrcHeight,
+          x, y, tileSize, tileSize
+        );
+      }
+    });
   }
 
   /**

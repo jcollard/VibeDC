@@ -293,6 +293,37 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
   }, [spritesLoaded, fontsLoaded, renderFrame, combatState, encounter]);
 
+  // Handle canvas click for deployment zone selection
+  const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = displayCanvasRef.current;
+    if (!canvas) return;
+
+    // Get canvas bounding rect
+    const rect = canvas.getBoundingClientRect();
+
+    // Calculate scale factor (canvas might be scaled to fit viewport)
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+
+    // Get click position relative to canvas
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+
+    // Calculate map offset (same as rendering)
+    const offsetX = (CANVAS_SIZE - (combatState.map.width * TILE_SIZE)) / 2;
+    const offsetY = (CANVAS_SIZE - (combatState.map.height * TILE_SIZE)) / 2;
+
+    // Pass click to phase handler (if deployment phase)
+    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
+      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+      const clicked = handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, encounter);
+
+      if (clicked) {
+        console.log('Deployment zone selected:', handler.getSelectedZoneIndex());
+      }
+    }
+  }, [combatState.map.width, combatState.map.height, combatState.phase, encounter]);
+
   // Available fonts (matching what's in index.css)
   const availableFonts = [
     'OldWizard',
@@ -450,6 +481,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       >
         <canvas
           ref={displayCanvasRef}
+          onClick={handleCanvasClick}
           style={{
             width: '100%',
             height: '100%',
@@ -457,6 +489,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             maxHeight: `${CANVAS_SIZE}px`,
             imageRendering: 'pixelated',
             objectFit: 'contain',
+            cursor: combatState.phase === 'deployment' ? 'pointer' : 'default',
           } as React.CSSProperties}
         />
       </div>
