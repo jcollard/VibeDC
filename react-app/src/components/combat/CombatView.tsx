@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { renderNineSliceDialog, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
+import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -97,6 +99,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         spritesToLoad.add('gradients-7');
         spritesToLoad.add('particles-5'); // Border sprite
       }
+
+      // Add dialog UI sprites
+      const dialogSprites = getNineSliceSpriteIds();
+      dialogSprites.forEach(id => spritesToLoad.add(id));
+
+      // Add character sprites for testing
+      const partyMembers = PartyMemberRegistry.getAll();
+      partyMembers.slice(0, 3).forEach(member => {
+        if (member.spriteId) {
+          spritesToLoad.add(member.spriteId);
+        }
+      });
 
       console.log('CombatView: Sprites to load:', Array.from(spritesToLoad));
 
@@ -302,6 +316,72 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Deploy Units', CANVAS_SIZE / 2, 60);
+    }
+
+    // Render test dialog with character selection
+    if (combatState.phase === 'deployment') {
+      // Get the first 3 party members
+      const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
+
+      // Dialog dimensions (in tiles)
+      const dialogWidth = 10; // Interior width
+      const dialogHeight = 6; // Interior height
+      const dialogX = (CANVAS_SIZE - (dialogWidth + 2) * TILE_SIZE) / 2; // Center horizontally
+      const dialogY = CANVAS_SIZE - (dialogHeight + 2) * TILE_SIZE - 40; // Near bottom
+
+      // Render the 9-slice dialog
+      renderNineSliceDialog(
+        ctx,
+        dialogX,
+        dialogY,
+        dialogWidth,
+        dialogHeight,
+        TILE_SIZE,
+        SPRITE_SIZE,
+        spriteImagesRef.current
+      );
+
+      // Render "Select a Character" title
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold 24px "${selectedFont}", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Select a Character', dialogX + (dialogWidth + 2) * TILE_SIZE / 2, dialogY + TILE_SIZE * 1.5);
+
+      // Render the 3 character sprites
+      const startX = dialogX + TILE_SIZE * 2;
+      const spriteY = dialogY + TILE_SIZE * 3;
+      const spacing = TILE_SIZE * 3;
+
+      partyMembers.forEach((member, index) => {
+        if (!member.spriteId) return;
+
+        const spriteDef = SpriteRegistry.getById(member.spriteId);
+        if (!spriteDef) return;
+
+        const spriteImage = spriteImagesRef.current.get(spriteDef.spriteSheet);
+        if (!spriteImage) return;
+
+        const x = startX + index * spacing;
+
+        // Draw character sprite
+        const srcX = spriteDef.x * SPRITE_SIZE;
+        const srcY = spriteDef.y * SPRITE_SIZE;
+        const srcWidth = (spriteDef.width || 1) * SPRITE_SIZE;
+        const srcHeight = (spriteDef.height || 1) * SPRITE_SIZE;
+
+        ctx.drawImage(
+          spriteImage,
+          srcX, srcY, srcWidth, srcHeight,
+          x, spriteY, TILE_SIZE * 2, TILE_SIZE * 2
+        );
+
+        // Draw character name below sprite
+        ctx.fillStyle = '#ffffff';
+        ctx.font = `12px "${selectedFont}", monospace`;
+        ctx.textAlign = 'center';
+        ctx.fillText(member.name, x + TILE_SIZE, spriteY + TILE_SIZE * 2.5);
+      });
     }
 
     // Copy buffer to display canvas
