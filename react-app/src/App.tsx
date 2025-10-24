@@ -1,5 +1,7 @@
 import { useEffect, useState } from 'react'
+import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Game } from './components/Game'
+import { CombatViewRoute } from './components/combat/CombatViewRoute'
 import { loadAllGameData } from './data/DataLoader'
 import './App.css'
 
@@ -16,7 +18,19 @@ function App() {
     return <div>Loading game data...</div>;
   }
 
-  return <Game />
+  return (
+    <BrowserRouter>
+      <Routes>
+        {/* Main game route */}
+        <Route path="/" element={<Game />} />
+
+        {/* Development-only route for testing combat encounters */}
+        {import.meta.env.DEV && (
+          <Route path="/combat/:encounterId" element={<CombatViewRoute />} />
+        )}
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
 export default App
