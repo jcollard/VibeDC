@@ -1,3 +1,5 @@
+import type { CombatMap } from './CombatMap';
+
 /**
  * CombatState represents the current state of an active combat encounter.
  * This is a placeholder interface that will be expanded as the combat system is implemented.
@@ -13,5 +15,16 @@
 export interface CombatState {
   // Placeholder - will be expanded during combat system implementation
   turnNumber: number;
+
+  /**
+   * The combat map grid
+   */
+  map: CombatMap;
+
+  /**
+   * The tileset ID to use for rendering the map
+   */
+  tilesetId: string;
+
   // Additional fields will be added as combat mechanics are implemented
 }

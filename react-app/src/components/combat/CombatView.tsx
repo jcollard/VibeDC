@@ -1,22 +1,190 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
+import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
   onExit?: () => void;
 }
 
+const SPRITE_SIZE = 12; // Size of each sprite in the sprite sheet (12x12 pixels)
+const SCALE = 4; // Scale factor for rendering
+const TILE_SIZE = SPRITE_SIZE * SCALE; // Size of each tile when rendered (48x48 pixels)
+
 /**
  * CombatView is the main view for displaying and interacting with combat encounters.
  * This is a placeholder component that will be expanded as the combat system is implemented.
  */
 export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => {
-  // Placeholder: Initialize combat state from the encounter
-  // This will be properly implemented when CombatState is fully designed
+  // Initialize combat state from the encounter
   const [combatState] = useState<CombatState>({
     turnNumber: 0,
+    map: encounter.map,
+    tilesetId: encounter.tilesetId,
   });
+
+  // Canvas refs for double buffering
+  const displayCanvasRef = useRef<HTMLCanvasElement>(null);
+  const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Store loaded sprite images
+  const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+
+  // Track if sprites are loaded
+  const [spritesLoaded, setSpritesLoaded] = useState(false);
+
+  // Load sprite images
+  useEffect(() => {
+    const loadSprites = async () => {
+      const spritesToLoad = new Set<string>();
+
+      // Collect all sprite IDs from the map
+      const allCells = combatState.map.getAllCells();
+      console.log('CombatView: Loading sprites for', allCells.length, 'cells');
+
+      for (const { cell } of allCells) {
+        if (cell.spriteId) {
+          spritesToLoad.add(cell.spriteId);
+        }
+      }
+
+      console.log('CombatView: Sprites to load:', Array.from(spritesToLoad));
+
+      // Load each sprite image
+      const loadPromises = Array.from(spritesToLoad).map(async (spriteId) => {
+        const spriteDef = SpriteRegistry.getById(spriteId);
+        if (!spriteDef) {
+          console.warn(`Sprite not found: ${spriteId}`);
+          return;
+        }
+
+        console.log(`CombatView: Loading sprite ${spriteId} from ${spriteDef.spriteSheet}`);
+
+        // Check if we already loaded this sprite sheet
+        if (!spriteImagesRef.current.has(spriteDef.spriteSheet)) {
+          const img = new Image();
+          img.src = spriteDef.spriteSheet;
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => {
+              spriteImagesRef.current.set(spriteDef.spriteSheet, img);
+              console.log(`CombatView: Loaded sprite sheet ${spriteDef.spriteSheet}`);
+              resolve();
+            };
+            img.onerror = (err) => {
+              console.error(`CombatView: Failed to load sprite sheet ${spriteDef.spriteSheet}`, err);
+              reject(err);
+            };
+          });
+        }
+      });
+
+      await Promise.all(loadPromises);
+      console.log('CombatView: All sprites loaded');
+      setSpritesLoaded(true);
+    };
+
+    loadSprites().catch(console.error);
+  }, [combatState.map]);
+
+  // Render the map to the canvas
+  useEffect(() => {
+    if (!spritesLoaded) {
+      console.log('CombatView: Sprites not loaded yet, skipping render');
+      return;
+    }
+
+    const displayCanvas = displayCanvasRef.current;
+    if (!displayCanvas) {
+      console.log('CombatView: Display canvas not ready');
+      return;
+    }
+
+    console.log('CombatView: Starting render');
+
+    // Create or get the buffer canvas
+    if (!bufferCanvasRef.current) {
+      bufferCanvasRef.current = document.createElement('canvas');
+    }
+    const bufferCanvas = bufferCanvasRef.current;
+
+    // Set canvas sizes
+    const width = combatState.map.width * TILE_SIZE;
+    const height = combatState.map.height * TILE_SIZE;
+
+    console.log(`CombatView: Canvas size: ${width}x${height} (${combatState.map.width}x${combatState.map.height} tiles)`);
+
+    bufferCanvas.width = width;
+    bufferCanvas.height = height;
+    displayCanvas.width = width;
+    displayCanvas.height = height;
+
+    const ctx = bufferCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Clear the buffer
+    ctx.fillStyle = '#000000';
+    ctx.fillRect(0, 0, width, height);
+
+    // Disable image smoothing for pixel-perfect rendering
+    ctx.imageSmoothingEnabled = false;
+
+    // Render each cell
+    const allCells = combatState.map.getAllCells();
+    let renderedSprites = 0;
+    let renderedDefaults = 0;
+
+    for (const { position, cell } of allCells) {
+      const x = position.x * TILE_SIZE;
+      const y = position.y * TILE_SIZE;
+
+      if (cell.spriteId) {
+        const spriteDef = SpriteRegistry.getById(cell.spriteId);
+        if (spriteDef) {
+          const spriteImage = spriteImagesRef.current.get(spriteDef.spriteSheet);
+          if (spriteImage) {
+            // Calculate source rectangle in the sprite sheet (12x12 sprites)
+            const srcX = spriteDef.x * SPRITE_SIZE;
+            const srcY = spriteDef.y * SPRITE_SIZE;
+            const srcWidth = (spriteDef.width || 1) * SPRITE_SIZE;
+            const srcHeight = (spriteDef.height || 1) * SPRITE_SIZE;
+
+            // Draw the sprite scaled up 4x
+            ctx.drawImage(
+              spriteImage,
+              srcX, srcY, srcWidth, srcHeight,
+              x, y, TILE_SIZE, TILE_SIZE
+            );
+            renderedSprites++;
+          } else {
+            console.warn(`CombatView: Sprite image not loaded for ${cell.spriteId}`);
+          }
+        } else {
+          console.warn(`CombatView: Sprite definition not found for ${cell.spriteId}`);
+        }
+      } else {
+        // Render a default tile based on terrain type
+        ctx.fillStyle = cell.walkable ? '#444444' : '#222222';
+        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
+
+        // Draw grid lines
+        ctx.strokeStyle = '#666666';
+        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
+        renderedDefaults++;
+      }
+    }
+
+    console.log(`CombatView: Rendered ${renderedSprites} sprites, ${renderedDefaults} default tiles`);
+
+    // Copy buffer to display canvas
+    const displayCtx = displayCanvas.getContext('2d');
+    if (displayCtx) {
+      displayCtx.imageSmoothingEnabled = false;
+      displayCtx.clearRect(0, 0, width, height);
+      displayCtx.drawImage(bufferCanvas, 0, 0);
+      console.log('CombatView: Copied buffer to display canvas');
+    }
+  }, [spritesLoaded, combatState]);
 
   return (
     <div
@@ -106,7 +274,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => 
           </div>
         </div>
 
-        {/* Placeholder for map view */}
+        {/* Combat Map Canvas */}
         <div
           style={{
             flex: 1,
@@ -117,15 +285,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => 
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            overflow: 'auto',
           }}
         >
-          <div style={{ textAlign: 'center', color: '#666' }}>
-            <div style={{ fontSize: '48px', marginBottom: '16px' }}>⚔️</div>
-            <div style={{ fontSize: '16px', marginBottom: '8px' }}>Combat Map View</div>
-            <div style={{ fontSize: '12px' }}>
-              This area will display the combat map with units, terrain, and interactive elements.
-            </div>
-          </div>
+          <canvas
+            ref={displayCanvasRef}
+            style={{
+              imageRendering: 'pixelated',
+              imageRendering: 'crisp-edges',
+              border: '2px solid rgba(33, 150, 243, 0.4)',
+              background: '#000',
+            }}
+          />
         </div>
 
         {/* Placeholder for action panel */}
