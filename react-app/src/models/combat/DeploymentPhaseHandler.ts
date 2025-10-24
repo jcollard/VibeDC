@@ -592,8 +592,8 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       return;
     }
 
-    // Get the first 3 party members
-    const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
+    // Get all party members (supports 1-4 members)
+    const partyMembers = PartyMemberRegistry.getAll();
 
     // Create dialog content with hover state and highlight color
     const dialogContent = new CharacterSelectionDialogContent(

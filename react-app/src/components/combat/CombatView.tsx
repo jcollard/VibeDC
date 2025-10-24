@@ -461,10 +461,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
 
       // First check if clicking on a character in the dialog
-      const characterIndex = handler.handleCharacterClick(canvasX, canvasY, 3);
+      const partyMembers = PartyMemberRegistry.getAll();
+      const characterIndex = handler.handleCharacterClick(canvasX, canvasY, partyMembers.length);
       if (characterIndex !== null) {
         // Character was clicked - create unit and place it
-        const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
         const selectedMember = partyMembers[characterIndex];
         const selectedZoneIndex = handler.getSelectedZoneIndex();
 
@@ -539,7 +539,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Pass mouse move to phase handler (if deployment phase)
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
-      handler.handleMouseMove(canvasX, canvasY, 3); // 3 characters in the list
+      const partySize = PartyMemberRegistry.getAll().length;
+      handler.handleMouseMove(canvasX, canvasY, partySize);
       handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
     }
   }, [combatState.phase]);
