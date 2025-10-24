@@ -7,6 +7,7 @@ import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { TilesetRegistry } from '../../utils/TilesetRegistry';
 import { TagFilter } from './TagFilter';
 import { EncounterPreview } from './EncounterPreview';
+import { CombatView } from '../combat/CombatView';
 import * as yaml from 'js-yaml';
 
 // Helper component to render a sprite on a canvas
@@ -69,6 +70,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
   const [editedTilesetId, setEditedTilesetId] = useState<string>('');
   const [mapRenderKey, setMapRenderKey] = useState(0);
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
+  const [testingEncounter, setTestingEncounter] = useState<CombatEncounter | null>(null);
 
   // Store original encounter state before editing (for cancel/revert)
   const originalEncounterRef = useRef<CombatEncounterJSON | null>(null);
@@ -590,12 +592,27 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     }
   };
 
+  const handleTest = () => {
+    if (!selectedEncounter) return;
+    setTestingEncounter(selectedEncounter);
+  };
+
   const filteredEncounters = selectedTag
     ? encounters.filter(_encounter => {
         // Future: filter by tags when we add them to encounters
         return true;
       })
     : encounters;
+
+  // If testing an encounter, show the CombatView instead
+  if (testingEncounter) {
+    return (
+      <CombatView
+        encounter={testingEncounter}
+        onExit={() => setTestingEncounter(null)}
+      />
+    );
+  }
 
   return (
     <div
@@ -797,6 +814,23 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
                   <div style={{ display: 'flex', gap: '8px' }}>
                     {!isEditing ? (
                       <>
+                        <button
+                          onClick={handleTest}
+                          style={{
+                            padding: '4px 12px',
+                            background: 'rgba(33, 150, 243, 0.3)',
+                            border: '1px solid rgba(33, 150, 243, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                            fontWeight: 'bold',
+                          }}
+                          title="Test this encounter in combat"
+                        >
+                          Test
+                        </button>
                         <button
                           onClick={handleEdit}
                           style={{
