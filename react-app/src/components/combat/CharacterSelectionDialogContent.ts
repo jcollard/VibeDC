@@ -100,7 +100,8 @@ export class CharacterSelectionDialogContent extends DialogContent {
 
     // Calculate height to align with tile boundaries: 4 tiles = 192px
     // 32 (title) + 48 (spacing) + 96 (sprite) + 16 (name) = 192px
-    const totalHeight = TITLE_FONT_SIZE + this.tileSize + SPRITE_SIZE_PIXELS + NAME_FONT_SIZE;
+    // DEBUG: Add 50px for testing
+    const totalHeight = TITLE_FONT_SIZE + this.tileSize + SPRITE_SIZE_PIXELS + NAME_FONT_SIZE + 50;
 
     return {
       width: totalWidth,
