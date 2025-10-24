@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { CombatEncounter } from './CombatEncounter';
+import type { CombatState } from './CombatState';
 import { CombatMap, TerrainType } from './CombatMap';
 import { UnitClass } from './UnitClass';
 import { CombatAbility } from './CombatAbility';
@@ -11,6 +12,16 @@ import {
   OrPredicate,
   AndPredicate,
 } from './CombatPredicate';
+
+// Helper to create a minimal CombatState for testing
+function createMockState(turnNumber: number): CombatState {
+  return {
+    turnNumber,
+    map: new CombatMap(1, 1), // Minimal 1x1 map
+    tilesetId: 'test',
+    phase: 'deployment',
+  };
+}
 
 describe('CombatEncounter', () => {
   let testClass: UnitClass;
@@ -151,7 +162,7 @@ describe('CombatEncounter', () => {
       );
 
       // AllEnemiesDefeatedPredicate returns false (not implemented yet)
-      expect(encounter.isVictory({ turnNumber: 1 })).toBe(false);
+      expect(encounter.isVictory(createMockState(1))).toBe(false);
     });
 
     it('should check defeat conditions (any can be true)', () => {
@@ -168,7 +179,7 @@ describe('CombatEncounter', () => {
       );
 
       // AllPlayersDefeatedPredicate returns false (not implemented yet)
-      expect(encounter.isDefeat({ turnNumber: 1 })).toBe(false);
+      expect(encounter.isDefeat(createMockState(1))).toBe(false);
     });
 
     it('should handle turn limit victory condition', () => {
@@ -184,9 +195,9 @@ describe('CombatEncounter', () => {
         []
       );
 
-      expect(encounter.isVictory({ turnNumber: 5 })).toBe(false);
-      expect(encounter.isVictory({ turnNumber: 10 })).toBe(true);
-      expect(encounter.isVictory({ turnNumber: 15 })).toBe(true);
+      expect(encounter.isVictory(createMockState(5))).toBe(false);
+      expect(encounter.isVictory(createMockState(10))).toBe(true);
+      expect(encounter.isVictory(createMockState(15))).toBe(true);
     });
 
     it('should handle complex OR victory conditions', () => {
@@ -208,7 +219,7 @@ describe('CombatEncounter', () => {
       );
 
       // Victory if turn 10 reached (even if enemies not defeated)
-      expect(encounter.isVictory({ turnNumber: 10 })).toBe(true);
+      expect(encounter.isVictory(createMockState(10))).toBe(true);
     });
 
     it('should handle complex AND victory conditions', () => {
@@ -229,9 +240,9 @@ describe('CombatEncounter', () => {
         []
       );
 
-      expect(encounter.isVictory({ turnNumber: 2 })).toBe(false);
-      expect(encounter.isVictory({ turnNumber: 3 })).toBe(false);
-      expect(encounter.isVictory({ turnNumber: 5 })).toBe(true);
+      expect(encounter.isVictory(createMockState(2))).toBe(false);
+      expect(encounter.isVictory(createMockState(3))).toBe(false);
+      expect(encounter.isVictory(createMockState(5))).toBe(true);
     });
   });
 

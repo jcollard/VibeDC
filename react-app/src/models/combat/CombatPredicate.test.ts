@@ -9,15 +9,26 @@ import {
   CombatPredicateFactory,
 } from './CombatPredicate';
 import type { CombatState } from './CombatState';
+import { CombatMap } from './CombatMap';
+
+// Helper to create a minimal CombatState for testing
+function createMockState(turnNumber: number): CombatState {
+  return {
+    turnNumber,
+    map: new CombatMap(1, 1), // Minimal 1x1 map
+    tilesetId: 'test',
+    phase: 'deployment',
+  };
+}
 
 describe('CombatPredicate', () => {
-  const mockState: CombatState = { turnNumber: 5 };
+  const mockState: CombatState = createMockState(5);
 
   describe('AlwaysTruePredicate', () => {
     it('should always evaluate to true', () => {
       const predicate = new AlwaysTruePredicate();
       expect(predicate.evaluate(mockState)).toBe(true);
-      expect(predicate.evaluate({ turnNumber: 100 })).toBe(true);
+      expect(predicate.evaluate(createMockState(100))).toBe(true);
     });
 
     it('should serialize and deserialize', () => {
@@ -34,7 +45,7 @@ describe('CombatPredicate', () => {
     it('should always evaluate to false', () => {
       const predicate = new AlwaysFalsePredicate();
       expect(predicate.evaluate(mockState)).toBe(false);
-      expect(predicate.evaluate({ turnNumber: 100 })).toBe(false);
+      expect(predicate.evaluate(createMockState(100))).toBe(false);
     });
 
     it('should serialize and deserialize', () => {
@@ -51,9 +62,9 @@ describe('CombatPredicate', () => {
     it('should evaluate based on turn number', () => {
       const predicate = new TurnLimitPredicate(10);
 
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(false);
-      expect(predicate.evaluate({ turnNumber: 10 })).toBe(true);
-      expect(predicate.evaluate({ turnNumber: 15 })).toBe(true);
+      expect(predicate.evaluate(createMockState(5))).toBe(false);
+      expect(predicate.evaluate(createMockState(10))).toBe(true);
+      expect(predicate.evaluate(createMockState(15))).toBe(true);
     });
 
     it('should use custom description', () => {
@@ -68,7 +79,7 @@ describe('CombatPredicate', () => {
 
       expect(deserialized.maxTurns).toBe(20);
       expect(deserialized.description).toBe('Test limit');
-      expect(deserialized.evaluate({ turnNumber: 20 })).toBe(true);
+      expect(deserialized.evaluate(createMockState(20))).toBe(true);
       expect(json.type).toBe('TurnLimit');
     });
   });
@@ -80,9 +91,9 @@ describe('CombatPredicate', () => {
         new TurnLimitPredicate(5),
       ]);
 
-      expect(predicate.evaluate({ turnNumber: 3 })).toBe(false); // Turn limit not met
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(true); // Both true
-      expect(predicate.evaluate({ turnNumber: 10 })).toBe(true); // Both true
+      expect(predicate.evaluate(createMockState(3))).toBe(false); // Turn limit not met
+      expect(predicate.evaluate(createMockState(5))).toBe(true); // Both true
+      expect(predicate.evaluate(createMockState(10))).toBe(true); // Both true
     });
 
     it('should evaluate to false if any predicate is false', () => {
@@ -101,7 +112,7 @@ describe('CombatPredicate', () => {
         new TurnLimitPredicate(3),
       ]);
 
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(true);
+      expect(predicate.evaluate(createMockState(5))).toBe(true);
     });
 
     it('should serialize and deserialize nested predicates', () => {
@@ -113,8 +124,8 @@ describe('CombatPredicate', () => {
       const json = original.toJSON();
       const deserialized = CombatPredicateFactory.fromJSON(json);
 
-      expect(deserialized.evaluate({ turnNumber: 3 })).toBe(false);
-      expect(deserialized.evaluate({ turnNumber: 10 })).toBe(true);
+      expect(deserialized.evaluate(createMockState(3))).toBe(false);
+      expect(deserialized.evaluate(createMockState(10))).toBe(true);
       expect(json.type).toBe('And');
     });
   });
@@ -126,8 +137,8 @@ describe('CombatPredicate', () => {
         new TurnLimitPredicate(5),
       ]);
 
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(true);
-      expect(predicate.evaluate({ turnNumber: 3 })).toBe(false);
+      expect(predicate.evaluate(createMockState(5))).toBe(true);
+      expect(predicate.evaluate(createMockState(3))).toBe(false);
     });
 
     it('should evaluate to true if at least one is true', () => {
@@ -158,7 +169,7 @@ describe('CombatPredicate', () => {
       const json = original.toJSON();
       const deserialized = CombatPredicateFactory.fromJSON(json);
 
-      expect(deserialized.evaluate({ turnNumber: 1 })).toBe(true); // AlwaysTrue makes it true
+      expect(deserialized.evaluate(createMockState(1))).toBe(true); // AlwaysTrue makes it true
       expect(json.type).toBe('Or');
     });
   });
@@ -177,9 +188,9 @@ describe('CombatPredicate', () => {
     it('should invert turn limit correctly', () => {
       const predicate = new NotPredicate(new TurnLimitPredicate(10));
 
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(true); // Not reached yet
-      expect(predicate.evaluate({ turnNumber: 10 })).toBe(false); // Reached
-      expect(predicate.evaluate({ turnNumber: 15 })).toBe(false); // Exceeded
+      expect(predicate.evaluate(createMockState(5))).toBe(true); // Not reached yet
+      expect(predicate.evaluate(createMockState(10))).toBe(false); // Reached
+      expect(predicate.evaluate(createMockState(15))).toBe(false); // Exceeded
     });
 
     it('should serialize and deserialize', () => {
@@ -188,8 +199,8 @@ describe('CombatPredicate', () => {
       const json = original.toJSON();
       const deserialized = CombatPredicateFactory.fromJSON(json);
 
-      expect(deserialized.evaluate({ turnNumber: 3 })).toBe(true);
-      expect(deserialized.evaluate({ turnNumber: 5 })).toBe(false);
+      expect(deserialized.evaluate(createMockState(3))).toBe(true);
+      expect(deserialized.evaluate(createMockState(5))).toBe(false);
       expect(json.type).toBe('Not');
     });
   });
@@ -205,9 +216,9 @@ describe('CombatPredicate', () => {
         new AlwaysTruePredicate(),
       ]);
 
-      expect(predicate.evaluate({ turnNumber: 3 })).toBe(false);
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(true);
-      expect(predicate.evaluate({ turnNumber: 15 })).toBe(true);
+      expect(predicate.evaluate(createMockState(3))).toBe(false);
+      expect(predicate.evaluate(createMockState(5))).toBe(true);
+      expect(predicate.evaluate(createMockState(15))).toBe(true);
     });
 
     it('should serialize and deserialize complex nested predicates', () => {
@@ -222,8 +233,8 @@ describe('CombatPredicate', () => {
       const json = original.toJSON();
       const deserialized = CombatPredicateFactory.fromJSON(json);
 
-      expect(deserialized.evaluate({ turnNumber: 5 })).toBe(true); // AlwaysTrue branch
-      expect(deserialized.evaluate({ turnNumber: 15 })).toBe(true); // Both branches true
+      expect(deserialized.evaluate(createMockState(5))).toBe(true); // AlwaysTrue branch
+      expect(deserialized.evaluate(createMockState(15))).toBe(true); // Both branches true
     });
   });
 
@@ -259,8 +270,8 @@ describe('CombatPredicate', () => {
 
       const predicate = CombatPredicateFactory.fromJSON(json);
       expect(predicate).toBeInstanceOf(AndPredicate);
-      expect(predicate.evaluate({ turnNumber: 5 })).toBe(false);
-      expect(predicate.evaluate({ turnNumber: 10 })).toBe(true);
+      expect(predicate.evaluate(createMockState(5))).toBe(false);
+      expect(predicate.evaluate(createMockState(10))).toBe(true);
     });
   });
 });

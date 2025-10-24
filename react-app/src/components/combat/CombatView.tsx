@@ -1,10 +1,9 @@
 import { useState, useRef, useEffect } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
+import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
-import { renderDialogWithContent, getNineSliceSpriteIds, renderTextWithShadow } from '../../utils/DialogRenderer';
-import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
-import { CharacterSelectionDialogContent } from './CharacterSelectionDialogContent';
+import { DeploymentPhaseHandler } from '../../models/combat/DeploymentPhaseHandler';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -24,9 +23,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [combatState] = useState<CombatState>({
     turnNumber: 0,
     map: encounter.map,
-    tilesetId: encounter.tilesetId,
+    tilesetId: encounter.tilesetId || 'default',
     phase: 'deployment', // Start in deployment phase
   });
+
+  // Initialize phase handler based on current phase
+  const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler());
 
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -100,23 +102,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         }
       }
 
-      // Add deployment zone sprite if in deployment phase
-      if (combatState.phase === 'deployment') {
-        spritesToLoad.add('gradients-7');
-        spritesToLoad.add('particles-5'); // Border sprite
-      }
-
-      // Add dialog UI sprites
-      const dialogSprites = getNineSliceSpriteIds();
-      dialogSprites.forEach(id => spritesToLoad.add(id));
-
-      // Add character sprites for testing
-      const partyMembers = PartyMemberRegistry.getAll();
-      partyMembers.slice(0, 3).forEach(member => {
-        if (member.spriteId) {
-          spritesToLoad.add(member.spriteId);
-        }
-      });
+      // Get phase-specific sprites from the phase handler
+      const phaseSprites = phaseHandlerRef.current.getRequiredSprites(combatState, encounter);
+      phaseSprites.spriteIds.forEach(id => spritesToLoad.add(id));
 
       console.log('CombatView: Sprites to load:', Array.from(spritesToLoad));
 
@@ -154,7 +142,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
 
     loadSprites().catch(console.error);
-  }, [combatState.map]);
+  }, [combatState.map, combatState.phase, encounter]);
 
   // Render the map to the canvas
   useEffect(() => {
@@ -257,118 +245,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     console.log(`CombatView: Rendered ${renderedSprites} sprites, ${renderedDefaults} default tiles`);
 
-    // Render deployment zones if in deployment phase
-    if (combatState.phase === 'deployment') {
-      console.log(`CombatView: Rendering ${encounter.deploymentSlotCount} deployment zones`);
-
-      // Get the deployment zone sprites
-      const deploymentSprite = SpriteRegistry.getById('gradients-7');
-      const borderSprite = SpriteRegistry.getById('particles-5');
-
-      if (deploymentSprite && borderSprite) {
-        const spriteImage = spriteImagesRef.current.get(deploymentSprite.spriteSheet);
-        const borderImage = spriteImagesRef.current.get(borderSprite.spriteSheet);
-
-        if (spriteImage && borderImage) {
-          for (const zone of encounter.playerDeploymentZones) {
-            const x = zone.x * TILE_SIZE + offsetX;
-            const y = zone.y * TILE_SIZE + offsetY;
-
-            // Draw the fill sprite with 50% transparency
-            ctx.save();
-            ctx.globalAlpha = 0.5;
-
-            const srcX = deploymentSprite.x * SPRITE_SIZE;
-            const srcY = deploymentSprite.y * SPRITE_SIZE;
-            const srcWidth = (deploymentSprite.width || 1) * SPRITE_SIZE;
-            const srcHeight = (deploymentSprite.height || 1) * SPRITE_SIZE;
-
-            ctx.drawImage(
-              spriteImage,
-              srcX, srcY, srcWidth, srcHeight,
-              x, y, TILE_SIZE, TILE_SIZE
-            );
-
-            ctx.restore();
-
-            // Draw the border sprite with full opacity
-            const borderSrcX = borderSprite.x * SPRITE_SIZE;
-            const borderSrcY = borderSprite.y * SPRITE_SIZE;
-            const borderSrcWidth = (borderSprite.width || 1) * SPRITE_SIZE;
-            const borderSrcHeight = (borderSprite.height || 1) * SPRITE_SIZE;
-
-            ctx.drawImage(
-              borderImage,
-              borderSrcX, borderSrcY, borderSrcWidth, borderSrcHeight,
-              x, y, TILE_SIZE, TILE_SIZE
-            );
-          }
-        } else {
-          console.warn('CombatView: Deployment sprite images not loaded');
-        }
-      } else {
-        console.warn('CombatView: Deployment sprites "gradients-7" or "particles-5" not found');
-      }
-    }
-
-    // Render phase message
-    if (combatState.phase === 'deployment') {
-      // Draw "Deploy Units" message at the top of the canvas
-      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent black background
-      ctx.fillRect(0, 20, CANVAS_SIZE, 80);
-
-      renderTextWithShadow(
-        ctx,
-        'Deploy Units',
-        CANVAS_SIZE / 2,
-        60,
-        `bold 48px "${headerFont}", monospace`,
-        '#ffffff',
-        2,
-        'center',
-        'middle'
-      );
-    }
-
-    // Render test dialog with character selection (auto-sized)
-    if (combatState.phase === 'deployment') {
-      // Get the first 3 party members
-      const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
-
-      // Create dialog content
-      const dialogContent = new CharacterSelectionDialogContent(
-        'Select a Character',
-        partyMembers,
-        dialogFont,
-        spriteImagesRef.current,
-        TILE_SIZE,
-        SPRITE_SIZE
-      );
-
-      // Measure the dialog to calculate centered position
-      const bounds = dialogContent.measure(TILE_SIZE);
-      const dialogSize = {
-        width: Math.ceil(bounds.maxX / TILE_SIZE) + 4, // +4 for borders and padding
-        height: Math.ceil(bounds.maxY / TILE_SIZE) + 4
-      };
-
-      // Center horizontally and position near bottom
-      const dialogX = (CANVAS_SIZE - (dialogSize.width * TILE_SIZE)) / 2;
-      const dialogY = CANVAS_SIZE - (dialogSize.height * TILE_SIZE) - 40;
-
-      // Render dialog with auto-sizing (DEBUG: 0px padding)
-      renderDialogWithContent(
-        ctx,
-        dialogContent,
-        dialogX,
-        dialogY,
-        TILE_SIZE,
-        SPRITE_SIZE,
-        spriteImagesRef.current,
-        undefined, // Use default 9-slice sprites
-        0 // DEBUG: 0px padding
-      );
-    }
+    // Render phase-specific overlays using the phase handler
+    phaseHandlerRef.current.render(combatState, encounter, {
+      ctx,
+      canvasSize: CANVAS_SIZE,
+      tileSize: TILE_SIZE,
+      spriteSize: SPRITE_SIZE,
+      offsetX,
+      offsetY,
+      spriteImages: spriteImagesRef.current,
+      headerFont,
+      dialogFont,
+    });
 
     // Copy buffer to display canvas
     const displayCtx = displayCanvas.getContext('2d');

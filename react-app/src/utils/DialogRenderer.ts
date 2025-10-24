@@ -26,10 +26,10 @@ export abstract class DialogContent {
 
   /**
    * Measure the content bounds without rendering to visible canvas
-   * @param tileSize - Size of each tile in pixels
+   * @param _tileSize - Size of each tile in pixels (unused in base implementation)
    * @returns The measured bounds of the content
    */
-  measure(tileSize: number): ContentBounds {
+  measure(_tileSize: number): ContentBounds {
     // Create an off-screen canvas for measuring
     const canvas = document.createElement('canvas');
     canvas.width = 2000; // Large enough for measurement

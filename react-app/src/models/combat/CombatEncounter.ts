@@ -1,5 +1,6 @@
 import type { Position } from "../../types";
 import type { CombatUnit } from "./CombatUnit";
+import type { CombatState } from "./CombatState";
 import { EnemyRegistry } from "../../utils/EnemyRegistry";
 import { TilesetRegistry } from "../../utils/TilesetRegistry";
 import { CombatMap, parseASCIIMap } from "./CombatMap";
@@ -95,7 +96,7 @@ export class CombatEncounter {
    * Checks if victory conditions are met.
    * All victory conditions must be true (AND logic).
    */
-  isVictory(state: { turnNumber: number }): boolean {
+  isVictory(state: CombatState): boolean {
     return this.victoryConditions.every((condition) =>
       condition.evaluate(state)
     );
@@ -105,7 +106,7 @@ export class CombatEncounter {
    * Checks if defeat conditions are met.
    * Any defeat condition being true results in defeat (OR logic).
    */
-  isDefeat(state: { turnNumber: number }): boolean {
+  isDefeat(state: CombatState): boolean {
     return this.defeatConditions.some((condition) =>
       condition.evaluate(state)
     );

@@ -103,7 +103,7 @@ export class CharacterSelectionDialogContent extends DialogContent {
     if (!tempCtx) {
       // Fallback to estimates if context not available
       const totalWidth = this.title.length * 20;
-      const totalHeight = TITLE_FONT_SIZE + this.tileSize + (SPRITE_SIZE_PIXELS * this.partyMembers.length) + (ROW_SPACING * (this.partyMembers.length - 1));
+      const totalHeight = TITLE_FONT_SIZE + TITLE_SPACING + (ROW_HEIGHT * this.partyMembers.length);
       return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
     }
 
