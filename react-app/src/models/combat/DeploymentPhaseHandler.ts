@@ -9,6 +9,7 @@ import { CharacterSelectionDialogContent } from '../../components/combat/Charact
 import { UIConfig } from '../../config/UIConfig';
 import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
+import { Button } from '../../components/ui/Button';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -64,6 +65,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   // Hover state for character selection
   private hoveredCharacterIndex: number | null = null;
   private lastDialogBounds: { x: number; y: number; width: number; height: number } | null = null;
+
+  // Deploy button
+  private deployButton: Button | null = null;
 
   /**
    * Update animation state
@@ -253,6 +257,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     spriteIds.add(this.deploymentSprite);
     spriteIds.add(this.borderSprite);
 
+    // Add button sprite
+    spriteIds.add('ui-simple-4');
+
     // Add dialog UI sprites
     const dialogSprites = getNineSliceSpriteIds();
     dialogSprites.forEach(id => spriteIds.add(id));
@@ -286,6 +293,21 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
     // Render "Deploy Units" header
     this.renderPhaseHeader(ctx, canvasSize, headerFont);
+
+    // Initialize and render Deploy button below header
+    if (!this.deployButton) {
+      this.deployButton = new Button({
+        label: 'Deploy',
+        x: canvasSize / 2 - 60, // Center button (120px wide)
+        y: 110, // Below the header which ends at y=100
+        width: 120,
+        height: 40,
+        spriteId: 'ui-simple-4',
+        font: headerFont,
+        fontSize: 18,
+      });
+    }
+    this.deployButton.render(ctx, spriteImages);
 
     // Render character selection dialog
     this.renderCharacterSelectionDialog(ctx, encounter, canvasSize, tileSize, spriteSize, offsetX, offsetY, dialogFont, spriteImages);
