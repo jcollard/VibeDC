@@ -5,18 +5,18 @@ import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
-  onExit?: () => void;
 }
 
 const SPRITE_SIZE = 12; // Size of each sprite in the sprite sheet (12x12 pixels)
 const SCALE = 4; // Scale factor for rendering
 const TILE_SIZE = SPRITE_SIZE * SCALE; // Size of each tile when rendered (48x48 pixels)
+const CANVAS_SIZE = 960; // Canvas size in pixels (960x960)
 
 /**
  * CombatView is the main view for displaying and interacting with combat encounters.
  * This is a placeholder component that will be expanded as the combat system is implemented.
  */
-export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => {
+export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Initialize combat state from the encounter
   const [combatState] = useState<CombatState>({
     turnNumber: 0,
@@ -33,6 +33,19 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => 
 
   // Track if sprites are loaded
   const [spritesLoaded, setSpritesLoaded] = useState(false);
+
+  // Track window resize to force re-render
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  // Listen for window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load sprite images
   useEffect(() => {
@@ -108,35 +121,42 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => 
     }
     const bufferCanvas = bufferCanvasRef.current;
 
-    // Set canvas sizes
-    const width = combatState.map.width * TILE_SIZE;
-    const height = combatState.map.height * TILE_SIZE;
+    // Set canvas sizes to 960x960
+    bufferCanvas.width = CANVAS_SIZE;
+    bufferCanvas.height = CANVAS_SIZE;
+    displayCanvas.width = CANVAS_SIZE;
+    displayCanvas.height = CANVAS_SIZE;
 
-    console.log(`CombatView: Canvas size: ${width}x${height} (${combatState.map.width}x${combatState.map.height} tiles)`);
+    // Calculate map size in pixels
+    const mapWidth = combatState.map.width * TILE_SIZE;
+    const mapHeight = combatState.map.height * TILE_SIZE;
 
-    bufferCanvas.width = width;
-    bufferCanvas.height = height;
-    displayCanvas.width = width;
-    displayCanvas.height = height;
+    // Calculate offset to center the map on the canvas
+    const offsetX = (CANVAS_SIZE - mapWidth) / 2;
+    const offsetY = (CANVAS_SIZE - mapHeight) / 2;
+
+    console.log(`CombatView: Canvas size: ${CANVAS_SIZE}x${CANVAS_SIZE}`);
+    console.log(`CombatView: Map size: ${mapWidth}x${mapHeight} (${combatState.map.width}x${combatState.map.height} tiles)`);
+    console.log(`CombatView: Offset: (${offsetX}, ${offsetY})`);
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
 
     // Clear the buffer
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, width, height);
+    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
 
     // Disable image smoothing for pixel-perfect rendering
     ctx.imageSmoothingEnabled = false;
 
-    // Render each cell
+    // Render each cell with offset to center the map
     const allCells = combatState.map.getAllCells();
     let renderedSprites = 0;
     let renderedDefaults = 0;
 
     for (const { position, cell } of allCells) {
-      const x = position.x * TILE_SIZE;
-      const y = position.y * TILE_SIZE;
+      const x = position.x * TILE_SIZE + offsetX;
+      const y = position.y * TILE_SIZE + offsetY;
 
       if (cell.spriteId) {
         const spriteDef = SpriteRegistry.getById(cell.spriteId);
@@ -180,141 +200,53 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter, onExit }) => 
     const displayCtx = displayCanvas.getContext('2d');
     if (displayCtx) {
       displayCtx.imageSmoothingEnabled = false;
-      displayCtx.clearRect(0, 0, width, height);
+      displayCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       displayCtx.drawImage(bufferCanvas, 0, 0);
       console.log('CombatView: Copied buffer to display canvas');
     }
-  }, [spritesLoaded, combatState]);
+  }, [spritesLoaded, combatState, windowSize]);
 
   return (
     <div
       style={{
-        position: 'absolute',
+        position: 'fixed',
         top: 0,
         left: 0,
-        width: '100%',
-        height: '100%',
-        background: 'rgba(0, 0, 0, 0.95)',
-        color: '#fff',
-        fontFamily: 'monospace',
-        fontSize: '14px',
-        zIndex: 3000,
+        width: '100vw',
+        height: '100vh',
+        margin: 0,
+        padding: 0,
+        overflow: 'hidden',
         display: 'flex',
-        flexDirection: 'column',
-        padding: '20px',
+        alignItems: 'center',
+        justifyContent: 'center',
+        background: '#000',
+        zIndex: 3000,
       }}
     >
-      {/* Header */}
       <div
         style={{
+          width: '100%',
+          height: '100%',
+          maxWidth: '177.78vh', // 16:9 aspect ratio (16/9 * 100vh)
+          maxHeight: '56.25vw', // 16:9 aspect ratio (9/16 * 100vw)
+          position: 'relative',
           display: 'flex',
-          justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '20px',
-          paddingBottom: '12px',
-          borderBottom: '2px solid #666',
+          justifyContent: 'center',
         }}
       >
-        <div>
-          <div style={{ fontWeight: 'bold', fontSize: '18px', marginBottom: '4px' }}>
-            {encounter.name}
-          </div>
-          <div style={{ fontSize: '12px', color: '#aaa' }}>
-            {encounter.description}
-          </div>
-        </div>
-        {onExit && (
-          <button
-            onClick={onExit}
-            style={{
-              padding: '8px 16px',
-              background: 'rgba(244, 67, 54, 0.3)',
-              border: '1px solid rgba(244, 67, 54, 0.6)',
-              borderRadius: '4px',
-              color: '#fff',
-              fontSize: '12px',
-              cursor: 'pointer',
-              fontFamily: 'monospace',
-              fontWeight: 'bold',
-            }}
-          >
-            Exit Combat
-          </button>
-        )}
-      </div>
-
-      {/* Main content area */}
-      <div
-        style={{
-          flex: 1,
-          display: 'flex',
-          flexDirection: 'column',
-          gap: '20px',
-          overflow: 'auto',
-        }}
-      >
-        {/* Combat State Info */}
-        <div
+        <canvas
+          ref={displayCanvasRef}
           style={{
-            padding: '16px',
-            background: 'rgba(33, 150, 243, 0.1)',
-            borderRadius: '4px',
-            border: '2px solid rgba(33, 150, 243, 0.4)',
-          }}
-        >
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '16px' }}>
-            Combat State (Placeholder)
-          </div>
-          <div style={{ fontSize: '12px', color: '#aaa' }}>
-            <div><strong>Turn Number:</strong> {combatState.turnNumber}</div>
-            <div><strong>Encounter ID:</strong> {encounter.id}</div>
-            <div><strong>Map Size:</strong> {encounter.map.width} × {encounter.map.height}</div>
-            <div><strong>Enemies:</strong> {encounter.enemyCount}</div>
-            <div><strong>Deployment Zones:</strong> {encounter.deploymentSlotCount}</div>
-          </div>
-        </div>
-
-        {/* Combat Map Canvas */}
-        <div
-          style={{
-            flex: 1,
-            padding: '16px',
-            background: 'rgba(255, 255, 255, 0.05)',
-            borderRadius: '4px',
-            border: '1px solid rgba(255, 255, 255, 0.1)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            overflow: 'auto',
-          }}
-        >
-          <canvas
-            ref={displayCanvasRef}
-            style={{
-              imageRendering: 'pixelated',
-              imageRendering: 'crisp-edges',
-              border: '2px solid rgba(33, 150, 243, 0.4)',
-              background: '#000',
-            }}
-          />
-        </div>
-
-        {/* Placeholder for action panel */}
-        <div
-          style={{
-            padding: '16px',
-            background: 'rgba(76, 175, 80, 0.1)',
-            borderRadius: '4px',
-            border: '1px solid rgba(76, 175, 80, 0.3)',
-          }}
-        >
-          <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px' }}>
-            Actions
-          </div>
-          <div style={{ fontSize: '12px', color: '#aaa' }}>
-            Available actions will appear here (Move, Attack, Use Ability, End Turn, etc.)
-          </div>
-        </div>
+            width: '100%',
+            height: '100%',
+            maxWidth: `${CANVAS_SIZE}px`,
+            maxHeight: `${CANVAS_SIZE}px`,
+            imageRendering: 'pixelated',
+            objectFit: 'contain',
+          } as React.CSSProperties}
+        />
       </div>
     </div>
   );

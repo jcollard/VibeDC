@@ -606,12 +606,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
 
   // If testing an encounter, show the CombatView instead
   if (testingEncounter) {
-    return (
-      <CombatView
-        encounter={testingEncounter}
-        onExit={() => setTestingEncounter(null)}
-      />
-    );
+    return <CombatView encounter={testingEncounter} />;
   }
 
   return (
