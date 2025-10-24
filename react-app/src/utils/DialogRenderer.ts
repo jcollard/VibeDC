@@ -298,18 +298,22 @@ export function renderDialogWithContent(
   const totalHeightPixels = contentHeight + (paddingPixels * 2);
 
   // Convert to tiles (round up to ensure content fits)
-  const width = Math.ceil(totalWidthPixels / tileSize);
-  const height = Math.ceil(totalHeightPixels / tileSize);
+  // Note: This is the INTERIOR size (the width/height passed to renderNineSliceDialog)
+  // The actual dialog will be 2 tiles larger (1 tile border on each side)
+  // Subtract 1 tile from height to account for border overlap with content
+  const interiorWidth = Math.ceil(totalWidthPixels / tileSize);
+  const interiorHeight = Math.ceil(totalHeightPixels / tileSize) - 1;
 
   // Render the dialog background
-  renderNineSliceDialog(ctx, x, y, width, height, tileSize, spriteSize, spriteImages, nineSlice);
+  renderNineSliceDialog(ctx, x, y, interiorWidth, interiorHeight, tileSize, spriteSize, spriteImages, nineSlice);
 
   // Calculate content position (inside dialog, accounting for border and padding)
+  // Since we reduced interior height by 1, shift content down by 0.5 tiles from top border
   const contentX = x + tileSize + paddingPixels; // 1 tile for border + padding
-  const contentY = y + tileSize + paddingPixels;
+  const contentY = y + (tileSize * 0.5) + paddingPixels; // Content starts 0.5 tiles down from top
 
   // Render the content
   content.render(ctx, contentX, contentY);
 
-  return { width, height };
+  return { width: interiorWidth, height: interiorHeight };
 }
