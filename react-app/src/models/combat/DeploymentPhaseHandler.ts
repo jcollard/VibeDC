@@ -263,14 +263,15 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   /**
    * Calculate the current alpha value for deployment zone animation
    * Oscillates between minAlpha and maxAlpha over cycleTime
+   * Starts at minAlpha (0) and fades in
    */
   private calculateAlpha(): number {
     // Get position in current cycle (0 to 1)
     const cyclePosition = (this.elapsedTime % this.cycleTime) / this.cycleTime;
 
-    // Use sine wave for smooth oscillation
-    // sin goes from 0 to 1 to 0 over the cycle
-    const sineValue = Math.sin(cyclePosition * Math.PI * 2);
+    // Use sine wave for smooth oscillation, offset by -π/2 to start at minimum
+    // This makes sin start at -1 (minAlpha) and oscillate to 1 (maxAlpha)
+    const sineValue = Math.sin((cyclePosition * Math.PI * 2) - (Math.PI / 2));
 
     // Map sine wave (-1 to 1) to alpha range (minAlpha to maxAlpha)
     const normalizedValue = (sineValue + 1) / 2; // Convert to 0-1 range
