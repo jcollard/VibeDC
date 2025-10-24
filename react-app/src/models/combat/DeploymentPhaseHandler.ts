@@ -237,6 +237,11 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     dialogFont: string,
     spriteImages: Map<string, HTMLImageElement>
   ): void {
+    // Only show dialog if a deployment zone is selected
+    if (this.selectedZoneIndex === null) {
+      return;
+    }
+
     // Get the first 3 party members
     const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
 
