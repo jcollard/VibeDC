@@ -9,7 +9,7 @@ import { CharacterSelectionDialogContent } from '../../components/combat/Charact
 import { UIConfig } from '../../config/UIConfig';
 import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
-import { Button } from '../../components/ui/Button';
+import { CanvasButton } from '../../components/ui/CanvasButton';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -67,7 +67,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   private lastDialogBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   // Deploy button
-  private deployButton: Button | null = null;
+  private deployButton: CanvasButton | null = null;
 
   /**
    * Update animation state
@@ -231,6 +231,36 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   }
 
   /**
+   * Handle button mouse move for hover detection
+   */
+  handleButtonMouseMove(canvasX: number, canvasY: number): boolean {
+    if (this.deployButton) {
+      return this.deployButton.handleMouseMove(canvasX, canvasY);
+    }
+    return false;
+  }
+
+  /**
+   * Handle button mouse down
+   */
+  handleButtonMouseDown(canvasX: number, canvasY: number): boolean {
+    if (this.deployButton) {
+      return this.deployButton.handleMouseDown(canvasX, canvasY);
+    }
+    return false;
+  }
+
+  /**
+   * Handle button mouse up (triggers click if over button)
+   */
+  handleButtonMouseUp(canvasX: number, canvasY: number): boolean {
+    if (this.deployButton) {
+      return this.deployButton.handleMouseUp(canvasX, canvasY);
+    }
+    return false;
+  }
+
+  /**
    * Calculate the current alpha value for deployment zone animation
    * Oscillates between minAlpha and maxAlpha over cycleTime
    */
@@ -257,8 +287,10 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     spriteIds.add(this.deploymentSprite);
     spriteIds.add(this.borderSprite);
 
-    // Add button sprite
+    // Add button sprites (normal, hover, active)
     spriteIds.add('ui-simple-4');
+    spriteIds.add('ui-simple-5');
+    spriteIds.add('ui-simple-6');
 
     // Add dialog UI sprites
     const dialogSprites = getNineSliceSpriteIds();
@@ -296,15 +328,20 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
     // Initialize and render Deploy button below header
     if (!this.deployButton) {
-      this.deployButton = new Button({
+      this.deployButton = new CanvasButton({
         label: 'Deploy',
         x: canvasSize / 2 - 60, // Center button (120px wide)
         y: 110, // Below the header which ends at y=100
         width: 120,
         height: 40,
         spriteId: 'ui-simple-4',
+        hoverSpriteId: 'ui-simple-5',
+        activeSpriteId: 'ui-simple-6',
         font: headerFont,
         fontSize: 18,
+        onClick: () => {
+          console.log('Deploy button clicked!');
+        },
       });
     }
     this.deployButton.render(ctx, spriteImages);

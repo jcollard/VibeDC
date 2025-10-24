@@ -333,6 +333,40 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
   }, [spritesLoaded, fontsLoaded, renderFrame, combatState, encounter]);
 
+  // Handle canvas mouse down for button active state
+  const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = displayCanvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+
+    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
+      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+      handler.handleButtonMouseDown(canvasX, canvasY);
+    }
+  }, [combatState.phase]);
+
+  // Handle canvas mouse up for button click
+  const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = displayCanvasRef.current;
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+
+    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
+      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+      handler.handleButtonMouseUp(canvasX, canvasY);
+    }
+  }, [combatState.phase]);
+
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = displayCanvasRef.current;
@@ -437,6 +471,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
       handler.handleMouseMove(canvasX, canvasY, 3); // 3 characters in the list
+      handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
     }
   }, [combatState.phase]);
 
@@ -630,6 +665,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         <canvas
           ref={displayCanvasRef}
           onClick={handleCanvasClick}
+          onMouseDown={handleCanvasMouseDown}
+          onMouseUp={handleCanvasMouseUp}
           onMouseMove={handleCanvasMouseMove}
           style={{
             width: '100%',
