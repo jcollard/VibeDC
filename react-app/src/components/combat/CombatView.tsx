@@ -177,7 +177,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const introSequence = new SequenceParallel([
         new MapFadeInSequence(2.0),
         new TitleFadeInSequence('Deploy Units', 1.0, 48, 20),
-        new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, 136)
+        new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, 136),
+        new MessageFadeInSequence('You have been waylaid by enemies and must defend yourself.', 2.0, dialogFont, 36, 900)
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
       introCinematicPlayedRef.current = true;

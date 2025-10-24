@@ -330,6 +330,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     // Render instruction message
     this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont);
 
+    // Render waylaid message at bottom
+    this.renderWaylaidMessage(ctx, canvasSize, dialogFont);
+
     // Check if all units are deployed or all zones are occupied
     const partySize = PartyMemberRegistry.getAll().length;
     const deploymentZoneCount = encounter.playerDeploymentZones.length;
@@ -520,6 +523,39 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     ctx.fillText(message2, currentX + 1, yPosition + 1);
     ctx.fillStyle = '#ffffff';
     ctx.fillText(message2, currentX, yPosition);
+
+    ctx.restore();
+  }
+
+  /**
+   * Render the waylaid message at the bottom of the screen
+   */
+  private renderWaylaidMessage(
+    ctx: CanvasRenderingContext2D,
+    canvasSize: number,
+    font: string
+  ): void {
+    const fontSize = 36;
+    const yPosition = 900;
+    const message = 'You have been waylaid by enemies and must defend yourself.';
+
+    // Set up text rendering
+    ctx.save();
+    ctx.font = `${fontSize}px "${font}", monospace`;
+    ctx.textBaseline = 'top';
+
+    // Measure and center the text
+    const textWidth = ctx.measureText(message).width;
+    const currentX = (canvasSize - textWidth) / 2;
+
+    // Render text with shadow
+    ctx.fillStyle = '#000000';
+    ctx.fillText(message, currentX - 1, yPosition - 1);
+    ctx.fillText(message, currentX + 1, yPosition - 1);
+    ctx.fillText(message, currentX - 1, yPosition + 1);
+    ctx.fillText(message, currentX + 1, yPosition + 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(message, currentX, yPosition);
 
     ctx.restore();
   }
