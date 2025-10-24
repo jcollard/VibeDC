@@ -190,8 +190,8 @@ export class MessageFadeInSequence implements CinematicSequence {
   private measureMessageWidth(
     ctx: CanvasRenderingContext2D,
     charCount: number,
-    spriteImages: Map<string, HTMLImageElement>,
-    spriteSize: number
+    _spriteImages: Map<string, HTMLImageElement>,
+    _spriteSize: number
   ): number {
     let width = 0;
     let charsProcessed = 0;

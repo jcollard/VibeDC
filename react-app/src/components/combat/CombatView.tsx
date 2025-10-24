@@ -11,7 +11,7 @@ import { CinematicManager } from '../../models/combat/CinematicSequence';
 import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
 import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
 import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence';
-import { SequenceChain } from '../../models/combat/SequenceChain';
+import { SequenceParallel } from '../../models/combat/SequenceParallel';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -170,10 +170,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Start the intro cinematic sequence when encounter loads
   useEffect(() => {
     if (spritesLoaded && fontsLoaded) {
-      // Chain together: map fade-in, title fade-in, then message fade-in
-      const introSequence = new SequenceChain([
+      // Run all intro animations in parallel
+      const introSequence = new SequenceParallel([
         new MapFadeInSequence(2.0),
-        new TitleFadeInSequence('Deploy Units', 1.0),
+        new TitleFadeInSequence('Deploy Units', 1.0, 48, 20),
         new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, 136)
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);

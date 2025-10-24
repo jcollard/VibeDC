@@ -19,9 +19,9 @@ export class TitleFadeInSequence implements CinematicSequence {
    * @param title - The text to display
    * @param duration - Duration of the fade-in effect in seconds (default: 1)
    * @param fontSize - Font size in pixels (default: 48)
-   * @param yPosition - Y position on screen (default: 60)
+   * @param yPosition - Y position on screen (default: 20, matching DeploymentPhaseHandler)
    */
-  constructor(title: string, duration: number = 1.0, fontSize: number = 48, yPosition: number = 60) {
+  constructor(title: string, duration: number = 1.0, fontSize: number = 48, yPosition: number = 20) {
     this.title = title;
     this.duration = duration;
     this.fontSize = fontSize;
@@ -57,6 +57,11 @@ export class TitleFadeInSequence implements CinematicSequence {
    * Use dithering to create a pixelated fade effect at 4px block level
    */
   private shouldDrawPixel(pixelX: number, pixelY: number, alpha: number): boolean {
+    // Don't draw anything if alpha is 0
+    if (alpha <= 0) {
+      return false;
+    }
+
     const ditherPixelSize = 4;
 
     const bayerMatrix = [
@@ -89,11 +94,11 @@ export class TitleFadeInSequence implements CinematicSequence {
 
     tempCtx.imageSmoothingEnabled = false;
 
-    // Draw semi-transparent black background
+    // Draw semi-transparent black background at y=0 of temp canvas
     tempCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
     tempCtx.fillRect(0, 0, canvasSize, 80);
 
-    // Render text to temp canvas
+    // Render text to temp canvas at y=40 (which will align to y=60 when drawn at yPosition=20)
     renderTextWithShadow(
       tempCtx,
       this.title,
@@ -128,8 +133,8 @@ export class TitleFadeInSequence implements CinematicSequence {
     // Put modified pixels back
     tempCtx.putImageData(imageData, 0, 0);
 
-    // Draw to main canvas at the top
-    ctx.drawImage(tempCanvas, 0, 20);
+    // Draw to main canvas at the specified Y position
+    ctx.drawImage(tempCanvas, 0, this.yPosition);
   }
 
   isComplete(): boolean {
