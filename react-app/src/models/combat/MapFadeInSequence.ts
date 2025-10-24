@@ -110,6 +110,9 @@ export class MapFadeInSequence implements CinematicSequence {
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
 
+    // Disable image smoothing for pixel-perfect rendering
+    tempCtx.imageSmoothingEnabled = false;
+
     // Render each tile with pixel-level dithering
     const allCells = map.getAllCells();
     for (const { position, cell } of allCells) {
@@ -167,8 +170,11 @@ export class MapFadeInSequence implements CinematicSequence {
 
           // Check if this pixel should be drawn based on dithering
           if (!this.shouldDrawPixel(globalPixelX, globalPixelY, alpha)) {
-            // Make pixel transparent
-            data[index + 3] = 0;
+            // Replace with black background color instead of transparency
+            data[index] = 0;     // R
+            data[index + 1] = 0; // G
+            data[index + 2] = 0; // B
+            data[index + 3] = 255; // A (fully opaque)
           }
         }
       }
