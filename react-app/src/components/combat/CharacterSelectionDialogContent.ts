@@ -33,9 +33,11 @@ export class CharacterSelectionDialogContent extends DialogContent {
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     const TITLE_FONT_SIZE = 32;
-    const NAME_FONT_SIZE = 16;
-    const SPRITE_SIZE_PIXELS = this.tileSize * 2; // Characters are 2x2 tiles
-    const SPACING = this.tileSize * 2.5; // Space between characters
+    const NAME_FONT_SIZE = 32; // Match the title font size
+    const SPRITE_SIZE_PIXELS = this.tileSize * 1; // Characters are 1x1 tiles (48px)
+    const ROW_HEIGHT = 48; // Each row is exactly 48px tall
+    const TITLE_SPACING = 8; // Space after title
+    const NAME_OFFSET = 8; // Horizontal space between sprite and name
 
     // DEBUG: Draw rectangle around content bounds
     const bounds = this.getBounds();
@@ -46,15 +48,12 @@ export class CharacterSelectionDialogContent extends DialogContent {
     // Render title
     ctx.fillStyle = '#000000';
     ctx.font = `bold ${TITLE_FONT_SIZE}px "${this.font}", monospace`;
-    ctx.textAlign = 'center';
+    ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
+    ctx.fillText(this.title, x, y);
 
-    // Calculate title position (centered horizontally)
-    const titleX = x + (this.partyMembers.length * SPACING - this.tileSize) / 2;
-    ctx.fillText(this.title, titleX, y);
-
-    // Render character sprites and names
-    const spriteY = y + TITLE_FONT_SIZE + this.tileSize; // Below title with 1 tile spacing
+    // Render character sprites in a column with names to the right
+    const firstRowY = y + TITLE_FONT_SIZE + TITLE_SPACING; // Below title with small spacing
 
     this.partyMembers.forEach((member, index) => {
       if (!member.spriteId) return;
@@ -65,7 +64,7 @@ export class CharacterSelectionDialogContent extends DialogContent {
       const spriteImage = this.spriteImages.get(spriteDef.spriteSheet);
       if (!spriteImage) return;
 
-      const memberX = x + index * SPACING;
+      const rowY = firstRowY + (index * ROW_HEIGHT);
 
       // Draw character sprite
       const srcX = spriteDef.x * this.spriteSize;
@@ -76,32 +75,58 @@ export class CharacterSelectionDialogContent extends DialogContent {
       ctx.drawImage(
         spriteImage,
         srcX, srcY, srcWidth, srcHeight,
-        memberX, spriteY, SPRITE_SIZE_PIXELS, SPRITE_SIZE_PIXELS
+        x, rowY, SPRITE_SIZE_PIXELS, SPRITE_SIZE_PIXELS
       );
 
-      // Draw character name below sprite
+      // Draw character name to the right of sprite (truncated to 13 characters)
+      const truncatedName = member.name.substring(0, 13);
       ctx.fillStyle = '#000000';
       ctx.font = `${NAME_FONT_SIZE}px "${this.font}", monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'top';
-      ctx.fillText(member.name, memberX + this.tileSize, spriteY + SPRITE_SIZE_PIXELS);
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(truncatedName, x + SPRITE_SIZE_PIXELS + NAME_OFFSET, rowY + (SPRITE_SIZE_PIXELS / 2));
     });
   }
 
   protected getBounds(): ContentBounds {
     const TITLE_FONT_SIZE = 32;
-    const NAME_FONT_SIZE = 16;
-    const SPRITE_SIZE_PIXELS = this.tileSize * 2;
-    const SPACING = this.tileSize * 2.5;
+    const NAME_FONT_SIZE = 32; // Match the title font size
+    const SPRITE_SIZE_PIXELS = this.tileSize * 1;
+    const ROW_HEIGHT = 48; // Each row is exactly 48px tall
+    const TITLE_SPACING = 8; // Space after title
+    const NAME_OFFSET = 8;
 
-    // Calculate width: sprite + (n-1) spacings between characters
-    // For 3 characters: sprite + spacing + sprite + spacing + sprite
-    const totalWidth = SPRITE_SIZE_PIXELS + (SPACING * (this.partyMembers.length - 1));
+    // Create a temporary canvas to measure text width accurately
+    const tempCanvas = document.createElement('canvas');
+    const tempCtx = tempCanvas.getContext('2d');
 
-    // Calculate height to align with tile boundaries: 4 tiles = 192px
-    // 32 (title) + 48 (spacing) + 96 (sprite) + 16 (name) = 192px
-    // DEBUG: Add 50px for testing
-    const totalHeight = TITLE_FONT_SIZE + this.tileSize + SPRITE_SIZE_PIXELS + NAME_FONT_SIZE + 50;
+    if (!tempCtx) {
+      // Fallback to estimates if context not available
+      const totalWidth = this.title.length * 20;
+      const totalHeight = TITLE_FONT_SIZE + this.tileSize + (SPRITE_SIZE_PIXELS * this.partyMembers.length) + (ROW_SPACING * (this.partyMembers.length - 1));
+      return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
+    }
+
+    // Measure title width
+    tempCtx.font = `bold ${TITLE_FONT_SIZE}px "${this.font}", monospace`;
+    const titleWidth = tempCtx.measureText(this.title).width;
+
+    // Measure character list width (sprite + offset + longest name)
+    tempCtx.font = `${NAME_FONT_SIZE}px "${this.font}", monospace`;
+    let maxNameWidth = 0;
+    this.partyMembers.forEach(member => {
+      const truncatedName = member.name.substring(0, 13);
+      const nameWidth = tempCtx.measureText(truncatedName).width;
+      maxNameWidth = Math.max(maxNameWidth, nameWidth);
+    });
+    const characterListWidth = SPRITE_SIZE_PIXELS + NAME_OFFSET + maxNameWidth;
+
+    // Use the maximum of title width and character list width
+    const totalWidth = Math.max(titleWidth, characterListWidth);
+
+    // Calculate height: title + spacing + (rows at 48px each, no gaps)
+    // Each row is exactly 48px tall
+    const totalHeight = TITLE_FONT_SIZE + TITLE_SPACING + (ROW_HEIGHT * this.partyMembers.length);
 
     return {
       width: totalWidth,
