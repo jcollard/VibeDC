@@ -2,7 +2,6 @@ import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
 import { FirstPersonView } from './FirstPersonView';
 import { DebugPanel } from './DebugPanel';
 import { MapEditor } from './MapEditor';
-import { CombatView } from './CombatView';
 import { DeveloperPanel } from './developer/DeveloperPanel';
 import { SpriteRegistryPanel } from './developer/SpriteRegistryPanel';
 import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
@@ -40,9 +39,6 @@ export const Game: React.FC = () => {
 
   // Map editor visibility
   const [mapEditorVisible, setMapEditorVisible] = useState<boolean>(false);
-
-  // Combat view visibility
-  const [combatViewVisible, setCombatViewVisible] = useState<boolean>(false);
 
   // Developer panel visibility (development only)
   const [developerPanelVisible, setDeveloperPanelVisible] = useState<boolean>(false);
@@ -318,13 +314,6 @@ export const Game: React.FC = () => {
         return;
       }
 
-      // Alt+C to toggle combat view (development only)
-      if (import.meta.env.DEV && e.altKey && e.key === 'c') {
-        e.preventDefault();
-        setCombatViewVisible(prev => !prev);
-        return;
-      }
-
       // Ignore game input if any modal panels are open that accept text input
       if (mapEditorVisible || spriteRegistryVisible || enemyRegistryVisible || partyMemberRegistryVisible || abilityRegistryVisible || equipmentRegistryVisible || classRegistryVisible || tilesetRegistryVisible || encounterRegistryVisible) {
         return;
@@ -421,14 +410,7 @@ export const Game: React.FC = () => {
         maxHeight: '56.25vw', // 16:9 aspect ratio (9/16 * 100vw)
         position: 'relative'
       }}>
-        {/* Combat view - only available in development mode */}
-        {import.meta.env.DEV && combatViewVisible ? (
-          <CombatView
-            onExitCombat={() => setCombatViewVisible(false)}
-          />
-        ) : (
-          <>
-            <FirstPersonView
+        <FirstPersonView
               playerX={gameState.player.x}
               playerY={gameState.player.y}
               direction={gameState.player.direction}
@@ -568,13 +550,11 @@ export const Game: React.FC = () => {
               />
             )}
 
-            {/* Encounter registry panel - only available in development mode */}
-            {import.meta.env.DEV && encounterRegistryVisible && (
-              <EncounterRegistryPanel
-                onClose={() => setEncounterRegistryVisible(false)}
-              />
-            )}
-          </>
+        {/* Encounter registry panel - only available in development mode */}
+        {import.meta.env.DEV && encounterRegistryVisible && (
+          <EncounterRegistryPanel
+            onClose={() => setEncounterRegistryVisible(false)}
+          />
         )}
       </div>
     </div>
