@@ -2,8 +2,9 @@ import { useState, useRef, useEffect } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
-import { renderNineSliceDialog, getNineSliceSpriteIds, renderTextWithShadow } from '../../utils/DialogRenderer';
+import { renderDialogWithContent, getNineSliceSpriteIds, renderTextWithShadow } from '../../utils/DialogRenderer';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
+import { CharacterSelectionDialogContent } from './CharacterSelectionDialogContent';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -329,71 +330,44 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       );
     }
 
-    // Render test dialog with character selection
+    // Render test dialog with character selection (auto-sized)
     if (combatState.phase === 'deployment') {
       // Get the first 3 party members
       const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
 
-      // Dialog dimensions (in tiles)
-      const dialogWidth = 10; // Interior width
-      const dialogHeight = 6; // Interior height
-      const dialogX = (CANVAS_SIZE - (dialogWidth + 2) * TILE_SIZE) / 2; // Center horizontally
-      const dialogY = CANVAS_SIZE - (dialogHeight + 2) * TILE_SIZE - 40; // Near bottom
-
-      // Render the 9-slice dialog
-      renderNineSliceDialog(
-        ctx,
-        dialogX,
-        dialogY,
-        dialogWidth,
-        dialogHeight,
+      // Create dialog content
+      const dialogContent = new CharacterSelectionDialogContent(
+        'Select a Character',
+        partyMembers,
+        dialogFont,
+        spriteImagesRef.current,
         TILE_SIZE,
-        SPRITE_SIZE,
-        spriteImagesRef.current
+        SPRITE_SIZE
       );
 
-      // Render "Select a Character" title
-      ctx.fillStyle = '#000000';
-      ctx.font = `bold 32px "${dialogFont}", monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Select a Character', dialogX + (dialogWidth + 2) * TILE_SIZE / 2, dialogY + TILE_SIZE * 1.5);
+      // Measure the dialog to calculate centered position
+      const bounds = dialogContent.measure(TILE_SIZE);
+      const dialogSize = {
+        width: Math.ceil(bounds.maxX / TILE_SIZE) + 4, // +4 for borders and padding
+        height: Math.ceil(bounds.maxY / TILE_SIZE) + 4
+      };
 
-      // Render the 3 character sprites
-      const startX = dialogX + TILE_SIZE * 2;
-      const spriteY = dialogY + TILE_SIZE * 3;
-      const spacing = TILE_SIZE * 3;
+      // Center horizontally and position near bottom
+      const dialogX = (CANVAS_SIZE - (dialogSize.width * TILE_SIZE)) / 2;
+      const dialogY = CANVAS_SIZE - (dialogSize.height * TILE_SIZE) - 40;
 
-      partyMembers.forEach((member, index) => {
-        if (!member.spriteId) return;
-
-        const spriteDef = SpriteRegistry.getById(member.spriteId);
-        if (!spriteDef) return;
-
-        const spriteImage = spriteImagesRef.current.get(spriteDef.spriteSheet);
-        if (!spriteImage) return;
-
-        const x = startX + index * spacing;
-
-        // Draw character sprite
-        const srcX = spriteDef.x * SPRITE_SIZE;
-        const srcY = spriteDef.y * SPRITE_SIZE;
-        const srcWidth = (spriteDef.width || 1) * SPRITE_SIZE;
-        const srcHeight = (spriteDef.height || 1) * SPRITE_SIZE;
-
-        ctx.drawImage(
-          spriteImage,
-          srcX, srcY, srcWidth, srcHeight,
-          x, spriteY, TILE_SIZE * 2, TILE_SIZE * 2
-        );
-
-        // Draw character name below sprite
-        ctx.fillStyle = '#000000';
-        ctx.font = `16px "${dialogFont}", monospace`;
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'alphabetic';
-        ctx.fillText(member.name, x + TILE_SIZE, spriteY + TILE_SIZE * 2.5);
-      });
+      // Render dialog with auto-sizing (DEBUG: 0px padding)
+      renderDialogWithContent(
+        ctx,
+        dialogContent,
+        dialogX,
+        dialogY,
+        TILE_SIZE,
+        SPRITE_SIZE,
+        spriteImagesRef.current,
+        undefined, // Use default 9-slice sprites
+        0 // DEBUG: 0px padding
+      );
     }
 
     // Copy buffer to display canvas

@@ -1,6 +1,82 @@
 import { SpriteRegistry } from './SpriteRegistry';
 
 /**
+ * Represents the measured bounds of dialog content
+ */
+export interface ContentBounds {
+  width: number;
+  height: number;
+  minX: number;
+  minY: number;
+  maxX: number;
+  maxY: number;
+}
+
+/**
+ * Abstract base class for dialog content that can be measured and rendered
+ */
+export abstract class DialogContent {
+  /**
+   * Render the content to a canvas context at the specified position
+   * @param ctx - Canvas context to render to
+   * @param x - X position (top-left of content area, inside dialog border)
+   * @param y - Y position (top-left of content area, inside dialog border)
+   */
+  abstract render(ctx: CanvasRenderingContext2D, x: number, y: number): void;
+
+  /**
+   * Measure the content bounds without rendering to visible canvas
+   * @param tileSize - Size of each tile in pixels
+   * @returns The measured bounds of the content
+   */
+  measure(tileSize: number): ContentBounds {
+    // Create an off-screen canvas for measuring
+    const canvas = document.createElement('canvas');
+    canvas.width = 2000; // Large enough for measurement
+    canvas.height = 2000;
+    const ctx = canvas.getContext('2d');
+
+    if (!ctx) {
+      return { width: 0, height: 0, minX: 0, minY: 0, maxX: 0, maxY: 0 };
+    }
+
+    // Render content at origin to measure
+    this.render(ctx, 0, 0);
+
+    // Get the actual bounds - for now, return the requested size
+    // Subclasses can override this to provide more accurate measurements
+    return this.getBounds();
+  }
+
+  /**
+   * Get the bounds of this content
+   * Subclasses should override this to provide accurate dimensions
+   */
+  protected abstract getBounds(): ContentBounds;
+
+  /**
+   * Calculate the required dialog size in tiles based on content bounds
+   * @param bounds - The measured content bounds
+   * @param tileSize - Size of each tile in pixels
+   * @param paddingTiles - Additional padding in tiles (default: 1)
+   * @returns Object with width and height in tiles (interior, not including borders)
+   */
+  static calculateDialogSize(
+    bounds: ContentBounds,
+    tileSize: number,
+    paddingTiles: number = 1
+  ): { width: number; height: number } {
+    const contentWidth = bounds.maxX - bounds.minX;
+    const contentHeight = bounds.maxY - bounds.minY;
+
+    const widthInTiles = Math.ceil(contentWidth / tileSize) + (paddingTiles * 2);
+    const heightInTiles = Math.ceil(contentHeight / tileSize) + (paddingTiles * 2);
+
+    return { width: widthInTiles, height: heightInTiles };
+  }
+}
+
+/**
  * 9-slice sprite IDs for rendering UI dialogs
  */
 export interface NineSliceSprites {
@@ -184,4 +260,56 @@ export function renderTextWithShadow(
 
   // Restore context state
   ctx.restore();
+}
+
+/**
+ * Renders a dialog with content, auto-sizing based on content bounds
+ *
+ * @param ctx - Canvas 2D context to render on
+ * @param content - DialogContent instance to render
+ * @param x - X position (top-left corner of dialog)
+ * @param y - Y position (top-left corner of dialog)
+ * @param tileSize - Size of each tile in pixels
+ * @param spriteSize - Size of sprites in the sprite sheet
+ * @param spriteImages - Map of sprite sheet URLs to loaded images
+ * @param nineSlice - 9-slice sprite IDs (defaults to DEFAULT_DIALOG_SPRITES)
+ * @param paddingPixels - Additional padding in pixels (default: 48)
+ * @returns The final dialog dimensions { width, height } in tiles
+ */
+export function renderDialogWithContent(
+  ctx: CanvasRenderingContext2D,
+  content: DialogContent,
+  x: number,
+  y: number,
+  tileSize: number,
+  spriteSize: number,
+  spriteImages: Map<string, HTMLImageElement>,
+  nineSlice: NineSliceSprites = DEFAULT_DIALOG_SPRITES,
+  paddingPixels: number = 48
+): { width: number; height: number } {
+  // Measure content bounds
+  const bounds = content.measure(tileSize);
+
+  // Calculate dialog size in pixels including padding
+  const contentWidth = bounds.maxX - bounds.minX;
+  const contentHeight = bounds.maxY - bounds.minY;
+
+  const totalWidthPixels = contentWidth + (paddingPixels * 2);
+  const totalHeightPixels = contentHeight + (paddingPixels * 2);
+
+  // Convert to tiles (round up to ensure content fits)
+  const width = Math.ceil(totalWidthPixels / tileSize);
+  const height = Math.ceil(totalHeightPixels / tileSize);
+
+  // Render the dialog background
+  renderNineSliceDialog(ctx, x, y, width, height, tileSize, spriteSize, spriteImages, nineSlice);
+
+  // Calculate content position (inside dialog, accounting for border and padding)
+  const contentX = x + tileSize + paddingPixels; // 1 tile for border + padding
+  const contentY = y + tileSize + paddingPixels;
+
+  // Render the content
+  content.render(ctx, contentX, contentY);
+
+  return { width, height };
 }
