@@ -330,11 +330,10 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     // Render waylaid message (8px below title)
     this.renderWaylaidMessage(ctx, canvasSize, dialogFont);
 
-    // Render instruction message (8px below map)
+    // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;
     const mapOffsetY = (canvasSize - mapHeight) / 2;
     const instructionY = mapOffsetY + mapHeight + 8;
-    this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont, instructionY);
 
     // Check if all units are deployed or all zones are occupied
     const partySize = PartyMemberRegistry.getAll().length;
@@ -342,20 +341,25 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     const deployedUnitCount = state.unitManifest.getAllUnits().length;
     const shouldShowButton = deployedUnitCount >= partySize || deployedUnitCount >= deploymentZoneCount;
 
-    // Initialize and render Start Combat button below header (only if deployment is complete)
+    // Render instruction message only if button is NOT visible
+    if (!shouldShowButton) {
+      this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont, instructionY);
+    }
+
+    // Initialize and render Start Combat button below map (only if deployment is complete)
     if (shouldShowButton) {
       if (!this.deployButton) {
         this.deployButton = new CanvasButton({
           label: 'Start Combat',
-          x: canvasSize / 2 - 75, // Center button (150px wide)
-          y: 110, // Below the header which ends at y=100
-          width: 150,
-          height: 40,
+          x: canvasSize / 2 - 110, // Center button (220px wide)
+          y: instructionY, // Same position as instruction message (8px below map)
+          width: 220,
+          height: 50,
           spriteId: 'ui-simple-4',
           hoverSpriteId: 'ui-simple-5',
           activeSpriteId: 'ui-simple-6',
           font: UIConfig.getButtonFont(),
-          fontSize: 22,
+          fontSize: 36,
           onClick: () => {
             console.log('Start Combat button clicked!');
           },
