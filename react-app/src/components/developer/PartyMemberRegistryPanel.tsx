@@ -1627,6 +1627,175 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                 )}
               </div>
 
+              {/* Learned Abilities Section */}
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#2196F3', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Learned Abilities</span>
+                <button
+                  onClick={() => {
+                    const currentAbilities = selectedMember.learnedAbilityIds || [];
+                    const usedAbilityIds = new Set(currentAbilities);
+                    const firstUnusedAbility = availableAbilities.find(a => !usedAbilityIds.has(a.id));
+
+                    if (firstUnusedAbility) {
+                      const updatedAbilities = [...currentAbilities, firstUnusedAbility.id];
+                      const updatedMember: PartyMemberDefinition = {
+                        ...selectedMember,
+                        learnedAbilityIds: updatedAbilities,
+                      };
+                      PartyMemberRegistry.register(updatedMember);
+                      setPartyMembers(PartyMemberRegistry.getAll());
+                      setSelectedMember(updatedMember);
+                    }
+                  }}
+                  style={{
+                    padding: '2px 6px',
+                    background: 'rgba(33, 150, 243, 0.3)',
+                    border: '1px solid rgba(33, 150, 243, 0.6)',
+                    borderRadius: '2px',
+                    color: '#64b5f6',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontFamily: 'monospace',
+                  }}
+                  title="Add new learned ability"
+                >
+                  +
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {selectedMember.learnedAbilityIds && selectedMember.learnedAbilityIds.length > 0 ? (
+                  selectedMember.learnedAbilityIds.map((abilityId, index) => (
+                    <div key={`${abilityId}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {/* Ability dropdown */}
+                      {editingField === `learnedAbility_${index}` ? (
+                        <>
+                          <select
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            autoFocus
+                            style={{
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '2px',
+                              color: '#fff',
+                              fontSize: '11px',
+                              minWidth: '200px',
+                            }}
+                          >
+                            {availableAbilities.map(ability => (
+                              <option key={ability.id} value={ability.id}>
+                                {ability.name} ({ability.id})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              const newAbilityId = editingValue;
+                              if (newAbilityId !== abilityId) {
+                                const currentAbilities = [...selectedMember.learnedAbilityIds!];
+                                currentAbilities[index] = newAbilityId;
+
+                                const updatedMember: PartyMemberDefinition = {
+                                  ...selectedMember,
+                                  learnedAbilityIds: currentAbilities,
+                                };
+                                PartyMemberRegistry.register(updatedMember);
+                                setPartyMembers(PartyMemberRegistry.getAll());
+                                setSelectedMember(updatedMember);
+                              }
+                              cancelEditing();
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(76, 175, 80, 0.3)',
+                              border: '1px solid rgba(76, 175, 80, 0.6)',
+                              borderRadius: '2px',
+                              color: '#8bc34a',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(244, 67, 54, 0.3)',
+                              border: '1px solid rgba(244, 67, 54, 0.6)',
+                              borderRadius: '2px',
+                              color: '#f44',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✗
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <div
+                            onClick={() => startEditing(`learnedAbility_${index}`, abilityId)}
+                            style={{
+                              padding: '4px 8px',
+                              background: 'rgba(33, 150, 243, 0.2)',
+                              border: '1px solid rgba(33, 150, 243, 0.4)',
+                              borderRadius: '2px',
+                              cursor: 'pointer',
+                              minWidth: '200px',
+                              flex: 1,
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'rgba(33, 150, 243, 0.3)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'rgba(33, 150, 243, 0.2)';
+                            }}
+                          >
+                            {availableAbilities.find(a => a.id === abilityId)?.name || abilityId}
+                          </div>
+
+                          {/* Delete button */}
+                          <button
+                            onClick={() => {
+                              const currentAbilities = selectedMember.learnedAbilityIds!.filter((_, i) => i !== index);
+
+                              const updatedMember: PartyMemberDefinition = {
+                                ...selectedMember,
+                                learnedAbilityIds: currentAbilities.length > 0 ? currentAbilities : undefined,
+                              };
+                              PartyMemberRegistry.register(updatedMember);
+                              setPartyMembers(PartyMemberRegistry.getAll());
+                              setSelectedMember(updatedMember);
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(244, 67, 54, 0.3)',
+                              border: '1px solid rgba(244, 67, 54, 0.6)',
+                              borderRadius: '2px',
+                              color: '#f44',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                            title="Remove this ability"
+                          >
+                            −
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: '#666', fontStyle: 'italic', fontSize: '10px' }}>
+                    No learned abilities. Click + to add.
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
         </div>
