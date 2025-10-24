@@ -10,6 +10,7 @@ import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { CinematicManager } from '../../models/combat/CinematicSequence';
 import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
 import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
+import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence';
 import { SequenceChain } from '../../models/combat/SequenceChain';
 
 interface CombatViewProps {
@@ -169,14 +170,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Start the intro cinematic sequence when encounter loads
   useEffect(() => {
     if (spritesLoaded && fontsLoaded) {
-      // Chain together: map fade-in, then title fade-in
+      // Chain together: map fade-in, title fade-in, then message fade-in
       const introSequence = new SequenceChain([
         new MapFadeInSequence(2.0),
-        new TitleFadeInSequence('Deploy Units', 1.0)
+        new TitleFadeInSequence('Deploy Units', 1.0),
+        new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, 136)
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, encounter]);
+  }, [spritesLoaded, fontsLoaded, combatState, encounter, dialogFont]);
 
   // Render function - draws one frame to the canvas
   const renderFrame = useCallback(() => {

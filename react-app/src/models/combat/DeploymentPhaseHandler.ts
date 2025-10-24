@@ -326,6 +326,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     // Render "Deploy Units" header
     this.renderPhaseHeader(ctx, canvasSize, headerFont);
 
+    // Render instruction message
+    this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont);
+
     // Check if all units are deployed or all zones are occupied
     const partySize = PartyMemberRegistry.getAll().length;
     const deploymentZoneCount = encounter.playerDeploymentZones.length;
@@ -450,6 +453,74 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       'center',
       'middle'
     );
+  }
+
+  /**
+   * Render the instruction message with embedded sprite
+   */
+  private renderInstructionMessage(
+    ctx: CanvasRenderingContext2D,
+    canvasSize: number,
+    spriteSize: number,
+    spriteImages: Map<string, HTMLImageElement>,
+    font: string
+  ): void {
+    const fontSize = 36;
+    const yPosition = 136;
+    const message = 'Click ';
+    const message2 = ' to deploy a unit.';
+
+    // Set up text rendering
+    ctx.save();
+    ctx.font = `${fontSize}px "${font}", monospace`;
+    ctx.textBaseline = 'top';
+
+    // Measure text parts
+    const part1Width = ctx.measureText(message).width;
+    const part2Width = ctx.measureText(message2).width;
+    const spriteDisplaySize = fontSize;
+    const totalWidth = part1Width + spriteDisplaySize + 4 + part2Width;
+    let currentX = (canvasSize - totalWidth) / 2;
+
+    // Render "Click "
+    ctx.fillStyle = '#000000';
+    ctx.fillText(message, currentX - 1, yPosition - 1);
+    ctx.fillText(message, currentX + 1, yPosition - 1);
+    ctx.fillText(message, currentX - 1, yPosition + 1);
+    ctx.fillText(message, currentX + 1, yPosition + 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(message, currentX, yPosition);
+    currentX += part1Width;
+
+    // Render deployment zone sprite
+    const spriteDef = SpriteRegistry.getById(this.deploymentSprite);
+    if (spriteDef) {
+      const spriteImage = spriteImages.get(spriteDef.spriteSheet);
+      if (spriteImage) {
+        const srcX = spriteDef.x * spriteSize;
+        const srcY = spriteDef.y * spriteSize;
+        const srcWidth = (spriteDef.width || 1) * spriteSize;
+        const srcHeight = (spriteDef.height || 1) * spriteSize;
+
+        ctx.drawImage(
+          spriteImage,
+          srcX, srcY, srcWidth, srcHeight,
+          currentX, yPosition, spriteDisplaySize, spriteDisplaySize
+        );
+      }
+    }
+    currentX += spriteDisplaySize + 4;
+
+    // Render " to deploy a unit."
+    ctx.fillStyle = '#000000';
+    ctx.fillText(message2, currentX - 1, yPosition - 1);
+    ctx.fillText(message2, currentX + 1, yPosition - 1);
+    ctx.fillText(message2, currentX - 1, yPosition + 1);
+    ctx.fillText(message2, currentX + 1, yPosition + 1);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillText(message2, currentX, yPosition);
+
+    ctx.restore();
   }
 
   /**
