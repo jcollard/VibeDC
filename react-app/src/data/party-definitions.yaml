@@ -16,8 +16,8 @@ partyMembers:
     baseCourage: 16
     baseAttunement: 6
     spriteId: "crystalwarriors-0"
-    secondaryClassId: "squire"
     learnedAbilityIds: ["charge-001", "focused-001", "shove-001", "bash-001", "taunt-001", "throw-stone-001", "sneak-001", "cut-001"]
+    reactionAbilityId: "parry-001"
     leftHandId: "iron-sword-001"
     rightHandId: "wooden-shield-001"
     headId: "iron-helm-001"

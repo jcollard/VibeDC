@@ -534,10 +534,16 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                 e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
               }}
             >
-              {currentValue !== undefined && currentValue !== null && currentValue !== ''
-                ? String(currentValue)
-                : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
-              }
+              {currentValue !== undefined && currentValue !== null && currentValue !== '' ? (
+                type === 'select' && options ? (
+                  // For select fields, show the label instead of the value
+                  options.find(opt => opt.value === currentValue)?.label || String(currentValue)
+                ) : (
+                  String(currentValue)
+                )
+              ) : (
+                <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+              )}
             </div>
           )}
         </div>
@@ -855,38 +861,35 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
 
               {/* Sprite preview */}
               <div style={{ marginBottom: '12px' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                  <div style={{ fontSize: '11px', color: '#aaa' }}>
-                    Sprite Preview
-                  </div>
-                  <button
-                    onClick={() => setSpriteBrowserVisible(true)}
-                    style={{
-                      padding: '4px 8px',
-                      background: 'rgba(76, 175, 80, 0.3)',
-                      border: '1px solid rgba(76, 175, 80, 0.6)',
-                      borderRadius: '2px',
-                      color: '#8bc34a',
-                      fontSize: '10px',
-                      cursor: 'pointer',
-                      fontFamily: 'monospace',
-                    }}
-                  >
-                    Change Sprite...
-                  </button>
-                </div>
-                <canvas
-                  ref={spriteCanvasRef}
-                  width={SPRITE_SIZE * PREVIEW_SCALE}
-                  height={SPRITE_SIZE * PREVIEW_SCALE}
+                <div
+                  onClick={() => setSpriteBrowserVisible(true)}
                   style={{
-                    border: '1px solid rgba(255, 255, 255, 0.2)',
-                    imageRendering: 'pixelated',
-                    background: 'rgba(0, 0, 0, 0.3)',
-                  } as React.CSSProperties}
-                />
-                <div style={{ fontSize: '10px', color: '#666', marginTop: '2px' }}>
-                  {selectedMember.spriteId}
+                    cursor: 'pointer',
+                    display: 'inline-block',
+                    transition: 'transform 0.2s',
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'scale(1.05)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }}
+                  title="Click to change sprite"
+                >
+                  <canvas
+                    ref={spriteCanvasRef}
+                    width={SPRITE_SIZE * PREVIEW_SCALE}
+                    height={SPRITE_SIZE * PREVIEW_SCALE}
+                    style={{
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      imageRendering: 'pixelated',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      display: 'block',
+                    } as React.CSSProperties}
+                  />
+                  <div style={{ fontSize: '10px', color: '#666', marginTop: '2px', textAlign: 'center' }}>
+                    {selectedMember.spriteId}
+                  </div>
                 </div>
               </div>
 
