@@ -327,11 +327,14 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     // Render "Deploy Units" header
     this.renderPhaseHeader(ctx, canvasSize, headerFont);
 
-    // Render instruction message
-    this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont);
-
-    // Render waylaid message at bottom
+    // Render waylaid message (8px below title)
     this.renderWaylaidMessage(ctx, canvasSize, dialogFont);
+
+    // Render instruction message (8px below map)
+    const mapHeight = state.map.height * tileSize;
+    const mapOffsetY = (canvasSize - mapHeight) / 2;
+    const instructionY = mapOffsetY + mapHeight + 8;
+    this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont, instructionY);
 
     // Check if all units are deployed or all zones are occupied
     const partySize = PartyMemberRegistry.getAll().length;
@@ -467,10 +470,10 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     canvasSize: number,
     spriteSize: number,
     spriteImages: Map<string, HTMLImageElement>,
-    font: string
+    font: string,
+    yPosition: number
   ): void {
     const fontSize = 36;
-    const yPosition = 136;
     const message = 'Click ';
     const message2 = ' to deploy a unit.';
 
@@ -528,7 +531,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   }
 
   /**
-   * Render the waylaid message at the bottom of the screen
+   * Render the waylaid message below the Deploy Units title
    */
   private renderWaylaidMessage(
     ctx: CanvasRenderingContext2D,
@@ -536,7 +539,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     font: string
   ): void {
     const fontSize = 36;
-    const yPosition = 900;
+    const yPosition = 108; // 8px below title background (which ends at y=100)
     const message = 'You have been waylaid by enemies and must defend yourself.';
 
     // Set up text rendering

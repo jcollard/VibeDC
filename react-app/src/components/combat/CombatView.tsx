@@ -173,12 +173,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Start the intro cinematic sequence when encounter loads (only once)
   useEffect(() => {
     if (spritesLoaded && fontsLoaded && !introCinematicPlayedRef.current) {
+      // Calculate message positions
+      // Waylaid message: 8px below Deploy Units title (which has background ending at y=100)
+      const waylaidMessageY = 108;
+      // Deployment instruction: 8px below map bottom
+      const mapHeight = combatState.map.height * TILE_SIZE;
+      const offsetY = (CANVAS_SIZE - mapHeight) / 2;
+      const deploymentInstructionY = offsetY + mapHeight + 8;
+
       // Run all intro animations in parallel
       const introSequence = new SequenceParallel([
         new MapFadeInSequence(2.0),
         new TitleFadeInSequence('Deploy Units', 1.0, 48, 20),
-        new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, 136),
-        new MessageFadeInSequence('You have been waylaid by enemies and must defend yourself.', 2.0, dialogFont, 36, 900)
+        new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, deploymentInstructionY),
+        new MessageFadeInSequence('You have been waylaid by enemies and must defend yourself.', 2.0, dialogFont, 36, waylaidMessageY)
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
       introCinematicPlayedRef.current = true;
