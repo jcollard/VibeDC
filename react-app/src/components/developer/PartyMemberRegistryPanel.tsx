@@ -231,6 +231,18 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
       if (member.totalExperience && member.totalExperience > 0) {
         yaml += `    totalExperience: ${member.totalExperience}\n`;
       }
+      if (member.classExperience && Object.keys(member.classExperience).length > 0) {
+        yaml += `    classExperience:\n`;
+        for (const [classId, exp] of Object.entries(member.classExperience)) {
+          yaml += `      ${classId}: ${exp}\n`;
+        }
+      }
+      if (member.classExperienceSpent && Object.keys(member.classExperienceSpent).length > 0) {
+        yaml += `    classExperienceSpent:\n`;
+        for (const [classId, spent] of Object.entries(member.classExperienceSpent)) {
+          yaml += `      ${classId}: ${spent}\n`;
+        }
+      }
 
       yaml += '\n';
     }
@@ -1046,6 +1058,573 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '4px', fontSize: '11px' }}>
                 {renderInlineEdit('description', 'Description', 'textarea')}
+              </div>
+
+              {/* Experience Section */}
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+                Experience
+              </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', fontSize: '11px' }}>
+                {renderInlineEdit('totalExperience', 'Total XP', 'number')}
+              </div>
+
+              {/* Class Experience Section */}
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#9C27B0', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Class Experience</span>
+                <button
+                  onClick={() => {
+                    const currentExperience = selectedMember.classExperience || {};
+                    const usedClassIds = new Set(Object.keys(currentExperience));
+                    const firstUnusedClass = availableClasses.find(c => !usedClassIds.has(c.id));
+
+                    if (firstUnusedClass) {
+                      const updatedExperience = { ...currentExperience, [firstUnusedClass.id]: 0 };
+                      // Calculate total experience as sum of all class experience
+                      const totalExperience = Object.values(updatedExperience).reduce((sum, exp) => sum + exp, 0);
+                      const updatedMember: PartyMemberDefinition = {
+                        ...selectedMember,
+                        classExperience: updatedExperience,
+                        totalExperience,
+                      };
+                      PartyMemberRegistry.register(updatedMember);
+                      setPartyMembers(PartyMemberRegistry.getAll());
+                      setSelectedMember(updatedMember);
+                    }
+                  }}
+                  style={{
+                    padding: '2px 6px',
+                    background: 'rgba(156, 39, 176, 0.3)',
+                    border: '1px solid rgba(156, 39, 176, 0.6)',
+                    borderRadius: '2px',
+                    color: '#ce93d8',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontFamily: 'monospace',
+                  }}
+                  title="Add new class experience"
+                >
+                  +
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {selectedMember.classExperience && Object.keys(selectedMember.classExperience).length > 0 ? (
+                  Object.entries(selectedMember.classExperience).map(([classId, exp]) => (
+                    <div key={classId} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {/* Class dropdown */}
+                      {editingField === `classExp_class_${classId}` ? (
+                        <>
+                          <select
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            autoFocus
+                            style={{
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '2px',
+                              color: '#fff',
+                              fontSize: '11px',
+                              minWidth: '120px',
+                            }}
+                          >
+                            {availableClasses.map(cls => (
+                              <option key={cls.id} value={cls.id}>
+                                {cls.name} ({cls.id})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              const newClassId = editingValue;
+                              if (newClassId !== classId) {
+                                const currentExperience = { ...selectedMember.classExperience };
+                                const expValue = currentExperience[classId];
+                                delete currentExperience[classId];
+                                currentExperience[newClassId] = expValue;
+
+                                // Calculate total experience as sum of all class experience
+                                const totalExperience = Object.values(currentExperience).reduce((sum, exp) => sum + exp, 0);
+                                const updatedMember: PartyMemberDefinition = {
+                                  ...selectedMember,
+                                  classExperience: currentExperience,
+                                  totalExperience,
+                                };
+                                PartyMemberRegistry.register(updatedMember);
+                                setPartyMembers(PartyMemberRegistry.getAll());
+                                setSelectedMember(updatedMember);
+                              }
+                              cancelEditing();
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(76, 175, 80, 0.3)',
+                              border: '1px solid rgba(76, 175, 80, 0.6)',
+                              borderRadius: '2px',
+                              color: '#8bc34a',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(244, 67, 54, 0.3)',
+                              border: '1px solid rgba(244, 67, 54, 0.6)',
+                              borderRadius: '2px',
+                              color: '#f44',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✗
+                          </button>
+                        </>
+                      ) : (
+                        <div
+                          onClick={() => startEditing(`classExp_class_${classId}`, classId)}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(156, 39, 176, 0.2)',
+                            border: '1px solid rgba(156, 39, 176, 0.4)',
+                            borderRadius: '2px',
+                            cursor: 'pointer',
+                            minWidth: '120px',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(156, 39, 176, 0.3)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(156, 39, 176, 0.2)';
+                          }}
+                        >
+                          {availableClasses.find(c => c.id === classId)?.name || classId}
+                        </div>
+                      )}
+
+                      {/* Experience amount */}
+                      {editingField === `classExp_amount_${classId}` ? (
+                        <>
+                          <input
+                            type="number"
+                            value={editingValue ?? 0}
+                            onChange={(e) => setEditingValue(parseInt(e.target.value, 10) || 0)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const currentExperience = { ...selectedMember.classExperience };
+                                currentExperience[classId] = editingValue ?? 0;
+
+                                // Calculate total experience as sum of all class experience
+                                const totalExperience = Object.values(currentExperience).reduce((sum, exp) => sum + exp, 0);
+                                const updatedMember: PartyMemberDefinition = {
+                                  ...selectedMember,
+                                  classExperience: currentExperience,
+                                  totalExperience,
+                                };
+                                PartyMemberRegistry.register(updatedMember);
+                                setPartyMembers(PartyMemberRegistry.getAll());
+                                setSelectedMember(updatedMember);
+                                cancelEditing();
+                              } else if (e.key === 'Escape') {
+                                cancelEditing();
+                              }
+                            }}
+                            autoFocus
+                            style={{
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '2px',
+                              color: '#fff',
+                              fontSize: '11px',
+                              width: '80px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              const currentExperience = { ...selectedMember.classExperience };
+                              currentExperience[classId] = editingValue ?? 0;
+
+                              // Calculate total experience as sum of all class experience
+                              const totalExperience = Object.values(currentExperience).reduce((sum, exp) => sum + exp, 0);
+                              const updatedMember: PartyMemberDefinition = {
+                                ...selectedMember,
+                                classExperience: currentExperience,
+                                totalExperience,
+                              };
+                              PartyMemberRegistry.register(updatedMember);
+                              setPartyMembers(PartyMemberRegistry.getAll());
+                              setSelectedMember(updatedMember);
+                              cancelEditing();
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(76, 175, 80, 0.3)',
+                              border: '1px solid rgba(76, 175, 80, 0.6)',
+                              borderRadius: '2px',
+                              color: '#8bc34a',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(244, 67, 54, 0.3)',
+                              border: '1px solid rgba(244, 67, 54, 0.6)',
+                              borderRadius: '2px',
+                              color: '#f44',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✗
+                          </button>
+                        </>
+                      ) : (
+                        <div
+                          onClick={() => startEditing(`classExp_amount_${classId}`, exp)}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '2px',
+                            cursor: 'pointer',
+                            width: '80px',
+                            textAlign: 'right',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
+                            e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.3)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                          }}
+                        >
+                          {exp}
+                        </div>
+                      )}
+
+                      {/* Delete button */}
+                      <button
+                        onClick={() => {
+                          const currentExperience = { ...selectedMember.classExperience };
+                          delete currentExperience[classId];
+
+                          // Calculate total experience as sum of all class experience
+                          const totalExperience = Object.values(currentExperience).reduce((sum, exp) => sum + exp, 0);
+                          const updatedMember: PartyMemberDefinition = {
+                            ...selectedMember,
+                            classExperience: Object.keys(currentExperience).length > 0 ? currentExperience : undefined,
+                            totalExperience,
+                          };
+                          PartyMemberRegistry.register(updatedMember);
+                          setPartyMembers(PartyMemberRegistry.getAll());
+                          setSelectedMember(updatedMember);
+                        }}
+                        style={{
+                          padding: '2px 6px',
+                          background: 'rgba(244, 67, 54, 0.3)',
+                          border: '1px solid rgba(244, 67, 54, 0.6)',
+                          borderRadius: '2px',
+                          color: '#f44',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          fontFamily: 'monospace',
+                        }}
+                        title="Remove this class experience"
+                      >
+                        −
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: '#666', fontStyle: 'italic', fontSize: '10px' }}>
+                    No class experience. Click + to add.
+                  </div>
+                )}
+              </div>
+
+              {/* Class Experience Spent Section */}
+              <div style={{ marginTop: '8px', marginBottom: '4px', fontSize: '12px', fontWeight: 'bold', color: '#FF9800', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span>Class Experience Spent</span>
+                <button
+                  onClick={() => {
+                    const currentSpent = selectedMember.classExperienceSpent || {};
+                    const usedClassIds = new Set(Object.keys(currentSpent));
+                    const firstUnusedClass = availableClasses.find(c => !usedClassIds.has(c.id));
+
+                    if (firstUnusedClass) {
+                      const updatedSpent = { ...currentSpent, [firstUnusedClass.id]: 0 };
+                      const updatedMember: PartyMemberDefinition = {
+                        ...selectedMember,
+                        classExperienceSpent: updatedSpent,
+                      };
+                      PartyMemberRegistry.register(updatedMember);
+                      setPartyMembers(PartyMemberRegistry.getAll());
+                      setSelectedMember(updatedMember);
+                    }
+                  }}
+                  style={{
+                    padding: '2px 6px',
+                    background: 'rgba(255, 152, 0, 0.3)',
+                    border: '1px solid rgba(255, 152, 0, 0.6)',
+                    borderRadius: '2px',
+                    color: '#ffb74d',
+                    fontSize: '12px',
+                    cursor: 'pointer',
+                    fontFamily: 'monospace',
+                  }}
+                  title="Add new class experience spent"
+                >
+                  +
+                </button>
+              </div>
+              <div style={{ fontSize: '11px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                {selectedMember.classExperienceSpent && Object.keys(selectedMember.classExperienceSpent).length > 0 ? (
+                  Object.entries(selectedMember.classExperienceSpent).map(([classId, spent]) => (
+                    <div key={classId} style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                      {/* Class dropdown */}
+                      {editingField === `classExpSpent_class_${classId}` ? (
+                        <>
+                          <select
+                            value={editingValue}
+                            onChange={(e) => setEditingValue(e.target.value)}
+                            autoFocus
+                            style={{
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '2px',
+                              color: '#fff',
+                              fontSize: '11px',
+                              minWidth: '120px',
+                            }}
+                          >
+                            {availableClasses.map(cls => (
+                              <option key={cls.id} value={cls.id}>
+                                {cls.name} ({cls.id})
+                              </option>
+                            ))}
+                          </select>
+                          <button
+                            onClick={() => {
+                              const newClassId = editingValue;
+                              if (newClassId !== classId) {
+                                const currentSpent = { ...selectedMember.classExperienceSpent };
+                                const spentValue = currentSpent[classId];
+                                delete currentSpent[classId];
+                                currentSpent[newClassId] = spentValue;
+
+                                const updatedMember: PartyMemberDefinition = {
+                                  ...selectedMember,
+                                  classExperienceSpent: currentSpent,
+                                };
+                                PartyMemberRegistry.register(updatedMember);
+                                setPartyMembers(PartyMemberRegistry.getAll());
+                                setSelectedMember(updatedMember);
+                              }
+                              cancelEditing();
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(76, 175, 80, 0.3)',
+                              border: '1px solid rgba(76, 175, 80, 0.6)',
+                              borderRadius: '2px',
+                              color: '#8bc34a',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(244, 67, 54, 0.3)',
+                              border: '1px solid rgba(244, 67, 54, 0.6)',
+                              borderRadius: '2px',
+                              color: '#f44',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✗
+                          </button>
+                        </>
+                      ) : (
+                        <div
+                          onClick={() => startEditing(`classExpSpent_class_${classId}`, classId)}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(255, 152, 0, 0.2)',
+                            border: '1px solid rgba(255, 152, 0, 0.4)',
+                            borderRadius: '2px',
+                            cursor: 'pointer',
+                            minWidth: '120px',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 152, 0, 0.3)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 152, 0, 0.2)';
+                          }}
+                        >
+                          {availableClasses.find(c => c.id === classId)?.name || classId}
+                        </div>
+                      )}
+
+                      {/* Spent amount */}
+                      {editingField === `classExpSpent_amount_${classId}` ? (
+                        <>
+                          <input
+                            type="number"
+                            value={editingValue ?? 0}
+                            onChange={(e) => setEditingValue(parseInt(e.target.value, 10) || 0)}
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') {
+                                const currentSpent = { ...selectedMember.classExperienceSpent };
+                                currentSpent[classId] = editingValue ?? 0;
+
+                                const updatedMember: PartyMemberDefinition = {
+                                  ...selectedMember,
+                                  classExperienceSpent: currentSpent,
+                                };
+                                PartyMemberRegistry.register(updatedMember);
+                                setPartyMembers(PartyMemberRegistry.getAll());
+                                setSelectedMember(updatedMember);
+                                cancelEditing();
+                              } else if (e.key === 'Escape') {
+                                cancelEditing();
+                              }
+                            }}
+                            autoFocus
+                            style={{
+                              padding: '4px',
+                              background: 'rgba(0, 0, 0, 0.5)',
+                              border: '1px solid #666',
+                              borderRadius: '2px',
+                              color: '#fff',
+                              fontSize: '11px',
+                              width: '80px',
+                            }}
+                          />
+                          <button
+                            onClick={() => {
+                              const currentSpent = { ...selectedMember.classExperienceSpent };
+                              currentSpent[classId] = editingValue ?? 0;
+
+                              const updatedMember: PartyMemberDefinition = {
+                                ...selectedMember,
+                                classExperienceSpent: currentSpent,
+                              };
+                              PartyMemberRegistry.register(updatedMember);
+                              setPartyMembers(PartyMemberRegistry.getAll());
+                              setSelectedMember(updatedMember);
+                              cancelEditing();
+                            }}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(76, 175, 80, 0.3)',
+                              border: '1px solid rgba(76, 175, 80, 0.6)',
+                              borderRadius: '2px',
+                              color: '#8bc34a',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            onClick={cancelEditing}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(244, 67, 54, 0.3)',
+                              border: '1px solid rgba(244, 67, 54, 0.6)',
+                              borderRadius: '2px',
+                              color: '#f44',
+                              fontSize: '12px',
+                              cursor: 'pointer',
+                              fontFamily: 'monospace',
+                            }}
+                          >
+                            ✗
+                          </button>
+                        </>
+                      ) : (
+                        <div
+                          onClick={() => startEditing(`classExpSpent_amount_${classId}`, spent)}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(255, 255, 255, 0.05)',
+                            border: '1px solid rgba(255, 255, 255, 0.1)',
+                            borderRadius: '2px',
+                            cursor: 'pointer',
+                            width: '80px',
+                            textAlign: 'right',
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
+                            e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.3)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                          }}
+                        >
+                          {spent}
+                        </div>
+                      )}
+
+                      {/* Delete button */}
+                      <button
+                        onClick={() => {
+                          const currentSpent = { ...selectedMember.classExperienceSpent };
+                          delete currentSpent[classId];
+
+                          const updatedMember: PartyMemberDefinition = {
+                            ...selectedMember,
+                            classExperienceSpent: Object.keys(currentSpent).length > 0 ? currentSpent : undefined,
+                          };
+                          PartyMemberRegistry.register(updatedMember);
+                          setPartyMembers(PartyMemberRegistry.getAll());
+                          setSelectedMember(updatedMember);
+                        }}
+                        style={{
+                          padding: '2px 6px',
+                          background: 'rgba(244, 67, 54, 0.3)',
+                          border: '1px solid rgba(244, 67, 54, 0.6)',
+                          borderRadius: '2px',
+                          color: '#f44',
+                          fontSize: '12px',
+                          cursor: 'pointer',
+                          fontFamily: 'monospace',
+                        }}
+                        title="Remove this class experience spent"
+                      >
+                        −
+                      </button>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ color: '#666', fontStyle: 'italic', fontSize: '10px' }}>
+                    No class experience spent. Click + to add.
+                  </div>
+                )}
               </div>
 
             </div>

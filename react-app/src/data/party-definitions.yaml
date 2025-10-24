@@ -23,7 +23,7 @@ partyMembers:
     bodyId: "iron-armor-001"
     tags: ["warrior", "tank", "melee"]
     description: "A noble knight with strong defensive capabilities"
-    totalExperience: 100
+    totalExperience: 1000
 
   - id: "mage-001"
     name: "Aria the Wise"
@@ -67,5 +67,8 @@ partyMembers:
     accessoryId: "swift-boots-001"
     tags: ["rogue", "fast", "melee", "dual-wield"]
     description: "A swift rogue who strikes from the shadows"
-    totalExperience: 90
+    totalExperience: 400
+    classExperience:
+      fighter: 100
+      rogue: 300
 

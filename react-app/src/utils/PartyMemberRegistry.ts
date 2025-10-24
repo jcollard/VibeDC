@@ -70,6 +70,7 @@ export interface PartyMemberDefinition {
    */
   totalExperience?: number;
   classExperience?: Record<string, number>;
+  classExperienceSpent?: Record<string, number>;
 
   /**
    * Optional tags for categorization
@@ -112,6 +113,7 @@ export interface PartyMemberDefinitionJSON {
   accessoryId?: string;
   totalExperience?: number;
   classExperience?: Record<string, number>;
+  classExperienceSpent?: Record<string, number>;
   tags?: string[];
   description?: string;
 }
@@ -235,6 +237,16 @@ export class PartyMemberRegistry {
         const experienceClass = UnitClass.getById(classId);
         if (experienceClass && experience > 0) {
           unit.addExperience(experience, experienceClass);
+        }
+      }
+    }
+
+    // Set class experience spent if specified
+    if (definition.classExperienceSpent) {
+      for (const [classId, spent] of Object.entries(definition.classExperienceSpent)) {
+        if (spent > 0) {
+          // Access private field through type assertion for initialization
+          (unit as any)._classExperienceSpent.set(classId, spent);
         }
       }
     }
