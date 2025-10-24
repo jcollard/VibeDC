@@ -1765,10 +1765,11 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
       )}
 
       {/* Ability Browser Modal */}
-      {abilityBrowserVisible && (
+      {abilityBrowserVisible && selectedMember && (
         <AbilityBrowser
           onSelectAbility={handleAbilitySelect}
           onClose={() => setAbilityBrowserVisible(false)}
+          learnedAbilityIds={selectedMember.learnedAbilityIds}
         />
       )}
     </div>

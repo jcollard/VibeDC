@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CombatAbility, type AbilityType } from '../../models/combat/CombatAbility';
 
 interface AbilityBrowserProps {
@@ -6,6 +6,7 @@ interface AbilityBrowserProps {
   onSelectAbility?: (abilityId: string) => void;
   selectedAbilityId?: string;
   filterType?: AbilityType; // Optional filter by ability type
+  learnedAbilityIds?: string[]; // IDs of abilities already learned by the unit
 }
 
 /**
@@ -17,10 +18,12 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
   onSelectAbility,
   selectedAbilityId,
   filterType,
+  learnedAbilityIds = [],
 }) => {
   const [allAbilities, setAllAbilities] = useState<CombatAbility[]>([]);
   const [selectedType, setSelectedType] = useState<AbilityType | ''>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   // Load all abilities on mount
   useEffect(() => {
@@ -30,6 +33,11 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
     // Set initial filter type if provided
     if (filterType) {
       setSelectedType(filterType);
+    }
+
+    // Focus the search input when the component mounts
+    if (searchInputRef.current) {
+      searchInputRef.current.focus();
     }
   }, [filterType]);
 
@@ -151,10 +159,17 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
         {/* Search box */}
         <div style={{ flex: 1 }}>
           <input
+            ref={searchInputRef}
             type="text"
             placeholder="Search by name, ID, description, or tags..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && filteredAbilities.length === 1) {
+                // If there's exactly one match, select it
+                onSelectAbility?.(filteredAbilities[0].id);
+              }
+            }}
             style={{
               width: '100%',
               padding: '8px',
@@ -281,18 +296,35 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
                               {ability.id}
                             </div>
                           </div>
-                          <div
-                            style={{
-                              padding: '2px 6px',
-                              background: `${getTypeColor(ability.abilityType)}33`,
-                              border: `1px solid ${getTypeColor(ability.abilityType)}66`,
-                              borderRadius: '3px',
-                              fontSize: '10px',
-                              color: getTypeColor(ability.abilityType),
-                              whiteSpace: 'nowrap',
-                            }}
-                          >
-                            XP: {ability.experiencePrice}
+                          <div style={{ display: 'flex', gap: '4px' }}>
+                            <div
+                              style={{
+                                padding: '2px 6px',
+                                background: `${getTypeColor(ability.abilityType)}33`,
+                                border: `1px solid ${getTypeColor(ability.abilityType)}66`,
+                                borderRadius: '3px',
+                                fontSize: '10px',
+                                color: getTypeColor(ability.abilityType),
+                                whiteSpace: 'nowrap',
+                              }}
+                            >
+                              XP: {ability.experiencePrice}
+                            </div>
+                            {learnedAbilityIds.includes(ability.id) && (
+                              <div
+                                style={{
+                                  padding: '2px 6px',
+                                  background: 'rgba(76, 175, 80, 0.3)',
+                                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                                  borderRadius: '3px',
+                                  fontSize: '10px',
+                                  color: '#8bc34a',
+                                  whiteSpace: 'nowrap',
+                                }}
+                              >
+                                Learned
+                              </div>
+                            )}
                           </div>
                         </div>
                         <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>
@@ -349,18 +381,35 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
                         {ability.id}
                       </div>
                     </div>
-                    <div
-                      style={{
-                        padding: '2px 6px',
-                        background: `${getTypeColor(ability.abilityType)}33`,
-                        border: `1px solid ${getTypeColor(ability.abilityType)}66`,
-                        borderRadius: '3px',
-                        fontSize: '10px',
-                        color: getTypeColor(ability.abilityType),
-                        whiteSpace: 'nowrap',
-                      }}
-                    >
-                      XP: {ability.experiencePrice}
+                    <div style={{ display: 'flex', gap: '4px' }}>
+                      <div
+                        style={{
+                          padding: '2px 6px',
+                          background: `${getTypeColor(ability.abilityType)}33`,
+                          border: `1px solid ${getTypeColor(ability.abilityType)}66`,
+                          borderRadius: '3px',
+                          fontSize: '10px',
+                          color: getTypeColor(ability.abilityType),
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        XP: {ability.experiencePrice}
+                      </div>
+                      {learnedAbilityIds.includes(ability.id) && (
+                        <div
+                          style={{
+                            padding: '2px 6px',
+                            background: 'rgba(76, 175, 80, 0.3)',
+                            border: '1px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            color: '#8bc34a',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Learned
+                        </div>
+                      )}
                     </div>
                   </div>
                   <div style={{ fontSize: '11px', color: '#ccc', marginBottom: '4px' }}>
