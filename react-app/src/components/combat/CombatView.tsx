@@ -22,6 +22,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     turnNumber: 0,
     map: encounter.map,
     tilesetId: encounter.tilesetId,
+    phase: 'deployment', // Start in deployment phase
   });
 
   // Canvas refs for double buffering
@@ -36,6 +37,35 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  // Track selected font for testing
+  const [selectedFont, setSelectedFont] = useState<string>('DungeonSlant');
+
+  // Track if the selected font is loaded
+  const [fontLoaded, setFontLoaded] = useState<boolean>(false);
+
+  // Load the selected font
+  useEffect(() => {
+    setFontLoaded(false);
+
+    // Use the Font Loading API to ensure the font is ready
+    const loadFont = async () => {
+      try {
+        // Try to load the font with various sizes to ensure it's ready
+        await document.fonts.load(`32px "${selectedFont}"`);
+        await document.fonts.load(`16px "${selectedFont}"`);
+
+        console.log(`CombatView: Font "${selectedFont}" loaded successfully`);
+        setFontLoaded(true);
+      } catch (error) {
+        console.warn(`CombatView: Failed to load font "${selectedFont}"`, error);
+        // Still set as loaded to prevent blocking
+        setFontLoaded(true);
+      }
+    };
+
+    loadFont();
+  }, [selectedFont]);
 
   // Listen for window resize
   useEffect(() => {
@@ -60,6 +90,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         if (cell.spriteId) {
           spritesToLoad.add(cell.spriteId);
         }
+      }
+
+      // Add deployment zone sprite if in deployment phase
+      if (combatState.phase === 'deployment') {
+        spritesToLoad.add('gradients-7');
+        spritesToLoad.add('particles-5'); // Border sprite
       }
 
       console.log('CombatView: Sprites to load:', Array.from(spritesToLoad));
@@ -104,6 +140,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   useEffect(() => {
     if (!spritesLoaded) {
       console.log('CombatView: Sprites not loaded yet, skipping render');
+      return;
+    }
+
+    if (!fontLoaded) {
+      console.log('CombatView: Font not loaded yet, skipping render');
       return;
     }
 
@@ -196,6 +237,73 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     console.log(`CombatView: Rendered ${renderedSprites} sprites, ${renderedDefaults} default tiles`);
 
+    // Render deployment zones if in deployment phase
+    if (combatState.phase === 'deployment') {
+      console.log(`CombatView: Rendering ${encounter.deploymentSlotCount} deployment zones`);
+
+      // Get the deployment zone sprites
+      const deploymentSprite = SpriteRegistry.getById('gradients-7');
+      const borderSprite = SpriteRegistry.getById('particles-5');
+
+      if (deploymentSprite && borderSprite) {
+        const spriteImage = spriteImagesRef.current.get(deploymentSprite.spriteSheet);
+        const borderImage = spriteImagesRef.current.get(borderSprite.spriteSheet);
+
+        if (spriteImage && borderImage) {
+          for (const zone of encounter.playerDeploymentZones) {
+            const x = zone.x * TILE_SIZE + offsetX;
+            const y = zone.y * TILE_SIZE + offsetY;
+
+            // Draw the fill sprite with 50% transparency
+            ctx.save();
+            ctx.globalAlpha = 0.5;
+
+            const srcX = deploymentSprite.x * SPRITE_SIZE;
+            const srcY = deploymentSprite.y * SPRITE_SIZE;
+            const srcWidth = (deploymentSprite.width || 1) * SPRITE_SIZE;
+            const srcHeight = (deploymentSprite.height || 1) * SPRITE_SIZE;
+
+            ctx.drawImage(
+              spriteImage,
+              srcX, srcY, srcWidth, srcHeight,
+              x, y, TILE_SIZE, TILE_SIZE
+            );
+
+            ctx.restore();
+
+            // Draw the border sprite with full opacity
+            const borderSrcX = borderSprite.x * SPRITE_SIZE;
+            const borderSrcY = borderSprite.y * SPRITE_SIZE;
+            const borderSrcWidth = (borderSprite.width || 1) * SPRITE_SIZE;
+            const borderSrcHeight = (borderSprite.height || 1) * SPRITE_SIZE;
+
+            ctx.drawImage(
+              borderImage,
+              borderSrcX, borderSrcY, borderSrcWidth, borderSrcHeight,
+              x, y, TILE_SIZE, TILE_SIZE
+            );
+          }
+        } else {
+          console.warn('CombatView: Deployment sprite images not loaded');
+        }
+      } else {
+        console.warn('CombatView: Deployment sprites "gradients-7" or "particles-5" not found');
+      }
+    }
+
+    // Render phase message
+    if (combatState.phase === 'deployment') {
+      // Draw "Deploy Units" message at the top of the canvas
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent black background
+      ctx.fillRect(0, 20, CANVAS_SIZE, 80);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = `bold 48px "${selectedFont}", monospace`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Deploy Units', CANVAS_SIZE / 2, 60);
+    }
+
     // Copy buffer to display canvas
     const displayCtx = displayCanvas.getContext('2d');
     if (displayCtx) {
@@ -204,7 +312,36 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       displayCtx.drawImage(bufferCanvas, 0, 0);
       console.log('CombatView: Copied buffer to display canvas');
     }
-  }, [spritesLoaded, combatState, windowSize]);
+  }, [spritesLoaded, fontLoaded, combatState, windowSize, selectedFont, encounter]);
+
+  // Available fonts (matching what's in index.css)
+  const availableFonts = [
+    'OldWizard',
+    'Bitfantasy',
+    'CelticTime',
+    'HelvetiPixel',
+    'KingsQuest6',
+    'Questgiver',
+    'AdventurerSmallCyr',
+    'FancyPixels',
+    'DOS-V',
+    'PixelTimesNewRoman',
+    'TimesNewPixel',
+    'DeckardsRegularSerif',
+    'NewPixelTimes',
+    'Sword',
+    'WizardsManse',
+    'DungeonSlant',
+    'Squirrel',
+    'Gothbit',
+    'IBM_VGA',
+    'Royalati',
+    'Tiny04b03',
+    'TinyJ2',
+    'Habbo8',
+    'IBM_BIOS',
+    'Habbo',
+  ];
 
   return (
     <div
@@ -224,6 +361,62 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         zIndex: 3000,
       }}
     >
+      {/* Font Diagnostic Panel */}
+      {import.meta.env.DEV && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '10px',
+            left: '10px',
+            background: 'rgba(0, 0, 0, 0.8)',
+            border: '2px solid #444',
+            borderRadius: '4px',
+            padding: '12px',
+            color: '#fff',
+            fontFamily: 'monospace',
+            fontSize: '12px',
+            zIndex: 4000,
+          }}
+        >
+          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>Font Diagnostics</div>
+          <label style={{ display: 'block', marginBottom: '4px' }}>
+            Selected Font:
+          </label>
+          <select
+            value={selectedFont}
+            onChange={(e) => setSelectedFont(e.target.value)}
+            style={{
+              width: '200px',
+              padding: '4px',
+              background: '#222',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              color: '#fff',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+            }}
+          >
+            {availableFonts.map((font) => (
+              <option key={font} value={font}>
+                {font}
+              </option>
+            ))}
+          </select>
+          <div
+            style={{
+              marginTop: '12px',
+              padding: '8px',
+              background: '#111',
+              borderRadius: '3px',
+              fontFamily: selectedFont,
+              fontSize: '16px',
+            }}
+          >
+            Deploy Units
+          </div>
+        </div>
+      )}
+
       <div
         style={{
           width: '100%',

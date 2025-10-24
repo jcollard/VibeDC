@@ -1,6 +1,11 @@
 import type { CombatMap } from './CombatMap';
 
 /**
+ * Combat phase types
+ */
+export type CombatPhase = 'deployment' | 'battle' | 'victory' | 'defeat';
+
+/**
  * CombatState represents the current state of an active combat encounter.
  * This is a placeholder interface that will be expanded as the combat system is implemented.
  *
@@ -25,6 +30,11 @@ export interface CombatState {
    * The tileset ID to use for rendering the map
    */
   tilesetId: string;
+
+  /**
+   * The current phase of combat
+   */
+  phase: CombatPhase;
 
   // Additional fields will be added as combat mechanics are implemented
 }
