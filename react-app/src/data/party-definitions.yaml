@@ -17,14 +17,20 @@ partyMembers:
     baseAttunement: 6
     spriteId: "crystalwarriors-0"
     secondaryClassId: "squire"
-    learnedAbilityIds: ["charge-001", "focused-001"]
+    learnedAbilityIds: ["charge-001", "focused-001", "shove-001", "bash-001", "taunt-001", "throw-stone-001", "sneak-001", "cut-001"]
     leftHandId: "iron-sword-001"
     rightHandId: "wooden-shield-001"
     headId: "iron-helm-001"
     bodyId: "iron-armor-001"
     tags: ["warrior", "tank", "melee"]
     description: "A noble knight with strong defensive capabilities"
-    totalExperience: 1000
+    totalExperience: 500
+    classExperience:
+      rogue: 500
+    classExperienceSpent:
+      fighter: 550
+      apprentice: 500
+      rogue: 350
 
   - id: "mage-001"
     name: "Aria the Wise"

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { CombatAbility, type AbilityType } from '../../models/combat/CombatAbility';
+import { UnitClass } from '../../models/combat/UnitClass';
 
 interface AbilityBrowserProps {
   onClose?: () => void;
@@ -21,14 +22,19 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
   learnedAbilityIds = [],
 }) => {
   const [allAbilities, setAllAbilities] = useState<CombatAbility[]>([]);
+  const [allClasses, setAllClasses] = useState<UnitClass[]>([]);
   const [selectedType, setSelectedType] = useState<AbilityType | ''>('');
+  const [selectedClass, setSelectedClass] = useState<string>('');
   const [searchTerm, setSearchTerm] = useState<string>('');
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Load all abilities on mount
+  // Load all abilities and classes on mount
   useEffect(() => {
     const abilities = CombatAbility.getAll();
     setAllAbilities(abilities);
+
+    const classes = UnitClass.getAll();
+    setAllClasses(classes);
 
     // Set initial filter type if provided
     if (filterType) {
@@ -53,11 +59,19 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  // Filter abilities based on type and search
+  // Filter abilities based on type, class, and search
   const filteredAbilities = allAbilities.filter((ability) => {
     // Filter by type
     if (selectedType && ability.abilityType !== selectedType) {
       return false;
+    }
+
+    // Filter by class - check if the selected class has this ability in its learnableAbilities
+    if (selectedClass) {
+      const unitClass = allClasses.find(c => c.id === selectedClass);
+      if (unitClass && !unitClass.learnableAbilities.includes(ability)) {
+        return false;
+      }
     }
 
     // Filter by search term
@@ -196,7 +210,7 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
         </div>
 
         {/* Type filter */}
-        <div style={{ flex: '0 0 200px' }}>
+        <div style={{ flex: '0 0 150px' }}>
           <select
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value as AbilityType | '')}
@@ -218,6 +232,32 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
             {allTypes.map((type) => (
               <option key={type} value={type}>
                 {type}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Class filter */}
+        <div style={{ flex: '0 0 200px' }}>
+          <select
+            value={selectedClass}
+            onChange={(e) => setSelectedClass(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '8px',
+              background: 'rgba(0, 0, 0, 0.5)',
+              border: '1px solid #666',
+              borderRadius: '4px',
+              color: '#fff',
+              fontFamily: 'monospace',
+              fontSize: '12px',
+              cursor: 'pointer',
+            }}
+          >
+            <option value="">All Classes</option>
+            {allClasses.map((unitClass) => (
+              <option key={unitClass.id} value={unitClass.id}>
+                {unitClass.name}
               </option>
             ))}
           </select>
