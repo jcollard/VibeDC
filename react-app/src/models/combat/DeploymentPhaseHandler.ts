@@ -132,7 +132,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     this.renderPhaseHeader(ctx, canvasSize, headerFont);
 
     // Render character selection dialog
-    this.renderCharacterSelectionDialog(ctx, canvasSize, tileSize, spriteSize, dialogFont, spriteImages);
+    this.renderCharacterSelectionDialog(ctx, encounter, canvasSize, tileSize, spriteSize, offsetX, offsetY, dialogFont, spriteImages);
   }
 
   /**
@@ -231,14 +231,23 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    */
   private renderCharacterSelectionDialog(
     ctx: CanvasRenderingContext2D,
+    encounter: CombatEncounter,
     canvasSize: number,
     tileSize: number,
     spriteSize: number,
+    offsetX: number,
+    offsetY: number,
     dialogFont: string,
     spriteImages: Map<string, HTMLImageElement>
   ): void {
     // Only show dialog if a deployment zone is selected
     if (this.selectedZoneIndex === null) {
+      return;
+    }
+
+    // Get the selected deployment zone position
+    const selectedZone = encounter.playerDeploymentZones[this.selectedZoneIndex];
+    if (!selectedZone) {
       return;
     }
 
@@ -255,23 +264,46 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       spriteSize
     );
 
-    // Measure the dialog to calculate centered position
+    // Measure the content bounds
     const bounds = dialogContent.measure(tileSize);
-    const dialogSize = {
-      width: Math.ceil(bounds.maxX / tileSize) + 4, // +4 for borders and padding
-      height: Math.ceil(bounds.maxY / tileSize) + 4
-    };
 
-    // Center horizontally and position near bottom
-    const dialogX = (canvasSize - (dialogSize.width * tileSize)) / 2;
-    const dialogY = canvasSize - (dialogSize.height * tileSize) - 40;
+    // Calculate dialog size using the same logic as renderDialogWithContent
+    const contentWidth = bounds.maxX - bounds.minX;
+    const contentHeight = bounds.maxY - bounds.minY;
+    const paddingPixels = 0; // Using 0 padding as in the render call
 
-    // Render dialog with auto-sizing (0px padding for debug)
+    const totalWidthPixels = contentWidth + (paddingPixels * 2);
+    const totalHeightPixels = contentHeight + (paddingPixels * 2);
+
+    // Convert to tiles (this is the interior size)
+    const interiorWidth = Math.ceil(totalWidthPixels / tileSize) - 1;
+    const interiorHeight = Math.ceil(totalHeightPixels / tileSize) - 1;
+
+    // The actual dialog size includes the 9-slice borders (1 tile on each side)
+    const actualDialogWidth = (interiorWidth + 2) * tileSize;
+    const actualDialogHeight = (interiorHeight + 2) * tileSize;
+
+    // Calculate the top-left corner of the selected zone in canvas coordinates
+    const zoneX = selectedZone.x * tileSize + offsetX;
+    const zoneY = selectedZone.y * tileSize + offsetY;
+
+    // Calculate zone center
+    const zoneCenterX = zoneX + (tileSize / 2);
+
+    // Position dialog centered horizontally above the selected zone
+    const dialogX = zoneCenterX - (actualDialogWidth / 2);
+    const dialogY = zoneY - actualDialogHeight - 20; // 20px gap above the zone
+
+    // Clamp dialog to stay within canvas bounds
+    const clampedDialogX = Math.max(10, Math.min(dialogX, canvasSize - actualDialogWidth - 10));
+    const clampedDialogY = Math.max(10, Math.min(dialogY, canvasSize - actualDialogHeight - 10));
+
+    // Render dialog with auto-sizing, clamped to canvas bounds
     renderDialogWithContent(
       ctx,
       dialogContent,
-      dialogX,
-      dialogY,
+      clampedDialogX,
+      clampedDialogY,
       tileSize,
       spriteSize,
       spriteImages,
