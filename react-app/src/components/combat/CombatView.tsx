@@ -42,6 +42,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Initialize cinematic manager
   const cinematicManagerRef = useRef<CinematicManager>(new CinematicManager());
 
+  // Track if the intro cinematic has already played
+  const introCinematicPlayedRef = useRef<boolean>(false);
+
   // Animation timing
   const lastFrameTimeRef = useRef<number>(performance.now());
   const animationFrameRef = useRef<number | null>(null);
@@ -167,9 +170,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     loadSprites().catch(console.error);
   }, [combatState.map, combatState.phase, encounter]);
 
-  // Start the intro cinematic sequence when encounter loads
+  // Start the intro cinematic sequence when encounter loads (only once)
   useEffect(() => {
-    if (spritesLoaded && fontsLoaded) {
+    if (spritesLoaded && fontsLoaded && !introCinematicPlayedRef.current) {
       // Run all intro animations in parallel
       const introSequence = new SequenceParallel([
         new MapFadeInSequence(2.0),
@@ -177,6 +180,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, 136)
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
+      introCinematicPlayedRef.current = true;
     }
   }, [spritesLoaded, fontsLoaded, combatState, encounter, dialogFont]);
 
