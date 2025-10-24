@@ -54,6 +54,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track selected fonts for testing
   const [headerFont, setHeaderFont] = useState<string>('DungeonSlant');
   const [dialogFont, setDialogFont] = useState<string>('Bitfantasy');
+  const [buttonFont, setButtonFont] = useState<string>('Bitfantasy');
 
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
@@ -62,6 +63,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   useEffect(() => {
     UIConfig.setHighlightColor(highlightColor);
   }, [highlightColor]);
+
+  // Update UIConfig when button font changes
+  useEffect(() => {
+    UIConfig.setButtonFont(buttonFont);
+  }, [buttonFont]);
 
   // Track if the selected fonts are loaded
   const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
@@ -646,6 +652,40 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             }}
           >
             Highlighted Text Preview
+          </div>
+
+          {/* Button Font Selector */}
+          <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
+            Button Font:
+          </label>
+          <select
+            value={buttonFont}
+            onChange={(e) => setButtonFont(e.target.value)}
+            style={{
+              width: '200px',
+              padding: '4px',
+              background: '#222',
+              color: '#fff',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              cursor: 'pointer',
+            }}
+          >
+            {availableFonts.map(font => (
+              <option key={font} value={font}>{font}</option>
+            ))}
+          </select>
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '8px',
+              background: '#111',
+              borderRadius: '3px',
+              fontFamily: buttonFont,
+              fontSize: '18px',
+            }}
+          >
+            Start Combat
           </div>
         </div>
       )}

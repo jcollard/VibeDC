@@ -320,31 +320,42 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   /**
    * Render deployment phase UI elements (header and dialog - rendered after units)
    */
-  renderUI(_state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
+  renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
     const { ctx, canvasSize, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
 
     // Render "Deploy Units" header
     this.renderPhaseHeader(ctx, canvasSize, headerFont);
 
-    // Initialize and render Deploy button below header
-    if (!this.deployButton) {
-      this.deployButton = new CanvasButton({
-        label: 'Deploy',
-        x: canvasSize / 2 - 60, // Center button (120px wide)
-        y: 110, // Below the header which ends at y=100
-        width: 120,
-        height: 40,
-        spriteId: 'ui-simple-4',
-        hoverSpriteId: 'ui-simple-5',
-        activeSpriteId: 'ui-simple-6',
-        font: headerFont,
-        fontSize: 18,
-        onClick: () => {
-          console.log('Deploy button clicked!');
-        },
-      });
+    // Check if all units are deployed or all zones are occupied
+    const partySize = PartyMemberRegistry.getAll().length;
+    const deploymentZoneCount = encounter.playerDeploymentZones.length;
+    const deployedUnitCount = state.unitManifest.getAllUnits().length;
+    const shouldShowButton = deployedUnitCount >= partySize || deployedUnitCount >= deploymentZoneCount;
+
+    // Initialize and render Start Combat button below header (only if deployment is complete)
+    if (shouldShowButton) {
+      if (!this.deployButton) {
+        this.deployButton = new CanvasButton({
+          label: 'Start Combat',
+          x: canvasSize / 2 - 75, // Center button (150px wide)
+          y: 110, // Below the header which ends at y=100
+          width: 150,
+          height: 40,
+          spriteId: 'ui-simple-4',
+          hoverSpriteId: 'ui-simple-5',
+          activeSpriteId: 'ui-simple-6',
+          font: UIConfig.getButtonFont(),
+          fontSize: 22,
+          onClick: () => {
+            console.log('Start Combat button clicked!');
+          },
+        });
+      } else {
+        // Update font in case it changed
+        this.deployButton.updateConfig({ font: UIConfig.getButtonFont() });
+      }
+      this.deployButton.render(ctx, spriteImages);
     }
-    this.deployButton.render(ctx, spriteImages);
 
     // Render character selection dialog
     this.renderCharacterSelectionDialog(ctx, encounter, canvasSize, tileSize, spriteSize, offsetX, offsetY, dialogFont, spriteImages);
