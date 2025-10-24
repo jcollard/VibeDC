@@ -274,6 +274,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
     }
 
+    // Render phase UI elements (header, dialogs) after units so they appear on top
+    if (phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
+      phaseHandlerRef.current.renderUI(combatState, encounter, {
+        ctx,
+        canvasSize: CANVAS_SIZE,
+        tileSize: TILE_SIZE,
+        spriteSize: SPRITE_SIZE,
+        offsetX,
+        offsetY,
+        spriteImages: spriteImagesRef.current,
+        headerFont,
+        dialogFont,
+      });
+    }
+
     // Copy buffer to display canvas
     const displayCtx = displayCanvas.getContext('2d');
     if (displayCtx) {

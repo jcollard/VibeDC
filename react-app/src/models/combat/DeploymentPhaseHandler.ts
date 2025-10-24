@@ -55,8 +55,8 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   // Animation state
   private elapsedTime = 0; // Time in seconds since phase started
   private readonly cycleTime = 1.0; // Time for full cycle (0.5s fade in + 0.5s fade out)
-  private readonly minAlpha = 0.25;
-  private readonly maxAlpha = 0.75;
+  private readonly minAlpha = 0.0;
+  private readonly maxAlpha = 0.5;
 
   // Selection state
   private selectedZoneIndex: number | null = null;
@@ -269,13 +269,20 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   }
 
   /**
-   * Render deployment phase UI elements
+   * Render deployment phase overlays (zones only - rendered before units)
    */
   render(_state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, canvasSize, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
+    const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
 
-    // Render deployment zones
+    // Render deployment zones (this happens before units are drawn)
     this.renderDeploymentZones(encounter, ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages);
+  }
+
+  /**
+   * Render deployment phase UI elements (header and dialog - rendered after units)
+   */
+  renderUI(_state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
+    const { ctx, canvasSize, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
 
     // Render "Deploy Units" header
     this.renderPhaseHeader(ctx, canvasSize, headerFont);
