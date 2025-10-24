@@ -5,6 +5,8 @@ import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { SpriteBrowser } from './SpriteBrowser';
 import { EquipmentBrowser } from './EquipmentBrowser';
 import { UnitClass } from '../../models/combat/UnitClass';
+import { CombatAbility } from '../../models/combat/CombatAbility';
+import { Equipment } from '../../models/combat/Equipment';
 import { TagFilter } from './TagFilter';
 
 interface PartyMemberRegistryPanelProps {
@@ -20,14 +22,17 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
   const [selectedMember, setSelectedMember] = useState<PartyMemberDefinition | null>(null);
   const [selectedTag, setSelectedTag] = useState<string>('');
   const [allTags, setAllTags] = useState<string[]>([]);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editedMember, setEditedMember] = useState<PartyMemberDefinition | null>(null);
-  const [editError, setEditError] = useState<string>('');
+
+  // Inline editing state - track which field is being edited and its temporary value
+  const [editingField, setEditingField] = useState<string | null>(null);
+  const [editingValue, setEditingValue] = useState<any>(null);
+
   const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
   const [equipmentBrowserVisible, setEquipmentBrowserVisible] = useState(false);
   const [equipmentBrowserSlot, setEquipmentBrowserSlot] = useState<'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory' | null>(null);
   const spriteCanvasRef = useRef<HTMLCanvasElement>(null);
   const [availableClasses, setAvailableClasses] = useState<UnitClass[]>([]);
+  const [availableAbilities, setAvailableAbilities] = useState<CombatAbility[]>([]);
 
   // Sprite size constant
   const SPRITE_SIZE = 12;
@@ -45,8 +50,9 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
     });
     setAllTags(Array.from(tagsSet).sort());
 
-    // Load available classes
+    // Load available classes and abilities
     setAvailableClasses(UnitClass.getAll());
+    setAvailableAbilities(CombatAbility.getAll());
 
     console.log('PartyMemberRegistryPanel: Loaded party members:', allMembers.length);
   }, []);
@@ -56,61 +62,51 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
     ? partyMembers.filter(m => m.tags?.includes(selectedTag))
     : partyMembers;
 
-  // Handle field changes during editing
-  const handleFieldChange = (field: keyof PartyMemberDefinition, value: any) => {
-    if (!editedMember) return;
-
-    setEditedMember({
-      ...editedMember,
-      [field]: value,
-    });
-    setEditError('');
+  // Start editing a field
+  const startEditing = (fieldName: string, currentValue: any) => {
+    setEditingField(fieldName);
+    setEditingValue(currentValue);
   };
 
-  // Save changes
-  const handleSave = () => {
-    if (!editedMember) return;
+  // Save the current field being edited
+  const saveField = () => {
+    if (!selectedMember || !editingField) return;
 
-    // Validate required fields
-    if (!editedMember.id.trim()) {
-      setEditError('ID is required');
-      return;
-    }
-    if (!editedMember.name.trim()) {
-      setEditError('Name is required');
-      return;
-    }
-    if (!editedMember.unitClassId) {
-      setEditError('Unit Class is required');
-      return;
-    }
+    const updatedMember: PartyMemberDefinition = {
+      ...selectedMember,
+      [editingField]: editingValue,
+    };
 
-    // Register the edited member
-    PartyMemberRegistry.register(editedMember);
+    // Register the updated member
+    PartyMemberRegistry.register(updatedMember);
 
     // Update local state
     const updatedMembers = PartyMemberRegistry.getAll();
     setPartyMembers(updatedMembers);
-    setSelectedMember(editedMember);
-    setIsEditing(false);
-    setEditError('');
+    setSelectedMember(updatedMember);
 
-    console.log('Saved party member:', editedMember.id);
+    // Clear editing state
+    setEditingField(null);
+    setEditingValue(null);
+
+    console.log(`Saved field ${editingField} for party member:`, selectedMember.id);
   };
 
-  // Cancel editing
-  const handleCancel = () => {
-    setIsEditing(false);
-    setEditedMember(null);
-    setEditError('');
+  // Cancel editing the current field
+  const cancelEditing = () => {
+    setEditingField(null);
+    setEditingValue(null);
   };
 
-  // Start editing
-  const handleEdit = () => {
-    if (!selectedMember) return;
-    setEditedMember({ ...selectedMember });
-    setIsEditing(true);
-    setEditError('');
+  // Handle keyboard shortcuts (Enter to save, Escape to cancel)
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      saveField();
+    } else if (e.key === 'Escape') {
+      e.preventDefault();
+      cancelEditing();
+    }
   };
 
   // Delete party member
@@ -124,8 +120,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
     const updatedMembers = PartyMemberRegistry.getAll();
     setPartyMembers(updatedMembers);
     setSelectedMember(null);
-    setIsEditing(false);
-    setEditedMember(null);
+    setEditingField(null);
+    setEditingValue(null);
   };
 
   // Create new party member
@@ -166,8 +162,6 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
     const updatedMembers = PartyMemberRegistry.getAll();
     setPartyMembers(updatedMembers);
     setSelectedMember(newMember);
-    setEditedMember({ ...newMember });
-    setIsEditing(true);
   };
 
   // Export to YAML
@@ -251,11 +245,45 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
     URL.revokeObjectURL(url);
   };
 
+  // Handle equipment browser selection
+  const handleEquipmentSelect = (equipmentId: string) => {
+    if (!selectedMember || !equipmentBrowserSlot) return;
+
+    const fieldName = `${equipmentBrowserSlot}Id`;
+    const updatedMember: PartyMemberDefinition = {
+      ...selectedMember,
+      [fieldName]: equipmentId || undefined,
+    };
+
+    PartyMemberRegistry.register(updatedMember);
+    const updatedMembers = PartyMemberRegistry.getAll();
+    setPartyMembers(updatedMembers);
+    setSelectedMember(updatedMember);
+    setEquipmentBrowserVisible(false);
+    setEquipmentBrowserSlot(null);
+  };
+
+  // Handle sprite browser selection
+  const handleSpriteSelect = (spriteId: string) => {
+    if (!selectedMember) return;
+
+    const updatedMember: PartyMemberDefinition = {
+      ...selectedMember,
+      spriteId,
+    };
+
+    PartyMemberRegistry.register(updatedMember);
+    const updatedMembers = PartyMemberRegistry.getAll();
+    setPartyMembers(updatedMembers);
+    setSelectedMember(updatedMember);
+    setSpriteBrowserVisible(false);
+  };
+
   // Render sprite preview
   useEffect(() => {
     if (!selectedMember || !spriteCanvasRef.current) return;
 
-    const spriteId = isEditing ? editedMember?.spriteId : selectedMember.spriteId;
+    const spriteId = selectedMember.spriteId;
     if (!spriteId) return;
 
     const sprite = SpriteRegistry.getById(spriteId);
@@ -285,7 +313,223 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
         SPRITE_SIZE * PREVIEW_SCALE
       );
     };
-  }, [selectedMember, editedMember, isEditing, SPRITE_SIZE, PREVIEW_SCALE]);
+  }, [selectedMember, SPRITE_SIZE, PREVIEW_SCALE]);
+
+  // Render inline editable field component
+  const renderInlineEdit = (
+    fieldName: string,
+    label: string,
+    type: 'text' | 'number' | 'select' | 'textarea' = 'text',
+    options?: { value: string; label: string }[],
+    gridColumn?: string
+  ) => {
+    if (!selectedMember) return null;
+
+    const currentValue = selectedMember[fieldName as keyof PartyMemberDefinition];
+    const isEditing = editingField === fieldName;
+
+    return (
+      <div style={{ gridColumn }}>
+        <label style={{ display: 'block', marginBottom: '2px', color: '#aaa', fontSize: '10px' }}>{label}:</label>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+          {isEditing ? (
+            <>
+              {type === 'text' && (
+                <input
+                  type="text"
+                  value={editingValue ?? ''}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    padding: '4px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid #666',
+                    borderRadius: '2px',
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                  }}
+                />
+              )}
+              {type === 'number' && (
+                <input
+                  type="number"
+                  value={editingValue ?? 0}
+                  onChange={(e) => setEditingValue(Number(e.target.value))}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    padding: '4px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid #666',
+                    borderRadius: '2px',
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                  }}
+                />
+              )}
+              {type === 'select' && options && (
+                <select
+                  value={editingValue ?? ''}
+                  onChange={(e) => setEditingValue(e.target.value || undefined)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  style={{
+                    flex: 1,
+                    padding: '4px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid #666',
+                    borderRadius: '2px',
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                  }}
+                >
+                  {options.map(opt => (
+                    <option key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </option>
+                  ))}
+                </select>
+              )}
+              {type === 'textarea' && (
+                <textarea
+                  value={editingValue ?? ''}
+                  onChange={(e) => setEditingValue(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  autoFocus
+                  rows={2}
+                  style={{
+                    flex: 1,
+                    padding: '4px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid #666',
+                    borderRadius: '2px',
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    resize: 'vertical',
+                  }}
+                />
+              )}
+              <button
+                onClick={saveField}
+                title="Save (Enter)"
+                style={{
+                  padding: '2px 6px',
+                  background: 'rgba(76, 175, 80, 0.3)',
+                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                  borderRadius: '2px',
+                  color: '#8bc34a',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                }}
+              >
+                ✓
+              </button>
+              <button
+                onClick={cancelEditing}
+                title="Cancel (Escape)"
+                style={{
+                  padding: '2px 6px',
+                  background: 'rgba(244, 67, 54, 0.3)',
+                  border: '1px solid rgba(244, 67, 54, 0.6)',
+                  borderRadius: '2px',
+                  color: '#f44',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                }}
+              >
+                ✗
+              </button>
+            </>
+          ) : (
+            <div
+              onClick={() => startEditing(fieldName, currentValue)}
+              style={{
+                flex: 1,
+                color: '#fff',
+                fontSize: '11px',
+                padding: '4px',
+                background: 'rgba(255, 255, 255, 0.05)',
+                border: '1px solid rgba(255, 255, 255, 0.1)',
+                borderRadius: '2px',
+                cursor: 'pointer',
+                transition: 'background 0.2s',
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
+                e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.3)';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+              }}
+            >
+              {currentValue !== undefined && currentValue !== null && currentValue !== ''
+                ? String(currentValue)
+                : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+              }
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  // Render equipment field with browse button
+  const renderEquipmentField = (
+    slot: 'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory',
+    label: string,
+    gridColumn?: string
+  ) => {
+    if (!selectedMember) return null;
+
+    const fieldName = `${slot}Id` as keyof PartyMemberDefinition;
+    const equipmentId = selectedMember[fieldName] as string | undefined;
+    const equipment = equipmentId ? Equipment.getById(equipmentId) : null;
+
+    return (
+      <div style={{ gridColumn }}>
+        <label style={{ display: 'block', marginBottom: '2px', color: '#aaa', fontSize: '10px' }}>{label}:</label>
+        <div
+          onClick={() => {
+            setEquipmentBrowserSlot(slot);
+            setEquipmentBrowserVisible(true);
+          }}
+          style={{
+            color: '#fff',
+            fontSize: '11px',
+            padding: '4px',
+            background: 'rgba(255, 255, 255, 0.05)',
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            borderRadius: '2px',
+            cursor: 'pointer',
+            transition: 'background 0.2s',
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
+            e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.3)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+          }}
+        >
+          {equipment
+            ? equipment.name
+            : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
+          }
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div
@@ -405,8 +649,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                     key={member.id}
                     onClick={() => {
                       setSelectedMember(member);
-                      setIsEditing(false);
-                      setEditedMember(null);
+                      setEditingField(null);
+                      setEditingValue(null);
                     }}
                     style={{
                       padding: '12px',
@@ -528,91 +772,43 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
             <div style={{ padding: '20px' }}>
               {/* Action buttons */}
               <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-                {!isEditing ? (
-                  <>
-                    <button
-                      onClick={handleEdit}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'rgba(33, 150, 243, 0.3)',
-                        border: '1px solid rgba(33, 150, 243, 0.6)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                      }}
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={handleDelete}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'rgba(244, 67, 54, 0.3)',
-                        border: '1px solid rgba(244, 67, 54, 0.6)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                      }}
-                    >
-                      Delete
-                    </button>
-                  </>
-                ) : (
-                  <>
-                    <button
-                      onClick={handleSave}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'rgba(76, 175, 80, 0.3)',
-                        border: '1px solid rgba(76, 175, 80, 0.6)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                      }}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={handleCancel}
-                      style={{
-                        padding: '8px 16px',
-                        background: 'rgba(158, 158, 158, 0.3)',
-                        border: '1px solid rgba(158, 158, 158, 0.6)',
-                        borderRadius: '4px',
-                        color: '#fff',
-                        cursor: 'pointer',
-                        fontSize: '12px',
-                      }}
-                    >
-                      Cancel
-                    </button>
-                  </>
-                )}
-              </div>
-
-              {/* Error message */}
-              {editError && (
-                <div
+                <button
+                  onClick={handleDelete}
                   style={{
-                    padding: '12px',
-                    marginBottom: '20px',
-                    background: 'rgba(244, 67, 54, 0.2)',
-                    border: '1px solid rgba(244, 67, 54, 0.4)',
+                    padding: '8px 16px',
+                    background: 'rgba(244, 67, 54, 0.3)',
+                    border: '1px solid rgba(244, 67, 54, 0.6)',
                     borderRadius: '4px',
-                    color: '#f44',
+                    color: '#fff',
+                    cursor: 'pointer',
+                    fontSize: '12px',
                   }}
                 >
-                  {editError}
-                </div>
-              )}
+                  Delete
+                </button>
+              </div>
 
               {/* Sprite preview */}
               <div style={{ marginBottom: '20px' }}>
-                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '8px' }}>
-                  Sprite: {isEditing ? editedMember?.spriteId : selectedMember.spriteId}
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '11px', color: '#aaa' }}>
+                    Sprite Preview
+                  </div>
+                  <button
+                    onClick={() => setSpriteBrowserVisible(true)}
+                    style={{
+                      padding: '6px 12px',
+                      background: 'rgba(76, 175, 80, 0.3)',
+                      border: '1px solid rgba(76, 175, 80, 0.6)',
+                      borderRadius: '3px',
+                      color: '#8bc34a',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontFamily: 'monospace',
+                    }}
+                  >
+                    Change Sprite...
+                  </button>
                 </div>
                 <canvas
                   ref={spriteCanvasRef}
@@ -624,414 +820,223 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
                     background: 'rgba(0, 0, 0, 0.3)',
                   } as React.CSSProperties}
                 />
+                <div style={{ fontSize: '10px', color: '#666', marginTop: '4px' }}>
+                  {selectedMember.spriteId}
+                </div>
               </div>
 
               {/* Party member fields */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11px' }}>
-                {/* ID */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>ID:</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedMember?.id || ''}
-                      onChange={(e) => handleFieldChange('id', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.id}</div>
-                  )}
-                </div>
-
-                {/* Name */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Name:</label>
-                  {isEditing ? (
-                    <input
-                      type="text"
-                      value={editedMember?.name || ''}
-                      onChange={(e) => handleFieldChange('name', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.name}</div>
-                  )}
-                </div>
-
-                {/* Primary Class */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Primary Class:</label>
-                  {isEditing ? (
-                    <select
-                      value={editedMember?.unitClassId || ''}
-                      onChange={(e) => handleFieldChange('unitClassId', e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    >
-                      <option value="">Select a class...</option>
-                      {availableClasses.map(unitClass => (
-                        <option key={unitClass.id} value={unitClass.id}>
-                          {unitClass.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div style={{ color: '#fff' }}>
-                      {UnitClass.getById(selectedMember.unitClassId)?.name || selectedMember.unitClassId}
-                    </div>
-                  )}
-                </div>
-
-                {/* Secondary Class */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Secondary Class:</label>
-                  {isEditing ? (
-                    <select
-                      value={editedMember?.secondaryClassId || ''}
-                      onChange={(e) => handleFieldChange('secondaryClassId', e.target.value || undefined)}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontSize: '11px',
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      <option value="">None</option>
-                      {availableClasses.map(unitClass => (
-                        <option key={unitClass.id} value={unitClass.id}>
-                          {unitClass.name}
-                        </option>
-                      ))}
-                    </select>
-                  ) : (
-                    <div style={{ fontSize: '11px', color: '#fff' }}>
-                      {selectedMember.secondaryClassId
-                        ? UnitClass.getById(selectedMember.secondaryClassId)?.name || selectedMember.secondaryClassId
-                        : <span style={{ color: '#666', fontStyle: 'italic' }}>None</span>
-                      }
-                    </div>
-                  )}
-                </div>
-
-                {/* Sprite ID */}
-                <div style={{ gridColumn: 'span 2' }}>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Sprite ID:</label>
-                  {isEditing ? (
-                    <div style={{ display: 'flex', gap: '4px' }}>
-                      <input
-                        type="text"
-                        value={editedMember?.spriteId || ''}
-                        onChange={(e) => handleFieldChange('spriteId', e.target.value)}
-                        style={{
-                          flex: 1,
-                          padding: '6px',
-                          background: 'rgba(0, 0, 0, 0.5)',
-                          border: '1px solid #666',
-                          borderRadius: '3px',
-                          color: '#fff',
-                          fontFamily: 'monospace',
-                          fontSize: '11px',
-                        }}
-                      />
-                      <button
-                        onClick={() => setSpriteBrowserVisible(true)}
-                        style={{
-                          padding: '6px 12px',
-                          background: 'rgba(76, 175, 80, 0.3)',
-                          border: '1px solid rgba(76, 175, 80, 0.6)',
-                          borderRadius: '3px',
-                          color: '#8bc34a',
-                          fontSize: '11px',
-                          cursor: 'pointer',
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        Browse...
-                      </button>
-                    </div>
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.spriteId}</div>
-                  )}
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
+                {renderInlineEdit('id', 'ID')}
+                {renderInlineEdit('name', 'Name')}
+                {renderInlineEdit(
+                  'unitClassId',
+                  'Primary Class',
+                  'select',
+                  [
+                    { value: '', label: 'Select a class...' },
+                    ...availableClasses.map(c => ({ value: c.id, label: c.name }))
+                  ]
+                )}
+                {renderInlineEdit(
+                  'secondaryClassId',
+                  'Secondary Class',
+                  'select',
+                  [
+                    { value: '', label: 'None' },
+                    ...availableClasses.map(c => ({ value: c.id, label: c.name }))
+                  ]
+                )}
               </div>
 
               {/* Base Stats */}
-              <div style={{ marginTop: '20px', marginBottom: '12px', fontSize: '13px', fontWeight: 'bold', color: '#4CAF50' }}>
+              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
                 Base Stats
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '12px', fontSize: '11px' }}>
-                {/* Health */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Health:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseHealth || 0}
-                      onChange={(e) => handleFieldChange('baseHealth', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseHealth}</div>
-                  )}
-                </div>
-
-                {/* Mana */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Mana:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseMana || 0}
-                      onChange={(e) => handleFieldChange('baseMana', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseMana}</div>
-                  )}
-                </div>
-
-                {/* Physical Power */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Phys Power:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.basePhysicalPower || 0}
-                      onChange={(e) => handleFieldChange('basePhysicalPower', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.basePhysicalPower}</div>
-                  )}
-                </div>
-
-                {/* Magic Power */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Magic Power:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseMagicPower || 0}
-                      onChange={(e) => handleFieldChange('baseMagicPower', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseMagicPower}</div>
-                  )}
-                </div>
-
-                {/* Speed */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Speed:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseSpeed || 0}
-                      onChange={(e) => handleFieldChange('baseSpeed', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseSpeed}</div>
-                  )}
-                </div>
-
-                {/* Movement */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Movement:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseMovement || 0}
-                      onChange={(e) => handleFieldChange('baseMovement', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseMovement}</div>
-                  )}
-                </div>
-
-                {/* Physical Evade */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Phys Evade:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.basePhysicalEvade || 0}
-                      onChange={(e) => handleFieldChange('basePhysicalEvade', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.basePhysicalEvade}</div>
-                  )}
-                </div>
-
-                {/* Magic Evade */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Magic Evade:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseMagicEvade || 0}
-                      onChange={(e) => handleFieldChange('baseMagicEvade', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseMagicEvade}</div>
-                  )}
-                </div>
-
-                {/* Courage */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Courage:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseCourage || 0}
-                      onChange={(e) => handleFieldChange('baseCourage', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseCourage}</div>
-                  )}
-                </div>
-
-                {/* Attunement */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Attunement:</label>
-                  {isEditing ? (
-                    <input
-                      type="number"
-                      value={editedMember?.baseAttunement || 0}
-                      onChange={(e) => handleFieldChange('baseAttunement', Number(e.target.value))}
-                      style={{
-                        width: '100%',
-                        padding: '6px',
-                        background: 'rgba(0, 0, 0, 0.5)',
-                        border: '1px solid #666',
-                        borderRadius: '3px',
-                        color: '#fff',
-                        fontFamily: 'monospace',
-                        fontSize: '11px',
-                      }}
-                    />
-                  ) : (
-                    <div style={{ color: '#fff' }}>{selectedMember.baseAttunement}</div>
-                  )}
-                </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: '8px', fontSize: '11px' }}>
+                {renderInlineEdit('baseHealth', 'Health', 'number')}
+                {renderInlineEdit('baseMana', 'Mana', 'number')}
+                {renderInlineEdit('basePhysicalPower', 'Phys Power', 'number')}
+                {renderInlineEdit('baseMagicPower', 'Magic Power', 'number')}
+                {renderInlineEdit('baseSpeed', 'Speed', 'number')}
+                {renderInlineEdit('baseMovement', 'Movement', 'number')}
+                {renderInlineEdit('basePhysicalEvade', 'Phys Evade', 'number')}
+                {renderInlineEdit('baseMagicEvade', 'Magic Evade', 'number')}
+                {renderInlineEdit('baseCourage', 'Courage', 'number')}
+                {renderInlineEdit('baseAttunement', 'Attunement', 'number')}
               </div>
 
-              {/* Description and Tags would go here - keeping it simple for now */}
+              {/* Equipment Section */}
+              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+                Equipment
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '11px' }}>
+                {renderEquipmentField('leftHand', 'Left Hand')}
+                {renderEquipmentField('rightHand', 'Right Hand')}
+                {renderEquipmentField('head', 'Head')}
+                {renderEquipmentField('body', 'Body')}
+                {renderEquipmentField('accessory', 'Accessory', 'span 2')}
+              </div>
+
+              {/* Abilities Section */}
+              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+                Abilities
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '11px' }}>
+                {renderInlineEdit(
+                  'reactionAbilityId',
+                  'Reaction Ability',
+                  'select',
+                  [
+                    { value: '', label: 'None' },
+                    ...availableAbilities.filter(a => a.abilityType === 'Reaction').map(a => ({ value: a.id, label: a.name }))
+                  ]
+                )}
+                {renderInlineEdit(
+                  'passiveAbilityId',
+                  'Passive Ability',
+                  'select',
+                  [
+                    { value: '', label: 'None' },
+                    ...availableAbilities.filter(a => a.abilityType === 'Passive').map(a => ({ value: a.id, label: a.name }))
+                  ]
+                )}
+                {renderInlineEdit(
+                  'movementAbilityId',
+                  'Movement Ability',
+                  'select',
+                  [
+                    { value: '', label: 'None' },
+                    ...availableAbilities.filter(a => a.abilityType === 'Movement').map(a => ({ value: a.id, label: a.name }))
+                  ]
+                )}
+              </div>
+
+              {/* Tags Section - Custom rendering for tag display */}
+              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+                Tags
+              </div>
+              <div style={{ fontSize: '11px' }}>
+                <label style={{ display: 'block', marginBottom: '2px', color: '#aaa', fontSize: '10px' }}>Tags:</label>
+                {editingField === 'tags' ? (
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '4px' }}>
+                    <input
+                      type="text"
+                      value={Array.isArray(editingValue) ? editingValue.join(', ') : ''}
+                      onChange={(e) => {
+                        const tagsString = e.target.value;
+                        const tagsArray = tagsString
+                          .split(',')
+                          .map(tag => tag.trim())
+                          .filter(tag => tag.length > 0);
+                        setEditingValue(tagsArray);
+                      }}
+                      onKeyDown={handleKeyDown}
+                      placeholder="tag1, tag2, tag3"
+                      autoFocus
+                      style={{
+                        flex: 1,
+                        padding: '4px',
+                        background: 'rgba(0, 0, 0, 0.5)',
+                        border: '1px solid #666',
+                        borderRadius: '2px',
+                        color: '#fff',
+                        fontFamily: 'monospace',
+                        fontSize: '11px',
+                      }}
+                    />
+                    <button
+                      onClick={saveField}
+                      title="Save (Enter)"
+                      style={{
+                        padding: '2px 6px',
+                        background: 'rgba(76, 175, 80, 0.3)',
+                        border: '1px solid rgba(76, 175, 80, 0.6)',
+                        borderRadius: '2px',
+                        color: '#8bc34a',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      ✓
+                    </button>
+                    <button
+                      onClick={cancelEditing}
+                      title="Cancel (Escape)"
+                      style={{
+                        padding: '2px 6px',
+                        background: 'rgba(244, 67, 54, 0.3)',
+                        border: '1px solid rgba(244, 67, 54, 0.6)',
+                        borderRadius: '2px',
+                        color: '#f44',
+                        fontSize: '12px',
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      ✗
+                    </button>
+                  </div>
+                ) : (
+                  <div
+                    onClick={() => startEditing('tags', selectedMember.tags || [])}
+                    style={{
+                      padding: '4px',
+                      background: 'rgba(255, 255, 255, 0.05)',
+                      border: '1px solid rgba(255, 255, 255, 0.1)',
+                      borderRadius: '2px',
+                      cursor: 'pointer',
+                      transition: 'background 0.2s',
+                      minHeight: '24px',
+                      display: 'flex',
+                      alignItems: 'center',
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
+                      e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.3)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                    }}
+                  >
+                    {selectedMember.tags && selectedMember.tags.length > 0 ? (
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                        {selectedMember.tags.map((tag) => (
+                          <span
+                            key={tag}
+                            style={{
+                              padding: '2px 6px',
+                              background: 'rgba(76, 175, 80, 0.2)',
+                              border: '1px solid rgba(76, 175, 80, 0.4)',
+                              borderRadius: '2px',
+                              fontSize: '10px',
+                            }}
+                          >
+                            {tag}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <span style={{ color: '#666', fontStyle: 'italic' }}>No tags</span>
+                    )}
+                  </div>
+                )}
+                {editingField === 'tags' && (
+                  <div style={{ marginTop: '2px', fontSize: '9px', color: '#aaa' }}>
+                    Separate tags with commas
+                  </div>
+                )}
+              </div>
+
+              {/* Description Section */}
+              <div style={{ marginTop: '12px', marginBottom: '6px', fontSize: '12px', fontWeight: 'bold', color: '#4CAF50' }}>
+                Description
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '8px', fontSize: '11px' }}>
+                {renderInlineEdit('description', 'Description', 'textarea')}
+              </div>
 
             </div>
           )}
@@ -1041,11 +1046,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
       {/* Sprite Browser Modal */}
       {spriteBrowserVisible && (
         <SpriteBrowser
-          selectedSpriteId={editedMember?.spriteId}
-          onSelectSprite={(spriteId) => {
-            handleFieldChange('spriteId', spriteId);
-            setSpriteBrowserVisible(false);
-          }}
+          selectedSpriteId={selectedMember?.spriteId}
+          onSelectSprite={handleSpriteSelect}
           onClose={() => setSpriteBrowserVisible(false)}
         />
       )}
@@ -1053,12 +1055,8 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
       {/* Equipment Browser Modal */}
       {equipmentBrowserVisible && equipmentBrowserSlot && (
         <EquipmentBrowser
-          selectedEquipmentId={editedMember?.[`${equipmentBrowserSlot}Id` as keyof PartyMemberDefinition] as string | undefined}
-          onSelectEquipment={(equipmentId) => {
-            handleFieldChange(`${equipmentBrowserSlot}Id`, equipmentId || undefined);
-            setEquipmentBrowserVisible(false);
-            setEquipmentBrowserSlot(null);
-          }}
+          selectedEquipmentId={selectedMember?.[`${equipmentBrowserSlot}Id` as keyof PartyMemberDefinition] as string | undefined}
+          onSelectEquipment={handleEquipmentSelect}
           onClose={() => {
             setEquipmentBrowserVisible(false);
             setEquipmentBrowserSlot(null);
