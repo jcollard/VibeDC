@@ -14,6 +14,40 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   private readonly deploymentSprite = 'gradients-7'; // Fill sprite for deployment zones
   private readonly borderSprite = 'particles-5'; // Border sprite for deployment zones
 
+  // Animation state
+  private elapsedTime = 0; // Time in seconds since phase started
+  private readonly cycleTime = 1.0; // Time for full cycle (0.5s fade in + 0.5s fade out)
+  private readonly minAlpha = 0.25;
+  private readonly maxAlpha = 0.75;
+
+  /**
+   * Update animation state
+   * @param state - Current combat state
+   * @param encounter - Current encounter
+   * @param deltaTime - Time elapsed since last update in seconds
+   */
+  update(state: CombatState, _encounter: CombatEncounter, deltaTime: number): CombatState | null {
+    this.elapsedTime += deltaTime;
+    return state; // No state changes, just internal animation
+  }
+
+  /**
+   * Calculate the current alpha value for deployment zone animation
+   * Oscillates between minAlpha and maxAlpha over cycleTime
+   */
+  private calculateAlpha(): number {
+    // Get position in current cycle (0 to 1)
+    const cyclePosition = (this.elapsedTime % this.cycleTime) / this.cycleTime;
+
+    // Use sine wave for smooth oscillation
+    // sin goes from 0 to 1 to 0 over the cycle
+    const sineValue = Math.sin(cyclePosition * Math.PI * 2);
+
+    // Map sine wave (-1 to 1) to alpha range (minAlpha to maxAlpha)
+    const normalizedValue = (sineValue + 1) / 2; // Convert to 0-1 range
+    return this.minAlpha + (normalizedValue * (this.maxAlpha - this.minAlpha));
+  }
+
   /**
    * Get all sprites needed for the deployment phase
    */
@@ -83,14 +117,17 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       return;
     }
 
+    // Calculate animated alpha value
+    const currentAlpha = this.calculateAlpha();
+
     // Render each deployment zone
     for (const zone of encounter.playerDeploymentZones) {
       const x = zone.x * tileSize + offsetX;
       const y = zone.y * tileSize + offsetY;
 
-      // Draw the fill sprite with 50% transparency
+      // Draw the fill sprite with animated transparency
       ctx.save();
-      ctx.globalAlpha = 0.5;
+      ctx.globalAlpha = currentAlpha;
 
       const srcX = deploymentSprite.x * spriteSize;
       const srcY = deploymentSprite.y * spriteSize;

@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
@@ -29,6 +29,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Initialize phase handler based on current phase
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler());
+
+  // Animation timing
+  const lastFrameTimeRef = useRef<number>(performance.now());
+  const animationFrameRef = useRef<number | null>(null);
 
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -144,25 +148,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     loadSprites().catch(console.error);
   }, [combatState.map, combatState.phase, encounter]);
 
-  // Render the map to the canvas
-  useEffect(() => {
-    if (!spritesLoaded) {
-      console.log('CombatView: Sprites not loaded yet, skipping render');
-      return;
-    }
-
-    if (!fontsLoaded) {
-      console.log('CombatView: Fonts not loaded yet, skipping render');
-      return;
-    }
-
+  // Render function - draws one frame to the canvas
+  const renderFrame = useCallback(() => {
     const displayCanvas = displayCanvasRef.current;
-    if (!displayCanvas) {
-      console.log('CombatView: Display canvas not ready');
+    if (!displayCanvas || !spritesLoaded || !fontsLoaded) {
       return;
     }
-
-    console.log('CombatView: Starting render');
 
     // Create or get the buffer canvas
     if (!bufferCanvasRef.current) {
@@ -264,9 +255,43 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       displayCtx.imageSmoothingEnabled = false;
       displayCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
       displayCtx.drawImage(bufferCanvas, 0, 0);
-      console.log('CombatView: Copied buffer to display canvas');
     }
   }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, encounter]);
+
+  // Animation loop
+  useEffect(() => {
+    if (!spritesLoaded || !fontsLoaded) {
+      return;
+    }
+
+    const animate = (currentTime: number) => {
+      // Calculate delta time in seconds
+      const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
+      lastFrameTimeRef.current = currentTime;
+
+      // Update phase handler (for animations)
+      if (phaseHandlerRef.current.update) {
+        phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+      }
+
+      // Render the frame
+      renderFrame();
+
+      // Schedule next frame
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    // Start animation loop
+    lastFrameTimeRef.current = performance.now();
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    // Cleanup on unmount
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [spritesLoaded, fontsLoaded, renderFrame, combatState, encounter]);
 
   // Available fonts (matching what's in index.css)
   const availableFonts = [
