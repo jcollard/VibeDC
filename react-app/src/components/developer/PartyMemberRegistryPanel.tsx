@@ -299,24 +299,25 @@ export const PartyMemberRegistryPanel: React.FC<PartyMemberRegistryPanelProps> =
 
     const currentAbilities = selectedMember.learnedAbilityIds || [];
 
-    // Prevent duplicates
+    // If already learned, remove it (toggle behavior)
+    let updatedAbilities: string[];
     if (currentAbilities.includes(abilityId)) {
-      setAbilityBrowserVisible(false);
-      return;
+      updatedAbilities = currentAbilities.filter(id => id !== abilityId);
+    } else {
+      // Add the ability
+      updatedAbilities = [...currentAbilities, abilityId];
     }
-
-    const updatedAbilities = [...currentAbilities, abilityId];
 
     const updatedMember: PartyMemberDefinition = {
       ...selectedMember,
-      learnedAbilityIds: updatedAbilities,
+      learnedAbilityIds: updatedAbilities.length > 0 ? updatedAbilities : undefined,
     };
 
     PartyMemberRegistry.register(updatedMember);
     const updatedMembers = PartyMemberRegistry.getAll();
     setPartyMembers(updatedMembers);
     setSelectedMember(updatedMember);
-    setAbilityBrowserVisible(false);
+    // Don't close the browser - allow selecting multiple abilities
   };
 
   // Render sprite preview

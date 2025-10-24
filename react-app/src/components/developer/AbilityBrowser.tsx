@@ -41,6 +41,18 @@ export const AbilityBrowser: React.FC<AbilityBrowserProps> = ({
     }
   }, [filterType]);
 
+  // Handle Escape key to close the browser
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose?.();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   // Filter abilities based on type and search
   const filteredAbilities = allAbilities.filter((ability) => {
     // Filter by type
