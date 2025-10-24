@@ -126,3 +126,62 @@ export function getNineSliceSpriteIds(nineSlice: NineSliceSprites = DEFAULT_DIAL
     nineSlice.bottomRight,
   ];
 }
+
+/**
+ * Renders text with a hard black outline for better readability
+ *
+ * @param ctx - Canvas 2D context to render on
+ * @param text - Text to render
+ * @param x - X position
+ * @param y - Y position
+ * @param font - Font string (e.g., 'bold 24px "DungeonSlant", monospace')
+ * @param color - Text color (defaults to white)
+ * @param shadowOffset - Outline thickness in pixels (defaults to 2)
+ * @param textAlign - Text alignment (defaults to current context setting)
+ * @param textBaseline - Text baseline (defaults to current context setting)
+ */
+export function renderTextWithShadow(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  font: string,
+  color: string = '#ffffff',
+  shadowOffset: number = 2,
+  textAlign?: CanvasTextAlign,
+  textBaseline?: CanvasTextBaseline
+): void {
+  // Save current context state
+  ctx.save();
+
+  // Set font
+  ctx.font = font;
+
+  // Set alignment if provided
+  if (textAlign) ctx.textAlign = textAlign;
+  if (textBaseline) ctx.textBaseline = textBaseline;
+
+  // Draw black outline on all 8 surrounding positions
+  ctx.fillStyle = '#000000';
+
+  // Top row
+  ctx.fillText(text, x - shadowOffset, y - shadowOffset); // Top-left
+  ctx.fillText(text, x, y - shadowOffset);                // Top
+  ctx.fillText(text, x + shadowOffset, y - shadowOffset); // Top-right
+
+  // Middle row
+  ctx.fillText(text, x - shadowOffset, y);                // Left
+  ctx.fillText(text, x + shadowOffset, y);                // Right
+
+  // Bottom row
+  ctx.fillText(text, x - shadowOffset, y + shadowOffset); // Bottom-left
+  ctx.fillText(text, x, y + shadowOffset);                // Bottom
+  ctx.fillText(text, x + shadowOffset, y + shadowOffset); // Bottom-right
+
+  // Draw main text on top
+  ctx.fillStyle = color;
+  ctx.fillText(text, x, y);
+
+  // Restore context state
+  ctx.restore();
+}

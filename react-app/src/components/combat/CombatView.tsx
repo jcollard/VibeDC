@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
-import { renderNineSliceDialog, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
+import { renderNineSliceDialog, getNineSliceSpriteIds, renderTextWithShadow } from '../../utils/DialogRenderer';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 
 interface CombatViewProps {
@@ -40,34 +40,39 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-  // Track selected font for testing
-  const [selectedFont, setSelectedFont] = useState<string>('DungeonSlant');
+  // Track selected fonts for testing
+  const [headerFont, setHeaderFont] = useState<string>('DungeonSlant');
+  const [dialogFont, setDialogFont] = useState<string>('Bitfantasy');
 
-  // Track if the selected font is loaded
-  const [fontLoaded, setFontLoaded] = useState<boolean>(false);
+  // Track if the selected fonts are loaded
+  const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
 
-  // Load the selected font
+  // Load the selected fonts
   useEffect(() => {
-    setFontLoaded(false);
+    setFontsLoaded(false);
 
-    // Use the Font Loading API to ensure the font is ready
-    const loadFont = async () => {
+    // Use the Font Loading API to ensure the fonts are ready
+    const loadFonts = async () => {
       try {
-        // Try to load the font with various sizes to ensure it's ready
-        await document.fonts.load(`32px "${selectedFont}"`);
-        await document.fonts.load(`16px "${selectedFont}"`);
+        // Load header font at various sizes
+        await document.fonts.load(`48px "${headerFont}"`);
+        await document.fonts.load(`32px "${headerFont}"`);
 
-        console.log(`CombatView: Font "${selectedFont}" loaded successfully`);
-        setFontLoaded(true);
+        // Load dialog font at various sizes
+        await document.fonts.load(`24px "${dialogFont}"`);
+        await document.fonts.load(`16px "${dialogFont}"`);
+
+        console.log(`CombatView: Fonts "${headerFont}" and "${dialogFont}" loaded successfully`);
+        setFontsLoaded(true);
       } catch (error) {
-        console.warn(`CombatView: Failed to load font "${selectedFont}"`, error);
+        console.warn(`CombatView: Failed to load fonts`, error);
         // Still set as loaded to prevent blocking
-        setFontLoaded(true);
+        setFontsLoaded(true);
       }
     };
 
-    loadFont();
-  }, [selectedFont]);
+    loadFonts();
+  }, [headerFont, dialogFont]);
 
   // Listen for window resize
   useEffect(() => {
@@ -157,8 +162,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return;
     }
 
-    if (!fontLoaded) {
-      console.log('CombatView: Font not loaded yet, skipping render');
+    if (!fontsLoaded) {
+      console.log('CombatView: Fonts not loaded yet, skipping render');
       return;
     }
 
@@ -311,11 +316,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; // Semi-transparent black background
       ctx.fillRect(0, 20, CANVAS_SIZE, 80);
 
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold 48px "${selectedFont}", monospace`;
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('Deploy Units', CANVAS_SIZE / 2, 60);
+      renderTextWithShadow(
+        ctx,
+        'Deploy Units',
+        CANVAS_SIZE / 2,
+        60,
+        `bold 48px "${headerFont}", monospace`,
+        '#ffffff',
+        2,
+        'center',
+        'middle'
+      );
     }
 
     // Render test dialog with character selection
@@ -342,8 +353,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       );
 
       // Render "Select a Character" title
-      ctx.fillStyle = '#ffffff';
-      ctx.font = `bold 24px "${selectedFont}", monospace`;
+      ctx.fillStyle = '#000000';
+      ctx.font = `bold 32px "${dialogFont}", monospace`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('Select a Character', dialogX + (dialogWidth + 2) * TILE_SIZE / 2, dialogY + TILE_SIZE * 1.5);
@@ -377,9 +388,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         );
 
         // Draw character name below sprite
-        ctx.fillStyle = '#ffffff';
-        ctx.font = `12px "${selectedFont}", monospace`;
+        ctx.fillStyle = '#000000';
+        ctx.font = `16px "${dialogFont}", monospace`;
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'alphabetic';
         ctx.fillText(member.name, x + TILE_SIZE, spriteY + TILE_SIZE * 2.5);
       });
     }
@@ -392,7 +404,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       displayCtx.drawImage(bufferCanvas, 0, 0);
       console.log('CombatView: Copied buffer to display canvas');
     }
-  }, [spritesLoaded, fontLoaded, combatState, windowSize, selectedFont, encounter]);
+  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, encounter]);
 
   // Available fonts (matching what's in index.css)
   const availableFonts = [
@@ -458,13 +470,53 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             zIndex: 4000,
           }}
         >
-          <div style={{ marginBottom: '8px', fontWeight: 'bold' }}>Font Diagnostics</div>
+          <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>Font Diagnostics</div>
+
+          {/* Header Font Selector */}
           <label style={{ display: 'block', marginBottom: '4px' }}>
-            Selected Font:
+            Header Font:
           </label>
           <select
-            value={selectedFont}
-            onChange={(e) => setSelectedFont(e.target.value)}
+            value={headerFont}
+            onChange={(e) => setHeaderFont(e.target.value)}
+            style={{
+              width: '200px',
+              padding: '4px',
+              background: '#222',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              color: '#fff',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              marginBottom: '8px',
+            }}
+          >
+            {availableFonts.map((font) => (
+              <option key={font} value={font}>
+                {font}
+              </option>
+            ))}
+          </select>
+          <div
+            style={{
+              marginBottom: '12px',
+              padding: '8px',
+              background: '#111',
+              borderRadius: '3px',
+              fontFamily: headerFont,
+              fontSize: '16px',
+            }}
+          >
+            Deploy Units
+          </div>
+
+          {/* Dialog Font Selector */}
+          <label style={{ display: 'block', marginBottom: '4px' }}>
+            Dialog Font:
+          </label>
+          <select
+            value={dialogFont}
+            onChange={(e) => setDialogFont(e.target.value)}
             style={{
               width: '200px',
               padding: '4px',
@@ -484,15 +536,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           </select>
           <div
             style={{
-              marginTop: '12px',
+              marginTop: '8px',
               padding: '8px',
               background: '#111',
               borderRadius: '3px',
-              fontFamily: selectedFont,
+              fontFamily: dialogFont,
               fontSize: '16px',
             }}
           >
-            Deploy Units
+            Select a Character
           </div>
         </div>
       )}
