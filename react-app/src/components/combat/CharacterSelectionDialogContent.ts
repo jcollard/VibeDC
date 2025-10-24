@@ -13,6 +13,8 @@ export class CharacterSelectionDialogContent extends DialogContent {
   private spriteImages: Map<string, HTMLImageElement>;
   private tileSize: number;
   private spriteSize: number;
+  private hoveredIndex: number | null;
+  private highlightColor: string;
 
   constructor(
     title: string,
@@ -20,7 +22,9 @@ export class CharacterSelectionDialogContent extends DialogContent {
     font: string,
     spriteImages: Map<string, HTMLImageElement>,
     tileSize: number,
-    spriteSize: number
+    spriteSize: number,
+    hoveredIndex: number | null = null,
+    highlightColor: string = '#ccaa00'
   ) {
     super();
     this.title = title;
@@ -29,6 +33,8 @@ export class CharacterSelectionDialogContent extends DialogContent {
     this.spriteImages = spriteImages;
     this.tileSize = tileSize;
     this.spriteSize = spriteSize;
+    this.hoveredIndex = hoveredIndex;
+    this.highlightColor = highlightColor;
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number): void {
@@ -80,7 +86,9 @@ export class CharacterSelectionDialogContent extends DialogContent {
 
       // Draw character name to the right of sprite (truncated to 13 characters)
       const truncatedName = member.name.substring(0, 13);
-      ctx.fillStyle = '#000000';
+
+      // Use highlight color if this row is hovered
+      ctx.fillStyle = this.hoveredIndex === index ? this.highlightColor : '#000000';
       ctx.font = `${NAME_FONT_SIZE}px "${this.font}", monospace`;
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';

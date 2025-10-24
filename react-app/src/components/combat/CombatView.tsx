@@ -4,6 +4,7 @@ import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { DeploymentPhaseHandler } from '../../models/combat/DeploymentPhaseHandler';
+import { UIConfig } from '../../config/UIConfig';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -50,6 +51,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track selected fonts for testing
   const [headerFont, setHeaderFont] = useState<string>('DungeonSlant');
   const [dialogFont, setDialogFont] = useState<string>('Bitfantasy');
+
+  // Track highlight color for testing
+  const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
+
+  // Update UIConfig when highlight color changes
+  useEffect(() => {
+    UIConfig.setHighlightColor(highlightColor);
+  }, [highlightColor]);
 
   // Track if the selected fonts are loaded
   const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
@@ -324,6 +333,29 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
   }, [combatState.map.width, combatState.map.height, combatState.phase, encounter]);
 
+  // Handle canvas mouse move for hover detection
+  const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = displayCanvasRef.current;
+    if (!canvas) return;
+
+    // Get canvas bounding rect
+    const rect = canvas.getBoundingClientRect();
+
+    // Calculate scale factor (canvas might be scaled to fit viewport)
+    const scaleX = CANVAS_SIZE / rect.width;
+    const scaleY = CANVAS_SIZE / rect.height;
+
+    // Get mouse position relative to canvas
+    const canvasX = (event.clientX - rect.left) * scaleX;
+    const canvasY = (event.clientY - rect.top) * scaleY;
+
+    // Pass mouse move to phase handler (if deployment phase)
+    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
+      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+      handler.handleMouseMove(canvasX, canvasY, 3); // 3 characters in the list
+    }
+  }, [combatState.phase]);
+
   // Available fonts (matching what's in index.css)
   const availableFonts = [
     'OldWizard',
@@ -464,6 +496,38 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           >
             Select a Character
           </div>
+
+          {/* Highlight Color Picker */}
+          <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
+            Highlight Color:
+          </label>
+          <input
+            type="color"
+            value={highlightColor}
+            onChange={(e) => setHighlightColor(e.target.value)}
+            style={{
+              width: '200px',
+              height: '32px',
+              padding: '2px',
+              background: '#222',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              cursor: 'pointer',
+            }}
+          />
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '8px',
+              background: '#111',
+              borderRadius: '3px',
+              fontFamily: dialogFont,
+              fontSize: '16px',
+              color: highlightColor,
+            }}
+          >
+            Highlighted Text Preview
+          </div>
         </div>
       )}
 
@@ -482,6 +546,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         <canvas
           ref={displayCanvasRef}
           onClick={handleCanvasClick}
+          onMouseMove={handleCanvasMouseMove}
           style={{
             width: '100%',
             height: '100%',

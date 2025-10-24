@@ -5,6 +5,7 @@ import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { renderDialogWithContent, renderTextWithShadow, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
 import { CharacterSelectionDialogContent } from '../../components/combat/CharacterSelectionDialogContent';
+import { UIConfig } from '../../config/UIConfig';
 
 /**
  * DeploymentPhaseHandler manages the deployment phase of combat where players
@@ -22,6 +23,10 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
   // Selection state
   private selectedZoneIndex: number | null = null;
+
+  // Hover state for character selection
+  private hoveredCharacterIndex: number | null = null;
+  private lastDialogBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   /**
    * Update animation state
@@ -75,6 +80,63 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    */
   getSelectedZoneIndex(): number | null {
     return this.selectedZoneIndex;
+  }
+
+  /**
+   * Handle mouse move to detect hover over character rows in the dialog
+   * Uses the last rendered dialog bounds
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param characterCount - Number of characters in the list
+   * @returns True if hovering over the dialog
+   */
+  handleMouseMove(
+    canvasX: number,
+    canvasY: number,
+    characterCount: number
+  ): boolean {
+    // Only process hover if a zone is selected (dialog is visible)
+    if (this.selectedZoneIndex === null || !this.lastDialogBounds) {
+      this.hoveredCharacterIndex = null;
+      return false;
+    }
+
+    const { x: dialogX, y: dialogY, width: dialogWidth, height: dialogHeight } = this.lastDialogBounds;
+
+    // Check if mouse is inside dialog bounds
+    if (
+      canvasX >= dialogX &&
+      canvasX <= dialogX + dialogWidth &&
+      canvasY >= dialogY &&
+      canvasY <= dialogY + dialogHeight
+    ) {
+      // Calculate which character row is being hovered
+      // Match CharacterSelectionDialogContent's layout
+      const ROW_HEIGHT = 48;
+      const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
+      const BORDER_PADDING = 24; // 0.5 tiles (24px at 48px tile size)
+
+      const relativeY = canvasY - dialogY - BORDER_PADDING - TITLE_HEIGHT;
+      const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
+
+      if (rowIndex >= 0 && rowIndex < characterCount) {
+        this.hoveredCharacterIndex = rowIndex;
+      } else {
+        this.hoveredCharacterIndex = null;
+      }
+
+      return true;
+    }
+
+    this.hoveredCharacterIndex = null;
+    return false;
+  }
+
+  /**
+   * Get the currently hovered character index
+   */
+  getHoveredCharacterIndex(): number | null {
+    return this.hoveredCharacterIndex;
   }
 
   /**
@@ -254,14 +316,16 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     // Get the first 3 party members
     const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
 
-    // Create dialog content
+    // Create dialog content with hover state and highlight color
     const dialogContent = new CharacterSelectionDialogContent(
       'Select a Character',
       partyMembers,
       dialogFont,
       spriteImages,
       tileSize,
-      spriteSize
+      spriteSize,
+      this.hoveredCharacterIndex,
+      UIConfig.getHighlightColor()
     );
 
     // Measure the content bounds
@@ -297,6 +361,14 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     // Clamp dialog to stay within canvas bounds
     const clampedDialogX = Math.max(10, Math.min(dialogX, canvasSize - actualDialogWidth - 10));
     const clampedDialogY = Math.max(10, Math.min(dialogY, canvasSize - actualDialogHeight - 10));
+
+    // Store dialog bounds for hover detection
+    this.lastDialogBounds = {
+      x: clampedDialogX,
+      y: clampedDialogY,
+      width: actualDialogWidth,
+      height: actualDialogHeight
+    };
 
     // Render dialog with auto-sizing, clamped to canvas bounds
     renderDialogWithContent(
