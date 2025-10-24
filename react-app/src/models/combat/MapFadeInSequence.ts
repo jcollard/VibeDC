@@ -75,54 +75,109 @@ export class MapFadeInSequence implements CinematicSequence {
     }
   }
 
+  /**
+   * Use dithering to create a pixelated fade effect at 4px block level
+   * Returns true if the pixel should be drawn based on alpha and dither pattern
+   */
+  private shouldDrawPixel(pixelX: number, pixelY: number, alpha: number): boolean {
+    // Dither pixel size (4px blocks)
+    const ditherPixelSize = 4;
+
+    // Use a 4x4 Bayer matrix for ordered dithering
+    const bayerMatrix = [
+      [0, 8, 2, 10],
+      [12, 4, 14, 6],
+      [3, 11, 1, 9],
+      [15, 7, 13, 5]
+    ];
+
+    // Calculate which dither block this pixel is in
+    const blockX = Math.floor(pixelX / ditherPixelSize);
+    const blockY = Math.floor(pixelY / ditherPixelSize);
+
+    const threshold = bayerMatrix[blockY % 4][blockX % 4] / 16;
+    return alpha > threshold;
+  }
+
   render(state: CombatState, _encounter: CombatEncounter, context: CinematicRenderContext): void {
     const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
     const map = state.map;
 
-    // Render each tile with calculated alpha
+    // Create an off-screen canvas for pixel manipulation
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = tileSize;
+    tempCanvas.height = tileSize;
+    const tempCtx = tempCanvas.getContext('2d');
+    if (!tempCtx) return;
+
+    // Render each tile with pixel-level dithering
     const allCells = map.getAllCells();
     for (const { position, cell } of allCells) {
-      const x = position.x;
-      const y = position.y;
+      const tileX = position.x;
+      const tileY = position.y;
 
       // Calculate position
-      const drawX = x * tileSize + offsetX;
-      const drawY = y * tileSize + offsetY;
+      const drawX = tileX * tileSize + offsetX;
+      const drawY = tileY * tileSize + offsetY;
 
       // Calculate alpha for this tile based on diagonal wave
-      const alpha = this.calculateTileAlpha(x, y, map.width, map.height);
+      const alpha = this.calculateTileAlpha(tileX, tileY, map.width, map.height);
 
-      // Get sprite ID from cell
+      if (alpha <= 0) continue;
+
+      // Clear temp canvas
+      tempCtx.clearRect(0, 0, tileSize, tileSize);
+
+      // Draw the tile to temp canvas first
       if (cell.spriteId) {
         const spriteDef = SpriteRegistry.getById(cell.spriteId);
         if (spriteDef) {
           const spriteImage = spriteImages.get(spriteDef.spriteSheet);
           if (spriteImage) {
-            // Calculate source rectangle in sprite sheet
             const srcX = spriteDef.x * spriteSize;
             const srcY = spriteDef.y * spriteSize;
             const srcWidth = (spriteDef.width || 1) * spriteSize;
             const srcHeight = (spriteDef.height || 1) * spriteSize;
 
-            // Apply alpha and draw tile
-            ctx.save();
-            ctx.globalAlpha = alpha;
-            ctx.drawImage(
+            tempCtx.drawImage(
               spriteImage,
               srcX, srcY, srcWidth, srcHeight,
-              drawX, drawY, tileSize, tileSize
+              0, 0, tileSize, tileSize
             );
-            ctx.restore();
           }
         }
       } else {
         // Render a default tile based on terrain type
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.fillStyle = cell.walkable ? '#444444' : '#222222';
-        ctx.fillRect(drawX, drawY, tileSize, tileSize);
-        ctx.restore();
+        tempCtx.fillStyle = cell.walkable ? '#444444' : '#222222';
+        tempCtx.fillRect(0, 0, tileSize, tileSize);
       }
+
+      // Get pixel data from temp canvas
+      const imageData = tempCtx.getImageData(0, 0, tileSize, tileSize);
+      const data = imageData.data;
+
+      // Apply dithering at pixel level
+      for (let py = 0; py < tileSize; py++) {
+        for (let px = 0; px < tileSize; px++) {
+          const index = (py * tileSize + px) * 4;
+
+          // Calculate global pixel position for dithering pattern
+          const globalPixelX = tileX * tileSize + px;
+          const globalPixelY = tileY * tileSize + py;
+
+          // Check if this pixel should be drawn based on dithering
+          if (!this.shouldDrawPixel(globalPixelX, globalPixelY, alpha)) {
+            // Make pixel transparent
+            data[index + 3] = 0;
+          }
+        }
+      }
+
+      // Put modified pixels back
+      tempCtx.putImageData(imageData, 0, 0);
+
+      // Draw the dithered tile to main canvas
+      ctx.drawImage(tempCanvas, drawX, drawY);
     }
   }
 
