@@ -378,6 +378,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               unitManifest: newManifest
             });
 
+            // Clear the selected zone after deploying
+            handler.clearSelectedZone();
+
             if (existingUnit) {
               console.log(`Replaced ${existingUnit.name} with ${unit.name} at position (${deploymentZone.x}, ${deploymentZone.y})`);
             } else {

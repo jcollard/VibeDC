@@ -120,6 +120,13 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   }
 
   /**
+   * Clear the selected deployment zone
+   */
+  clearSelectedZone(): void {
+    this.selectedZoneIndex = null;
+  }
+
+  /**
    * Handle mouse move to detect hover over character rows in the dialog
    * Uses the last rendered dialog bounds
    * @param canvasX - X coordinate on canvas (in pixels)
