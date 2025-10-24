@@ -123,15 +123,6 @@ export class MapFadeInSequence implements CinematicSequence {
         ctx.fillRect(drawX, drawY, tileSize, tileSize);
         ctx.restore();
       }
-
-      // Draw grid lines (also with fade)
-      if (alpha > 0) {
-        ctx.save();
-        ctx.globalAlpha = alpha;
-        ctx.strokeStyle = '#666666';
-        ctx.strokeRect(drawX, drawY, tileSize, tileSize);
-        ctx.restore();
-      }
     }
   }
 

@@ -30,15 +30,15 @@ tilesets:
       - char: '#'
         terrain: wall
         walkable: false
-        spriteId: rock-tiles-196
+        spriteId: vegetation-2
       - char: .
         terrain: floor
         walkable: true
-        spriteId: rock-tiles-180
+        spriteId: biomes-91
       - char: T
         terrain: wall
         walkable: false
-        spriteId: rock-tiles-195
+        spriteId: vegetation-1
     tags:
       - outdoor
       - forest
