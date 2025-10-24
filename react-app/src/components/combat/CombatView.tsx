@@ -7,6 +7,8 @@ import { DeploymentPhaseHandler, createUnitFromPartyMember } from '../../models/
 import { UIConfig } from '../../config/UIConfig';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
+import { CinematicManager } from '../../models/combat/CinematicSequence';
+import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -33,6 +35,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Initialize phase handler based on current phase
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler());
+
+  // Initialize cinematic manager
+  const cinematicManagerRef = useRef<CinematicManager>(new CinematicManager());
 
   // Animation timing
   const lastFrameTimeRef = useRef<number>(performance.now());
@@ -159,6 +164,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     loadSprites().catch(console.error);
   }, [combatState.map, combatState.phase, encounter]);
 
+  // Start the map fade-in cinematic when encounter loads
+  useEffect(() => {
+    if (spritesLoaded && fontsLoaded) {
+      const fadeInSequence = new MapFadeInSequence(2.0);
+      cinematicManagerRef.current.play(fadeInSequence, combatState, encounter);
+    }
+  }, [spritesLoaded, fontsLoaded, combatState, encounter]);
+
   // Render function - draws one frame to the canvas
   const renderFrame = useCallback(() => {
     const displayCanvas = displayCanvasRef.current;
@@ -195,6 +208,31 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Disable image smoothing for pixel-perfect rendering
     ctx.imageSmoothingEnabled = false;
+
+    // Check if a cinematic is playing
+    const cinematicPlaying = cinematicManagerRef.current.isPlayingCinematic();
+
+    // If cinematic is playing, render it instead of normal gameplay
+    if (cinematicPlaying) {
+      cinematicManagerRef.current.render(combatState, encounter, {
+        ctx,
+        canvasSize: CANVAS_SIZE,
+        tileSize: TILE_SIZE,
+        spriteSize: SPRITE_SIZE,
+        offsetX,
+        offsetY,
+        spriteImages: spriteImagesRef.current,
+      });
+
+      // Copy buffer to display canvas and return early
+      const displayCtx = displayCanvas.getContext('2d');
+      if (displayCtx) {
+        displayCtx.imageSmoothingEnabled = false;
+        displayCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        displayCtx.drawImage(bufferCanvas, 0, 0);
+      }
+      return;
+    }
 
     // Render each cell with offset to center the map
     const allCells = combatState.map.getAllCells();
@@ -315,8 +353,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
       lastFrameTimeRef.current = currentTime;
 
-      // Update phase handler (for animations)
-      if (phaseHandlerRef.current.update) {
+      // Update cinematic manager (has priority over phase updates)
+      const cinematicPlaying = cinematicManagerRef.current.update(deltaTime);
+
+      // Update phase handler (for animations) only if no cinematic is playing
+      if (!cinematicPlaying && phaseHandlerRef.current.update) {
         phaseHandlerRef.current.update(combatState, encounter, deltaTime);
       }
 
