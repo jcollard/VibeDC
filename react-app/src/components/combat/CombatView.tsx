@@ -231,7 +231,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
     }
 
-    // Render deployed units from the manifest
+    // Render phase-specific overlays using the phase handler (before units so deployment zones appear below)
+    phaseHandlerRef.current.render(combatState, encounter, {
+      ctx,
+      canvasSize: CANVAS_SIZE,
+      tileSize: TILE_SIZE,
+      spriteSize: SPRITE_SIZE,
+      offsetX,
+      offsetY,
+      spriteImages: spriteImagesRef.current,
+      headerFont,
+      dialogFont,
+    });
+
+    // Render deployed units from the manifest (after deployment zones so they appear on top)
     const allUnits = combatState.unitManifest.getAllUnits();
     for (const { unit, position } of allUnits) {
       const x = position.x * TILE_SIZE + offsetX;
@@ -260,19 +273,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         }
       }
     }
-
-    // Render phase-specific overlays using the phase handler
-    phaseHandlerRef.current.render(combatState, encounter, {
-      ctx,
-      canvasSize: CANVAS_SIZE,
-      tileSize: TILE_SIZE,
-      spriteSize: SPRITE_SIZE,
-      offsetX,
-      offsetY,
-      spriteImages: spriteImagesRef.current,
-      headerFont,
-      dialogFont,
-    });
 
     // Copy buffer to display canvas
     const displayCtx = displayCanvas.getContext('2d');
