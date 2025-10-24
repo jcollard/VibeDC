@@ -1,4 +1,5 @@
 import type { CombatMap } from './CombatMap';
+import type { CombatUnitManifest } from './CombatUnitManifest';
 
 /**
  * Combat phase types
@@ -35,6 +36,11 @@ export interface CombatState {
    * The current phase of combat
    */
   phase: CombatPhase;
+
+  /**
+   * Tracks all units and their positions on the map
+   */
+  unitManifest: CombatUnitManifest;
 
   // Additional fields will be added as combat mechanics are implemented
 }

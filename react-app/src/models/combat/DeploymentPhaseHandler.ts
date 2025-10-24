@@ -1,11 +1,48 @@
 import type { CombatPhaseHandler, PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
+import type { CombatUnit } from './CombatUnit';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
-import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
+import { PartyMemberRegistry, type PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
 import { renderDialogWithContent, renderTextWithShadow, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
 import { CharacterSelectionDialogContent } from '../../components/combat/CharacterSelectionDialogContent';
 import { UIConfig } from '../../config/UIConfig';
+import { HumanoidUnit } from './HumanoidUnit';
+import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
+
+/**
+ * Create a CombatUnit from a PartyMemberDefinition
+ * Creates a basic unit - abilities and equipment will be added later as those systems are implemented
+ */
+export function createUnitFromPartyMember(member: PartyMemberDefinition): CombatUnit {
+  // Get the unit class
+  const unitClass = UnitClassRegistry.getById(member.unitClassId);
+  if (!unitClass) {
+    throw new Error(`Unit class not found: ${member.unitClassId}`);
+  }
+
+  // Create the humanoid unit with base stats
+  const unit = new HumanoidUnit(
+    member.name,
+    unitClass,
+    member.baseHealth,
+    member.baseMana,
+    member.basePhysicalPower,
+    member.baseMagicPower,
+    member.baseSpeed,
+    member.baseMovement,
+    member.basePhysicalEvade,
+    member.baseMagicEvade,
+    member.baseCourage,
+    member.baseAttunement,
+    member.spriteId
+  );
+
+  // TODO: Add learned abilities, equipment, and secondary class once setter methods are available
+  // For now, the unit is created with just base stats
+
+  return unit;
+}
 
 /**
  * DeploymentPhaseHandler manages the deployment phase of combat where players
@@ -137,6 +174,49 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    */
   getHoveredCharacterIndex(): number | null {
     return this.hoveredCharacterIndex;
+  }
+
+  /**
+   * Handle click on character in the selection dialog
+   * Uses the last rendered dialog bounds
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param characterCount - Number of characters in the list
+   * @returns Character index if clicked, null otherwise
+   */
+  handleCharacterClick(
+    canvasX: number,
+    canvasY: number,
+    characterCount: number
+  ): number | null {
+    // Only process click if a zone is selected (dialog is visible)
+    if (this.selectedZoneIndex === null || !this.lastDialogBounds) {
+      return null;
+    }
+
+    const { x: dialogX, y: dialogY, width: dialogWidth, height: dialogHeight } = this.lastDialogBounds;
+
+    // Check if click is inside dialog bounds
+    if (
+      canvasX >= dialogX &&
+      canvasX <= dialogX + dialogWidth &&
+      canvasY >= dialogY &&
+      canvasY <= dialogY + dialogHeight
+    ) {
+      // Calculate which character row was clicked
+      const ROW_HEIGHT = 48;
+      const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
+      const BORDER_PADDING = 24; // 0.5 tiles (24px at 48px tile size)
+
+      const relativeY = canvasY - dialogY - BORDER_PADDING - TITLE_HEIGHT;
+      const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
+
+      if (rowIndex >= 0 && rowIndex < characterCount) {
+        return rowIndex;
+      }
+    }
+
+    return null;
   }
 
   /**

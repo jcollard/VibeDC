@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { CombatEncounter } from './CombatEncounter';
 import type { CombatState } from './CombatState';
 import { CombatMap, TerrainType } from './CombatMap';
+import { CombatUnitManifest } from './CombatUnitManifest';
 import { UnitClass } from './UnitClass';
 import { CombatAbility } from './CombatAbility';
 import { EnemyRegistry } from '../../utils/EnemyRegistry';
@@ -20,6 +21,7 @@ function createMockState(turnNumber: number): CombatState {
     map: new CombatMap(1, 1), // Minimal 1x1 map
     tilesetId: 'test',
     phase: 'deployment',
+    unitManifest: new CombatUnitManifest(),
   };
 }
 

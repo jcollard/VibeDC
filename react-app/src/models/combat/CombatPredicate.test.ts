@@ -10,6 +10,7 @@ import {
 } from './CombatPredicate';
 import type { CombatState } from './CombatState';
 import { CombatMap } from './CombatMap';
+import { CombatUnitManifest } from './CombatUnitManifest';
 
 // Helper to create a minimal CombatState for testing
 function createMockState(turnNumber: number): CombatState {
@@ -18,6 +19,7 @@ function createMockState(turnNumber: number): CombatState {
     map: new CombatMap(1, 1), // Minimal 1x1 map
     tilesetId: 'test',
     phase: 'deployment',
+    unitManifest: new CombatUnitManifest(),
   };
 }
 

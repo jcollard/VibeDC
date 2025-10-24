@@ -3,8 +3,10 @@ import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
-import { DeploymentPhaseHandler } from '../../models/combat/DeploymentPhaseHandler';
+import { DeploymentPhaseHandler, createUnitFromPartyMember } from '../../models/combat/DeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
+import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
+import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -21,11 +23,12 @@ const CANVAS_SIZE = 960; // Canvas size in pixels (960x960)
  */
 export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Initialize combat state from the encounter
-  const [combatState] = useState<CombatState>({
+  const [combatState, setCombatState] = useState<CombatState>({
     turnNumber: 0,
     map: encounter.map,
     tilesetId: encounter.tilesetId || 'default',
     phase: 'deployment', // Start in deployment phase
+    unitManifest: new CombatUnitManifest(),
   });
 
   // Initialize phase handler based on current phase
@@ -107,7 +110,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Collect all sprite IDs from the map
       const allCells = combatState.map.getAllCells();
-      console.log('CombatView: Loading sprites for', allCells.length, 'cells');
 
       for (const { cell } of allCells) {
         if (cell.spriteId) {
@@ -119,8 +121,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const phaseSprites = phaseHandlerRef.current.getRequiredSprites(combatState, encounter);
       phaseSprites.spriteIds.forEach(id => spritesToLoad.add(id));
 
-      console.log('CombatView: Sprites to load:', Array.from(spritesToLoad));
-
       // Load each sprite image
       const loadPromises = Array.from(spritesToLoad).map(async (spriteId) => {
         const spriteDef = SpriteRegistry.getById(spriteId);
@@ -129,8 +129,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           return;
         }
 
-        console.log(`CombatView: Loading sprite ${spriteId} from ${spriteDef.spriteSheet}`);
-
         // Check if we already loaded this sprite sheet
         if (!spriteImagesRef.current.has(spriteDef.spriteSheet)) {
           const img = new Image();
@@ -138,7 +136,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           await new Promise<void>((resolve, reject) => {
             img.onload = () => {
               spriteImagesRef.current.set(spriteDef.spriteSheet, img);
-              console.log(`CombatView: Loaded sprite sheet ${spriteDef.spriteSheet}`);
               resolve();
             };
             img.onerror = (err) => {
@@ -150,7 +147,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       });
 
       await Promise.all(loadPromises);
-      console.log('CombatView: All sprites loaded');
       setSpritesLoaded(true);
     };
 
@@ -184,10 +180,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const offsetX = (CANVAS_SIZE - mapWidth) / 2;
     const offsetY = (CANVAS_SIZE - mapHeight) / 2;
 
-    console.log(`CombatView: Canvas size: ${CANVAS_SIZE}x${CANVAS_SIZE}`);
-    console.log(`CombatView: Map size: ${mapWidth}x${mapHeight} (${combatState.map.width}x${combatState.map.height} tiles)`);
-    console.log(`CombatView: Offset: (${offsetX}, ${offsetY})`);
-
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
 
@@ -200,8 +192,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render each cell with offset to center the map
     const allCells = combatState.map.getAllCells();
-    let renderedSprites = 0;
-    let renderedDefaults = 0;
 
     for (const { position, cell } of allCells) {
       const x = position.x * TILE_SIZE + offsetX;
@@ -224,7 +214,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               srcX, srcY, srcWidth, srcHeight,
               x, y, TILE_SIZE, TILE_SIZE
             );
-            renderedSprites++;
           } else {
             console.warn(`CombatView: Sprite image not loaded for ${cell.spriteId}`);
           }
@@ -239,11 +228,38 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         // Draw grid lines
         ctx.strokeStyle = '#666666';
         ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
-        renderedDefaults++;
       }
     }
 
-    console.log(`CombatView: Rendered ${renderedSprites} sprites, ${renderedDefaults} default tiles`);
+    // Render deployed units from the manifest
+    const allUnits = combatState.unitManifest.getAllUnits();
+    for (const { unit, position } of allUnits) {
+      const x = position.x * TILE_SIZE + offsetX;
+      const y = position.y * TILE_SIZE + offsetY;
+
+      // Get the unit's sprite
+      const spriteId = unit.spriteId;
+      if (spriteId) {
+        const spriteDef = SpriteRegistry.getById(spriteId);
+        if (spriteDef) {
+          const spriteImage = spriteImagesRef.current.get(spriteDef.spriteSheet);
+          if (spriteImage) {
+            // Calculate source rectangle in the sprite sheet
+            const srcX = spriteDef.x * SPRITE_SIZE;
+            const srcY = spriteDef.y * SPRITE_SIZE;
+            const srcWidth = (spriteDef.width || 1) * SPRITE_SIZE;
+            const srcHeight = (spriteDef.height || 1) * SPRITE_SIZE;
+
+            // Draw the unit sprite
+            ctx.drawImage(
+              spriteImage,
+              srcX, srcY, srcWidth, srcHeight,
+              x, y, TILE_SIZE, TILE_SIZE
+            );
+          }
+        }
+      }
+    }
 
     // Render phase-specific overlays using the phase handler
     phaseHandlerRef.current.render(combatState, encounter, {
@@ -302,7 +318,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
   }, [spritesLoaded, fontsLoaded, renderFrame, combatState, encounter]);
 
-  // Handle canvas click for deployment zone selection
+  // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = displayCanvasRef.current;
     if (!canvas) return;
@@ -325,13 +341,63 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Pass click to phase handler (if deployment phase)
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+
+      // First check if clicking on a character in the dialog
+      const characterIndex = handler.handleCharacterClick(canvasX, canvasY, 3);
+      if (characterIndex !== null) {
+        // Character was clicked - create unit and place it
+        const partyMembers = PartyMemberRegistry.getAll().slice(0, 3);
+        const selectedMember = partyMembers[characterIndex];
+        const selectedZoneIndex = handler.getSelectedZoneIndex();
+
+        if (selectedMember && selectedZoneIndex !== null) {
+          const deploymentZone = encounter.playerDeploymentZones[selectedZoneIndex];
+
+          // Create unit from party member and add to manifest (replacing existing if present)
+          try {
+            const unit = createUnitFromPartyMember(selectedMember);
+            const newManifest = new CombatUnitManifest();
+
+            // Check if zone is already occupied
+            const existingUnit = combatState.unitManifest.getUnitAtPosition(deploymentZone);
+
+            // Copy existing units, excluding any unit at the deployment zone
+            combatState.unitManifest.getAllUnits().forEach(placement => {
+              // Skip the unit at the deployment position (it will be replaced)
+              if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
+                newManifest.addUnit(placement.unit, placement.position);
+              }
+            });
+
+            // Add new unit at the deployment zone
+            newManifest.addUnit(unit, deploymentZone);
+
+            // Update state
+            setCombatState({
+              ...combatState,
+              unitManifest: newManifest
+            });
+
+            if (existingUnit) {
+              console.log(`Replaced ${existingUnit.name} with ${unit.name} at position (${deploymentZone.x}, ${deploymentZone.y})`);
+            } else {
+              console.log(`Deployed ${unit.name} at position (${deploymentZone.x}, ${deploymentZone.y})`);
+            }
+          } catch (error) {
+            console.error('Failed to create unit:', error);
+          }
+        }
+        return;
+      }
+
+      // If no character clicked, check for deployment zone click
       const clicked = handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, encounter);
 
       if (clicked) {
         console.log('Deployment zone selected:', handler.getSelectedZoneIndex());
       }
     }
-  }, [combatState.map.width, combatState.map.height, combatState.phase, encounter]);
+  }, [combatState, encounter, setCombatState]);
 
   // Handle canvas mouse move for hover detection
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
