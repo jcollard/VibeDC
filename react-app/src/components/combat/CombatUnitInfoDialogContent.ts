@@ -5,6 +5,7 @@ import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { HumanoidUnit } from '../../models/combat/HumanoidUnit';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
+import { SpriteRenderer } from '../../utils/SpriteRenderer';
 
 /**
  * Dialog content for displaying combat unit information
@@ -59,20 +60,20 @@ export class CombatUnitInfoDialogContent extends DialogContent {
 
     let currentY = y;
 
-    // Render unit sprite on the left
+    // Render unit sprite on the left using pixel-perfect renderer
     const spriteDef = SpriteRegistry.getById(this.unit.spriteId);
     if (spriteDef) {
       const spriteImage = this.spriteImages.get(spriteDef.spriteSheet);
       if (spriteImage) {
-        const srcX = spriteDef.x * this.spriteSize;
-        const srcY = spriteDef.y * this.spriteSize;
-        const srcWidth = (spriteDef.width || 1) * this.spriteSize;
-        const srcHeight = (spriteDef.height || 1) * this.spriteSize;
-
-        ctx.drawImage(
+        SpriteRenderer.renderSprite(
+          ctx,
           spriteImage,
-          srcX, srcY, srcWidth, srcHeight,
-          x, currentY, SPRITE_SIZE_PIXELS, SPRITE_SIZE_PIXELS
+          spriteDef,
+          this.spriteSize,
+          x,
+          currentY,
+          SPRITE_SIZE_PIXELS,
+          SPRITE_SIZE_PIXELS
         );
       }
     }

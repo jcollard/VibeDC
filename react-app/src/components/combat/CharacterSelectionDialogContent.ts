@@ -4,6 +4,7 @@ import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import type { PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
+import { SpriteRenderer } from '../../utils/SpriteRenderer';
 
 /**
  * Dialog content for character selection
@@ -89,16 +90,16 @@ export class CharacterSelectionDialogContent extends DialogContent {
 
       const rowY = firstRowY + (index * ROW_HEIGHT);
 
-      // Draw character sprite
-      const srcX = spriteDef.x * this.spriteSize;
-      const srcY = spriteDef.y * this.spriteSize;
-      const srcWidth = (spriteDef.width || 1) * this.spriteSize;
-      const srcHeight = (spriteDef.height || 1) * this.spriteSize;
-
-      ctx.drawImage(
+      // Draw character sprite using pixel-perfect renderer
+      SpriteRenderer.renderSprite(
+        ctx,
         spriteImage,
-        srcX, srcY, srcWidth, srcHeight,
-        x, rowY, SPRITE_SIZE_PIXELS, SPRITE_SIZE_PIXELS
+        spriteDef,
+        this.spriteSize,
+        x,
+        rowY,
+        SPRITE_SIZE_PIXELS,
+        SPRITE_SIZE_PIXELS
       );
 
       // Draw character name to the right of sprite (truncated to 13 characters)
