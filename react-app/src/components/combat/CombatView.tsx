@@ -23,10 +23,16 @@ import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
 import { renderDialogWithContent } from '../../utils/DialogRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatLayout1TraditionalRenderer } from '../../models/combat/layouts/CombatLayout1TraditionalRenderer';
+import { CombatLayout1bCompactRenderer } from '../../models/combat/layouts/CombatLayout1bCompactRenderer';
+import { CombatLayout1cWideRenderer } from '../../models/combat/layouts/CombatLayout1cWideRenderer';
 import { CombatLayout2BottomHUDRenderer } from '../../models/combat/layouts/CombatLayout2BottomHUDRenderer';
 import { CombatLayout3SplitScreenRenderer } from '../../models/combat/layouts/CombatLayout3SplitScreenRenderer';
+import { CombatLayout3bWideRenderer } from '../../models/combat/layouts/CombatLayout3bWideRenderer';
 import { CombatLayout4CornerPanelsRenderer } from '../../models/combat/layouts/CombatLayout4CornerPanelsRenderer';
 import { CombatLayout5TopBarRenderer } from '../../models/combat/layouts/CombatLayout5TopBarRenderer';
+import { CombatLayout5bMinimalRenderer } from '../../models/combat/layouts/CombatLayout5bMinimalRenderer';
+import { CombatLayout5cDetailedRenderer } from '../../models/combat/layouts/CombatLayout5cDetailedRenderer';
+import { CombatLayout6LeftMapRenderer } from '../../models/combat/layouts/CombatLayout6LeftMapRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -184,10 +190,16 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Layout renderers (memoized to prevent recreation)
   const layoutRenderers = useMemo(() => ({
     layout1: new CombatLayout1TraditionalRenderer(),
+    layout1b: new CombatLayout1bCompactRenderer(),
+    layout1c: new CombatLayout1cWideRenderer(),
     layout2: new CombatLayout2BottomHUDRenderer(),
     layout3: new CombatLayout3SplitScreenRenderer(),
+    layout3b: new CombatLayout3bWideRenderer(),
     layout4: new CombatLayout4CornerPanelsRenderer(),
     layout5: new CombatLayout5TopBarRenderer(),
+    layout5b: new CombatLayout5bMinimalRenderer(),
+    layout5c: new CombatLayout5cDetailedRenderer(),
+    layout6: new CombatLayout6LeftMapRenderer(),
   }), []);
 
   // Get current layout renderer
@@ -926,11 +938,23 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             }}
           >
             <option value="none">None (Default)</option>
-            <option value="layout1">Layout 1: Traditional RPG</option>
+            <optgroup label="Traditional RPG Layouts">
+              <option value="layout1">Layout 1: Traditional (96px sidebars)</option>
+              <option value="layout1b">Layout 1b: Compact (72px sidebars)</option>
+              <option value="layout1c">Layout 1c: Wide (flipped)</option>
+            </optgroup>
             <option value="layout2">Layout 2: Bottom HUD</option>
-            <option value="layout3">Layout 3: Split Screen</option>
+            <optgroup label="Split Screen Layouts">
+              <option value="layout3">Layout 3: Split Screen (120px panel)</option>
+              <option value="layout3b">Layout 3b: Wide Split (144px panel)</option>
+            </optgroup>
             <option value="layout4">Layout 4: Corner Panels</option>
-            <option value="layout5">Layout 5: Top Bar</option>
+            <optgroup label="Top/Bottom Bar Layouts">
+              <option value="layout5">Layout 5: Top Bar (36px bars)</option>
+              <option value="layout5b">Layout 5b: Minimal (24px bars)</option>
+              <option value="layout5c">Layout 5c: Detailed (48px bars)</option>
+            </optgroup>
+            <option value="layout6">Layout 6: Left Map w/ Turn Order</option>
           </select>
         </div>
       )}
