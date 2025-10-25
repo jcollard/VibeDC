@@ -1,0 +1,18 @@
+# Font definition for 8px-habbo8
+# Generated from font atlas generator
+
+fonts:
+  - id: "8px-habbo8"
+    atlasPath: "/fonts/8px-habbo8-atlas.png"
+    charWidth: 12
+    charHeight: 12
+    lineHeight: 14
+    charSpacing: 1
+    baselineOffset: 1
+    charOffsetX: 0
+    charOffsetY: 0
+    fallbackChar: "?"
+    charsPerRow: 16
+    charSet: [" ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~"]
+    charWidths: [7, 4, 6, 9, 10, 10, 9, 4, 6, 6, 8, 8, 5, 7, 5, 10, 8, 8, 8, 8, 8, 8, 8, 8, 8, 8, 5, 5, 7, 8, 7, 8, 10, 8, 7, 7, 7, 7, 7, 7, 7, 6, 7, 8, 7, 8, 8, 8, 7, 8, 7, 7, 8, 8, 8, 8, 8, 8, 8, 6, 10, 6, 6, 8, 5, 7, 7, 7, 7, 7, 7, 7, 7, 5, 5, 7, 4, 8, 7, 7, 7, 7, 7, 7, 6, 7, 8, 8, 8, 7, 8, 7, 4, 7, 8]
+    tags: ["pixel", "game", "variable-width"]

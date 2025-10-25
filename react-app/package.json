@@ -5,9 +5,12 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:font-tool": "vite --open /font-tool.html",
     "build": "tsc -b && vite build",
+    "build:font-tool": "npm run build && node scripts/extract-font-tool.js",
     "lint": "eslint .",
     "preview": "vite preview",
+    "preview:font-tool": "vite preview --open /font-tool.html",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:run": "vitest run"
