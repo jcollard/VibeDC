@@ -19,7 +19,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const [fontSize, setFontSize] = useState<number>(12);
   const [lineHeight, setLineHeight] = useState<number>(14);
   const [charSpacing, setCharSpacing] = useState<number>(1);
-  const [baselineOffset, setBaselineOffset] = useState<number>(1);
+  const [baselineOffset, setBaselineOffset] = useState<number>(0);
   const [charsPerRow, setCharsPerRow] = useState<number>(16);
   const [previewScale, setPreviewScale] = useState<number>(2);
   const [antialiasThreshold, setAntialiasThreshold] = useState<number>(200);
@@ -57,12 +57,79 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       const fontFace = new FontFace(familyName, arrayBuffer);
       await fontFace.load();
       document.fonts.add(fontFace);
+
+      // Auto-detect optimal font dimensions
+      autoDetectFontDimensions(familyName);
+
       setFontLoaded(true);
       console.log(`Font loaded: ${familyName}`);
     } catch (error) {
       console.error('Failed to load font:', error);
       alert('Failed to load font file. Please try a different TTF file.');
     }
+  };
+
+  // Auto-detect optimal font dimensions
+  const autoDetectFontDimensions = (fontFamilyName: string) => {
+    // Create a temporary canvas for measurements
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // Test multiple font sizes to find optimal dimensions
+    const testSizes = [8, 10, 12, 14, 16, 18, 20, 24];
+    let bestSize = 12;
+    let bestWidth = 12;
+    let bestHeight = 12;
+
+    // Test with capital 'M' (typically widest character) and lowercase letters
+    const testChars = ['M', 'W', 'A', 'g', 'j', 'y'];
+
+    for (const size of testSizes) {
+      ctx.font = `${size}px "${fontFamilyName}", monospace`;
+
+      // Measure width of widest characters
+      let maxWidth = 0;
+      for (const char of testChars) {
+        const metrics = ctx.measureText(char);
+        maxWidth = Math.max(maxWidth, Math.ceil(metrics.width));
+      }
+
+      // Get font height using font metrics
+      const metrics = ctx.measureText('M');
+      const height = Math.ceil(
+        (metrics.actualBoundingBoxAscent || size) +
+        (metrics.actualBoundingBoxDescent || size * 0.2)
+      );
+
+      // Prefer sizes that result in nice pixel values (8, 12, 16, etc.)
+      const isPowerOfTwo = (n: number) => n > 0 && (n & (n - 1)) === 0;
+      const isNiceNumber = isPowerOfTwo(maxWidth) || maxWidth % 4 === 0 || maxWidth === 12;
+
+      // Pick the first size where width and height are in a reasonable range
+      if (maxWidth >= 6 && maxWidth <= 32 && height >= 6 && height <= 32) {
+        bestSize = size;
+        bestWidth = Math.max(maxWidth, 8); // Minimum 8px
+        bestHeight = Math.max(height, 8); // Minimum 8px
+
+        // If we found a nice number, use it
+        if (isNiceNumber) {
+          break;
+        }
+      }
+    }
+
+    // Round to nearest multiple of 2 for cleaner values
+    bestWidth = Math.ceil(bestWidth / 2) * 2;
+    bestHeight = Math.ceil(bestHeight / 2) * 2;
+
+    // Set the detected values
+    setCharWidth(bestWidth);
+    setCharHeight(bestHeight);
+    setFontSize(bestSize);
+    // Note: lineHeight and baselineOffset left for user to adjust
+
+    console.log(`Auto-detected dimensions: ${bestWidth}×${bestHeight}px at ${bestSize}pt font size`);
   };
 
   // Generate the font atlas
