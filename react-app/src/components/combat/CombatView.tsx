@@ -26,11 +26,11 @@ interface CombatViewProps {
   encounter: CombatEncounter;
 }
 
-const SPRITE_SIZE = 12; // Size of each sprite in the sprite sheet (12x12 pixels)
-const SCALE = 4; // Scale factor for rendering
-const TILE_SIZE = SPRITE_SIZE * SCALE; // Size of each tile when rendered (48x48 pixels)
-const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH;
-const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT;
+// Canvas dimensions - now using base resolution without internal scaling
+const SPRITE_SIZE = CombatConstants.SPRITE_SIZE; // 12x12 pixels
+const TILE_SIZE = CombatConstants.TILE_SIZE; // 12x12 pixels (1:1 with sprite size)
+const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
+const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216 pixels (18 tiles)
 
 /**
  * CombatView is the main view for displaying and interacting with combat encounters.
@@ -192,21 +192,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         new TitleFadeInSequence(
           CombatConstants.TEXT.DEPLOY_TITLE,
           CombatConstants.ANIMATION.TITLE_FADE_DURATION,
-          3, // Scale factor to match DeploymentUI
+          1, // Scale factor (reduced from 3 for new resolution)
           titleY
         ),
         new MessageFadeInSequence(
           CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
           '9px-habbo', // Font ID
-          2, // Scale factor (9px * 2 = 18px)
+          1, // Scale factor (reduced from 2 for new resolution)
           deploymentInstructionY
         ),
         new MessageFadeInSequence(
           CombatConstants.TEXT.WAYLAID_MESSAGE,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
           '9px-habbo', // Font ID
-          2, // Scale factor (9px * 2 = 18px)
+          1, // Scale factor (reduced from 2 for new resolution)
           waylaidMessageY
         )
       ]);
@@ -355,18 +355,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           spriteImagesRef.current,
           TILE_SIZE,
           SPRITE_SIZE,
-          2 // Scale of 2
+          1 // Scale (reduced from 2 for new resolution)
         );
 
         // Calculate dialog size
         const bounds = unitInfoDialog.measure(0);
-        const BORDER_INSET = 6 * 4; // Scale of 4
-        const PADDING = 6;
+        const BORDER_INSET = 6 * 1; // Scale of 1 (reduced from 4)
+        const PADDING = 2; // Reduced from 6 for new resolution
         const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
         const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
 
-        // Position at right side with 16px margin, vertically centered
-        const dialogX = CANVAS_WIDTH - dialogWidth - 16;
+        // Position at right side with 4px margin, vertically centered (reduced from 16px)
+        const dialogX = CANVAS_WIDTH - dialogWidth - 4;
         const dialogY = (CANVAS_HEIGHT - dialogHeight) / 2;
 
         renderDialogWithContent(
@@ -378,7 +378,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           spriteImagesRef.current,
           undefined, // Use default 9-slice sprites
           PADDING,
-          4 // Scale
+          1 // Scale (reduced from 4 for new resolution)
         );
       }
     }
