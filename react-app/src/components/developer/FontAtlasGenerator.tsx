@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { generateASCIICharSet } from '../../utils/FontRegistry';
 
 interface FontAtlasGeneratorProps {
@@ -19,13 +19,16 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const [fontSize, setFontSize] = useState<number>(12);
   const [lineHeight, setLineHeight] = useState<number>(14);
   const [charSpacing, setCharSpacing] = useState<number>(1);
-  const [baselineOffset, setBaselineOffset] = useState<number>(10);
+  const [baselineOffset, setBaselineOffset] = useState<number>(1);
   const [charsPerRow, setCharsPerRow] = useState<number>(16);
   const [previewScale, setPreviewScale] = useState<number>(4);
-  const [antialiasThreshold, setAntialiasThreshold] = useState<number>(128);
+  const [antialiasThreshold, setAntialiasThreshold] = useState<number>(200);
   const [applyThreshold, setApplyThreshold] = useState<boolean>(true);
+  const [demoText, setDemoText] = useState<string>('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
+  const [demoScale, setDemoScale] = useState<number>(2);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
+  const demoCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // ASCII printable characters (32-126)
   const charSet = generateASCIICharSet();
@@ -100,8 +103,19 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       const x = col * charWidth;
       const y = row * charHeight;
 
+      // Save context state
+      ctx.save();
+
+      // Clip to character cell to prevent overflow
+      ctx.beginPath();
+      ctx.rect(x, y, charWidth, charHeight);
+      ctx.clip();
+
       // Draw character at baseline offset
       ctx.fillText(char, x, y + baselineOffset);
+
+      // Restore context state
+      ctx.restore();
     });
 
     // Apply threshold to remove antialiasing (make pixel-perfect)
@@ -153,6 +167,24 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(sourceCanvas, 0, 0, width, height);
+
+    // Draw grid overlay to visualize character cells (optional debug)
+    // Uncomment to see cell boundaries
+    // ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
+    // ctx.lineWidth = 1;
+    // const rows = Math.ceil(charSet.length / charsPerRow);
+    // for (let row = 0; row <= rows; row++) {
+    //   ctx.beginPath();
+    //   ctx.moveTo(0, row * charHeight * previewScale);
+    //   ctx.lineTo(width, row * charHeight * previewScale);
+    //   ctx.stroke();
+    // }
+    // for (let col = 0; col <= charsPerRow; col++) {
+    //   ctx.beginPath();
+    //   ctx.moveTo(col * charWidth * previewScale, 0);
+    //   ctx.lineTo(col * charWidth * previewScale, height);
+    //   ctx.stroke();
+    // }
   };
 
   // Auto-generate when font is loaded and parameters change
@@ -166,6 +198,80 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   useEffect(() => {
     updatePreview();
   }, [previewScale]);
+
+  // Render demo text using the generated atlas
+  const renderDemoText = useCallback(() => {
+    if (!canvasRef.current || !demoCanvasRef.current || !fontLoaded || !demoText) return;
+
+    const atlasCanvas = canvasRef.current;
+    const demoCanvas = demoCanvasRef.current;
+    const ctx = demoCanvas.getContext('2d');
+    if (!ctx) return;
+
+    // Calculate dimensions for multi-line text
+    const maxLineWidth = 500; // Max width before wrapping
+    const charWidthWithSpacing = charWidth + charSpacing;
+    const charsPerLine = Math.floor(maxLineWidth / charWidthWithSpacing);
+
+    // Word wrap the text
+    const words = demoText.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (testLine.length <= charsPerLine) {
+        currentLine = testLine;
+      } else {
+        if (currentLine) lines.push(currentLine);
+        currentLine = word;
+      }
+    }
+    if (currentLine) lines.push(currentLine);
+
+    // Calculate canvas size
+    const maxCharsInLine = Math.max(...lines.map(line => line.length));
+    const textWidth = maxCharsInLine * charWidthWithSpacing;
+    const textHeight = lines.length * lineHeight;
+
+    demoCanvas.width = textWidth * demoScale;
+    demoCanvas.height = textHeight * demoScale;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, demoCanvas.width, demoCanvas.height);
+    ctx.imageSmoothingEnabled = false;
+
+    // Render each line
+    lines.forEach((line, lineIndex) => {
+      let x = 0;
+      const y = lineIndex * lineHeight;
+
+      // Render each character in the line
+      for (const char of line) {
+        const charIndex = charSet.indexOf(char);
+        if (charIndex !== -1) {
+          const col = charIndex % charsPerRow;
+          const row = Math.floor(charIndex / charsPerRow);
+          const srcX = col * charWidth;
+          const srcY = row * charHeight;
+
+          ctx.drawImage(
+            atlasCanvas,
+            srcX, srcY, charWidth, charHeight,
+            x * demoScale, y * demoScale, charWidth * demoScale, charHeight * demoScale
+          );
+        }
+        x += charWidthWithSpacing;
+      }
+    });
+  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow]);
+
+  // Update demo when parameters change
+  useEffect(() => {
+    if (fontLoaded) {
+      renderDemoText();
+    }
+  }, [fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, renderDemoText]);
 
   // Download the atlas image
   const downloadAtlas = () => {
@@ -229,23 +335,23 @@ fonts:
   return (
     <div
       style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        width: '100vw',
+        height: '100vh',
         background: 'rgba(0, 0, 0, 0.95)',
-        border: '2px solid #666',
-        padding: '20px',
-        borderRadius: '8px',
         color: '#fff',
         fontFamily: 'monospace',
         fontSize: '12px',
         zIndex: 3000,
-        width: '900px',
-        maxHeight: '90vh',
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
+        margin: 0,
+        padding: 0,
       }}
     >
       {/* Header */}
@@ -254,8 +360,7 @@ fonts:
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'center',
-          marginBottom: '16px',
-          paddingBottom: '12px',
+          padding: '20px 20px 16px 20px',
           borderBottom: '1px solid #666',
         }}
       >
@@ -286,9 +391,9 @@ fonts:
       </div>
 
       {/* Content */}
-      <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0 }}>
+      <div style={{ display: 'flex', gap: '20px', flex: 1, minHeight: 0, padding: '20px' }}>
         {/* Left Panel - Controls */}
-        <div style={{ flex: '0 0 320px', display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'auto' }}>
+        <div style={{ flex: '0 0 400px', display: 'flex', flexDirection: 'column', gap: '12px', overflow: 'auto', paddingRight: '10px' }}>
           {/* Font Upload */}
           <div
             style={{
@@ -559,16 +664,18 @@ fonts:
                   fontSize: '10px',
                   lineHeight: '1.5',
                   color: '#aaa',
+                  wordWrap: 'break-word',
+                  overflowWrap: 'break-word',
                 }}
               >
                 <div style={{ fontWeight: 'bold', marginBottom: '4px', color: '#ff9800' }}>
                   Instructions:
                 </div>
-                <div>1. Upload a TTF/OTF font file</div>
-                <div>2. Adjust parameters to fit characters in cells</div>
-                <div>3. Download both the PNG atlas and YAML definition</div>
-                <div>4. Place PNG in /public/fonts/</div>
-                <div>5. Load YAML definition in your game</div>
+                <div style={{ wordWrap: 'break-word' }}>1. Upload a TTF/OTF font file</div>
+                <div style={{ wordWrap: 'break-word' }}>2. Adjust parameters to fit characters in cells</div>
+                <div style={{ wordWrap: 'break-word' }}>3. Download both PNG atlas and YAML</div>
+                <div style={{ wordWrap: 'break-word' }}>4. Place PNG in /public/fonts/</div>
+                <div style={{ wordWrap: 'break-word' }}>5. Load YAML in your game</div>
               </div>
             </>
           )}
@@ -581,79 +688,162 @@ fonts:
             display: 'flex',
             flexDirection: 'column',
             minHeight: 0,
+            overflow: 'auto',
             background: 'rgba(0, 0, 0, 0.3)',
             borderRadius: '4px',
             border: '1px solid rgba(255, 255, 255, 0.1)',
-            padding: '12px',
+            padding: '20px',
+            gap: '20px',
           }}
         >
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '12px' }}>
-            <div style={{ fontWeight: 'bold', fontSize: '13px' }}>Atlas Preview</div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-              <label style={{ fontSize: '11px', color: '#aaa' }}>Scale:</label>
-              <select
-                value={previewScale}
-                onChange={(e) => setPreviewScale(Number(e.target.value))}
+          {/* Atlas Preview Section */}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '13px' }}>Atlas Preview</div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <label style={{ fontSize: '11px', color: '#aaa' }}>Scale:</label>
+                <select
+                  value={previewScale}
+                  onChange={(e) => setPreviewScale(Number(e.target.value))}
+                  style={{
+                    padding: '4px 8px',
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontFamily: 'monospace',
+                    fontSize: '11px',
+                    cursor: 'pointer',
+                  }}
+                >
+                  <option value="1">1x</option>
+                  <option value="2">2x</option>
+                  <option value="3">3x</option>
+                  <option value="4">4x</option>
+                  <option value="6">6x</option>
+                  <option value="8">8x</option>
+                </select>
+              </div>
+            </div>
+
+            <div
+              style={{
+                maxHeight: '400px',
+                overflow: 'auto',
+                background: 'rgba(0, 0, 0, 0.5)',
+                borderRadius: '4px',
+                padding: '10px',
+              }}
+            >
+              {fontLoaded ? (
+                <canvas
+                  ref={previewCanvasRef}
+                  style={{
+                    border: '1px solid rgba(255, 255, 255, 0.2)',
+                    imageRendering: 'pixelated',
+                    display: 'block',
+                  } as React.CSSProperties}
+                />
+              ) : (
+                <div
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '200px',
+                    color: '#666',
+                    fontSize: '14px',
+                  }}
+                >
+                  Upload a font to generate atlas
+                </div>
+              )}
+            </div>
+
+            {/* Atlas Info */}
+            {fontLoaded && (() => {
+              const rows = Math.ceil(charSet.length / charsPerRow);
+              const atlasWidth = charWidth * charsPerRow;
+              const atlasHeight = charHeight * rows;
+              return (
+                <div style={{ fontSize: '11px', color: '#aaa' }}>
+                  <div>Atlas Size: {atlasWidth} × {atlasHeight} px</div>
+                  <div>Grid: {charsPerRow} cols × {rows} rows</div>
+                  <div>Characters: {charSet.length} (ASCII 32-126)</div>
+                </div>
+              );
+            })()}
+          </div>
+
+          {/* Demo Text Section */}
+          {fontLoaded && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+              <div style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+              }}>
+                <div style={{ fontWeight: 'bold', fontSize: '13px' }}>Text Preview</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <label style={{ fontSize: '11px', color: '#aaa' }}>Scale:</label>
+                  <select
+                    value={demoScale}
+                    onChange={(e) => setDemoScale(Number(e.target.value))}
+                    style={{
+                      padding: '4px 8px',
+                      background: 'rgba(0, 0, 0, 0.5)',
+                      border: '1px solid #666',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontFamily: 'monospace',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                    }}
+                  >
+                    <option value="1">1x</option>
+                    <option value="2">2x</option>
+                    <option value="3">3x</option>
+                    <option value="4">4x</option>
+                  </select>
+                </div>
+              </div>
+
+              <textarea
+                value={demoText}
+                onChange={(e) => setDemoText(e.target.value)}
+                placeholder="Enter text to preview..."
                 style={{
-                  padding: '4px 8px',
+                  width: '100%',
+                  minHeight: '60px',
+                  padding: '8px',
                   background: 'rgba(0, 0, 0, 0.5)',
                   border: '1px solid #666',
                   borderRadius: '4px',
                   color: '#fff',
                   fontFamily: 'monospace',
-                  fontSize: '11px',
-                  cursor: 'pointer',
+                  fontSize: '12px',
+                  resize: 'vertical',
                 }}
-              >
-                <option value="1">1x</option>
-                <option value="2">2x</option>
-                <option value="3">3x</option>
-                <option value="4">4x</option>
-                <option value="6">6x</option>
-                <option value="8">8x</option>
-              </select>
-            </div>
-          </div>
-
-          <div
-            style={{
-              flex: 1,
-              overflow: 'auto',
-              background: 'rgba(0, 0, 0, 0.5)',
-              borderRadius: '4px',
-              padding: '10px',
-            }}
-          >
-            {fontLoaded ? (
-              <canvas
-                ref={previewCanvasRef}
-                style={{
-                  border: '1px solid rgba(255, 255, 255, 0.2)',
-                  imageRendering: 'pixelated',
-                  display: 'block',
-                } as React.CSSProperties}
               />
-            ) : (
+
               <div
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  height: '100%',
-                  color: '#666',
-                  fontSize: '14px',
+                  background: 'rgba(0, 0, 0, 0.5)',
+                  borderRadius: '4px',
+                  padding: '12px',
+                  overflow: 'auto',
+                  maxHeight: '200px',
+                  border: '1px solid rgba(255, 255, 255, 0.2)',
                 }}
               >
-                Upload a font to generate atlas
+                <canvas
+                  ref={demoCanvasRef}
+                  style={{
+                    imageRendering: 'pixelated',
+                    display: 'block',
+                  } as React.CSSProperties}
+                />
               </div>
-            )}
-          </div>
-
-          {/* Atlas Info */}
-          {fontLoaded && (
-            <div style={{ marginTop: '12px', fontSize: '11px', color: '#aaa' }}>
-              <div>Atlas Size: {charWidth * charsPerRow} × {charHeight * Math.ceil(charSet.length / charsPerRow)} px</div>
-              <div>Characters: {charSet.length} (ASCII 32-126)</div>
             </div>
           )}
         </div>
