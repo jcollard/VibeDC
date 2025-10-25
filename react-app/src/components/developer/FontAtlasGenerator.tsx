@@ -579,17 +579,40 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   };
 
   // Download the atlas image
-  const downloadAtlas = () => {
+  const downloadAtlas = async () => {
     if (!canvasRef.current) return;
 
     const canvas = canvasRef.current;
-    canvas.toBlob((blob) => {
+    const defaultName = fontId ? `${fontId}-atlas.png` : 'font-atlas.png';
+
+    canvas.toBlob(async (blob) => {
       if (!blob) return;
 
+      // Try using File System Access API (modern browsers)
+      if ('showSaveFilePicker' in window) {
+        try {
+          const handle = await (window as any).showSaveFilePicker({
+            suggestedName: defaultName,
+            types: [{
+              description: 'PNG Image',
+              accept: { 'image/png': ['.png'] },
+            }],
+          });
+          const writable = await handle.createWritable();
+          await writable.write(blob);
+          await writable.close();
+          return;
+        } catch (err) {
+          // User cancelled or error occurred, fall through to legacy method
+          if ((err as Error).name === 'AbortError') return;
+        }
+      }
+
+      // Fallback to legacy download method
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `${fontId}-atlas.png`;
+      a.download = defaultName;
       document.body.appendChild(a);
       a.click();
       document.body.removeChild(a);
@@ -598,7 +621,9 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   };
 
   // Download the YAML definition
-  const downloadYAML = () => {
+  const downloadYAML = async () => {
+    const defaultName = fontId || 'font-definition';
+
     // Generate characters array with position and width data
     const charactersYAML = charSet.map((char, index) => {
       const col = index % charsPerRow;
@@ -615,13 +640,13 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       return `      - { char: "${escapedChar}", x: ${x}, y: ${y}, width: ${width} }`;
     }).join('\n');
 
-    const yaml = `# Font definition for ${fontId}
+    const yaml = `# Font definition for ${defaultName}
 # Generated from font atlas generator
 # AA Threshold: ${applyThreshold ? antialiasThreshold : 'disabled'}
 
 fonts:
-  - id: "${fontId}"
-    atlasPath: "/fonts/${fontId}-atlas.png"
+  - id: "${defaultName}"
+    atlasPath: "/fonts/${defaultName}-atlas.png"
     charHeight: ${charHeight}
     lineHeight: ${lineHeight}
     charSpacing: ${charSpacing}
@@ -633,10 +658,32 @@ ${charactersYAML}
 `;
 
     const blob = new Blob([yaml], { type: 'text/yaml' });
+
+    // Try using File System Access API (modern browsers)
+    if ('showSaveFilePicker' in window) {
+      try {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: `${defaultName}.yaml`,
+          types: [{
+            description: 'YAML File',
+            accept: { 'text/yaml': ['.yaml', '.yml'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(blob);
+        await writable.close();
+        return;
+      } catch (err) {
+        // User cancelled or error occurred, fall through to legacy method
+        if ((err as Error).name === 'AbortError') return;
+      }
+    }
+
+    // Fallback to legacy download method
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${fontId}.yaml`;
+    a.download = `${defaultName}.yaml`;
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
