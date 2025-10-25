@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { generateASCIICharSet } from '../../utils/FontRegistry';
+import yaml from 'js-yaml';
 
 interface FontAtlasGeneratorProps {
   onClose: () => void;
@@ -384,18 +385,17 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       for (const char of line) {
         const charIndex = charSet.indexOf(char);
         if (charIndex !== -1) {
-          const col = charIndex % charsPerRow;
-          const row = Math.floor(charIndex / charsPerRow);
-          const srcX = col * charWidth;
-          const srcY = row * charHeight;
-
-          // Use measured width if available, otherwise use fixed width
-          const actualCharWidth = charWidths[charIndex] || charWidth;
+          // Use character position if available (for custom x/y), otherwise calculate from grid
+          const charPos = charPositions[charIndex];
+          const srcX = charPos?.x ?? (charIndex % charsPerRow) * charWidth;
+          const srcY = charPos?.y ?? Math.floor(charIndex / charsPerRow) * charHeight;
+          const actualCharWidth = charPos?.width ?? charWidths[charIndex] ?? charWidth;
+          const actualCharHeight = charPos?.height ?? charHeight;
 
           ctx.drawImage(
             atlasCanvas,
-            srcX, srcY, charWidth, charHeight,
-            x * demoScale, y * demoScale, charWidth * demoScale, charHeight * demoScale
+            srcX, srcY, actualCharWidth, actualCharHeight,
+            x * demoScale, y * demoScale, actualCharWidth * demoScale, actualCharHeight * demoScale
           );
 
           // Advance by actual character width when NOT rendering monospaced
@@ -405,7 +405,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
         }
       }
     });
-  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow, charWidths, useVariableWidth, renderMonospaced]);
+  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow, charWidths, charPositions, useVariableWidth, renderMonospaced]);
 
   // Update demo when parameters change
   useEffect(() => {
@@ -540,6 +540,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
     const yaml = `# Font definition for ${fontId}
 # Generated from font atlas generator
+# AA Threshold: ${applyThreshold ? antialiasThreshold : 'disabled'}
 
 fonts:
   - id: "${fontId}"
@@ -563,6 +564,85 @@ ${charactersYAML}
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  // Import YAML definition
+  const handleImportYAML = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const content = e.target?.result as string;
+        const parsed = yaml.load(content) as any;
+
+        if (!parsed.fonts || !parsed.fonts[0]) {
+          alert('Invalid YAML format: No font definition found');
+          return;
+        }
+
+        const fontDef = parsed.fonts[0];
+
+        // Import font settings
+        if (fontDef.id) setFontId(fontDef.id);
+        if (fontDef.charHeight) setCharHeight(fontDef.charHeight);
+        if (fontDef.lineHeight) setLineHeight(fontDef.lineHeight);
+        if (fontDef.charSpacing !== undefined) setCharSpacing(fontDef.charSpacing);
+        if (fontDef.baselineOffset !== undefined) setBaselineOffset(fontDef.baselineOffset);
+
+        // Check if variable width
+        const isVariableWidth = fontDef.tags && fontDef.tags.includes('variable-width');
+        setUseVariableWidth(isVariableWidth);
+
+        // Import character widths
+        if (fontDef.characters && Array.isArray(fontDef.characters)) {
+          const importedWidths: number[] = [];
+          const importedPositions: { x: number; y: number; width: number; height: number }[] = [];
+
+          // Map characters by their char value to handle out-of-order definitions
+          const charMap = new Map<string, any>();
+          fontDef.characters.forEach((charDef: any) => {
+            charMap.set(charDef.char, charDef);
+          });
+
+          // Build arrays in ASCII order (32-126)
+          charSet.forEach((char) => {
+            const charDef = charMap.get(char);
+            if (charDef) {
+              importedWidths.push(charDef.width || charWidth);
+              importedPositions.push({
+                x: charDef.x || 0,
+                y: charDef.y || 0,
+                width: charDef.width || charWidth,
+                height: fontDef.charHeight || charHeight
+              });
+            } else {
+              // Character not found in import, use default
+              importedWidths.push(charWidth);
+              importedPositions.push({
+                x: 0,
+                y: 0,
+                width: charWidth,
+                height: charHeight
+              });
+            }
+          });
+
+          setCharWidths(importedWidths);
+          setCharPositions(importedPositions);
+        }
+
+        alert(`Successfully imported font definition: ${fontDef.id}`);
+      } catch (error) {
+        console.error('Failed to parse YAML:', error);
+        alert('Failed to parse YAML file. Please check the file format.');
+      }
+    };
+
+    reader.readAsText(file);
+    // Reset the input so the same file can be selected again
+    event.target.value = '';
   };
 
   return (
@@ -885,7 +965,7 @@ ${charactersYAML}
                 )}
               </div>
 
-              {/* Export */}
+              {/* Import/Export */}
               <div
                 style={{
                   padding: '12px',
@@ -895,9 +975,34 @@ ${charactersYAML}
                 }}
               >
                 <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>
-                  3. Export
+                  3. Import/Export
                 </div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                  <label
+                    htmlFor="yaml-import"
+                    style={{
+                      padding: '8px',
+                      background: 'rgba(156, 39, 176, 0.3)',
+                      border: '1px solid rgba(156, 39, 176, 0.6)',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '11px',
+                      cursor: 'pointer',
+                      fontFamily: 'monospace',
+                      fontWeight: 'bold',
+                      textAlign: 'center',
+                      display: 'block',
+                    }}
+                  >
+                    Import YAML Definition
+                    <input
+                      id="yaml-import"
+                      type="file"
+                      accept=".yaml,.yml"
+                      onChange={handleImportYAML}
+                      style={{ display: 'none' }}
+                    />
+                  </label>
                   <button
                     onClick={downloadAtlas}
                     style={{
@@ -1087,18 +1192,18 @@ ${charactersYAML}
               </div>
 
               {/* Character Properties */}
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+              <div style={{ display: 'flex', gap: '12px' }}>
                 {/* X Position */}
-                <div>
+                <div style={{ flex: '0 0 auto' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
-                    X Position: {charPositions[selectedCharIndex]?.x ?? 0}
+                    X: {charPositions[selectedCharIndex]?.x ?? 0}
                   </label>
                   <input
                     type="number"
                     value={charPositions[selectedCharIndex]?.x ?? 0}
                     onChange={(e) => updateCharacterProperty('x', Number(e.target.value))}
                     style={{
-                      width: '100%',
+                      width: '80px',
                       padding: '6px',
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid #666',
@@ -1111,16 +1216,16 @@ ${charactersYAML}
                 </div>
 
                 {/* Y Position */}
-                <div>
+                <div style={{ flex: '0 0 auto' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
-                    Y Position: {charPositions[selectedCharIndex]?.y ?? 0}
+                    Y: {charPositions[selectedCharIndex]?.y ?? 0}
                   </label>
                   <input
                     type="number"
                     value={charPositions[selectedCharIndex]?.y ?? 0}
                     onChange={(e) => updateCharacterProperty('y', Number(e.target.value))}
                     style={{
-                      width: '100%',
+                      width: '80px',
                       padding: '6px',
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid #666',
@@ -1133,7 +1238,7 @@ ${charactersYAML}
                 </div>
 
                 {/* Width */}
-                <div>
+                <div style={{ flex: '0 0 auto' }}>
                   <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
                     Width: {charPositions[selectedCharIndex]?.width ?? charWidth}
                   </label>
@@ -1144,31 +1249,7 @@ ${charactersYAML}
                     value={charPositions[selectedCharIndex]?.width ?? charWidth}
                     onChange={(e) => updateCharacterProperty('width', Number(e.target.value))}
                     style={{
-                      width: '100%',
-                      padding: '6px',
-                      background: 'rgba(0, 0, 0, 0.3)',
-                      border: '1px solid #666',
-                      borderRadius: '3px',
-                      color: '#fff',
-                      fontSize: '11px',
-                      fontFamily: 'monospace',
-                    }}
-                  />
-                </div>
-
-                {/* Height */}
-                <div>
-                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
-                    Height: {charPositions[selectedCharIndex]?.height ?? charHeight}
-                  </label>
-                  <input
-                    type="number"
-                    min="1"
-                    max={charHeight}
-                    value={charPositions[selectedCharIndex]?.height ?? charHeight}
-                    onChange={(e) => updateCharacterProperty('height', Number(e.target.value))}
-                    style={{
-                      width: '100%',
+                      width: '80px',
                       padding: '6px',
                       background: 'rgba(0, 0, 0, 0.3)',
                       border: '1px solid #666',
