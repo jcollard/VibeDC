@@ -626,11 +626,11 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
     // Generate characters array with position and width data
     const charactersYAML = charSet.map((char, index) => {
-      const col = index % charsPerRow;
-      const row = Math.floor(index / charsPerRow);
-      const x = col * charWidth;
-      const y = row * charHeight;
-      const width = charWidths[index] || charWidth;
+      // Use stored character position if available, otherwise calculate from grid
+      const charPos = charPositions[index];
+      const x = charPos?.x ?? (index % charsPerRow) * charWidth;
+      const y = charPos?.y ?? Math.floor(index / charsPerRow) * charHeight;
+      const width = charPos?.width ?? charWidths[index] ?? charWidth;
 
       // Escape special characters
       let escapedChar = char;
