@@ -55,24 +55,23 @@ export abstract class DialogContent {
   protected abstract getBounds(): ContentBounds;
 
   /**
-   * Calculate the required dialog size in tiles based on content bounds
+   * Calculate the required dialog size in pixels based on content bounds
    * @param bounds - The measured content bounds
-   * @param tileSize - Size of each tile in pixels
-   * @param paddingTiles - Additional padding in tiles (default: 1)
-   * @returns Object with width and height in tiles (interior, not including borders)
+   * @param paddingPixels - Additional padding beyond the 6px border inset (default: 6)
+   * @returns Object with width and height in pixels (total including borders and padding)
    */
   static calculateDialogSize(
     bounds: ContentBounds,
-    tileSize: number,
-    paddingTiles: number = 1
+    paddingPixels: number = 6
   ): { width: number; height: number } {
+    const BORDER_INSET = 6;
     const contentWidth = bounds.maxX - bounds.minX;
     const contentHeight = bounds.maxY - bounds.minY;
 
-    const widthInTiles = Math.ceil(contentWidth / tileSize) + (paddingTiles * 2);
-    const heightInTiles = Math.ceil(contentHeight / tileSize) + (paddingTiles * 2);
+    const width = contentWidth + (paddingPixels * 2) + (BORDER_INSET * 2);
+    const height = contentHeight + (paddingPixels * 2) + (BORDER_INSET * 2);
 
-    return { width: widthInTiles, height: heightInTiles };
+    return { width, height };
   }
 }
 
@@ -107,14 +106,13 @@ export const DEFAULT_DIALOG_SPRITES: NineSliceSprites = {
 };
 
 /**
- * Renders a 9-slice dialog box on a canvas context
+ * Renders a 9-slice dialog box on a canvas context with pixel-precise sizing
  *
  * @param ctx - Canvas 2D context to render on
- * @param x - X position (top-left corner)
- * @param y - Y position (top-left corner)
- * @param width - Width in tiles (interior width, not including borders)
- * @param height - Height in tiles (interior height, not including borders)
- * @param tileSize - Size of each tile in pixels
+ * @param x - X position (top-left corner) in pixels
+ * @param y - Y position (top-left corner) in pixels
+ * @param width - Width in pixels (total width including borders)
+ * @param height - Height in pixels (total height including borders)
  * @param spriteSize - Size of sprites in the sprite sheet (e.g., 12 for 12x12)
  * @param spriteImages - Map of sprite sheet URLs to loaded images
  * @param nineSlice - 9-slice sprite IDs (defaults to DEFAULT_DIALOG_SPRITES)
@@ -125,13 +123,12 @@ export function renderNineSliceDialog(
   y: number,
   width: number,
   height: number,
-  tileSize: number,
   spriteSize: number,
   spriteImages: Map<string, HTMLImageElement>,
   nineSlice: NineSliceSprites = DEFAULT_DIALOG_SPRITES
 ): void {
-  // Helper function to draw a single sprite
-  const drawSprite = (spriteId: string, dx: number, dy: number) => {
+  // Helper function to draw a corner sprite
+  const drawCornerSprite = (spriteId: string, dx: number, dy: number) => {
     const spriteDef = SpriteRegistry.getById(spriteId);
     if (!spriteDef) {
       console.warn(`DialogRenderer: Sprite "${spriteId}" not found`);
@@ -146,44 +143,62 @@ export function renderNineSliceDialog(
 
     const srcX = spriteDef.x * spriteSize;
     const srcY = spriteDef.y * spriteSize;
-    const srcWidth = (spriteDef.width || 1) * spriteSize;
-    const srcHeight = (spriteDef.height || 1) * spriteSize;
+    const srcWidth = spriteSize;
+    const srcHeight = spriteSize;
 
     ctx.drawImage(
       spriteImage,
       srcX, srcY, srcWidth, srcHeight,
-      dx, dy, tileSize, tileSize
+      dx, dy, spriteSize, spriteSize
     );
   };
 
-  // Total dialog size including borders
-  const totalWidth = width + 2;
-  const totalHeight = height + 2;
-
-  // Draw corners (never repeated)
-  drawSprite(nineSlice.topLeft, x, y);
-  drawSprite(nineSlice.topRight, x + (totalWidth - 1) * tileSize, y);
-  drawSprite(nineSlice.bottomLeft, x, y + (totalHeight - 1) * tileSize);
-  drawSprite(nineSlice.bottomRight, x + (totalWidth - 1) * tileSize, y + (totalHeight - 1) * tileSize);
-
-  // Draw top and bottom edges (repeated horizontally)
-  for (let i = 1; i < totalWidth - 1; i++) {
-    drawSprite(nineSlice.topCenter, x + i * tileSize, y);
-    drawSprite(nineSlice.bottomCenter, x + i * tileSize, y + (totalHeight - 1) * tileSize);
-  }
-
-  // Draw left and right edges (repeated vertically)
-  for (let i = 1; i < totalHeight - 1; i++) {
-    drawSprite(nineSlice.middleLeft, x, y + i * tileSize);
-    drawSprite(nineSlice.middleRight, x + (totalWidth - 1) * tileSize, y + i * tileSize);
-  }
-
-  // Draw center (tiled to fill interior)
-  for (let row = 1; row < totalHeight - 1; row++) {
-    for (let col = 1; col < totalWidth - 1; col++) {
-      drawSprite(nineSlice.middleCenter, x + col * tileSize, y + row * tileSize);
+  // Helper function to draw an edge sprite (stretched)
+  const drawEdgeSprite = (spriteId: string, dx: number, dy: number, dw: number, dh: number) => {
+    const spriteDef = SpriteRegistry.getById(spriteId);
+    if (!spriteDef) {
+      console.warn(`DialogRenderer: Sprite "${spriteId}" not found`);
+      return;
     }
-  }
+
+    const spriteImage = spriteImages.get(spriteDef.spriteSheet);
+    if (!spriteImage) {
+      console.warn(`DialogRenderer: Sprite sheet not loaded for "${spriteId}"`);
+      return;
+    }
+
+    const srcX = spriteDef.x * spriteSize;
+    const srcY = spriteDef.y * spriteSize;
+    const srcWidth = spriteSize;
+    const srcHeight = spriteSize;
+
+    ctx.drawImage(
+      spriteImage,
+      srcX, srcY, srcWidth, srcHeight,
+      dx, dy, dw, dh
+    );
+  };
+
+  // Draw corners (12x12px each)
+  drawCornerSprite(nineSlice.topLeft, x, y);
+  drawCornerSprite(nineSlice.topRight, x + width - spriteSize, y);
+  drawCornerSprite(nineSlice.bottomLeft, x, y + height - spriteSize);
+  drawCornerSprite(nineSlice.bottomRight, x + width - spriteSize, y + height - spriteSize);
+
+  // Draw top and bottom edges (stretched horizontally)
+  const horizontalEdgeWidth = width - (spriteSize * 2);
+  drawEdgeSprite(nineSlice.topCenter, x + spriteSize, y, horizontalEdgeWidth, spriteSize);
+  drawEdgeSprite(nineSlice.bottomCenter, x + spriteSize, y + height - spriteSize, horizontalEdgeWidth, spriteSize);
+
+  // Draw left and right edges (stretched vertically)
+  const verticalEdgeHeight = height - (spriteSize * 2);
+  drawEdgeSprite(nineSlice.middleLeft, x, y + spriteSize, spriteSize, verticalEdgeHeight);
+  drawEdgeSprite(nineSlice.middleRight, x + width - spriteSize, y + spriteSize, spriteSize, verticalEdgeHeight);
+
+  // Draw center (scaled to fill interior) - solid color sprite
+  const centerWidth = width - (spriteSize * 2);
+  const centerHeight = height - (spriteSize * 2);
+  drawEdgeSprite(nineSlice.middleCenter, x + spriteSize, y + spriteSize, centerWidth, centerHeight);
 }
 
 /**
@@ -267,53 +282,48 @@ export function renderTextWithShadow(
  *
  * @param ctx - Canvas 2D context to render on
  * @param content - DialogContent instance to render
- * @param x - X position (top-left corner of dialog)
- * @param y - Y position (top-left corner of dialog)
- * @param tileSize - Size of each tile in pixels
- * @param spriteSize - Size of sprites in the sprite sheet
+ * @param x - X position (top-left corner of dialog) in pixels
+ * @param y - Y position (top-left corner of dialog) in pixels
+ * @param spriteSize - Size of sprites in the sprite sheet (12px for 12x12)
  * @param spriteImages - Map of sprite sheet URLs to loaded images
  * @param nineSlice - 9-slice sprite IDs (defaults to DEFAULT_DIALOG_SPRITES)
- * @param paddingPixels - Additional padding in pixels (default: 48)
- * @returns The final dialog dimensions { width, height } in tiles
+ * @param paddingPixels - Additional padding beyond the 6px border inset (default: 6)
+ * @returns The final dialog dimensions { width, height } in pixels
  */
 export function renderDialogWithContent(
   ctx: CanvasRenderingContext2D,
   content: DialogContent,
   x: number,
   y: number,
-  tileSize: number,
   spriteSize: number,
   spriteImages: Map<string, HTMLImageElement>,
   nineSlice: NineSliceSprites = DEFAULT_DIALOG_SPRITES,
-  paddingPixels: number = 48
+  paddingPixels: number = 6
 ): { width: number; height: number } {
-  // Measure content bounds
-  const bounds = content.measure(tileSize);
+  // Border inset - 6px from each edge of the 12px sprite is usable for content
+  const BORDER_INSET = 6;
 
-  // Calculate dialog size in pixels including padding
+  // Measure content bounds (tileSize parameter is no longer used, pass 0)
+  const bounds = content.measure(0);
+
+  // Calculate content dimensions
   const contentWidth = bounds.maxX - bounds.minX;
   const contentHeight = bounds.maxY - bounds.minY;
 
-  const totalWidthPixels = contentWidth + (paddingPixels * 2);
-  const totalHeightPixels = contentHeight + (paddingPixels * 2);
-
-  // Convert to tiles (round up to ensure content fits)
-  // Note: This is the INTERIOR size (the width/height passed to renderNineSliceDialog)
-  // The actual dialog will be 2 tiles larger (1 tile border on each side)
-  // Subtract 1 tile from width and height to account for border overlap with content
-  const interiorWidth = Math.ceil(totalWidthPixels / tileSize) - 1;
-  const interiorHeight = Math.ceil(totalHeightPixels / tileSize) - 1;
+  // Calculate total dialog size in pixels
+  // Total = content + padding on both sides + border insets on both sides
+  const totalWidth = contentWidth + (paddingPixels * 2) + (BORDER_INSET * 2);
+  const totalHeight = contentHeight + (paddingPixels * 2) + (BORDER_INSET * 2);
 
   // Render the dialog background
-  renderNineSliceDialog(ctx, x, y, interiorWidth, interiorHeight, tileSize, spriteSize, spriteImages, nineSlice);
+  renderNineSliceDialog(ctx, x, y, totalWidth, totalHeight, spriteSize, spriteImages, nineSlice);
 
-  // Calculate content position (inside dialog, accounting for border and padding)
-  // Since we reduced interior width and height by 1, shift content by 0.5 tiles from borders
-  const contentX = x + (tileSize * 0.5) + paddingPixels; // Shift left by 0.5 tiles from left border
-  const contentY = y + (tileSize * 0.5) + paddingPixels; // Content starts 0.5 tiles down from top
+  // Calculate content position (inside dialog, accounting for border inset and padding)
+  const contentX = x + BORDER_INSET + paddingPixels;
+  const contentY = y + BORDER_INSET + paddingPixels;
 
   // Render the content
   content.render(ctx, contentX, contentY);
 
-  return { width: interiorWidth, height: interiorHeight };
+  return { width: totalWidth, height: totalHeight };
 }

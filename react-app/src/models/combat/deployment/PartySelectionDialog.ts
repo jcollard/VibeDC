@@ -78,9 +78,10 @@ export class PartySelectionDialog {
       // Match CharacterSelectionDialogContent's layout
       const ROW_HEIGHT = 48;
       const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const BORDER_PADDING = 24; // 0.5 tiles (24px at 48px tile size)
+      const BORDER_INSET = 6; // 6px border inset from sprite edge
+      const PADDING = 6; // Additional padding beyond border inset
 
-      const relativeY = canvasY - dialogY - BORDER_PADDING - TITLE_HEIGHT;
+      const relativeY = canvasY - dialogY - BORDER_INSET - PADDING - TITLE_HEIGHT;
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
 
       if (rowIndex >= 0 && rowIndex < characterCount) {
@@ -127,9 +128,10 @@ export class PartySelectionDialog {
       // Calculate which character row was clicked
       const ROW_HEIGHT = 48;
       const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const BORDER_PADDING = 24; // 0.5 tiles (24px at 48px tile size)
+      const BORDER_INSET = 6; // 6px border inset from sprite edge
+      const PADDING = 6; // Additional padding beyond border inset
 
-      const relativeY = canvasY - dialogY - BORDER_PADDING - TITLE_HEIGHT;
+      const relativeY = canvasY - dialogY - BORDER_INSET - PADDING - TITLE_HEIGHT;
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
 
       if (rowIndex >= 0 && rowIndex < characterCount) {
@@ -191,24 +193,12 @@ export class PartySelectionDialog {
       UIConfig.getHighlightColor()
     );
 
-    // Measure the content bounds
-    const bounds = dialogContent.measure(tileSize);
-
-    // Calculate dialog size using the same logic as renderDialogWithContent
-    const contentWidth = bounds.maxX - bounds.minX;
-    const contentHeight = bounds.maxY - bounds.minY;
-    const paddingPixels = 0; // Using 0 padding as in the render call
-
-    const totalWidthPixels = contentWidth + (paddingPixels * 2);
-    const totalHeightPixels = contentHeight + (paddingPixels * 2);
-
-    // Convert to tiles (this is the interior size)
-    const interiorWidth = Math.ceil(totalWidthPixels / tileSize) - 1;
-    const interiorHeight = Math.ceil(totalHeightPixels / tileSize) - 1;
-
-    // The actual dialog size includes the 9-slice borders (1 tile on each side)
-    const actualDialogWidth = (interiorWidth + 2) * tileSize;
-    const actualDialogHeight = (interiorHeight + 2) * tileSize;
+    // Calculate dialog size
+    const paddingPixels = 6; // Use default 6px padding beyond border insets
+    const bounds = dialogContent.measure(0);
+    const BORDER_INSET = 6;
+    const dialogWidth = (bounds.maxX - bounds.minX) + (paddingPixels * 2) + (BORDER_INSET * 2);
+    const dialogHeight = (bounds.maxY - bounds.minY) + (paddingPixels * 2) + (BORDER_INSET * 2);
 
     // Calculate the top-left corner of the selected zone in canvas coordinates
     const zoneX = selectedZone.x * tileSize + offsetX;
@@ -218,32 +208,31 @@ export class PartySelectionDialog {
     const zoneCenterX = zoneX + (tileSize / 2);
 
     // Position dialog centered horizontally above the selected zone
-    const dialogX = zoneCenterX - (actualDialogWidth / 2);
-    const dialogY = zoneY - actualDialogHeight - 20; // 20px gap above the zone
+    const dialogX = zoneCenterX - (dialogWidth / 2);
+    const dialogY = zoneY - dialogHeight - 20; // 20px gap above the zone
 
     // Clamp dialog to stay within canvas bounds
-    const clampedDialogX = Math.max(10, Math.min(dialogX, canvasWidth - actualDialogWidth - 10));
-    const clampedDialogY = Math.max(10, Math.min(dialogY, canvasWidth - actualDialogHeight - 10));
+    const clampedDialogX = Math.max(10, Math.min(dialogX, canvasWidth - dialogWidth - 10));
+    const clampedDialogY = Math.max(10, Math.min(dialogY, canvasWidth - dialogHeight - 10));
 
     // Store dialog bounds for hover detection
     this.lastDialogBounds = {
       x: clampedDialogX,
       y: clampedDialogY,
-      width: actualDialogWidth,
-      height: actualDialogHeight
+      width: dialogWidth,
+      height: dialogHeight
     };
 
-    // Render dialog with auto-sizing, clamped to canvas bounds
+    // Render dialog at the final position
     renderDialogWithContent(
       ctx,
       dialogContent,
       clampedDialogX,
       clampedDialogY,
-      tileSize,
       spriteSize,
       spriteImages,
       undefined, // Use default 9-slice sprites
-      0 // DEBUG: 0px padding
+      paddingPixels
     );
   }
 }
