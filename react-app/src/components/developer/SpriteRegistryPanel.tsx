@@ -462,22 +462,20 @@ export const SpriteRegistryPanel: React.FC<SpriteRegistryPanelProps> = ({ onClos
   return (
     <div
       style={{
-        position: 'absolute',
-        top: '50%',
-        left: '50%',
-        transform: 'translate(-50%, -50%)',
-        background: 'rgba(0, 0, 0, 0.9)',
-        border: '2px solid #666',
-        padding: '20px',
-        borderRadius: '8px',
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        width: '100vw',
+        height: '100vh',
+        background: 'rgba(0, 0, 0, 0.95)',
         color: '#fff',
         fontFamily: 'monospace',
         fontSize: '12px',
         zIndex: 2000,
-        width: '900px',
-        height: '80vh',
         display: 'flex',
         flexDirection: 'column',
+        padding: '20px',
+        boxSizing: 'border-box',
       }}
     >
       {/* Header */}
