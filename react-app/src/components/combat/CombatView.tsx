@@ -663,7 +663,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
-        background: '#000',
+        background: '#0a0a0a',
         zIndex: 3000,
       }}
     >
