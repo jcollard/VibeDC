@@ -1,28 +1,73 @@
 import { TextRenderingUtils } from '../../../utils/TextRenderingUtils';
 import { CombatConstants } from '../CombatConstants';
 import { SpriteRegistry } from '../../../utils/SpriteRegistry';
+import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 
 /**
  * Renders UI elements for the deployment phase
  * Handles phase header, messages, and instructions
  */
 export class DeploymentUI {
+  private fontAtlasImage: HTMLImageElement | null = null;
+  private fontAtlasLoading: Promise<void> | null = null;
+
+  /**
+   * Load the font atlas image (called once)
+   */
+  private async loadFontAtlas(): Promise<void> {
+    if (this.fontAtlasImage || this.fontAtlasLoading) {
+      return this.fontAtlasLoading || Promise.resolve();
+    }
+
+    this.fontAtlasLoading = new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.src = '/fonts/15px-dungeonslant-atlas.png';
+      img.onload = () => {
+        this.fontAtlasImage = img;
+        resolve();
+      };
+      img.onerror = () => reject(new Error('Failed to load font atlas'));
+    });
+
+    return this.fontAtlasLoading;
+  }
+
   /**
    * Render the "Deploy Units" phase header with background
    */
   renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasWidth: number, headerFont: string): void {
-    TextRenderingUtils.renderTitleWithBackground(
-      ctx,
-      CombatConstants.TEXT.DEPLOY_TITLE,
-      canvasWidth,
-      CombatConstants.UI.TITLE_Y_POSITION,
-      CombatConstants.UI.TITLE_HEIGHT,
-      CombatConstants.RENDERING.BACKGROUND_ALPHA,
-      headerFont,
-      CombatConstants.FONTS.TITLE_SIZE,
-      CombatConstants.RENDERING.TEXT_COLOR,
-      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET
-    );
+    // Start loading font atlas if not already loaded
+    if (!this.fontAtlasImage && !this.fontAtlasLoading) {
+      this.loadFontAtlas().catch(console.error);
+    }
+
+    // Use font atlas rendering if available
+    if (this.fontAtlasImage) {
+      const text = CombatConstants.TEXT.DEPLOY_TITLE;
+      const fontId = "15px-dungeonslant";
+      const scale = 3; // Scale factor for the font
+      const y = CombatConstants.UI.TITLE_Y_POSITION;
+
+      // Draw semi-transparent background
+      const backgroundHeight = CombatConstants.UI.TITLE_HEIGHT;
+      ctx.fillStyle = `rgba(0, 0, 0, ${CombatConstants.RENDERING.BACKGROUND_ALPHA})`;
+      ctx.fillRect(0, y, canvasWidth, backgroundHeight);
+
+      // Calculate centered position for text
+      const textY = y + backgroundHeight / 2 - (15 * scale) / 2; // 15 is charHeight
+
+      // Render centered title
+      FontAtlasRenderer.renderText(
+        ctx,
+        text,
+        canvasWidth / 2,
+        textY,
+        fontId,
+        this.fontAtlasImage,
+        scale,
+        'center'
+      );
+    }
   }
 
   /**

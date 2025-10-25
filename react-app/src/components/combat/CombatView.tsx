@@ -92,6 +92,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track if sprites are loaded
   const [spritesLoaded, setSpritesLoaded] = useState(false);
 
+  // Store loaded font atlas image
+  const fontAtlasImageRef = useRef<HTMLImageElement | null>(null);
+
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
@@ -148,6 +151,24 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Load font atlas image
+  useEffect(() => {
+    const loadFontAtlas = async () => {
+      const img = new Image();
+      img.src = '/fonts/15px-dungeonslant-atlas.png';
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => {
+          fontAtlasImageRef.current = img;
+          console.log('Font atlas loaded successfully');
+          resolve();
+        };
+        img.onerror = () => reject(new Error('Failed to load font atlas'));
+      });
+    };
+
+    loadFontAtlas().catch(console.error);
   }, []);
 
   // Load sprite images using SpriteAssetLoader
