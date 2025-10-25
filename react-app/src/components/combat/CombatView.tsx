@@ -2,6 +2,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
+import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { DeploymentPhaseHandler, createUnitFromPartyMember } from '../../models/combat/DeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -101,6 +102,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track unit info dialog font size for testing
   const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(36);
+
+  // Track the last displayed unit for info panel persistence
+  const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
 
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
@@ -299,48 +303,76 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       });
     }
 
-    // Render unit info dialog when hovering over a character in deployment phase
+    // Render unit info dialog in deployment phase
+    // Show for: 1) hovered character in selection dialog, 2) hovered placed unit on map, 3) last displayed unit
     const phaseHandler = phaseHandlerRef.current;
     if (phaseHandler instanceof DeploymentPhaseHandler) {
+      let unitToDisplay: CombatUnit | null = null;
+
+      // Priority 1: Check if hovering over a character in the selection dialog
       const hoveredCharacterIndex = phaseHandler.getHoveredCharacterIndex();
       if (hoveredCharacterIndex !== null) {
         const partyMembers = PartyMemberRegistry.getAll();
         if (hoveredCharacterIndex >= 0 && hoveredCharacterIndex < partyMembers.length) {
           const hoveredMember = partyMembers[hoveredCharacterIndex];
-          const hoveredUnit = createUnitFromPartyMember(hoveredMember);
-
-          const unitInfoDialog = new CombatUnitInfoDialogContent(
-            hoveredUnit,
-            dialogFont,
-            spriteImagesRef.current,
-            TILE_SIZE,
-            SPRITE_SIZE,
-            unitInfoFontSize
-          );
-
-          // Calculate dialog size
-          const bounds = unitInfoDialog.measure(0);
-          const BORDER_INSET = 6 * 4; // Scale of 4
-          const PADDING = 6;
-          const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
-          const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
-
-          // Position at right side with 16px margin, vertically centered
-          const dialogX = CANVAS_WIDTH - dialogWidth - 16;
-          const dialogY = (CANVAS_HEIGHT - dialogHeight) / 2;
-
-          renderDialogWithContent(
-            ctx,
-            unitInfoDialog,
-            dialogX,
-            dialogY,
-            SPRITE_SIZE,
-            spriteImagesRef.current,
-            undefined, // Use default 9-slice sprites
-            PADDING,
-            4 // Scale
-          );
+          unitToDisplay = createUnitFromPartyMember(hoveredMember);
         }
+      }
+
+      // Priority 2: Check if hovering over a placed unit on the map
+      if (!unitToDisplay) {
+        const uiState = uiStateManager.getState();
+        if (uiState.hoveredCell) {
+          const hoveredUnit = combatState.unitManifest.getUnitAtPosition(uiState.hoveredCell);
+          if (hoveredUnit) {
+            unitToDisplay = hoveredUnit;
+          }
+        }
+      }
+
+      // Priority 3: Use the last displayed unit if no hover
+      if (!unitToDisplay && lastDisplayedUnitRef.current) {
+        unitToDisplay = lastDisplayedUnitRef.current;
+      }
+
+      // Update the last displayed unit
+      if (unitToDisplay) {
+        lastDisplayedUnitRef.current = unitToDisplay;
+      }
+
+      // Render the unit info dialog if we have a unit to display
+      if (unitToDisplay) {
+        const unitInfoDialog = new CombatUnitInfoDialogContent(
+          unitToDisplay,
+          dialogFont,
+          spriteImagesRef.current,
+          TILE_SIZE,
+          SPRITE_SIZE,
+          unitInfoFontSize
+        );
+
+        // Calculate dialog size
+        const bounds = unitInfoDialog.measure(0);
+        const BORDER_INSET = 6 * 4; // Scale of 4
+        const PADDING = 6;
+        const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
+        const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
+
+        // Position at right side with 16px margin, vertically centered
+        const dialogX = CANVAS_WIDTH - dialogWidth - 16;
+        const dialogY = (CANVAS_HEIGHT - dialogHeight) / 2;
+
+        renderDialogWithContent(
+          ctx,
+          unitInfoDialog,
+          dialogX,
+          dialogY,
+          SPRITE_SIZE,
+          spriteImagesRef.current,
+          undefined, // Use default 9-slice sprites
+          PADDING,
+          4 // Scale
+        );
       }
     }
 
