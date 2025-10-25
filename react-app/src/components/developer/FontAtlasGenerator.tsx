@@ -26,7 +26,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const [applyThreshold, setApplyThreshold] = useState<boolean>(true);
   const [useVariableWidth, setUseVariableWidth] = useState<boolean>(true);
   const [renderMonospaced, setRenderMonospaced] = useState<boolean>(true);
-  const [demoText, setDemoText] = useState<string>('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
+  const [demoText, setDemoText] = useState<string>('The quick brown fox jumps over the lazy dog!\n0123456789 @#$%^&*()_+-=[]{}|;:\'".,<>?/`~\\');
   const [demoScale, setDemoScale] = useState<number>(2);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
