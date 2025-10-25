@@ -386,13 +386,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Render the unit info dialog if we have a unit to display
       if (unitToDisplay) {
+        // Get the unit info font atlas image (default to 8px-habbo8)
+        const unitInfoFontId = '8px-habbo8';
+        const unitInfoFontAtlas = fontAtlasImagesRef.current.get(unitInfoFontId) || null;
+
         const unitInfoDialog = new CombatUnitInfoDialogContent(
           unitToDisplay,
-          dialogFont,
+          unitInfoFontId,
+          unitInfoFontAtlas,
           spriteImagesRef.current,
           TILE_SIZE,
           SPRITE_SIZE,
-          unitInfoFontSize
+          2 // Scale of 2 (8px * 2 = 16px)
         );
 
         // Calculate dialog size
