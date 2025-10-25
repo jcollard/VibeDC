@@ -1,6 +1,5 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
-import { renderNineSliceDialog, DEFAULT_DIALOG_SPRITES } from '../../../utils/DialogRenderer';
 import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
 
 /**
@@ -11,9 +10,9 @@ import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVertica
  * - Right column: Current unit (top) + Target unit (bottom) split horizontally
  */
 export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
-  private readonly RIGHT_COLUMN_WIDTH = 120; // 10 tiles
-  private readonly TURN_ORDER_HEIGHT = 36; // 3 tiles
-  private readonly COMBAT_LOG_HEIGHT = 36; // 3 tiles
+  private readonly RIGHT_COLUMN_WIDTH = 132; // 11 tiles
+  private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles (was 3)
+  private readonly COMBAT_LOG_HEIGHT = 48; // 4 tiles
   private readonly PANEL_PADDING = 4;
   private readonly LINE_SPACING = 8;
   private readonly frameLayout: HorizontalVerticalLayout;
@@ -22,20 +21,20 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     // Define the layout regions using tile-based dimensions
     // Canvas is 384x216 (32x18 tiles at 12px each)
     const regions: LayoutRegion[] = [
-      // Top-left: Turn order (22 tiles wide, 3 tiles tall)
-      { name: 'turnOrder', x: 0, y: 0, widthTiles: 22, heightTiles: 3 },
+      // Top-left: Turn order (21 tiles wide, 2 tiles tall)
+      { name: 'turnOrder', x: 0, y: 0, widthTiles: 21, heightTiles: 2 },
 
-      // Middle-left: Map area (22 tiles wide, 12 tiles tall)
-      { name: 'map', x: 0, y: 36, widthTiles: 22, heightTiles: 12 },
+      // Middle-left: Map area (21 tiles wide, 12 tiles tall)
+      { name: 'map', x: 0, y: 24, widthTiles: 21, heightTiles: 12 },
 
-      // Bottom-left: Combat log (22 tiles wide, 3 tiles tall)
-      { name: 'combatLog', x: 0, y: 180, widthTiles: 22, heightTiles: 3 },
+      // Bottom-left: Combat log (21 tiles wide, 4 tiles tall)
+      { name: 'combatLog', x: 0, y: 168, widthTiles: 21, heightTiles: 4 },
 
-      // Top-right: Current unit (10 tiles wide, 9 tiles tall)
-      { name: 'currentUnit', x: 264, y: 0, widthTiles: 10, heightTiles: 9 },
+      // Top-right: Current unit (11 tiles wide, 9 tiles tall)
+      { name: 'currentUnit', x: 252, y: 0, widthTiles: 11, heightTiles: 9 },
 
-      // Bottom-right: Target unit (10 tiles wide, 9 tiles tall)
-      { name: 'targetUnit', x: 264, y: 108, widthTiles: 10, heightTiles: 9 },
+      // Bottom-right: Target unit (11 tiles wide, 9 tiles tall)
+      { name: 'targetUnit', x: 252, y: 108, widthTiles: 11, heightTiles: 9 },
     ];
 
     this.frameLayout = new HorizontalVerticalLayout({ regions });
@@ -104,11 +103,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, turnOrder, fontId, fontAtlasImage, spriteSize, spriteImages } = context;
+    const { ctx, turnOrder, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
-
-    // Draw panel background
-    renderNineSliceDialog(ctx, x, y, width, height, spriteSize, spriteImages, DEFAULT_DIALOG_SPRITES, 1);
 
     let currentY = y + this.PANEL_PADDING + 6;
 
@@ -153,11 +149,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, combatLog, fontId, fontAtlasImage, spriteSize, spriteImages } = context;
+    const { ctx, combatLog, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
-
-    // Draw panel background
-    renderNineSliceDialog(ctx, x, y, width, height, spriteSize, spriteImages, DEFAULT_DIALOG_SPRITES, 1);
 
     let currentY = y + this.PANEL_PADDING + 6;
 
@@ -200,11 +193,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage, spriteSize, spriteImages } = context;
+    const { ctx, currentUnit, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
-
-    // Draw panel background
-    renderNineSliceDialog(ctx, x, y, width, height, spriteSize, spriteImages, DEFAULT_DIALOG_SPRITES, 1);
 
     let currentY = y + this.PANEL_PADDING + 6;
 
@@ -308,11 +298,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, targetUnit, fontId, fontAtlasImage, spriteSize, spriteImages } = context;
+    const { ctx, targetUnit, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
-
-    // Draw panel background
-    renderNineSliceDialog(ctx, x, y, width, height, spriteSize, spriteImages, DEFAULT_DIALOG_SPRITES, 1);
 
     let currentY = y + this.PANEL_PADDING + 6;
 

@@ -157,4 +157,32 @@ export class CombatRenderer {
       offsetY: (this.canvasHeight - mapHeight) / 2,
     };
   }
+
+  /**
+   * Render a debug grid overlay showing tile boundaries
+   * @param ctx - Canvas rendering context
+   */
+  renderDebugGrid(ctx: CanvasRenderingContext2D): void {
+    ctx.save();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.lineWidth = 1;
+
+    // Draw vertical lines
+    for (let x = 0; x <= this.canvasWidth; x += this.tileSize) {
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, this.canvasHeight);
+      ctx.stroke();
+    }
+
+    // Draw horizontal lines
+    for (let y = 0; y <= this.canvasHeight; y += this.tileSize) {
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(this.canvasWidth, y);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
 }

@@ -195,6 +195,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track selected combat layout - default to layout6
   const [selectedLayout, setSelectedLayout] = useState<string>('layout6');
 
+  // Track debug grid overlay
+  const [showDebugGrid, setShowDebugGrid] = useState<boolean>(false);
+
   // Layout renderers (memoized to prevent recreation)
   const layoutRenderers = useMemo(() => ({
     layout1: new CombatLayout1TraditionalRenderer(),
@@ -533,12 +536,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       });
     }
 
+    // Render debug grid overlay (if enabled)
+    if (showDebugGrid) {
+      renderer.renderDebugGrid(ctx);
+    }
+
     // Copy buffer to display canvas
     const displayCtx = displayCanvas.getContext('2d');
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, currentLayoutRenderer]);
+  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, currentLayoutRenderer, showDebugGrid]);
 
   // Animation loop
   useEffect(() => {
@@ -784,6 +792,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               }}
             />
             <span>Integer Scaling (pixel-perfect)</span>
+          </label>
+
+          {/* Debug Grid Toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={showDebugGrid}
+              onChange={(e) => setShowDebugGrid(e.target.checked)}
+              style={{
+                marginRight: '8px',
+                cursor: 'pointer',
+                width: '16px',
+                height: '16px',
+              }}
+            />
+            <span>Show Debug Grid</span>
           </label>
 
           {/* Manual Scale Selector */}
