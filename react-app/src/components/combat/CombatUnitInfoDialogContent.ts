@@ -78,20 +78,19 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     // Move down past the sprite/name/class area
     currentY += SPRITE_SIZE_PIXELS + SPACING;
 
-    // Prepare stats with labels and max digits
+    // Prepare stats with actual values from the unit
     // Layout: Row 1: HP/MP, Row 2: Speed/Move, Row 3: P.Power/M.Power, Row 4: P.Evade/M.Evade, Row 5: Courage/Attunement
-    // TEST: Display 999 for all values to test maximum width
     const stats = [
-      { label: 'HP', value: '999/999', maxDigits: 7 },
-      { label: 'MP', value: '999/999', maxDigits: 7 },
-      { label: 'Speed', value: '99', maxDigits: 2 },
-      { label: 'Move', value: '9', maxDigits: 1 },
-      { label: 'P.Power', value: '99', maxDigits: 2 },
-      { label: 'M.Power', value: '99', maxDigits: 2 },
-      { label: 'P.Evade', value: '99', maxDigits: 2 },
-      { label: 'M.Evade', value: '99', maxDigits: 2 },
-      { label: 'Courage', value: '99', maxDigits: 2 },
-      { label: 'Attunement', value: '99', maxDigits: 2 },
+      { label: 'HP', value: `${this.unit.health}/${this.unit.maxHealth}`, maxDigits: 7 },
+      { label: 'MP', value: `${this.unit.mana}/${this.unit.maxMana}`, maxDigits: 7 },
+      { label: 'Speed', value: `${this.unit.speed}`, maxDigits: 2 },
+      { label: 'Move', value: `${this.unit.movement}`, maxDigits: 1 },
+      { label: 'P.Power', value: `${this.unit.physicalPower}`, maxDigits: 2 },
+      { label: 'M.Power', value: `${this.unit.magicPower}`, maxDigits: 2 },
+      { label: 'P.Evade', value: `${this.unit.physicalEvade}`, maxDigits: 2 },
+      { label: 'M.Evade', value: `${this.unit.magicEvade}`, maxDigits: 2 },
+      { label: 'Courage', value: `${this.unit.courage}`, maxDigits: 2 },
+      { label: 'Attunement', value: `${this.unit.attunement}`, maxDigits: 2 },
     ];
 
     // Render stats in two columns (row-major order)

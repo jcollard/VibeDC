@@ -299,41 +299,49 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       });
     }
 
-    // TEST: Render unit info dialog for first party member at bottom-right
-    const partyMembers = PartyMemberRegistry.getAll();
-    if (partyMembers.length > 0) {
-      const testUnit = createUnitFromPartyMember(partyMembers[0]);
-      const unitInfoDialog = new CombatUnitInfoDialogContent(
-        testUnit,
-        dialogFont,
-        spriteImagesRef.current,
-        TILE_SIZE,
-        SPRITE_SIZE,
-        unitInfoFontSize
-      );
+    // Render unit info dialog when hovering over a character in deployment phase
+    const phaseHandler = phaseHandlerRef.current;
+    if (phaseHandler instanceof DeploymentPhaseHandler) {
+      const hoveredCharacterIndex = phaseHandler.getHoveredCharacterIndex();
+      if (hoveredCharacterIndex !== null) {
+        const partyMembers = PartyMemberRegistry.getAll();
+        if (hoveredCharacterIndex >= 0 && hoveredCharacterIndex < partyMembers.length) {
+          const hoveredMember = partyMembers[hoveredCharacterIndex];
+          const hoveredUnit = createUnitFromPartyMember(hoveredMember);
 
-      // Calculate dialog size
-      const bounds = unitInfoDialog.measure(0);
-      const BORDER_INSET = 6 * 4; // Scale of 4
-      const PADDING = 6;
-      const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
-      const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
+          const unitInfoDialog = new CombatUnitInfoDialogContent(
+            hoveredUnit,
+            dialogFont,
+            spriteImagesRef.current,
+            TILE_SIZE,
+            SPRITE_SIZE,
+            unitInfoFontSize
+          );
 
-      // Position at bottom-right with 10px margin
-      const dialogX = CANVAS_WIDTH - dialogWidth - 10;
-      const dialogY = CANVAS_HEIGHT - dialogHeight - 10;
+          // Calculate dialog size
+          const bounds = unitInfoDialog.measure(0);
+          const BORDER_INSET = 6 * 4; // Scale of 4
+          const PADDING = 6;
+          const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
+          const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
 
-      renderDialogWithContent(
-        ctx,
-        unitInfoDialog,
-        dialogX,
-        dialogY,
-        SPRITE_SIZE,
-        spriteImagesRef.current,
-        undefined, // Use default 9-slice sprites
-        PADDING,
-        4 // Scale
-      );
+          // Position at right side with 16px margin, vertically centered
+          const dialogX = CANVAS_WIDTH - dialogWidth - 16;
+          const dialogY = (CANVAS_HEIGHT - dialogHeight) / 2;
+
+          renderDialogWithContent(
+            ctx,
+            unitInfoDialog,
+            dialogX,
+            dialogY,
+            SPRITE_SIZE,
+            spriteImagesRef.current,
+            undefined, // Use default 9-slice sprites
+            PADDING,
+            4 // Scale
+          );
+        }
+      }
     }
 
     // Copy buffer to display canvas
