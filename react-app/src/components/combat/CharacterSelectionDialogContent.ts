@@ -54,12 +54,12 @@ export class CharacterSelectionDialogContent extends DialogContent {
       return;
     }
 
-    const TITLE_SCALE = 2; // Scale for title (9px * 2 = 18px)
-    const NAME_SCALE = 2; // Scale for names (9px * 2 = 18px)
-    const SPRITE_SIZE_PIXELS = this.tileSize * 1; // Characters are 1x1 tiles (48px)
-    const ROW_HEIGHT = 48; // Each row is exactly 48px tall
-    const TITLE_SPACING = 8; // Space after title
-    const NAME_OFFSET = 8; // Horizontal space between sprite and name
+    const TITLE_SCALE = 1; // Scale for title (reduced from 2 for new resolution)
+    const NAME_SCALE = 1; // Scale for names (reduced from 2 for new resolution)
+    const SPRITE_SIZE_PIXELS = this.tileSize * 1; // Characters are 1x1 tiles (12px at new resolution)
+    const ROW_HEIGHT = 12; // Each row is exactly 12px tall (reduced from 48)
+    const TITLE_SPACING = 2; // Space after title (reduced from 8)
+    const NAME_OFFSET = 2; // Horizontal space between sprite and name (reduced from 8)
 
     // Render title using FontAtlasRenderer
     const titleHeight = font.charHeight * TITLE_SCALE;
@@ -128,18 +128,18 @@ export class CharacterSelectionDialogContent extends DialogContent {
     const font = FontRegistry.getById(this.fontId);
     if (!font) {
       console.warn(`Font '${this.fontId}' not found in registry`);
-      // Fallback to estimates
-      const totalWidth = this.title.length * 20;
-      const totalHeight = 40 + (48 * this.partyMembers.length);
+      // Fallback to estimates (scaled down from previous values)
+      const totalWidth = this.title.length * 5; // Reduced from 20
+      const totalHeight = 10 + (12 * this.partyMembers.length); // Reduced from 40 + (48 * length)
       return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
     }
 
-    const TITLE_SCALE = 2; // Scale for title (9px * 2 = 18px)
-    const NAME_SCALE = 2; // Scale for names (9px * 2 = 18px)
+    const TITLE_SCALE = 1; // Scale for title (reduced from 2 for new resolution)
+    const NAME_SCALE = 1; // Scale for names (reduced from 2 for new resolution)
     const SPRITE_SIZE_PIXELS = this.tileSize * 1;
-    const ROW_HEIGHT = 48; // Each row is exactly 48px tall
-    const TITLE_SPACING = 8; // Space after title
-    const NAME_OFFSET = 8;
+    const ROW_HEIGHT = 12; // Each row is exactly 12px tall (reduced from 48)
+    const TITLE_SPACING = 2; // Space after title (reduced from 8)
+    const NAME_OFFSET = 2; // Horizontal space between sprite and name (reduced from 8)
 
     // Measure title width using FontAtlasRenderer
     const titleWidth = FontAtlasRenderer.measureTextByFontId(this.title, this.fontId) * TITLE_SCALE;

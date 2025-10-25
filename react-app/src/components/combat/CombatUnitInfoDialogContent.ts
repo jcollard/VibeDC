@@ -25,7 +25,7 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     spriteImages: Map<string, HTMLImageElement>,
     tileSize: number,
     spriteSize: number,
-    scale: number = 2
+    scale: number = 1 // Default scale reduced from 2 for new resolution
   ) {
     super();
     this.unit = unit;
@@ -49,13 +49,13 @@ export class CombatUnitInfoDialogContent extends DialogContent {
       return;
     }
 
-    const NAME_SCALE = this.scale * 1.5; // 1.5x scale for name (8px * 2 * 1.5 = 24px)
+    const NAME_SCALE = this.scale * 1.5; // 1.5x scale for name
     const TEXT_SCALE = this.scale; // Regular scale for text
     const FONT_HEIGHT = font.charHeight * TEXT_SCALE;
     const NAME_HEIGHT = font.charHeight * NAME_SCALE;
-    const LINE_HEIGHT = FONT_HEIGHT + 4; // Add 4px spacing between lines
-    const SPRITE_SIZE_PIXELS = this.tileSize; // 48px
-    const SPACING = 8;
+    const LINE_HEIGHT = FONT_HEIGHT + 1; // Add 1px spacing between lines (reduced from 4)
+    const SPRITE_SIZE_PIXELS = this.tileSize; // 12px at new resolution
+    const SPACING = 2; // Reduced from 8
 
     let currentY = y;
 
@@ -139,9 +139,9 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     });
 
     // Column width = label width + spacing + value width
-    const LABEL_VALUE_SPACING = 8; // Space between label and value
+    const LABEL_VALUE_SPACING = 2; // Space between label and value (reduced from 8)
     const COL_WIDTH = maxLabelWidth + LABEL_VALUE_SPACING + maxValueWidth;
-    const COL_SPACING = 16; // Space between columns
+    const COL_SPACING = 4; // Space between columns (reduced from 16)
 
     stats.forEach((stat, index) => {
       if (!this.fontAtlasImage) return;
@@ -301,19 +301,19 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     const font = FontRegistry.getById(this.fontId);
     if (!font) {
       console.warn(`Font '${this.fontId}' not found in registry`);
-      // Fallback to estimates
-      const totalWidth = 200;
-      const totalHeight = 300;
+      // Fallback to estimates (scaled down from previous values)
+      const totalWidth = 50; // Reduced from 200
+      const totalHeight = 75; // Reduced from 300
       return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
     }
 
     const NAME_SCALE = this.scale * 1.5;
     const TEXT_SCALE = this.scale;
     const FONT_HEIGHT = font.charHeight * TEXT_SCALE;
-    const LINE_HEIGHT = FONT_HEIGHT + 4; // Add 4px spacing between lines
-    const SPRITE_SIZE_PIXELS = this.tileSize; // 48px
-    const SPACING = 8;
-    const LABEL_VALUE_SPACING = 8;
+    const LINE_HEIGHT = FONT_HEIGHT + 1; // Add 1px spacing between lines (reduced from 4)
+    const SPRITE_SIZE_PIXELS = this.tileSize; // 12px at new resolution
+    const SPACING = 2; // Reduced from 8
+    const LABEL_VALUE_SPACING = 2; // Reduced from 8
 
     // Measure name width using FontAtlasRenderer
     const nameWidth = FontAtlasRenderer.measureTextByFontId(this.unit.name, this.fontId) * NAME_SCALE;
@@ -348,7 +348,7 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     });
 
     const COL_WIDTH = maxLabelWidth + LABEL_VALUE_SPACING + maxValueWidth;
-    const COL_SPACING = 16;
+    const COL_SPACING = 4; // Reduced from 16
 
     // Total width is max(sprite + spacing + max(name, class), stats width)
     const topRowWidth = SPRITE_SIZE_PIXELS + SPACING + Math.max(nameWidth, classWidth);

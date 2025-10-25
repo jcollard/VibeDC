@@ -92,7 +92,7 @@ export class DeploymentUI {
     if (!fontDef) return;
 
     const text = CombatConstants.TEXT.DEPLOY_TITLE;
-    const scale = 3; // Scale factor for the font
+    const scale = 1; // Scale factor for the font (reduced from 3 for new resolution)
     const y = CombatConstants.UI.TITLE_Y_POSITION;
 
     // Draw semi-transparent background
@@ -129,7 +129,7 @@ export class DeploymentUI {
     }
 
     const text = CombatConstants.TEXT.WAYLAID_MESSAGE;
-    const scale = 2; // Scale factor for the font (8px * 2 = 16px, close to MESSAGE_SIZE)
+    const scale = 1; // Scale factor for the font (reduced from 2 for new resolution)
     const y = CombatConstants.UI.WAYLAID_MESSAGE_Y;
 
     // Render centered message
@@ -168,7 +168,7 @@ export class DeploymentUI {
     const fontDef = FontRegistry.getById(fontId);
     if (!fontDef) return;
 
-    const scale = 2; // Scale factor for the font
+    const scale = 1; // Scale factor for the font (reduced from 2 for new resolution)
     const message = 'Click ';
     const message2 = ' to deploy a unit.';
 

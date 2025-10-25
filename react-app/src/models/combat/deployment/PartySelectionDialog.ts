@@ -76,11 +76,11 @@ export class PartySelectionDialog {
     ) {
       // Calculate which character row is being hovered
       // Match CharacterSelectionDialogContent's layout
-      const ROW_HEIGHT = 48;
-      const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const SCALE = 4; // Scale factor for borders
+      const ROW_HEIGHT = 12; // Reduced from 48 for new resolution
+      const TITLE_HEIGHT = 8 + 2; // Title font size + spacing (reduced from 32+8)
+      const SCALE = 1; // Scale factor for borders (reduced from 4)
       const BORDER_INSET = 6 * SCALE; // 6px border inset from sprite edge (scaled)
-      const PADDING = 6; // Additional padding beyond border inset (not scaled)
+      const PADDING = 2; // Additional padding beyond border inset (reduced from 6)
 
       const relativeY = canvasY - dialogY - BORDER_INSET - PADDING - TITLE_HEIGHT;
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
@@ -127,11 +127,11 @@ export class PartySelectionDialog {
       canvasY <= dialogY + dialogHeight
     ) {
       // Calculate which character row was clicked
-      const ROW_HEIGHT = 48;
-      const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const SCALE = 4; // Scale factor for borders
+      const ROW_HEIGHT = 12; // Reduced from 48 for new resolution
+      const TITLE_HEIGHT = 8 + 2; // Title font size + spacing (reduced from 32+8)
+      const SCALE = 1; // Scale factor for borders (reduced from 4)
       const BORDER_INSET = 6 * SCALE; // 6px border inset from sprite edge (scaled)
-      const PADDING = 6; // Additional padding beyond border inset (not scaled)
+      const PADDING = 2; // Additional padding beyond border inset (reduced from 6)
 
       const relativeY = canvasY - dialogY - BORDER_INSET - PADDING - TITLE_HEIGHT;
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
@@ -199,8 +199,8 @@ export class PartySelectionDialog {
     );
 
     // Calculate dialog size
-    const paddingPixels = 6; // Use default 6px padding beyond border insets
-    const scale = 4; // Default scale for dialog borders
+    const paddingPixels = 2; // Padding beyond border insets (reduced from 6)
+    const scale = 1; // Scale for dialog borders (reduced from 4)
     const bounds = dialogContent.measure(0);
     const BORDER_INSET = 6 * scale;
     const dialogWidth = (bounds.maxX - bounds.minX) + (paddingPixels * 2) + (BORDER_INSET * 2);
@@ -215,11 +215,11 @@ export class PartySelectionDialog {
 
     // Position dialog centered horizontally above the selected zone
     const dialogX = zoneCenterX - (dialogWidth / 2);
-    const dialogY = zoneY - dialogHeight - 20; // 20px gap above the zone
+    const dialogY = zoneY - dialogHeight - 5; // 5px gap above the zone (reduced from 20px)
 
     // Clamp dialog to stay within canvas bounds
-    const clampedDialogX = Math.max(10, Math.min(dialogX, canvasWidth - dialogWidth - 10));
-    const clampedDialogY = Math.max(10, Math.min(dialogY, canvasWidth - dialogHeight - 10));
+    const clampedDialogX = Math.max(3, Math.min(dialogX, canvasWidth - dialogWidth - 3)); // 3px margin (reduced from 10px)
+    const clampedDialogY = Math.max(3, Math.min(dialogY, canvasWidth - dialogHeight - 3)); // 3px margin (reduced from 10px)
 
     // Store dialog bounds for hover detection
     this.lastDialogBounds = {

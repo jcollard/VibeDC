@@ -374,7 +374,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
           activeSpriteId: 'ui-simple-6',
           fontId: buttonFontId,
           fontAtlasImage: buttonFontAtlas,
-          fontScale: 2, // 10px * 2 = 20px
+          fontScale: 1, // Scale factor (reduced from 2 for new resolution)
           // padding: 1 is the default
           onClick: () => {
             console.log('Start Combat button clicked!');
