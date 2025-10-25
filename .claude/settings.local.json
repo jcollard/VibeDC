@@ -14,7 +14,8 @@
       "Bash(node generate-sprites.js)",
       "Bash(npm test -- CombatEncounter.test.ts)",
       "Bash(npm test)",
-      "Bash(npm test -- DataLoader.test.ts)"
+      "Bash(npm test -- DataLoader.test.ts)",
+      "Bash(timeout 30 npm test)"
     ],
     "deny": [],
     "ask": []
