@@ -51,7 +51,8 @@ async function extractFontTool() {
 
   for (const asset of assets) {
     // Only copy assets used by font-tool
-    if (asset.includes('font-tool') || asset.includes('index')) {
+    // Include: font-tool, index (shared chunks), and js-yaml (dependency)
+    if (asset.includes('font-tool') || asset.includes('index') || asset.includes('js-yaml')) {
       const content = await readFile(join(assetsDir, asset));
       await writeFile(join(OUTPUT_DIR, 'assets', asset), content);
       copiedCount++;

@@ -106,7 +106,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
-  const [messageAtlasFont, setMessageAtlasFont] = useState<string>('8px-habbo8');
+  const [messageAtlasFont, setMessageAtlasFont] = useState<string>('9px-habbo');
 
   // Track unit info dialog font size for testing
   const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(36);

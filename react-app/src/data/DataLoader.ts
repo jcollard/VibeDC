@@ -27,6 +27,7 @@ import partyYaml from './party-definitions.yaml?raw';
 import equipmentYaml from './equipment-definitions.yaml?raw';
 import tilesetYaml from './tileset-database.yaml?raw';
 import font8pxYaml from './fonts/8px-habbo8.yaml?raw';
+import font9pxYaml from './fonts/9px-habbo.yaml?raw';
 import font10pxYaml from './fonts/10px-bitfantasy.yaml?raw';
 import font15pxYaml from './fonts/15px-dungeonslant.yaml?raw';
 
@@ -233,6 +234,7 @@ export function loadPartyMembers(): void {
 export async function loadFonts(): Promise<void> {
   const fontYamls = [
     { name: '8px-habbo8', yaml: font8pxYaml },
+    { name: '9px-habbo', yaml: font9pxYaml },
     { name: '10px-bitfantasy', yaml: font10pxYaml },
     { name: '15px-dungeonslant', yaml: font15pxYaml },
   ];

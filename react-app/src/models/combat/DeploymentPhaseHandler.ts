@@ -340,7 +340,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
     this.ui.renderPhaseHeader(ctx, canvasWidth, headerFont, titleAtlasFontId || '15px-dungeonslant');
 
     // Render waylaid message (8px below title)
-    this.ui.renderWaylaidMessage(ctx, canvasWidth, dialogFont, messageAtlasFontId || '8px-habbo8');
+    this.ui.renderWaylaidMessage(ctx, canvasWidth, dialogFont, messageAtlasFontId || '9px-habbo');
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;

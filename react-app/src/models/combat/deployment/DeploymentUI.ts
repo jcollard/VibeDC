@@ -20,22 +20,18 @@ export class DeploymentUI {
    * Pre-load default fonts synchronously
    */
   private preloadDefaultFonts(): void {
-    const defaultFonts = ['15px-dungeonslant', '8px-habbo8'];
+    const defaultFonts = ['15px-dungeonslant', '9px-habbo'];
     for (const fontId of defaultFonts) {
       const fontDef = FontRegistry.getById(fontId);
       if (fontDef) {
         const img = new Image();
         img.src = fontDef.atlasPath;
-        // Add to cache when loaded
         img.onload = () => {
           this.fontAtlasCache.set(fontId, img);
-          console.log(`Preloaded font atlas: ${fontId}`);
         };
         img.onerror = () => {
           console.error(`Failed to preload font atlas '${fontId}' from ${fontDef.atlasPath}`);
         };
-      } else {
-        console.error(`Font definition '${fontId}' not found in FontRegistry during preload`);
       }
     }
   }
@@ -123,7 +119,7 @@ export class DeploymentUI {
   /**
    * Render the waylaid message below the Deploy Units title
    */
-  renderWaylaidMessage(ctx: CanvasRenderingContext2D, canvasWidth: number, _font: string, fontId: string = '8px-habbo8'): void {
+  renderWaylaidMessage(ctx: CanvasRenderingContext2D, canvasWidth: number, _font: string, fontId: string = '9px-habbo'): void {
     // Get font atlas (load if needed)
     const atlas = this.fontAtlasCache.get(fontId);
     if (!atlas) {
