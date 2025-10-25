@@ -162,21 +162,20 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     ctx.font = `${fontSize}px "${fontFamily}", monospace`;
     ctx.textBaseline = 'top';
 
-    // Measure character widths if using variable width
+    // Placeholder for measured widths - will be calculated after rendering
     const measuredWidths: number[] = [];
     const positions: { x: number; y: number; width: number; height: number }[] = [];
 
+    // Initially use text measurement or fixed width for rendering
     if (useVariableWidth) {
       charSet.forEach(char => {
         const metrics = ctx.measureText(char);
         const actualWidth = Math.ceil(metrics.width) + 2; // Add 2px padding
         measuredWidths.push(Math.min(actualWidth, charWidth)); // Cap at max charWidth
       });
-      setCharWidths(measuredWidths);
     } else {
       // Use fixed width for all characters
       charSet.forEach(() => measuredWidths.push(charWidth));
-      setCharWidths(measuredWidths);
     }
 
     // Calculate canvas dimensions
@@ -205,7 +204,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     // Enable font rendering hints for sharper text
     // Note: These don't fully prevent antialiasing in all browsers
 
-    // Render each character
+    // Render each character (first pass - will refine positions after)
     charSet.forEach((char, index) => {
       const col = index % charsPerRow;
       const row = Math.floor(index / charsPerRow);
@@ -215,14 +214,6 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
       // Center character horizontally if using variable width
       const xOffset = useVariableWidth ? Math.floor((charWidth - charActualWidth) / 2) : 0;
-
-      // Store actual character position (not cell position)
-      positions.push({
-        x: cellX + xOffset,
-        y: cellY,
-        width: charActualWidth,
-        height: charHeight
-      });
 
       // Save context state
       ctx.save();
@@ -238,9 +229,6 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       // Restore context state
       ctx.restore();
     });
-
-    // Store character positions
-    setCharPositions(positions);
 
     // Apply threshold to remove antialiasing (make pixel-perfect)
     if (applyThreshold) {
@@ -269,6 +257,95 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
       ctx.putImageData(imageData, 0, 0);
     }
+
+    // Measure actual pixel widths by scanning the rendered characters
+    if (useVariableWidth) {
+      const imageData = ctx.getImageData(0, 0, atlasWidth, atlasHeight);
+      const data = imageData.data;
+
+      charSet.forEach((char, index) => {
+        const col = index % charsPerRow;
+        const row = Math.floor(index / charsPerRow);
+        const cellX = col * charWidth;
+        const cellY = row * charHeight;
+
+        // Scan pixels to find actual bounds
+        let minX = charWidth;
+        let maxX = 0;
+
+        // Scan the entire cell for non-transparent pixels
+        for (let y = 0; y < charHeight; y++) {
+          for (let x = 0; x < charWidth; x++) {
+            const pixelX = cellX + x;
+            const pixelY = cellY + y;
+            const pixelIndex = (pixelY * atlasWidth + pixelX) * 4;
+            const alpha = data[pixelIndex + 3];
+
+            // If pixel has content (not transparent)
+            if (alpha > 0) {
+              minX = Math.min(minX, x);
+              maxX = Math.max(maxX, x);
+            }
+          }
+        }
+
+        // Calculate actual width and position
+        let actualWidth;
+        let actualX;
+
+        // Space character always uses full charWidth
+        if (char === ' ') {
+          actualWidth = charWidth;
+          actualX = cellX;
+        } else if (maxX >= minX) {
+          // Found pixels - add 1px padding on each side
+          const leftPadding = Math.max(0, minX - 1);
+          const rightPadding = Math.min(charWidth - 1, maxX + 1);
+          actualWidth = rightPadding - leftPadding + 1;
+          actualX = cellX + leftPadding;
+        } else {
+          // No pixels found - use full width
+          actualWidth = charWidth;
+          actualX = cellX;
+        }
+
+        // Cap at max charWidth
+        actualWidth = Math.min(actualWidth, charWidth);
+
+        // Update measured width
+        measuredWidths[index] = actualWidth;
+
+        // Store actual character position
+        positions.push({
+          x: actualX,
+          y: cellY,
+          width: actualWidth,
+          height: charHeight
+        });
+      });
+
+      setCharWidths(measuredWidths);
+    } else {
+      // For fixed width, just store positions
+      charSet.forEach((char, index) => {
+        const col = index % charsPerRow;
+        const row = Math.floor(index / charsPerRow);
+        const cellX = col * charWidth;
+        const cellY = row * charHeight;
+
+        positions.push({
+          x: cellX,
+          y: cellY,
+          width: charWidth,
+          height: charHeight
+        });
+      });
+
+      setCharWidths(measuredWidths);
+    }
+
+    // Store character positions
+    setCharPositions(positions);
 
     updatePreview();
   };
@@ -903,9 +980,28 @@ ${charactersYAML}
                     </span>
                   </label>
                   {useVariableWidth && (
-                    <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
-                      Each character centered in cell
-                    </div>
+                    <>
+                      <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
+                        Each character centered in cell
+                      </div>
+                      <button
+                        onClick={generateAtlas}
+                        style={{
+                          marginTop: '6px',
+                          marginLeft: '24px',
+                          padding: '4px 8px',
+                          background: 'rgba(33, 150, 243, 0.2)',
+                          border: '1px solid rgba(33, 150, 243, 0.4)',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        Regenerate Widths
+                      </button>
+                    </>
                   )}
                 </div>
 
