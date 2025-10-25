@@ -14,6 +14,7 @@ import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence
 import { SequenceParallel } from '../../models/combat/SequenceParallel';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
+import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -61,6 +62,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     () => new CombatInputHandler(displayCanvasRef, CANVAS_WIDTH, CANVAS_HEIGHT),
     []
   );
+
+  // Sprite asset loader
+  const spriteLoader = useMemo(() => new SpriteAssetLoader(), []);
 
   // Store loaded sprite images
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -129,55 +133,25 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load sprite images
+  // Load sprite images using SpriteAssetLoader
   useEffect(() => {
     const loadSprites = async () => {
-      const spritesToLoad = new Set<string>();
+      const result = await spriteLoader.loadSprites(
+        combatState,
+        encounter,
+        phaseHandlerRef.current
+      );
 
-      // Collect all sprite IDs from the map
-      const allCells = combatState.map.getAllCells();
-
-      for (const { cell } of allCells) {
-        if (cell.spriteId) {
-          spritesToLoad.add(cell.spriteId);
-        }
+      if (result.loaded) {
+        spriteImagesRef.current = result.spriteSheets;
+        setSpritesLoaded(true);
+      } else {
+        console.error('Failed to load sprites:', result.error);
       }
-
-      // Get phase-specific sprites from the phase handler
-      const phaseSprites = phaseHandlerRef.current.getRequiredSprites(combatState, encounter);
-      phaseSprites.spriteIds.forEach(id => spritesToLoad.add(id));
-
-      // Load each sprite image
-      const loadPromises = Array.from(spritesToLoad).map(async (spriteId) => {
-        const spriteDef = SpriteRegistry.getById(spriteId);
-        if (!spriteDef) {
-          console.warn(`Sprite not found: ${spriteId}`);
-          return;
-        }
-
-        // Check if we already loaded this sprite sheet
-        if (!spriteImagesRef.current.has(spriteDef.spriteSheet)) {
-          const img = new Image();
-          img.src = spriteDef.spriteSheet;
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => {
-              spriteImagesRef.current.set(spriteDef.spriteSheet, img);
-              resolve();
-            };
-            img.onerror = (err) => {
-              console.error(`CombatView: Failed to load sprite sheet ${spriteDef.spriteSheet}`, err);
-              reject(err);
-            };
-          });
-        }
-      });
-
-      await Promise.all(loadPromises);
-      setSpritesLoaded(true);
     };
 
     loadSprites().catch(console.error);
-  }, [combatState.map, combatState.phase, encounter]);
+  }, [combatState.map, combatState.phase, encounter, spriteLoader]);
 
   // Start the intro cinematic sequence when encounter loads (only once)
   useEffect(() => {
