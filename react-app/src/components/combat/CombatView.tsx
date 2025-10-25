@@ -99,6 +99,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
   const [messageAtlasFont, setMessageAtlasFont] = useState<string>('9px-habbo');
   const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('9px-habbo');
+  const [unitInfoAtlasFont, setUnitInfoAtlasFont] = useState<string>('8px-habbo8');
 
   // Track the last displayed unit for info panel persistence
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
@@ -344,18 +345,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Render the unit info dialog if we have a unit to display
       if (unitToDisplay) {
-        // Get the unit info font atlas image (default to 8px-habbo8)
-        const unitInfoFontId = '8px-habbo8';
-        const unitInfoFontAtlas = fontAtlasImagesRef.current.get(unitInfoFontId) || null;
+        // Get the unit info font atlas image from the selected font
+        const unitInfoFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
 
         const unitInfoDialog = new CombatUnitInfoDialogContent(
           unitToDisplay,
-          unitInfoFontId,
+          unitInfoAtlasFont,
           unitInfoFontAtlas,
           spriteImagesRef.current,
           TILE_SIZE,
           SPRITE_SIZE,
-          2 // Scale of 2 (8px * 2 = 16px)
+          2 // Scale of 2
         );
 
         // Calculate dialog size
@@ -388,7 +388,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont]);
+  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont]);
 
   // Animation loop
   useEffect(() => {
@@ -679,6 +679,32 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             <select
               value={dialogAtlasFont}
               onChange={(e) => setDialogAtlasFont(e.target.value)}
+              style={{
+                width: '200px',
+                padding: '4px',
+                background: '#222',
+                border: '1px solid #555',
+                borderRadius: '3px',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                marginBottom: '8px',
+              }}
+            >
+              {FontRegistry.getAllIds().sort().map((fontId) => (
+                <option key={fontId} value={fontId}>
+                  {fontId}
+                </option>
+              ))}
+            </select>
+
+            {/* Unit Info Font Atlas Selector */}
+            <label style={{ display: 'block', marginBottom: '4px' }}>
+              Unit Info Font Atlas:
+            </label>
+            <select
+              value={unitInfoAtlasFont}
+              onChange={(e) => setUnitInfoAtlasFont(e.target.value)}
               style={{
                 width: '200px',
                 padding: '4px',
