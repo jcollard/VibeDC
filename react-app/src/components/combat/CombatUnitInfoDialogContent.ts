@@ -40,7 +40,7 @@ export class CombatUnitInfoDialogContent extends DialogContent {
 
     let currentY = y;
 
-    // Render unit sprite
+    // Render unit sprite on the left
     const spriteDef = SpriteRegistry.getById(this.unit.spriteId);
     if (spriteDef) {
       const spriteImage = this.spriteImages.get(spriteDef.spriteSheet);
@@ -58,29 +58,39 @@ export class CombatUnitInfoDialogContent extends DialogContent {
       }
     }
 
-    // Render unit name to the right of sprite
+    // Render unit name to the right of sprite (moved up 16px)
+    const textX = x + SPRITE_SIZE_PIXELS + SPACING;
+    const textY = currentY - 16;
     ctx.fillStyle = '#000000';
     ctx.font = `bold ${NAME_FONT_SIZE}px "${this.font}", monospace`;
     ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(this.unit.name, x + SPRITE_SIZE_PIXELS + SPACING, currentY + (SPRITE_SIZE_PIXELS / 2));
+    ctx.textBaseline = 'top';
+    ctx.fillText(this.unit.name, textX, textY);
 
+    // Render class information below name (moved up additional 8px from previous -4, now -12)
+    ctx.font = `${FONT_SIZE}px "${this.font}", monospace`;
+    const classText = this.unit.secondaryClass
+      ? `${this.unit.unitClass.name}/${this.unit.secondaryClass.name}`
+      : this.unit.unitClass.name;
+    ctx.fillText(classText, textX, textY + NAME_FONT_SIZE - 12);
+
+    // Move down past the sprite/name/class area
     currentY += SPRITE_SIZE_PIXELS + SPACING;
 
     // Prepare stats with labels and max digits
-    // Layout: Row 1: HP/MP, Row 2: SPD/MV, Row 3: P.Pow/M.Pow, Row 4: P.Ev/M.Ev, Row 5: Cour/Attn
+    // Layout: Row 1: HP/MP, Row 2: Speed/Move, Row 3: P.Power/M.Power, Row 4: P.Evade/M.Evade, Row 5: Courage/Attunement
     // TEST: Display 999 for all values to test maximum width
     const stats = [
       { label: 'HP', value: '999/999', maxDigits: 7 },
       { label: 'MP', value: '999/999', maxDigits: 7 },
-      { label: 'SPD', value: '99', maxDigits: 2 },
-      { label: 'MV', value: '9', maxDigits: 1 },
-      { label: 'P.Pow', value: '99', maxDigits: 2 },
-      { label: 'M.Pow', value: '99', maxDigits: 2 },
-      { label: 'P.Ev', value: '99', maxDigits: 2 },
-      { label: 'M.Ev', value: '99', maxDigits: 2 },
-      { label: 'Cour', value: '99', maxDigits: 2 },
-      { label: 'Attn', value: '99', maxDigits: 2 },
+      { label: 'Speed', value: '99', maxDigits: 2 },
+      { label: 'Move', value: '9', maxDigits: 1 },
+      { label: 'P.Power', value: '99', maxDigits: 2 },
+      { label: 'M.Power', value: '99', maxDigits: 2 },
+      { label: 'P.Evade', value: '99', maxDigits: 2 },
+      { label: 'M.Evade', value: '99', maxDigits: 2 },
+      { label: 'Courage', value: '99', maxDigits: 2 },
+      { label: 'Attunement', value: '99', maxDigits: 2 },
     ];
 
     // Render stats in two columns (row-major order)
@@ -89,18 +99,21 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     ctx.textBaseline = 'top';
 
     // Scale column width based on font size (approximately 5.5x font size)
-    const COL_WIDTH = Math.ceil(this.fontSize * 5.5);
+    // Reduced by 24px for tighter label-value spacing
+    const COL_WIDTH = Math.ceil(this.fontSize * 5.5) - 24;
+    // Add 16px spacing between columns
+    const COL_SPACING = 16;
 
     stats.forEach((stat, index) => {
       // Row-major order: fill left to right, then move to next row
       const row = Math.floor(index / 2);
       const column = index % 2;
-      const statX = x + (column * COL_WIDTH);
+      const statX = x + (column * (COL_WIDTH + COL_SPACING));
       const statY = currentY + (row * LINE_HEIGHT);
 
       // Render label
       ctx.fillStyle = '#000000';
-      ctx.fillText(`${stat.label}:`, statX, statY);
+      ctx.fillText(stat.label, statX, statY);
 
       // Render value (right-aligned within the column)
       const valueX = statX + COL_WIDTH - 8;
@@ -115,7 +128,8 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     const SPRITE_SIZE_PIXELS = this.tileSize; // 48px
     const NAME_FONT_SIZE = Math.ceil(this.fontSize * 1.25);
     const SPACING = 8;
-    const COL_WIDTH = Math.ceil(this.fontSize * 5.5);
+    const COL_WIDTH = Math.ceil(this.fontSize * 5.5) - 24; // Reduced by 24px
+    const COL_SPACING = 16; // Add spacing between columns
 
     // Create a temporary canvas to measure text width accurately
     const tempCanvas = document.createElement('canvas');
@@ -123,7 +137,7 @@ export class CombatUnitInfoDialogContent extends DialogContent {
 
     if (!tempCtx) {
       // Fallback to estimates if context not available
-      const totalWidth = COL_WIDTH * 2;
+      const totalWidth = (COL_WIDTH * 2) + COL_SPACING;
       const totalHeight = SPRITE_SIZE_PIXELS + SPACING + (LINE_HEIGHT * 5);
       return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
     }
@@ -132,12 +146,20 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     tempCtx.font = `bold ${NAME_FONT_SIZE}px "${this.font}", monospace`;
     const nameWidth = tempCtx.measureText(this.unit.name).width;
 
-    // Total width is sprite + spacing + name OR two columns of stats (whichever is wider)
-    const topRowWidth = SPRITE_SIZE_PIXELS + SPACING + nameWidth;
-    const statsWidth = COL_WIDTH * 2;
+    // Measure class text width
+    tempCtx.font = `${this.fontSize}px "${this.font}", monospace`;
+    const classText = this.unit.secondaryClass
+      ? `${this.unit.unitClass.name}/${this.unit.secondaryClass.name}`
+      : this.unit.unitClass.name;
+    const classWidth = tempCtx.measureText(classText).width;
+
+    // Total width is max(sprite + spacing + max(name, class), stats)
+    const topRowWidth = SPRITE_SIZE_PIXELS + SPACING + Math.max(nameWidth, classWidth);
+    const statsWidth = (COL_WIDTH * 2) + COL_SPACING;
     const totalWidth = Math.max(topRowWidth, statsWidth);
 
-    // Height: sprite + spacing + stats (5 rows in each column)
+    // Height: sprite + spacing + stats (5 rows)
+    // The sprite is tall enough to contain both name and class
     const statsHeight = LINE_HEIGHT * 5; // 5 rows of stats
     const totalHeight = SPRITE_SIZE_PIXELS + SPACING + statsHeight;
 

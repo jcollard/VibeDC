@@ -16,6 +16,7 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 10
     spriteId: "crystalwarriors-14"
+    secondaryClassId: "rogue"
 
   - id: "knight-001"
     name: "Roland"

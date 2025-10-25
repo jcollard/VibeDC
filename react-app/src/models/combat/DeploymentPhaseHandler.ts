@@ -44,8 +44,18 @@ export function createUnitFromPartyMember(member: PartyMemberDefinition): Combat
     member.spriteId
   );
 
-  // TODO: Add learned abilities, equipment, and secondary class once setter methods are available
-  // For now, the unit is created with just base stats
+  // Set secondary class if specified
+  if (member.secondaryClassId) {
+    const secondaryClass = UnitClassRegistry.getById(member.secondaryClassId);
+    if (secondaryClass) {
+      unit.setSecondaryClass(secondaryClass);
+    } else {
+      console.warn(`Secondary class not found: ${member.secondaryClassId}`);
+    }
+  }
+
+  // TODO: Add learned abilities and equipment once setter methods are available
+  // For now, the unit is created with just base stats and secondary class
 
   return unit;
 }
