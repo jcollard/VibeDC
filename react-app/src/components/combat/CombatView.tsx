@@ -209,7 +209,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         new TitleFadeInSequence(
           CombatConstants.TEXT.DEPLOY_TITLE,
           CombatConstants.ANIMATION.TITLE_FADE_DURATION,
-          CombatConstants.FONTS.TITLE_SIZE,
+          3, // Scale factor to match DeploymentUI
           titleY
         ),
         new MessageFadeInSequence(

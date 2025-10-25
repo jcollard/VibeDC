@@ -1,7 +1,7 @@
 import type { CinematicSequence, CinematicRenderContext } from './CinematicSequence';
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
-import { renderTextWithShadow } from '../../utils/DialogRenderer';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { CombatConstants } from './CombatConstants';
 
 /**
@@ -12,26 +12,53 @@ export class TitleFadeInSequence implements CinematicSequence {
   private elapsedTime = 0;
   private readonly duration: number;
   private readonly title: string;
-  private readonly fontSize: number;
+  private readonly scale: number;
   private readonly yPosition: number;
   private complete = false;
+  private fontAtlasImage: HTMLImageElement | null = null;
+  private fontAtlasLoading: Promise<void> | null = null;
 
   /**
    * @param title - The text to display
    * @param duration - Duration of the fade-in effect in seconds (default: 1)
-   * @param fontSize - Font size in pixels (default: 48)
+   * @param scale - Scale factor for font atlas rendering (default: 3)
    * @param yPosition - Y position on screen (default: 20, matching DeploymentPhaseHandler)
    */
-  constructor(title: string, duration: number = 1.0, fontSize: number = 48, yPosition: number = 20) {
+  constructor(title: string, duration: number = 1.0, scale: number = 3, yPosition: number = 20) {
     this.title = title;
     this.duration = duration;
-    this.fontSize = fontSize;
+    this.scale = scale;
     this.yPosition = yPosition;
+  }
+
+  /**
+   * Load the font atlas image (called once)
+   */
+  private async loadFontAtlas(): Promise<void> {
+    if (this.fontAtlasImage || this.fontAtlasLoading) {
+      return this.fontAtlasLoading || Promise.resolve();
+    }
+
+    this.fontAtlasLoading = new Promise<void>((resolve, reject) => {
+      const img = new Image();
+      img.src = '/fonts/15px-dungeonslant-atlas.png';
+      img.onload = () => {
+        this.fontAtlasImage = img;
+        resolve();
+      };
+      img.onerror = () => reject(new Error('Failed to load font atlas'));
+    });
+
+    return this.fontAtlasLoading;
   }
 
   start(_state: CombatState, _encounter: CombatEncounter): void {
     this.elapsedTime = 0;
     this.complete = false;
+    // Start loading font atlas if not already loaded
+    if (!this.fontAtlasImage && !this.fontAtlasLoading) {
+      this.loadFontAtlas().catch(console.error);
+    }
   }
 
   update(deltaTime: number): boolean {
@@ -76,6 +103,11 @@ export class TitleFadeInSequence implements CinematicSequence {
   render(_state: CombatState, _encounter: CombatEncounter, context: CinematicRenderContext): void {
     const { ctx, canvasWidth } = context;
 
+    // Skip rendering if font atlas not loaded yet
+    if (!this.fontAtlasImage) {
+      return;
+    }
+
     // Calculate fade progress with easing
     const progress = Math.min(this.elapsedTime / this.duration, 1.0);
     const alpha = this.easeInOutCubic(progress);
@@ -93,17 +125,20 @@ export class TitleFadeInSequence implements CinematicSequence {
     tempCtx.fillStyle = `rgba(0, 0, 0, ${CombatConstants.RENDERING.BACKGROUND_ALPHA})`;
     tempCtx.fillRect(0, 0, canvasWidth, CombatConstants.UI.TITLE_HEIGHT);
 
-    // Render text to temp canvas at center of title area
-    renderTextWithShadow(
+    // Calculate centered position for text
+    const fontId = "15px-dungeonslant";
+    const textY = CombatConstants.UI.TITLE_HEIGHT / 2 - (15 * this.scale) / 2; // 15 is charHeight
+
+    // Render text using font atlas to temp canvas
+    FontAtlasRenderer.renderText(
       tempCtx,
       this.title,
       canvasWidth / 2,
-      CombatConstants.UI.TITLE_HEIGHT / 2,
-      `bold ${this.fontSize}px "DungeonSlant", monospace`,
-      CombatConstants.RENDERING.TEXT_COLOR,
-      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET,
-      'center',
-      'middle'
+      textY,
+      fontId,
+      this.fontAtlasImage,
+      this.scale,
+      'center'
     );
 
     // Get pixel data and apply dithering

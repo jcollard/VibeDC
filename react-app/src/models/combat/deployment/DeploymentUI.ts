@@ -11,6 +11,11 @@ export class DeploymentUI {
   private fontAtlasImage: HTMLImageElement | null = null;
   private fontAtlasLoading: Promise<void> | null = null;
 
+  constructor() {
+    // Start loading font atlas immediately
+    this.loadFontAtlas().catch(console.error);
+  }
+
   /**
    * Load the font atlas image (called once)
    */
@@ -36,11 +41,6 @@ export class DeploymentUI {
    * Render the "Deploy Units" phase header with background
    */
   renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasWidth: number, headerFont: string): void {
-    // Start loading font atlas if not already loaded
-    if (!this.fontAtlasImage && !this.fontAtlasLoading) {
-      this.loadFontAtlas().catch(console.error);
-    }
-
     // Use font atlas rendering if available
     if (this.fontAtlasImage) {
       const text = CombatConstants.TEXT.DEPLOY_TITLE;
