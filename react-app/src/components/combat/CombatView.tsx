@@ -9,18 +9,20 @@ import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { CinematicManager } from '../../models/combat/CinematicSequence';
-import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
-import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
-import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence';
-import { SequenceParallel } from '../../models/combat/SequenceParallel';
+// Animations disabled for prototyping
+// import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
+// import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
+// import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence';
+// import { SequenceParallel } from '../../models/combat/SequenceParallel';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
-import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
-import { renderDialogWithContent } from '../../utils/DialogRenderer';
+// Disabled for prototyping - unit info dialog
+// import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
+// import { renderDialogWithContent } from '../../utils/DialogRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatLayout1TraditionalRenderer } from '../../models/combat/layouts/CombatLayout1TraditionalRenderer';
 import { CombatLayout1bCompactRenderer } from '../../models/combat/layouts/CombatLayout1bCompactRenderer';
@@ -112,10 +114,16 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     UISettings.isIntegerScalingEnabled()
   );
 
-  // Track manual scale factor
-  const [manualScale, setManualScale] = useState<number>(
-    UISettings.getManualScale()
-  );
+  // Track manual scale factor - default to 3x
+  const [manualScale, setManualScale] = useState<number>(() => {
+    const savedScale = UISettings.getManualScale();
+    // If no saved scale, default to 3x
+    if (savedScale === 0) {
+      UISettings.setManualScale(3);
+      return 3;
+    }
+    return savedScale;
+  });
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -184,8 +192,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
 
-  // Track selected combat layout
-  const [selectedLayout, setSelectedLayout] = useState<string>('none');
+  // Track selected combat layout - default to layout6
+  const [selectedLayout, setSelectedLayout] = useState<string>('layout6');
 
   // Layout renderers (memoized to prevent recreation)
   const layoutRenderers = useMemo(() => ({
@@ -276,45 +284,48 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }, [combatState.map, combatState.phase, encounter, spriteLoader]);
 
   // Start the intro cinematic sequence when encounter loads (only once)
+  // DISABLED FOR PROTOTYPING - Skip animations to work on Layout 6
   useEffect(() => {
     if (spritesLoaded && !introCinematicPlayedRef.current) {
+      // Skip animations - just mark as played
+      introCinematicPlayedRef.current = true;
+
+      // Uncomment below to re-enable intro animations
+      /*
       // Calculate message positions
-      // Title and waylaid message at very top of screen
       const titleY = CombatConstants.UI.TITLE_Y_POSITION;
       const waylaidMessageY = CombatConstants.UI.WAYLAID_MESSAGE_Y;
-      // Deployment instruction: 8px below map bottom
       const mapHeight = combatState.map.height * TILE_SIZE;
       const offsetY = (CANVAS_HEIGHT - mapHeight) / 2;
       const deploymentInstructionY = offsetY + mapHeight + CombatConstants.UI.MESSAGE_SPACING;
 
-      // Run all intro animations in parallel
       const introSequence = new SequenceParallel([
         new MapFadeInSequence(CombatConstants.ANIMATION.MAP_FADE_DURATION),
         new TitleFadeInSequence(
           CombatConstants.TEXT.DEPLOY_TITLE,
           CombatConstants.ANIMATION.TITLE_FADE_DURATION,
-          1, // Scale factor (reduced from 3 for new resolution)
+          1,
           titleY
         ),
         new MessageFadeInSequence(
           CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          '7px-04b03', // Font ID (changed from 9px-habbo)
-          1, // Scale factor (reduced from 2 for new resolution)
+          '7px-04b03',
+          1,
           deploymentInstructionY
         ),
         new MessageFadeInSequence(
           CombatConstants.TEXT.WAYLAID_MESSAGE,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          '7px-04b03', // Font ID (changed from 9px-habbo)
-          1, // Scale factor (reduced from 2 for new resolution)
+          '7px-04b03',
+          1,
           waylaidMessageY
         )
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
-      introCinematicPlayedRef.current = true;
+      */
     }
-  }, [spritesLoaded, combatState, encounter]);
+  }, [spritesLoaded]);
 
   // Render function - draws one frame to the canvas
   const renderFrame = useCallback(() => {
@@ -403,7 +414,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Render deployed units from the manifest (after deployment zones so they appear on top)
     renderer.renderUnits(ctx, combatState.unitManifest, spriteImagesRef.current, offsetX, offsetY);
 
-    // Render phase UI elements (header, dialogs) after units so they appear on top
+    // DISABLED FOR PROTOTYPING - Skip default phase UI (titles, dialogs)
+    // Uncomment to re-enable deployment phase UI elements
+    /*
     if (phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       phaseHandlerRef.current.renderUI(combatState, encounter, {
         ctx,
@@ -420,9 +433,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         fontAtlasImages: fontAtlasImagesRef.current,
       });
     }
+    */
 
-    // Render unit info dialog in deployment phase
-    // Show for: 1) hovered placed unit on map, 2) hovered character in selection dialog, 3) last displayed unit
+    // DISABLED FOR PROTOTYPING - Skip unit info dialog
+    // Uncomment to re-enable unit info dialog in deployment phase
+    /*
     const phaseHandler = phaseHandlerRef.current;
     if (phaseHandler instanceof DeploymentPhaseHandler) {
       let unitToDisplay: CombatUnit | null = null;
@@ -496,6 +511,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         );
       }
     }
+    */
 
     // Render layout UI (if a layout is selected)
     if (currentLayoutRenderer) {
