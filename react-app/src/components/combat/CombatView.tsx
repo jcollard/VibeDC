@@ -5,6 +5,7 @@ import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler'
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { DeploymentPhaseHandler, createUnitFromPartyMember } from '../../models/combat/DeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
+import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { CinematicManager } from '../../models/combat/CinematicSequence';
@@ -94,6 +95,32 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  // Calculate canvas display dimensions based on integer scaling setting
+  const canvasDisplayStyle = useMemo(() => {
+    const containerRef = displayCanvasRef.current?.parentElement;
+    if (!containerRef) {
+      return { width: '100%', height: '100%' };
+    }
+
+    const scaledDimensions = UISettings.getIntegerScaledDimensions(
+      CANVAS_WIDTH,
+      CANVAS_HEIGHT,
+      containerRef.clientWidth,
+      containerRef.clientHeight
+    );
+
+    if (scaledDimensions) {
+      // Integer scaling enabled - use exact pixel dimensions
+      return {
+        width: `${scaledDimensions.width}px`,
+        height: `${scaledDimensions.height}px`,
+      };
+    } else {
+      // Integer scaling disabled - use percentage to fill container
+      return { width: '100%', height: '100%' };
+    }
+  }, [windowSize.width, windowSize.height]);
 
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
@@ -763,8 +790,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           onMouseUp={handleCanvasMouseUp}
           onMouseMove={handleCanvasMouseMove}
           style={{
-            width: '100%',
-            height: '100%',
+            ...canvasDisplayStyle,
             imageRendering: 'pixelated',
             objectFit: 'contain',
             cursor: combatState.phase === 'deployment' ? 'pointer' : 'default',
