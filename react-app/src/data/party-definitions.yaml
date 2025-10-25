@@ -17,6 +17,14 @@ partyMembers:
     baseAttunement: 10
     spriteId: "crystalwarriors-14"
     secondaryClassId: "rogue"
+    reactionAbilityId: "parry-001"
+    passiveAbilityId: "meat-shield-001"
+    movementAbilityId: "journeyman-001"
+    leftHandId: "iron-sword-001"
+    rightHandId: "tower-shield-001"
+    headId: "iron-helmet-001"
+    bodyId: "plate-armor-001"
+    accessoryId: "swift-boots-001"
 
   - id: "knight-001"
     name: "Roland"

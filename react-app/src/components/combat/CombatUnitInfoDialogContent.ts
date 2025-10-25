@@ -2,6 +2,7 @@ import { DialogContent } from '../../utils/DialogRenderer';
 import type { ContentBounds } from '../../utils/DialogRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
+import { HumanoidUnit } from '../../models/combat/HumanoidUnit';
 
 /**
  * Dialog content for displaying combat unit information
@@ -121,6 +122,57 @@ export class CombatUnitInfoDialogContent extends DialogContent {
       ctx.fillText(stat.value, valueX, statY);
       ctx.textAlign = 'left';
     });
+
+    // Move down past stats
+    currentY += LINE_HEIGHT * 5 + SPACING;
+
+    // Render ability slots
+    // Use wider width for abilities/equipment (full two-column width)
+    const ABILITY_WIDTH = (COL_WIDTH * 2) + COL_SPACING;
+    ctx.fillStyle = '#000000';
+    ctx.textAlign = 'left';
+
+    const abilities = [
+      { label: 'Reaction', ability: this.unit.reactionAbility },
+      { label: 'Passive', ability: this.unit.passiveAbility },
+      { label: 'Movement', ability: this.unit.movementAbility },
+    ];
+
+    abilities.forEach((slot, index) => {
+      const abilityY = currentY + (index * LINE_HEIGHT);
+      ctx.fillText(slot.label, x, abilityY);
+
+      const abilityName = slot.ability ? slot.ability.name : '-';
+      const valueX = x + ABILITY_WIDTH - 8;
+      ctx.textAlign = 'right';
+      ctx.fillText(abilityName, valueX, abilityY);
+      ctx.textAlign = 'left';
+    });
+
+    // Move down past abilities
+    currentY += LINE_HEIGHT * 3 + SPACING;
+
+    // Render equipment slots if unit is humanoid
+    if (this.unit instanceof HumanoidUnit) {
+      const equipment = [
+        { label: 'L.Hand', item: this.unit.leftHand },
+        { label: 'R.Hand', item: this.unit.rightHand },
+        { label: 'Head', item: this.unit.head },
+        { label: 'Body', item: this.unit.body },
+        { label: 'Accessory', item: this.unit.accessory },
+      ];
+
+      equipment.forEach((slot, index) => {
+        const equipY = currentY + (index * LINE_HEIGHT);
+        ctx.fillText(slot.label, x, equipY);
+
+        const itemName = slot.item ? slot.item.name : '-';
+        const valueX = x + ABILITY_WIDTH - 8;
+        ctx.textAlign = 'right';
+        ctx.fillText(itemName, valueX, equipY);
+        ctx.textAlign = 'left';
+      });
+    }
   }
 
   protected getBounds(): ContentBounds {
@@ -138,7 +190,9 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     if (!tempCtx) {
       // Fallback to estimates if context not available
       const totalWidth = (COL_WIDTH * 2) + COL_SPACING;
-      const totalHeight = SPRITE_SIZE_PIXELS + SPACING + (LINE_HEIGHT * 5);
+      const abilitiesHeight = SPACING + (LINE_HEIGHT * 3);
+      const equipmentHeight = this.unit instanceof HumanoidUnit ? SPACING + (LINE_HEIGHT * 5) : 0;
+      const totalHeight = SPRITE_SIZE_PIXELS + SPACING + (LINE_HEIGHT * 5) + abilitiesHeight + equipmentHeight;
       return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
     }
 
@@ -158,10 +212,12 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     const statsWidth = (COL_WIDTH * 2) + COL_SPACING;
     const totalWidth = Math.max(topRowWidth, statsWidth);
 
-    // Height: sprite + spacing + stats (5 rows)
+    // Height: sprite + spacing + stats (5 rows) + spacing + abilities (3 rows) + spacing + equipment (5 rows if humanoid)
     // The sprite is tall enough to contain both name and class
     const statsHeight = LINE_HEIGHT * 5; // 5 rows of stats
-    const totalHeight = SPRITE_SIZE_PIXELS + SPACING + statsHeight;
+    const abilitiesHeight = SPACING + (LINE_HEIGHT * 3); // 3 ability slots
+    const equipmentHeight = this.unit instanceof HumanoidUnit ? SPACING + (LINE_HEIGHT * 5) : 0; // 5 equipment slots if humanoid
+    const totalHeight = SPRITE_SIZE_PIXELS + SPACING + statsHeight + abilitiesHeight + equipmentHeight;
 
     return {
       width: totalWidth,

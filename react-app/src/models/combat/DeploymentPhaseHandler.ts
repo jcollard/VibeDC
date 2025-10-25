@@ -15,6 +15,8 @@ import { DeploymentZoneRenderer } from './deployment/DeploymentZoneRenderer';
 import { UnitDeploymentManager } from './deployment/UnitDeploymentManager';
 import { PartySelectionDialog } from './deployment/PartySelectionDialog';
 import { PhaseBase } from './PhaseBase';
+import { CombatAbility } from './CombatAbility';
+import { Equipment } from './Equipment';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -54,8 +56,82 @@ export function createUnitFromPartyMember(member: PartyMemberDefinition): Combat
     }
   }
 
-  // TODO: Add learned abilities and equipment once setter methods are available
-  // For now, the unit is created with just base stats and secondary class
+  // Set abilities if specified (directly assign to bypass learned ability checks)
+  // This matches the behavior of HumanoidUnit.fromJSON()
+  if (member.reactionAbilityId) {
+    const ability = CombatAbility.getById(member.reactionAbilityId);
+    if (ability) {
+      (unit as any)._reactionAbility = ability;
+    } else {
+      console.warn(`Reaction ability not found: ${member.reactionAbilityId}`);
+    }
+  }
+
+  if (member.passiveAbilityId) {
+    const ability = CombatAbility.getById(member.passiveAbilityId);
+    if (ability) {
+      (unit as any)._passiveAbility = ability;
+    } else {
+      console.warn(`Passive ability not found: ${member.passiveAbilityId}`);
+    }
+  }
+
+  if (member.movementAbilityId) {
+    const ability = CombatAbility.getById(member.movementAbilityId);
+    if (ability) {
+      (unit as any)._movementAbility = ability;
+    } else {
+      console.warn(`Movement ability not found: ${member.movementAbilityId}`);
+    }
+  }
+
+  // Set equipment if specified
+  if (member.leftHandId) {
+    const equipment = Equipment.getById(member.leftHandId);
+    if (equipment) {
+      unit.equipLeftHand(equipment);
+    } else {
+      console.warn(`Left hand equipment not found: ${member.leftHandId}`);
+    }
+  }
+
+  if (member.rightHandId) {
+    const equipment = Equipment.getById(member.rightHandId);
+    if (equipment) {
+      unit.equipRightHand(equipment);
+    } else {
+      console.warn(`Right hand equipment not found: ${member.rightHandId}`);
+    }
+  }
+
+  if (member.headId) {
+    const equipment = Equipment.getById(member.headId);
+    if (equipment) {
+      unit.equipHead(equipment);
+    } else {
+      console.warn(`Head equipment not found: ${member.headId}`);
+    }
+  }
+
+  if (member.bodyId) {
+    const equipment = Equipment.getById(member.bodyId);
+    if (equipment) {
+      unit.equipBody(equipment);
+    } else {
+      console.warn(`Body equipment not found: ${member.bodyId}`);
+    }
+  }
+
+  if (member.accessoryId) {
+    const equipment = Equipment.getById(member.accessoryId);
+    if (equipment) {
+      unit.equipAccessory(equipment);
+    } else {
+      console.warn(`Accessory equipment not found: ${member.accessoryId}`);
+    }
+  }
+
+  // TODO: Add learned abilities once that system is implemented
 
   return unit;
 }

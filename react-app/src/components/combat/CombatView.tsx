@@ -100,7 +100,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [buttonFont, setButtonFont] = useState<string>('Bitfantasy');
 
   // Track unit info dialog font size for testing
-  const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(32);
+  const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(36);
 
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
