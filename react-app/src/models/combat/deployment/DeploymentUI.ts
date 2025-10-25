@@ -40,7 +40,7 @@ export class DeploymentUI {
   /**
    * Render the "Deploy Units" phase header with background
    */
-  renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasWidth: number, headerFont: string): void {
+  renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasWidth: number, _headerFont: string): void {
     // Use font atlas rendering if available
     if (this.fontAtlasImage) {
       const text = CombatConstants.TEXT.DEPLOY_TITLE;

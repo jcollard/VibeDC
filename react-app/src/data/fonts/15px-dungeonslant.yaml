@@ -12,7 +12,7 @@ fonts:
     fallbackChar: "?"
     tags: ["pixel", "game", "variable-width"]
     characters:
-      - { char: " ", x: 0, y: 0, width: 15 }
+      - { char: " ", x: 0, y: 0, width: 10 }
       - { char: "!", x: 15, y: 0, width: 4 }
       - { char: "\"", x: 30, y: 0, width: 6 }
       - { char: "#", x: 45, y: 0, width: 11 }
@@ -92,7 +92,7 @@ fonts:
       - { char: "m", x: 195, y: 60, width: 15 }
       - { char: "n", x: 210, y: 60, width: 11 }
       - { char: "o", x: 225, y: 60, width: 9 }
-      - { char: "p", x: 0, y: 75, width: 10 }
+      - { char: "p", x: 0, y: 75, width: 9 }
       - { char: "q", x: 15, y: 75, width: 10 }
       - { char: "r", x: 30, y: 75, width: 8 }
       - { char: "s", x: 45, y: 75, width: 8 }

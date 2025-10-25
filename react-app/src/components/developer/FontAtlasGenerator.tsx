@@ -327,7 +327,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       setCharWidths(measuredWidths);
     } else {
       // For fixed width, just store positions
-      charSet.forEach((char, index) => {
+      charSet.forEach((_char, index) => {
         const col = index % charsPerRow;
         const row = Math.floor(index / charsPerRow);
         const cellX = col * charWidth;
