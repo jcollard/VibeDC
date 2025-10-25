@@ -97,9 +97,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
-  const [messageAtlasFont, setMessageAtlasFont] = useState<string>('9px-habbo');
-  const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('9px-habbo');
-  const [unitInfoAtlasFont, setUnitInfoAtlasFont] = useState<string>('8px-habbo8');
+  const [messageAtlasFont, setMessageAtlasFont] = useState<string>('7px-04b03');
+  const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('7px-04b03');
+  const [unitInfoAtlasFont, setUnitInfoAtlasFont] = useState<string>('7px-04b03');
 
   // Track the last displayed unit for info panel persistence
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
@@ -198,14 +198,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         new MessageFadeInSequence(
           CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          '9px-habbo', // Font ID
+          '7px-04b03', // Font ID (changed from 9px-habbo)
           1, // Scale factor (reduced from 2 for new resolution)
           deploymentInstructionY
         ),
         new MessageFadeInSequence(
           CombatConstants.TEXT.WAYLAID_MESSAGE,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          '9px-habbo', // Font ID
+          '7px-04b03', // Font ID (changed from 9px-habbo)
           1, // Scale factor (reduced from 2 for new resolution)
           waylaidMessageY
         )

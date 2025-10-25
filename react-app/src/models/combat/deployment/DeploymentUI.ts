@@ -20,7 +20,7 @@ export class DeploymentUI {
    * Pre-load default fonts synchronously
    */
   private preloadDefaultFonts(): void {
-    const defaultFonts = ['15px-dungeonslant', '9px-habbo'];
+    const defaultFonts = ['15px-dungeonslant', '7px-04b03'];
     for (const fontId of defaultFonts) {
       const fontDef = FontRegistry.getById(fontId);
       if (fontDef) {
@@ -119,7 +119,7 @@ export class DeploymentUI {
   /**
    * Render the waylaid message below the Deploy Units title
    */
-  renderWaylaidMessage(ctx: CanvasRenderingContext2D, canvasWidth: number, _font: string, fontId: string = '9px-habbo'): void {
+  renderWaylaidMessage(ctx: CanvasRenderingContext2D, canvasWidth: number, _font: string, fontId: string = '7px-04b03'): void {
     // Get font atlas (load if needed)
     const atlas = this.fontAtlasCache.get(fontId);
     if (!atlas) {
@@ -155,7 +155,7 @@ export class DeploymentUI {
     spriteImages: Map<string, HTMLImageElement>,
     _font: string,
     yPosition: number,
-    fontId: string = '9px-habbo'
+    fontId: string = '7px-04b03'
   ): void {
     // Get font atlas (load if needed)
     const atlas = this.fontAtlasCache.get(fontId);

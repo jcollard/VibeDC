@@ -339,7 +339,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
     this.ui.renderPhaseHeader(ctx, canvasWidth, '', titleAtlasFontId || '15px-dungeonslant');
 
     // Render waylaid message (8px below title)
-    this.ui.renderWaylaidMessage(ctx, canvasWidth, '', messageAtlasFontId || '9px-habbo');
+    this.ui.renderWaylaidMessage(ctx, canvasWidth, '', messageAtlasFontId || '7px-04b03');
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;
@@ -354,7 +354,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
     // Render instruction message only if button is NOT visible
     if (!shouldShowButton) {
-      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, '', instructionY, messageAtlasFontId || '9px-habbo');
+      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, '', instructionY, messageAtlasFontId || '7px-04b03');
     }
 
     // Initialize and render Start Combat button below map (only if deployment is complete)
@@ -397,7 +397,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
     }
 
     // Get the dialog font atlas image
-    const dialogFontIdToUse = dialogAtlasFontId || '9px-habbo';
+    const dialogFontIdToUse = dialogAtlasFontId || '7px-04b03';
     const fontAtlasImage = fontAtlasImages?.get(dialogFontIdToUse) || null;
 
     // Render character selection dialog
