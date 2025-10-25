@@ -49,7 +49,7 @@ export class CombatUnitInfoDialogContent extends DialogContent {
       return;
     }
 
-    const NAME_SCALE = this.scale * 1.25; // 1.25x scale for name (8px * 2 * 1.25 = 20px)
+    const NAME_SCALE = this.scale * 1.5; // 1.5x scale for name (8px * 2 * 1.5 = 24px)
     const TEXT_SCALE = this.scale; // Regular scale for text
     const FONT_HEIGHT = font.charHeight * TEXT_SCALE;
     const NAME_HEIGHT = font.charHeight * NAME_SCALE;
@@ -307,7 +307,7 @@ export class CombatUnitInfoDialogContent extends DialogContent {
       return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
     }
 
-    const NAME_SCALE = this.scale * 1.25;
+    const NAME_SCALE = this.scale * 1.5;
     const TEXT_SCALE = this.scale;
     const FONT_HEIGHT = font.charHeight * TEXT_SCALE;
     const LINE_HEIGHT = FONT_HEIGHT + 4; // Add 4px spacing between lines
