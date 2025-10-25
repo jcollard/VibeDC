@@ -24,11 +24,13 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const [previewScale, setPreviewScale] = useState<number>(2);
   const [antialiasThreshold, setAntialiasThreshold] = useState<number>(200);
   const [applyThreshold, setApplyThreshold] = useState<boolean>(true);
+  const [useVariableWidth, setUseVariableWidth] = useState<boolean>(true);
   const [demoText, setDemoText] = useState<string>('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
   const [demoScale, setDemoScale] = useState<number>(2);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const demoCanvasRef = useRef<HTMLCanvasElement>(null);
+  const [charWidths, setCharWidths] = useState<number[]>([]);
 
   // ASCII printable characters (32-126)
   const charSet = generateASCIICharSet();
@@ -70,6 +72,25 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
 
+    // Set font for measurements
+    ctx.font = `${fontSize}px "${fontFamily}", monospace`;
+    ctx.textBaseline = 'top';
+
+    // Measure character widths if using variable width
+    const measuredWidths: number[] = [];
+    if (useVariableWidth) {
+      charSet.forEach(char => {
+        const metrics = ctx.measureText(char);
+        const actualWidth = Math.ceil(metrics.width) + 2; // Add 2px padding
+        measuredWidths.push(Math.min(actualWidth, charWidth)); // Cap at max charWidth
+      });
+      setCharWidths(measuredWidths);
+    } else {
+      // Use fixed width for all characters
+      charSet.forEach(() => measuredWidths.push(charWidth));
+      setCharWidths(measuredWidths);
+    }
+
     // Calculate canvas dimensions
     const totalChars = charSet.length;
     const rows = Math.ceil(totalChars / charsPerRow);
@@ -102,6 +123,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       const row = Math.floor(index / charsPerRow);
       const x = col * charWidth;
       const y = row * charHeight;
+      const charActualWidth = measuredWidths[index];
 
       // Save context state
       ctx.save();
@@ -111,8 +133,11 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       ctx.rect(x, y, charWidth, charHeight);
       ctx.clip();
 
+      // Center character horizontally if using variable width
+      const xOffset = useVariableWidth ? Math.floor((charWidth - charActualWidth) / 2) : 0;
+
       // Draw character at baseline offset
-      ctx.fillText(char, x, y + baselineOffset);
+      ctx.fillText(char, x + xOffset, y + baselineOffset);
 
       // Restore context state
       ctx.restore();
@@ -192,7 +217,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     if (fontLoaded) {
       generateAtlas();
     }
-  }, [fontLoaded, charWidth, charHeight, fontSize, baselineOffset, charsPerRow, applyThreshold, antialiasThreshold]);
+  }, [fontLoaded, charWidth, charHeight, fontSize, baselineOffset, charsPerRow, applyThreshold, antialiasThreshold, useVariableWidth]);
 
   // Update preview when scale changes
   useEffect(() => {
@@ -266,16 +291,23 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
           const srcX = col * charWidth;
           const srcY = row * charHeight;
 
+          // Use measured width if available, otherwise use fixed width
+          const actualCharWidth = charWidths[charIndex] || charWidth;
+
           ctx.drawImage(
             atlasCanvas,
             srcX, srcY, charWidth, charHeight,
             x * demoScale, y * demoScale, charWidth * demoScale, charHeight * demoScale
           );
+
+          // Advance by actual character width when using variable width
+          x += useVariableWidth ? actualCharWidth + charSpacing : charWidthWithSpacing;
+        } else {
+          x += charWidthWithSpacing;
         }
-        x += charWidthWithSpacing;
       }
     });
-  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow]);
+  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow, charWidths, useVariableWidth]);
 
   // Update demo when parameters change
   useEffect(() => {
@@ -313,6 +345,11 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       return c;
     }).map(c => `"${c}"`).join(', ');
 
+    // Generate character widths array if using variable width
+    const charWidthsYAML = useVariableWidth && charWidths.length > 0
+      ? `\n    charWidths: [${charWidths.join(', ')}]`
+      : '';
+
     const yaml = `# Font definition for ${fontId}
 # Generated from font atlas generator
 
@@ -328,8 +365,8 @@ fonts:
     charOffsetY: 0
     fallbackChar: "?"
     charsPerRow: ${charsPerRow}
-    charSet: [${charSetYAML}]
-    tags: ["pixel", "game"]
+    charSet: [${charSetYAML}]${charWidthsYAML}
+    tags: ["pixel", "game"${useVariableWidth ? ', "variable-width"' : ''}]
 `;
 
     const blob = new Blob([yaml], { type: 'text/yaml' });
@@ -587,8 +624,28 @@ fonts:
                   />
                 </div>
 
-                {/* Pixel-Perfect Toggle */}
+                {/* Variable Width Toggle */}
                 <div style={{ marginBottom: '8px', marginTop: '16px', paddingTop: '12px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={useVariableWidth}
+                      onChange={(e) => setUseVariableWidth(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#aaa' }}>
+                      Variable Width (Auto-detect)
+                    </span>
+                  </label>
+                  {useVariableWidth && (
+                    <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
+                      Each character centered in cell
+                    </div>
+                  )}
+                </div>
+
+                {/* Pixel-Perfect Toggle */}
+                <div style={{ marginBottom: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
                     <input
                       type="checkbox"
