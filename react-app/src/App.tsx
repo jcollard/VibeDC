@@ -10,8 +10,12 @@ function App() {
 
   useEffect(() => {
     // Load game data on mount
-    loadAllGameData();
-    setDataLoaded(true);
+    loadAllGameData().then(() => {
+      setDataLoaded(true);
+    }).catch((error) => {
+      console.error('Failed to load game data:', error);
+      setDataLoaded(true); // Continue anyway
+    });
   }, []);
 
   if (!dataLoaded) {

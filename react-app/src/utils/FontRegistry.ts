@@ -1,4 +1,14 @@
 /**
+ * Character definition for variable-width fonts
+ */
+export interface CharacterDefinition {
+  char: string;
+  x: number;
+  y: number;
+  width: number;
+}
+
+/**
  * Defines a font's atlas configuration and rendering properties
  */
 export interface FontDefinition {
@@ -14,8 +24,9 @@ export interface FontDefinition {
 
   /**
    * Fixed width of each character in pixels (in the atlas image)
+   * Optional for variable-width fonts
    */
-  charWidth: number;
+  charWidth?: number;
 
   /**
    * Height of each character in pixels (in the atlas image)
@@ -60,17 +71,23 @@ export interface FontDefinition {
   fallbackChar?: string;
 
   /**
-   * The character set mapping
+   * The character set mapping (for fixed-width fonts)
    * Array of strings where index maps to character
    * Example for ASCII 32-126: starts with ' ', '!', '"', etc.
    */
-  charSet: string[];
+  charSet?: string[];
 
   /**
-   * Number of characters per row in the atlas
+   * Number of characters per row in the atlas (for fixed-width fonts)
    * Used to calculate the grid position of each character
    */
-  charsPerRow: number;
+  charsPerRow?: number;
+
+  /**
+   * Variable-width character definitions
+   * Used instead of charSet/charsPerRow for variable-width fonts
+   */
+  characters?: CharacterDefinition[];
 
   /**
    * Optional tags for categorization and filtering
@@ -306,12 +323,14 @@ export class FontRegistry {
   }
 
   /**
-   * Get the character index in the atlas for a given character
+   * Get the character index in the atlas for a given character (fixed-width fonts only)
    * @param font - The font definition
    * @param char - The character to look up
    * @returns The index in the charSet array, or -1 if not found
    */
   static getCharIndex(font: FontDefinition, char: string): number {
+    if (!font.charSet) return -1;
+
     const index = font.charSet.indexOf(char);
     if (index === -1) {
       // Try fallback character
@@ -325,16 +344,71 @@ export class FontRegistry {
    * Get the atlas coordinates for a character
    * @param font - The font definition
    * @param char - The character to look up
-   * @returns Object with x, y grid coordinates in the atlas, or null if not found
+   * @returns Object with x, y coordinates and width in the atlas, or null if not found
    */
-  static getCharCoordinates(font: FontDefinition, char: string): { x: number; y: number } | null {
-    const index = this.getCharIndex(font, char);
-    if (index === -1) return null;
+  static getCharCoordinates(font: FontDefinition, char: string): { x: number; y: number; width: number } | null {
+    // For variable-width fonts
+    if (font.characters) {
+      const charDef = font.characters.find(c => c.char === char);
+      if (charDef) {
+        return { x: charDef.x, y: charDef.y, width: charDef.width };
+      }
 
-    const x = index % font.charsPerRow;
-    const y = Math.floor(index / font.charsPerRow);
+      // Try fallback character
+      const fallback = font.fallbackChar || '?';
+      const fallbackDef = font.characters.find(c => c.char === fallback);
+      if (fallbackDef) {
+        return { x: fallbackDef.x, y: fallbackDef.y, width: fallbackDef.width };
+      }
 
-    return { x, y };
+      return null;
+    }
+
+    // For fixed-width fonts
+    if (font.charSet && font.charsPerRow && font.charWidth) {
+      const index = this.getCharIndex(font, char);
+      if (index === -1) return null;
+
+      const x = (index % font.charsPerRow) * font.charWidth;
+      const y = Math.floor(index / font.charsPerRow) * font.charHeight;
+
+      return { x, y, width: font.charWidth };
+    }
+
+    return null;
+  }
+
+  /**
+   * Get the character width for a given character
+   * @param font - The font definition
+   * @param char - The character to look up
+   * @returns The width in pixels, or charWidth for fixed-width fonts, or 0 if not found
+   */
+  static getCharWidth(font: FontDefinition, char: string): number {
+    // For variable-width fonts
+    if (font.characters) {
+      const charDef = font.characters.find(c => c.char === char);
+      if (charDef) return charDef.width;
+
+      // Try fallback character
+      const fallback = font.fallbackChar || '?';
+      const fallbackDef = font.characters.find(c => c.char === fallback);
+      if (fallbackDef) return fallbackDef.width;
+
+      return 0;
+    }
+
+    // For fixed-width fonts
+    return font.charWidth || 0;
+  }
+
+  /**
+   * Check if a font uses variable-width characters
+   * @param font - The font definition
+   * @returns true if the font has variable-width character definitions
+   */
+  static isVariableWidth(font: FontDefinition): boolean {
+    return !!font.characters;
   }
 }
 

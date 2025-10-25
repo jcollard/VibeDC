@@ -70,9 +70,9 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
 
     setFontInfo({
       atlasPath: font.atlasPath,
-      charWidth: font.charWidth,
+      charWidth: font.charWidth || 0,
       charHeight: font.charHeight,
-      charCount: font.charSet.length,
+      charCount: font.charSet?.length || font.characters?.length || 0,
       tags: font.tags || [],
     });
   }, [selectedFont]);
@@ -186,9 +186,9 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
       if (font) {
         setFontInfo({
           atlasPath: font.atlasPath,
-          charWidth: font.charWidth,
+          charWidth: font.charWidth || 0,
           charHeight: font.charHeight,
-          charCount: font.charSet.length,
+          charCount: font.charSet?.length || font.characters?.length || 0,
           tags: font.tags || [],
         });
       }
@@ -213,9 +213,9 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
       if (font) {
         setFontInfo({
           atlasPath: font.atlasPath,
-          charWidth: font.charWidth,
+          charWidth: font.charWidth || 0,
           charHeight: font.charHeight,
-          charCount: font.charSet.length,
+          charCount: font.charSet?.length || font.characters?.length || 0,
           tags: font.tags || [],
         });
       }
@@ -271,26 +271,40 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
     for (const font of sortedFonts) {
       yaml += `  - id: "${font.id}"\n`;
       yaml += `    atlasPath: "${font.atlasPath}"\n`;
-      yaml += `    charWidth: ${font.charWidth}\n`;
       yaml += `    charHeight: ${font.charHeight}\n`;
       yaml += `    lineHeight: ${font.lineHeight || font.charHeight}\n`;
       yaml += `    charSpacing: ${font.charSpacing || 0}\n`;
       yaml += `    baselineOffset: ${font.baselineOffset || 0}\n`;
-      yaml += `    charOffsetX: ${font.charOffsetX || 0}\n`;
-      yaml += `    charOffsetY: ${font.charOffsetY || 0}\n`;
-      yaml += `    fallbackChar: "${font.fallbackChar || '?'}"\n`;
-      yaml += `    charsPerRow: ${font.charsPerRow}\n`;
 
-      // Character set
-      const charSetYAML = font.charSet.map(c => {
-        if (c === '"') return '\\"';
-        if (c === '\\') return '\\\\';
-        return c;
-      }).map(c => `"${c}"`).join(', ');
-      yaml += `    charSet: [${charSetYAML}]\n`;
+      if (font.charOffsetX) yaml += `    charOffsetX: ${font.charOffsetX}\n`;
+      if (font.charOffsetY) yaml += `    charOffsetY: ${font.charOffsetY}\n`;
+
+      yaml += `    fallbackChar: "${font.fallbackChar || '?'}"\n`;
 
       if (font.tags && font.tags.length > 0) {
         yaml += `    tags: [${font.tags.map(t => `"${t}"`).join(', ')}]\n`;
+      }
+
+      // Export character data based on font type
+      if (font.characters) {
+        // Variable-width font
+        yaml += `    characters:\n`;
+        for (const char of font.characters) {
+          let escapedChar = char.char;
+          if (char.char === '"') escapedChar = '\\"';
+          if (char.char === '\\') escapedChar = '\\\\';
+          yaml += `      - { char: "${escapedChar}", x: ${char.x}, y: ${char.y}, width: ${char.width} }\n`;
+        }
+      } else if (font.charSet && font.charsPerRow !== undefined && font.charWidth !== undefined) {
+        // Fixed-width font
+        yaml += `    charWidth: ${font.charWidth}\n`;
+        yaml += `    charsPerRow: ${font.charsPerRow}\n`;
+        const charSetYAML = font.charSet.map(c => {
+          if (c === '"') return '\\"';
+          if (c === '\\') return '\\\\';
+          return c;
+        }).map(c => `"${c}"`).join(', ');
+        yaml += `    charSet: [${charSetYAML}]\n`;
       }
 
       yaml += '\n';
@@ -823,7 +837,12 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
                   if (!img) return null;
 
                   // Calculate preview dimensions
-                  const maxLineWidth = previewText.length * (font.charWidth + (font.charSpacing || 0));
+                  let totalWidth = 0;
+                  for (const char of previewText) {
+                    const charWidth = FontRegistry.getCharWidth(font, char);
+                    totalWidth += charWidth + (font.charSpacing || 0);
+                  }
+                  const maxLineWidth = totalWidth;
                   const previewHeight = font.charHeight;
 
                   return (
@@ -845,16 +864,14 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
                               for (const char of previewText) {
                                 const coords = FontRegistry.getCharCoordinates(font, char);
                                 if (coords) {
-                                  const srcX = coords.x * font.charWidth;
-                                  const srcY = coords.y * font.charHeight;
-
+                                  // coords now contains pixel coordinates directly
                                   ctx.drawImage(
                                     img,
-                                    srcX, srcY, font.charWidth, font.charHeight,
-                                    x * scale, 0, font.charWidth * scale, font.charHeight * scale
+                                    coords.x, coords.y, coords.width, font.charHeight,
+                                    x * scale, 0, coords.width * scale, font.charHeight * scale
                                   );
+                                  x += coords.width + (font.charSpacing || 0);
                                 }
-                                x += font.charWidth + (font.charSpacing || 0);
                               }
                             }
                           }

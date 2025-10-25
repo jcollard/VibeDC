@@ -14,6 +14,8 @@ import { PartyMemberRegistry } from '../utils/PartyMemberRegistry';
 import type { PartyMemberDefinitionJSON } from '../utils/PartyMemberRegistry';
 import { TilesetRegistry } from '../utils/TilesetRegistry';
 import type { TilesetDefinitionJSON } from '../utils/TilesetRegistry';
+import { FontRegistry } from '../utils/FontRegistry';
+import { loadFontFromYAML } from '../utils/FontLoader';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
@@ -24,6 +26,9 @@ import enemyYaml from './enemy-definitions.yaml?raw';
 import partyYaml from './party-definitions.yaml?raw';
 import equipmentYaml from './equipment-definitions.yaml?raw';
 import tilesetYaml from './tileset-database.yaml?raw';
+import font8pxYaml from './fonts/8px-habbo8.yaml?raw';
+import font10pxYaml from './fonts/10px-bitfantasy.yaml?raw';
+import font15pxYaml from './fonts/15px-dungeonslant.yaml?raw';
 
 /**
  * Interface for ability data from YAML
@@ -223,19 +228,47 @@ export function loadPartyMembers(): void {
 }
 
 /**
+ * Load all font definitions from the YAML database
+ */
+export async function loadFonts(): Promise<void> {
+  const fontYamls = [
+    { name: '8px-habbo8', yaml: font8pxYaml },
+    { name: '10px-bitfantasy', yaml: font10pxYaml },
+    { name: '15px-dungeonslant', yaml: font15pxYaml },
+  ];
+
+  let totalFonts = 0;
+
+  for (const { name, yaml: fontYaml } of fontYamls) {
+    try {
+      const fonts = await loadFontFromYAML(fontYaml);
+      FontRegistry.registerAll(fonts);
+      totalFonts += fonts.length;
+      console.log(`Loaded ${fonts.length} font(s) from ${name}`);
+    } catch (error) {
+      console.error(`Failed to load font ${name}:`, error);
+    }
+  }
+
+  console.log(`Loaded ${totalFonts} total font definitions`);
+}
+
+/**
  * Load all game data from YAML files
  * Call this once at application startup
  */
-export function loadAllGameData(): void {
+export async function loadAllGameData(): Promise<void> {
   console.log('Loading game data...');
 
   // Order matters:
   // - Sprites should be loaded first (referenced by enemies and party members)
+  // - Fonts should be loaded early (referenced by UI components)
   // - Abilities must be loaded before classes and encounters
   // - Equipment must be loaded before party members (they reference equipment)
   // - Enemies and party members should be loaded after classes (they reference unit classes)
   // - Tilesets must be loaded before encounters (encounters reference tilesets)
   loadSprites();
+  await loadFonts();
   loadAbilities();
   loadEquipment();
   loadClasses();
@@ -245,5 +278,5 @@ export function loadAllGameData(): void {
   loadEncounters();
 
   console.log('Game data loaded successfully');
-  console.log(`Total: ${SpriteRegistry.count} sprites, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${TilesetRegistry.count} tilesets, ${CombatEncounter.getAll().length} encounters`);
+  console.log(`Total: ${SpriteRegistry.count} sprites, ${FontRegistry.count} fonts, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${TilesetRegistry.count} tilesets, ${CombatEncounter.getAll().length} encounters`);
 }
