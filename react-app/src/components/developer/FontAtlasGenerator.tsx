@@ -77,16 +77,16 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     if (!ctx) return;
 
     // Test multiple font sizes to find optimal dimensions
-    const testSizes = [8, 10, 12, 14, 16, 18, 20, 24];
-    let bestSize = 12;
+    const testSizes = [8, 10, 12, 14, 16, 18, 20, 24, 32];
     let bestWidth = 12;
     let bestHeight = 12;
 
-    // Test with capital 'M' (typically widest character) and lowercase letters
-    const testChars = ['M', 'W', 'A', 'g', 'j', 'y'];
+    // Test with various characters to get accurate measurements
+    const testChars = ['M', 'W', 'A', 'g', 'j', 'y', 'Q', 'p'];
 
     for (const size of testSizes) {
       ctx.font = `${size}px "${fontFamilyName}", monospace`;
+      ctx.textBaseline = 'top';
 
       // Measure width of widest characters
       let maxWidth = 0;
@@ -95,22 +95,34 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
         maxWidth = Math.max(maxWidth, Math.ceil(metrics.width));
       }
 
-      // Get font height using font metrics
-      const metrics = ctx.measureText('M');
-      const height = Math.ceil(
-        (metrics.actualBoundingBoxAscent || size) +
-        (metrics.actualBoundingBoxDescent || size * 0.2)
-      );
+      // Get accurate font height by measuring actual bounding box
+      let maxAscent = 0;
+      let maxDescent = 0;
+
+      for (const char of testChars) {
+        const metrics = ctx.measureText(char);
+        // Use actualBoundingBox for more accurate measurements
+        if (metrics.actualBoundingBoxAscent !== undefined) {
+          maxAscent = Math.max(maxAscent, metrics.actualBoundingBoxAscent);
+        }
+        if (metrics.actualBoundingBoxDescent !== undefined) {
+          maxDescent = Math.max(maxDescent, metrics.actualBoundingBoxDescent);
+        }
+      }
+
+      // If actualBoundingBox not supported, fall back to font size estimation
+      const height = maxAscent + maxDescent > 0
+        ? Math.ceil(maxAscent + maxDescent)
+        : size; // Fallback to font size itself
 
       // Prefer sizes that result in nice pixel values (8, 12, 16, etc.)
       const isPowerOfTwo = (n: number) => n > 0 && (n & (n - 1)) === 0;
-      const isNiceNumber = isPowerOfTwo(maxWidth) || maxWidth % 4 === 0 || maxWidth === 12;
+      const isNiceNumber = isPowerOfTwo(height) || height % 4 === 0 || height === 12;
 
       // Pick the first size where width and height are in a reasonable range
-      if (maxWidth >= 6 && maxWidth <= 32 && height >= 6 && height <= 32) {
-        bestSize = size;
-        bestWidth = Math.max(maxWidth, 8); // Minimum 8px
-        bestHeight = Math.max(height, 8); // Minimum 8px
+      if (maxWidth >= 4 && maxWidth <= 48 && height >= 4 && height <= 48) {
+        bestWidth = Math.max(maxWidth, 4); // Minimum 4px
+        bestHeight = Math.max(height, 4); // Minimum 4px
 
         // If we found a nice number, use it
         if (isNiceNumber) {
@@ -123,13 +135,14 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     bestWidth = Math.ceil(bestWidth / 2) * 2;
     bestHeight = Math.ceil(bestHeight / 2) * 2;
 
-    // Set the detected values
+    // Set the detected values - char height, font size, and line height match
     setCharWidth(bestWidth);
     setCharHeight(bestHeight);
-    setFontSize(bestSize);
-    // Note: lineHeight and baselineOffset left for user to adjust
+    setFontSize(bestHeight); // Font size matches char height
+    setLineHeight(bestHeight); // Line height matches char height
+    // Note: baselineOffset left for user to adjust
 
-    console.log(`Auto-detected dimensions: ${bestWidth}×${bestHeight}px at ${bestSize}pt font size`);
+    console.log(`Auto-detected: Width=${bestWidth}px, Height=${bestHeight}px, FontSize=${bestHeight}pt, LineHeight=${bestHeight}px`);
   };
 
   // Generate the font atlas
