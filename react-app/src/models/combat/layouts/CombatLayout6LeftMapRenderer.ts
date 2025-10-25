@@ -1,6 +1,7 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 import { renderNineSliceDialog, DEFAULT_DIALOG_SPRITES } from '../../../utils/DialogRenderer';
+import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
 
 /**
  * Layout 6: Left Map with Top Turn Order
@@ -15,6 +16,30 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   private readonly COMBAT_LOG_HEIGHT = 36; // 3 tiles
   private readonly PANEL_PADDING = 4;
   private readonly LINE_SPACING = 8;
+  private readonly frameLayout: HorizontalVerticalLayout;
+
+  constructor() {
+    // Define the layout regions using tile-based dimensions
+    // Canvas is 384x216 (32x18 tiles at 12px each)
+    const regions: LayoutRegion[] = [
+      // Top-left: Turn order (22 tiles wide, 3 tiles tall)
+      { name: 'turnOrder', x: 0, y: 0, widthTiles: 22, heightTiles: 3 },
+
+      // Middle-left: Map area (22 tiles wide, 12 tiles tall)
+      { name: 'map', x: 0, y: 36, widthTiles: 22, heightTiles: 12 },
+
+      // Bottom-left: Combat log (22 tiles wide, 3 tiles tall)
+      { name: 'combatLog', x: 0, y: 180, widthTiles: 22, heightTiles: 3 },
+
+      // Top-right: Current unit (10 tiles wide, 9 tiles tall)
+      { name: 'currentUnit', x: 264, y: 0, widthTiles: 10, heightTiles: 9 },
+
+      // Bottom-right: Target unit (10 tiles wide, 9 tiles tall)
+      { name: 'targetUnit', x: 264, y: 108, widthTiles: 10, heightTiles: 9 },
+    ];
+
+    this.frameLayout = new HorizontalVerticalLayout({ regions });
+  }
 
   getMapViewport(canvasWidth: number, canvasHeight: number): { x: number; y: number; width: number; height: number } {
     const leftColumnWidth = canvasWidth - this.RIGHT_COLUMN_WIDTH;
@@ -28,7 +53,7 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   }
 
   renderLayout(context: LayoutRenderContext): void {
-    const { canvasWidth, canvasHeight, fontAtlasImage } = context;
+    const { ctx, canvasWidth, canvasHeight, fontAtlasImage, spriteImages, spriteSize } = context;
 
     if (!fontAtlasImage) return;
 
@@ -67,6 +92,9 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       this.RIGHT_COLUMN_WIDTH,
       rightColumnHeight
     );
+
+    // Render the frame layout dividers on top of the 9-slice panels
+    this.frameLayout.render(ctx, spriteImages, spriteSize);
   }
 
   private renderTurnOrderPanel(
