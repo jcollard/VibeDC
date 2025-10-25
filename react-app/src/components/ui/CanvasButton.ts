@@ -1,4 +1,6 @@
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../utils/FontRegistry';
 
 /**
  * Configuration for a canvas button's appearance and behavior
@@ -10,20 +12,24 @@ export interface CanvasButtonConfig {
   x: number;
   /** Y position of the button (top-left corner) */
   y: number;
-  /** Width of the button in pixels */
-  width: number;
-  /** Height of the button in pixels */
-  height: number;
+  /** Width of the button in pixels (optional - auto-calculated from text if not provided) */
+  width?: number;
+  /** Height of the button in pixels (optional - auto-calculated from text if not provided) */
+  height?: number;
+  /** Padding around the text in pixels (default: 16) */
+  padding?: number;
   /** Sprite ID to use for the normal button state (default: 'ui-simple-4') */
   spriteId?: string;
   /** Sprite ID to use for the hover state (default: 'ui-simple-5') */
   hoverSpriteId?: string;
   /** Sprite ID to use for the active/clicked state (default: 'ui-simple-6') */
   activeSpriteId?: string;
-  /** Font to use for the label */
-  font: string;
-  /** Font size in pixels */
-  fontSize: number;
+  /** Font ID from FontRegistry to use for the label */
+  fontId: string;
+  /** Font atlas image for rendering */
+  fontAtlasImage: HTMLImageElement | null;
+  /** Scale factor for the font (default: 2) */
+  fontScale?: number;
   /** Text color (default: white) */
   textColor?: string;
   /** Whether the button is currently enabled (default: true) */
@@ -47,13 +53,46 @@ export class CanvasButton {
   private isActive = false;
 
   constructor(config: CanvasButtonConfig) {
+    // Calculate width and height from text if not provided
+    const fontScale = config.fontScale || 2;
+    const padding = config.padding || 16;
+    const borderSize = this.borderSize * 4; // 3 pixels * 4 scale = 12 pixels per side
+
+    let width = config.width;
+    let height = config.height;
+
+    // Auto-calculate dimensions if not provided
+    if (!width || !height) {
+      const font = FontRegistry.getById(config.fontId);
+      if (font && config.fontAtlasImage) {
+        const textWidth = FontAtlasRenderer.measureTextByFontId(config.label, config.fontId) * fontScale;
+        const textHeight = font.charHeight * fontScale;
+
+        if (!width) {
+          width = textWidth + (padding * 2) + (borderSize * 2);
+        }
+        if (!height) {
+          height = textHeight + (padding * 2) + (borderSize * 2);
+        }
+      } else {
+        // Fallback if font not loaded
+        console.warn('CanvasButton: Cannot auto-calculate size - font not loaded');
+        width = width || 200;
+        height = height || 60;
+      }
+    }
+
     this.config = {
       spriteId: 'ui-simple-4',
       hoverSpriteId: 'ui-simple-5',
       activeSpriteId: 'ui-simple-6',
+      fontScale: 2,
+      padding: 16,
       textColor: '#ffffff',
       enabled: true,
       ...config,
+      width,
+      height,
     };
   }
 
@@ -79,11 +118,13 @@ export class CanvasButton {
    * Check if a point is within the button's bounds
    */
   contains(x: number, y: number): boolean {
+    const width = this.config.width || 0;
+    const height = this.config.height || 0;
     return (
       x >= this.config.x &&
-      x <= this.config.x + this.config.width &&
+      x <= this.config.x + width &&
       y >= this.config.y &&
-      y <= this.config.y + this.config.height
+      y <= this.config.y + height
     );
   }
 
@@ -167,7 +208,9 @@ export class CanvasButton {
       return;
     }
 
-    const { x, y, width, height } = this.config;
+    const { x, y } = this.config;
+    const width = this.config.width || 0;
+    const height = this.config.height || 0;
     const spriteSize = 12; // All sprites are 12x12
     const borderSizeInSprite = this.borderSize; // 3 pixels in the sprite
     const borderScale = 4; // Scale factor for the border
@@ -241,25 +284,40 @@ export class CanvasButton {
       x + scaledBorderSize, y + scaledBorderSize, centerWidth, centerHeight
     );
 
-    // Draw label text
-    ctx.save();
-    ctx.font = `${this.config.fontSize}px "${this.config.font}", monospace`;
-    ctx.fillStyle = this.config.enabled ? (this.config.textColor || '#ffffff') : '#888888';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
+    // Draw label text using FontAtlasRenderer
+    if (!this.config.fontAtlasImage) {
+      console.warn('CanvasButton: Font atlas image not loaded');
+      return;
+    }
 
-    // Draw text shadow for readability
-    ctx.fillStyle = '#000000';
+    const font = FontRegistry.getById(this.config.fontId);
+    if (!font) {
+      console.warn(`CanvasButton: Font '${this.config.fontId}' not found in registry`);
+      return;
+    }
+
+    const fontScale = this.config.fontScale || 2;
+    const textColor = this.config.enabled ? (this.config.textColor || '#ffffff') : '#888888';
+
+    // Calculate text position (centered)
     const textX = x + width / 2;
-    const textY = y + height / 2;
-    ctx.fillText(this.config.label, textX - 1, textY - 1);
-    ctx.fillText(this.config.label, textX + 1, textY - 1);
-    ctx.fillText(this.config.label, textX - 1, textY + 1);
-    ctx.fillText(this.config.label, textX + 1, textY + 1);
+    const fontHeight = font.charHeight * fontScale;
+    const textY = y + (height / 2) - (fontHeight / 2);
 
-    // Draw main text
-    ctx.fillStyle = this.config.enabled ? (this.config.textColor || '#ffffff') : '#888888';
-    ctx.fillText(this.config.label, textX, textY);
+    ctx.save();
+
+    // Draw main text (no shadow)
+    FontAtlasRenderer.renderText(
+      ctx,
+      this.config.label,
+      textX,
+      textY,
+      this.config.fontId,
+      this.config.fontAtlasImage,
+      fontScale,
+      'center',
+      textColor
+    );
 
     ctx.restore();
   }

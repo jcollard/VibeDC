@@ -4,7 +4,6 @@ import type { CombatEncounter } from './CombatEncounter';
 import type { CombatUnit } from './CombatUnit';
 import { PartyMemberRegistry, type PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
 import { getNineSliceSpriteIds } from '../../utils/DialogRenderer';
-import { UIConfig } from '../../config/UIConfig';
 import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
 import { CanvasButton } from '../../components/ui/CanvasButton';
@@ -360,25 +359,39 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
     // Initialize and render Start Combat button below map (only if deployment is complete)
     if (shouldShowButton) {
+      // Get button font atlas (use 10px-bitfantasy for buttons)
+      const buttonFontId = '10px-bitfantasy';
+      const buttonFontAtlas = fontAtlasImages?.get(buttonFontId) || null;
+
       if (!this.deployButton) {
+        // Create button with auto-sizing (width/height calculated from text)
         this.deployButton = new CanvasButton({
           label: CombatConstants.TEXT.START_COMBAT_BUTTON,
-          x: canvasWidth / 2 - CombatConstants.UI.BUTTON.WIDTH / 2, // Center button
+          x: 0, // Will be centered after we know the width
           y: instructionY, // Same position as instruction message (MESSAGE_SPACING below map)
-          width: CombatConstants.UI.BUTTON.WIDTH,
-          height: CombatConstants.UI.BUTTON.HEIGHT,
           spriteId: 'ui-simple-4',
           hoverSpriteId: 'ui-simple-5',
           activeSpriteId: 'ui-simple-6',
-          font: UIConfig.getButtonFont(),
-          fontSize: CombatConstants.UI.BUTTON.FONT_SIZE,
+          fontId: buttonFontId,
+          fontAtlasImage: buttonFontAtlas,
+          fontScale: 2, // 10px * 2 = 20px
+          padding: 16, // Padding around text
           onClick: () => {
             console.log('Start Combat button clicked!');
           },
         });
+
+        // Center the button horizontally
+        const buttonWidth = this.deployButton['config'].width || 0;
+        this.deployButton.updateConfig({
+          x: canvasWidth / 2 - buttonWidth / 2
+        });
       } else {
-        // Update font in case it changed
-        this.deployButton.updateConfig({ font: UIConfig.getButtonFont() });
+        // Update font atlas in case it changed
+        this.deployButton.updateConfig({
+          fontId: buttonFontId,
+          fontAtlasImage: buttonFontAtlas
+        });
       }
       this.deployButton.render(ctx, spriteImages);
     }
