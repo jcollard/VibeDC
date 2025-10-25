@@ -78,8 +78,9 @@ export class PartySelectionDialog {
       // Match CharacterSelectionDialogContent's layout
       const ROW_HEIGHT = 48;
       const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const BORDER_INSET = 6; // 6px border inset from sprite edge
-      const PADDING = 6; // Additional padding beyond border inset
+      const SCALE = 4; // Scale factor for borders
+      const BORDER_INSET = 6 * SCALE; // 6px border inset from sprite edge (scaled)
+      const PADDING = 6; // Additional padding beyond border inset (not scaled)
 
       const relativeY = canvasY - dialogY - BORDER_INSET - PADDING - TITLE_HEIGHT;
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
@@ -128,8 +129,9 @@ export class PartySelectionDialog {
       // Calculate which character row was clicked
       const ROW_HEIGHT = 48;
       const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const BORDER_INSET = 6; // 6px border inset from sprite edge
-      const PADDING = 6; // Additional padding beyond border inset
+      const SCALE = 4; // Scale factor for borders
+      const BORDER_INSET = 6 * SCALE; // 6px border inset from sprite edge (scaled)
+      const PADDING = 6; // Additional padding beyond border inset (not scaled)
 
       const relativeY = canvasY - dialogY - BORDER_INSET - PADDING - TITLE_HEIGHT;
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
@@ -195,8 +197,9 @@ export class PartySelectionDialog {
 
     // Calculate dialog size
     const paddingPixels = 6; // Use default 6px padding beyond border insets
+    const scale = 4; // Default scale for dialog borders
     const bounds = dialogContent.measure(0);
-    const BORDER_INSET = 6;
+    const BORDER_INSET = 6 * scale;
     const dialogWidth = (bounds.maxX - bounds.minX) + (paddingPixels * 2) + (BORDER_INSET * 2);
     const dialogHeight = (bounds.maxY - bounds.minY) + (paddingPixels * 2) + (BORDER_INSET * 2);
 
@@ -232,7 +235,8 @@ export class PartySelectionDialog {
       spriteSize,
       spriteImages,
       undefined, // Use default 9-slice sprites
-      paddingPixels
+      paddingPixels,
+      scale
     );
   }
 }
