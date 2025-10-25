@@ -153,34 +153,53 @@ export class DeploymentUI {
     canvasWidth: number,
     spriteSize: number,
     spriteImages: Map<string, HTMLImageElement>,
-    font: string,
-    yPosition: number
+    _font: string,
+    yPosition: number,
+    fontId: string = '9px-habbo'
   ): void {
-    const fontSize = CombatConstants.FONTS.MESSAGE_SIZE;
+    // Get font atlas (load if needed)
+    const atlas = this.fontAtlasCache.get(fontId);
+    if (!atlas) {
+      // Start loading if not already loaded
+      this.loadFontAtlas(fontId).catch(console.error);
+      return;
+    }
+
+    const fontDef = FontRegistry.getById(fontId);
+    if (!fontDef) return;
+
+    const scale = 2; // Scale factor for the font
     const message = 'Click ';
     const message2 = ' to deploy a unit.';
 
-    // Set up text rendering
     ctx.save();
-    ctx.font = `${fontSize}px "${font}", monospace`;
-    ctx.textBaseline = 'top';
+    ctx.imageSmoothingEnabled = false;
 
-    // Measure text parts
-    const part1Width = ctx.measureText(message).width;
-    const part2Width = ctx.measureText(message2).width;
-    const spriteDisplaySize = fontSize;
-    const totalWidth = part1Width + spriteDisplaySize + 4 + part2Width;
+    // Measure text parts using font atlas
+    const part1Width = FontAtlasRenderer.measureTextByFontId(message, fontId) * scale;
+    const part2Width = FontAtlasRenderer.measureTextByFontId(message2, fontId) * scale;
+    const spriteDisplaySize = fontDef.charHeight * scale;
+    const totalWidth = part1Width + spriteDisplaySize + 4 * scale + part2Width;
     let currentX = (canvasWidth - totalWidth) / 2;
 
-    // Render "Click "
-    ctx.fillStyle = '#000000';
-    ctx.fillText(message, currentX - 1, yPosition - 1);
-    ctx.fillText(message, currentX + 1, yPosition - 1);
-    ctx.fillText(message, currentX - 1, yPosition + 1);
-    ctx.fillText(message, currentX + 1, yPosition + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(message, currentX, yPosition);
-    currentX += part1Width;
+    // Render "Click " using font atlas
+    for (const char of message) {
+      const coords = FontRegistry.getCharCoordinates(fontDef, char);
+      if (coords) {
+        ctx.drawImage(
+          atlas,
+          coords.x,
+          coords.y,
+          coords.width,
+          fontDef.charHeight,
+          Math.round(currentX),
+          Math.round(yPosition),
+          Math.round(coords.width * scale),
+          Math.round(fontDef.charHeight * scale)
+        );
+        currentX += coords.width * scale + (fontDef.charSpacing || 0) * scale;
+      }
+    }
 
     // Render deployment zone sprite
     const deploymentSprite = 'gradients-7';
@@ -206,16 +225,26 @@ export class DeploymentUI {
         );
       }
     }
-    currentX += spriteDisplaySize + 4;
+    currentX += spriteDisplaySize + 4 * scale;
 
-    // Render " to deploy a unit."
-    ctx.fillStyle = '#000000';
-    ctx.fillText(message2, currentX - 1, yPosition - 1);
-    ctx.fillText(message2, currentX + 1, yPosition - 1);
-    ctx.fillText(message2, currentX - 1, yPosition + 1);
-    ctx.fillText(message2, currentX + 1, yPosition + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(message2, currentX, yPosition);
+    // Render " to deploy a unit." using font atlas
+    for (const char of message2) {
+      const coords = FontRegistry.getCharCoordinates(fontDef, char);
+      if (coords) {
+        ctx.drawImage(
+          atlas,
+          coords.x,
+          coords.y,
+          coords.width,
+          fontDef.charHeight,
+          Math.round(currentX),
+          Math.round(yPosition),
+          Math.round(coords.width * scale),
+          Math.round(fontDef.charHeight * scale)
+        );
+        currentX += coords.width * scale + (fontDef.charSpacing || 0) * scale;
+      }
+    }
 
     ctx.restore();
   }

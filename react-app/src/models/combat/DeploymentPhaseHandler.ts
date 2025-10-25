@@ -355,7 +355,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
     // Render instruction message only if button is NOT visible
     if (!shouldShowButton) {
-      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, dialogFont, instructionY);
+      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, dialogFont, instructionY, messageAtlasFontId || '9px-habbo');
     }
 
     // Initialize and render Start Combat button below map (only if deployment is complete)
