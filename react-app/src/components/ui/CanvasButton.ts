@@ -16,7 +16,7 @@ export interface CanvasButtonConfig {
   width?: number;
   /** Height of the button in pixels (optional - auto-calculated from text if not provided) */
   height?: number;
-  /** Padding around the text in pixels (default: 16) */
+  /** Padding around the text in pixels (default: 1) */
   padding?: number;
   /** Sprite ID to use for the normal button state (default: 'ui-simple-4') */
   spriteId?: string;
@@ -55,7 +55,7 @@ export class CanvasButton {
   constructor(config: CanvasButtonConfig) {
     // Calculate width and height from text if not provided
     const fontScale = config.fontScale || 2;
-    const padding = config.padding || 16;
+    const padding = config.padding !== undefined ? config.padding : 1;
     const borderSize = this.borderSize * 4; // 3 pixels * 4 scale = 12 pixels per side
 
     let width = config.width;
@@ -87,7 +87,7 @@ export class CanvasButton {
       hoverSpriteId: 'ui-simple-5',
       activeSpriteId: 'ui-simple-6',
       fontScale: 2,
-      padding: 16,
+      padding: 1,
       textColor: '#ffffff',
       enabled: true,
       ...config,

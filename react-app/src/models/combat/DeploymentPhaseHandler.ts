@@ -375,7 +375,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
           fontId: buttonFontId,
           fontAtlasImage: buttonFontAtlas,
           fontScale: 2, // 10px * 2 = 20px
-          padding: 16, // Padding around text
+          // padding: 1 is the default
           onClick: () => {
             console.log('Start Combat button clicked!');
           },
