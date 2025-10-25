@@ -25,6 +25,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const [antialiasThreshold, setAntialiasThreshold] = useState<number>(200);
   const [applyThreshold, setApplyThreshold] = useState<boolean>(true);
   const [useVariableWidth, setUseVariableWidth] = useState<boolean>(true);
+  const [renderMonospaced, setRenderMonospaced] = useState<boolean>(true);
   const [demoText, setDemoText] = useState<string>('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
   const [demoScale, setDemoScale] = useState<number>(2);
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -300,14 +301,14 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
             x * demoScale, y * demoScale, charWidth * demoScale, charHeight * demoScale
           );
 
-          // Advance by actual character width when using variable width
-          x += useVariableWidth ? actualCharWidth + charSpacing : charWidthWithSpacing;
+          // Advance by actual character width when NOT rendering monospaced
+          x += (useVariableWidth && !renderMonospaced) ? actualCharWidth + charSpacing : charWidthWithSpacing;
         } else {
           x += charWidthWithSpacing;
         }
       }
     });
-  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow, charWidths, useVariableWidth]);
+  }, [canvasRef, demoCanvasRef, fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, charSet, charsPerRow, charWidths, useVariableWidth, renderMonospaced]);
 
   // Update demo when parameters change
   useEffect(() => {
@@ -337,18 +338,21 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
   // Download the YAML definition
   const downloadYAML = () => {
-    // Generate character set as YAML array
-    const charSetYAML = charSet.map(c => {
-      // Escape special characters
-      if (c === '"') return '\\"';
-      if (c === '\\') return '\\\\';
-      return c;
-    }).map(c => `"${c}"`).join(', ');
+    // Generate characters array with position and width data
+    const charactersYAML = charSet.map((char, index) => {
+      const col = index % charsPerRow;
+      const row = Math.floor(index / charsPerRow);
+      const x = col * charWidth;
+      const y = row * charHeight;
+      const width = charWidths[index] || charWidth;
 
-    // Generate character widths array if using variable width
-    const charWidthsYAML = useVariableWidth && charWidths.length > 0
-      ? `\n    charWidths: [${charWidths.join(', ')}]`
-      : '';
+      // Escape special characters
+      let escapedChar = char;
+      if (char === '"') escapedChar = '\\"';
+      if (char === '\\') escapedChar = '\\\\';
+
+      return `      - { char: "${escapedChar}", x: ${x}, y: ${y}, width: ${width} }`;
+    }).join('\n');
 
     const yaml = `# Font definition for ${fontId}
 # Generated from font atlas generator
@@ -356,17 +360,14 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 fonts:
   - id: "${fontId}"
     atlasPath: "/fonts/${fontId}-atlas.png"
-    charWidth: ${charWidth}
     charHeight: ${charHeight}
     lineHeight: ${lineHeight}
     charSpacing: ${charSpacing}
     baselineOffset: ${baselineOffset}
-    charOffsetX: 0
-    charOffsetY: 0
     fallbackChar: "?"
-    charsPerRow: ${charsPerRow}
-    charSet: [${charSetYAML}]${charWidthsYAML}
     tags: ["pixel", "game"${useVariableWidth ? ', "variable-width"' : ''}]
+    characters:
+${charactersYAML}
 `;
 
     const blob = new Blob([yaml], { type: 'text/yaml' });
@@ -899,6 +900,26 @@ fonts:
                   resize: 'vertical',
                 }}
               />
+
+              {/* Render Monospaced Toggle */}
+              {useVariableWidth && (
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={renderMonospaced}
+                      onChange={(e) => setRenderMonospaced(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#aaa' }}>
+                      Render Monospaced
+                    </span>
+                  </label>
+                  <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
+                    {renderMonospaced ? 'Fixed spacing (default)' : 'Proportional spacing'}
+                  </div>
+                </div>
+              )}
 
               <div
                 style={{
