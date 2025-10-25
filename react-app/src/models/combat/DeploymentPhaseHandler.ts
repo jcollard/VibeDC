@@ -4,12 +4,14 @@ import type { CombatEncounter } from './CombatEncounter';
 import type { CombatUnit } from './CombatUnit';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { PartyMemberRegistry, type PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
-import { renderDialogWithContent, renderTextWithShadow, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
+import { renderDialogWithContent, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
+import { TextRenderingUtils } from '../../utils/TextRenderingUtils';
 import { CharacterSelectionDialogContent } from '../../components/combat/CharacterSelectionDialogContent';
 import { UIConfig } from '../../config/UIConfig';
 import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
 import { CanvasButton } from '../../components/ui/CanvasButton';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -55,9 +57,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
   // Animation state
   private elapsedTime = 0; // Time in seconds since phase started
-  private readonly cycleTime = 2.0; // Time for full cycle (1s fade in + 1s fade out)
-  private readonly minAlpha = 0.0;
-  private readonly maxAlpha = 0.25;
+  private readonly cycleTime = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.CYCLE_TIME;
+  private readonly minAlpha = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.MIN_ALPHA;
+  private readonly maxAlpha = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.MAX_ALPHA;
 
   // Selection state
   private selectedZoneIndex: number | null = null;
@@ -350,16 +352,16 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     if (shouldShowButton) {
       if (!this.deployButton) {
         this.deployButton = new CanvasButton({
-          label: 'Start Combat',
-          x: canvasWidth / 2 - 110, // Center button (220px wide)
-          y: instructionY, // Same position as instruction message (8px below map)
-          width: 220,
-          height: 50,
+          label: CombatConstants.TEXT.START_COMBAT_BUTTON,
+          x: canvasWidth / 2 - CombatConstants.UI.BUTTON.WIDTH / 2, // Center button
+          y: instructionY, // Same position as instruction message (MESSAGE_SPACING below map)
+          width: CombatConstants.UI.BUTTON.WIDTH,
+          height: CombatConstants.UI.BUTTON.HEIGHT,
           spriteId: 'ui-simple-4',
           hoverSpriteId: 'ui-simple-5',
           activeSpriteId: 'ui-simple-6',
           font: UIConfig.getButtonFont(),
-          fontSize: 36,
+          fontSize: CombatConstants.UI.BUTTON.FONT_SIZE,
           onClick: () => {
             console.log('Start Combat button clicked!');
           },
@@ -448,21 +450,17 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * Render the "Deploy Units" header message
    */
   private renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasSize: number, headerFont: string): void {
-    // Draw semi-transparent black background at top of screen
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    ctx.fillRect(0, 0, canvasSize, 80);
-
-    // Render "Deploy Units" text with shadow
-    renderTextWithShadow(
+    TextRenderingUtils.renderTitleWithBackground(
       ctx,
-      'Deploy Units',
-      canvasSize / 2,
-      40,
-      `bold 48px "${headerFont}", monospace`,
-      '#ffffff',
-      2,
-      'center',
-      'middle'
+      CombatConstants.TEXT.DEPLOY_TITLE,
+      canvasSize,
+      CombatConstants.UI.TITLE_Y_POSITION,
+      CombatConstants.UI.TITLE_HEIGHT,
+      CombatConstants.RENDERING.BACKGROUND_ALPHA,
+      headerFont,
+      CombatConstants.FONTS.TITLE_SIZE,
+      CombatConstants.RENDERING.TEXT_COLOR,
+      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET
     );
   }
 
@@ -477,7 +475,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     font: string,
     yPosition: number
   ): void {
-    const fontSize = 36;
+    const fontSize = CombatConstants.FONTS.MESSAGE_SIZE;
     const message = 'Click ';
     const message2 = ' to deploy a unit.';
 
@@ -542,29 +540,16 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     canvasSize: number,
     font: string
   ): void {
-    const fontSize = 36;
-    const yPosition = 88; // 8px below title background (which ends at y=80)
-    const message = 'You have been waylaid by enemies and must defend yourself.';
-
-    // Set up text rendering
-    ctx.save();
-    ctx.font = `${fontSize}px "${font}", monospace`;
-    ctx.textBaseline = 'top';
-
-    // Measure and center the text
-    const textWidth = ctx.measureText(message).width;
-    const currentX = (canvasSize - textWidth) / 2;
-
-    // Render text with shadow
-    ctx.fillStyle = '#000000';
-    ctx.fillText(message, currentX - 1, yPosition - 1);
-    ctx.fillText(message, currentX + 1, yPosition - 1);
-    ctx.fillText(message, currentX - 1, yPosition + 1);
-    ctx.fillText(message, currentX + 1, yPosition + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(message, currentX, yPosition);
-
-    ctx.restore();
+    TextRenderingUtils.renderCenteredMessage(
+      ctx,
+      CombatConstants.TEXT.WAYLAID_MESSAGE,
+      canvasSize,
+      CombatConstants.UI.WAYLAID_MESSAGE_Y,
+      font,
+      CombatConstants.FONTS.MESSAGE_SIZE,
+      CombatConstants.RENDERING.TEXT_COLOR,
+      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET
+    );
   }
 
   /**

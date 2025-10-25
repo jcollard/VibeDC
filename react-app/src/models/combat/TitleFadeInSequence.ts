@@ -2,6 +2,7 @@ import type { CinematicSequence, CinematicRenderContext } from './CinematicSeque
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import { renderTextWithShadow } from '../../utils/DialogRenderer';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Cinematic sequence that fades in a title text at the top of the screen
@@ -62,14 +63,8 @@ export class TitleFadeInSequence implements CinematicSequence {
       return false;
     }
 
-    const ditherPixelSize = 4;
-
-    const bayerMatrix = [
-      [0, 8, 2, 10],
-      [12, 4, 14, 6],
-      [3, 11, 1, 9],
-      [15, 7, 13, 5]
-    ];
+    const ditherPixelSize = CombatConstants.ANIMATION.DITHERING.PIXEL_SIZE;
+    const bayerMatrix = CombatConstants.ANIMATION.DITHERING.BAYER_MATRIX;
 
     const blockX = Math.floor(pixelX / ditherPixelSize);
     const blockY = Math.floor(pixelY / ditherPixelSize);
@@ -95,18 +90,18 @@ export class TitleFadeInSequence implements CinematicSequence {
     tempCtx.imageSmoothingEnabled = false;
 
     // Draw semi-transparent black background at y=0 of temp canvas
-    tempCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    tempCtx.fillRect(0, 0, canvasWidth, 80);
+    tempCtx.fillStyle = `rgba(0, 0, 0, ${CombatConstants.RENDERING.BACKGROUND_ALPHA})`;
+    tempCtx.fillRect(0, 0, canvasWidth, CombatConstants.UI.TITLE_HEIGHT);
 
-    // Render text to temp canvas at y=40 (which will align to y=60 when drawn at yPosition=20)
+    // Render text to temp canvas at center of title area
     renderTextWithShadow(
       tempCtx,
       this.title,
       canvasWidth / 2,
-      40,
+      CombatConstants.UI.TITLE_HEIGHT / 2,
       `bold ${this.fontSize}px "DungeonSlant", monospace`,
-      '#ffffff',
-      2,
+      CombatConstants.RENDERING.TEXT_COLOR,
+      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET,
       'center',
       'middle'
     );

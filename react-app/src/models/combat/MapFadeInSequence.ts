@@ -2,6 +2,7 @@ import type { CinematicSequence, CinematicRenderContext } from './CinematicSeque
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Cinematic sequence that fades in the map grid with a diagonal wave effect
@@ -80,16 +81,8 @@ export class MapFadeInSequence implements CinematicSequence {
    * Returns true if the pixel should be drawn based on alpha and dither pattern
    */
   private shouldDrawPixel(pixelX: number, pixelY: number, alpha: number): boolean {
-    // Dither pixel size (4px blocks)
-    const ditherPixelSize = 4;
-
-    // Use a 4x4 Bayer matrix for ordered dithering
-    const bayerMatrix = [
-      [0, 8, 2, 10],
-      [12, 4, 14, 6],
-      [3, 11, 1, 9],
-      [15, 7, 13, 5]
-    ];
+    const ditherPixelSize = CombatConstants.ANIMATION.DITHERING.PIXEL_SIZE;
+    const bayerMatrix = CombatConstants.ANIMATION.DITHERING.BAYER_MATRIX;
 
     // Calculate which dither block this pixel is in
     const blockX = Math.floor(pixelX / ditherPixelSize);

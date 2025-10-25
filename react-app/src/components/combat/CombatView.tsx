@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
@@ -12,6 +12,8 @@ import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
 import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
 import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence';
 import { SequenceParallel } from '../../models/combat/SequenceParallel';
+import { CombatConstants } from '../../models/combat/CombatConstants';
+import { CombatInputHandler } from '../../services/CombatInputHandler';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -20,8 +22,8 @@ interface CombatViewProps {
 const SPRITE_SIZE = 12; // Size of each sprite in the sprite sheet (12x12 pixels)
 const SCALE = 4; // Scale factor for rendering
 const TILE_SIZE = SPRITE_SIZE * SCALE; // Size of each tile when rendered (48x48 pixels)
-const CANVAS_WIDTH = 1706; // Canvas width in pixels (16:9 aspect ratio)
-const CANVAS_HEIGHT = 960; // Canvas height in pixels
+const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH;
+const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT;
 
 /**
  * CombatView is the main view for displaying and interacting with combat encounters.
@@ -53,6 +55,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
+
+  // Input handler for coordinate conversion and input blocking
+  const inputHandler = useMemo(
+    () => new CombatInputHandler(displayCanvasRef, CANVAS_WIDTH, CANVAS_HEIGHT),
+    []
+  );
 
   // Store loaded sprite images
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -176,19 +184,36 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (spritesLoaded && fontsLoaded && !introCinematicPlayedRef.current) {
       // Calculate message positions
       // Title and waylaid message at very top of screen
-      const titleY = 0;
-      const waylaidMessageY = 88; // 8px below title background (which ends at y=80)
+      const titleY = CombatConstants.UI.TITLE_Y_POSITION;
+      const waylaidMessageY = CombatConstants.UI.WAYLAID_MESSAGE_Y;
       // Deployment instruction: 8px below map bottom
       const mapHeight = combatState.map.height * TILE_SIZE;
       const offsetY = (CANVAS_HEIGHT - mapHeight) / 2;
-      const deploymentInstructionY = offsetY + mapHeight + 8;
+      const deploymentInstructionY = offsetY + mapHeight + CombatConstants.UI.MESSAGE_SPACING;
 
       // Run all intro animations in parallel
       const introSequence = new SequenceParallel([
-        new MapFadeInSequence(2.0),
-        new TitleFadeInSequence('Deploy Units', 1.0, 48, titleY),
-        new MessageFadeInSequence('Click [sprite:gradients-7] to deploy a unit.', 1.0, dialogFont, 36, deploymentInstructionY),
-        new MessageFadeInSequence('You have been waylaid by enemies and must defend yourself.', 1.0, dialogFont, 36, waylaidMessageY)
+        new MapFadeInSequence(CombatConstants.ANIMATION.MAP_FADE_DURATION),
+        new TitleFadeInSequence(
+          CombatConstants.TEXT.DEPLOY_TITLE,
+          CombatConstants.ANIMATION.TITLE_FADE_DURATION,
+          CombatConstants.FONTS.TITLE_SIZE,
+          titleY
+        ),
+        new MessageFadeInSequence(
+          CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION,
+          CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
+          dialogFont,
+          CombatConstants.FONTS.MESSAGE_SIZE,
+          deploymentInstructionY
+        ),
+        new MessageFadeInSequence(
+          CombatConstants.TEXT.WAYLAID_MESSAGE,
+          CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
+          dialogFont,
+          CombatConstants.FONTS.MESSAGE_SIZE,
+          waylaidMessageY
+        )
       ]);
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
       introCinematicPlayedRef.current = true;
@@ -442,19 +467,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = displayCanvasRef.current;
-    if (!canvas) return;
+    // Block input during cinematics
+    if (inputHandler.isInputBlocked(cinematicManagerRef.current)) return;
 
-    // Get canvas bounding rect
-    const rect = canvas.getBoundingClientRect();
+    // Convert mouse coordinates to canvas coordinates
+    const coords = inputHandler.getCanvasCoordinates(event);
+    if (!coords) return;
 
-    // Calculate scale factor (canvas might be scaled to fit viewport)
-    const scaleX = CANVAS_WIDTH / rect.width;
-    const scaleY = CANVAS_HEIGHT / rect.height;
-
-    // Get click position relative to canvas
-    const canvasX = (event.clientX - rect.left) * scaleX;
-    const canvasY = (event.clientY - rect.top) * scaleY;
+    const { x: canvasX, y: canvasY } = coords;
 
     // Calculate map offset (same as rendering)
     const offsetX = (CANVAS_WIDTH - (combatState.map.width * TILE_SIZE)) / 2;
@@ -522,23 +542,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         console.log('Deployment zone selected:', handler.getSelectedZoneIndex());
       }
     }
-  }, [combatState, encounter, setCombatState]);
+  }, [combatState, encounter, setCombatState, inputHandler]);
 
   // Handle canvas mouse move for hover detection
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
-    const canvas = displayCanvasRef.current;
-    if (!canvas) return;
+    // Block input during cinematics
+    if (inputHandler.isInputBlocked(cinematicManagerRef.current)) return;
 
-    // Get canvas bounding rect
-    const rect = canvas.getBoundingClientRect();
+    // Convert mouse coordinates to canvas coordinates
+    const coords = inputHandler.getCanvasCoordinates(event);
+    if (!coords) return;
 
-    // Calculate scale factor (canvas might be scaled to fit viewport)
-    const scaleX = CANVAS_WIDTH / rect.width;
-    const scaleY = CANVAS_HEIGHT / rect.height;
-
-    // Get mouse position relative to canvas
-    const canvasX = (event.clientX - rect.left) * scaleX;
-    const canvasY = (event.clientY - rect.top) * scaleY;
+    const { x: canvasX, y: canvasY } = coords;
 
     // Pass mouse move to phase handler (if deployment phase)
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
@@ -547,7 +562,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       handler.handleMouseMove(canvasX, canvasY, partySize);
       handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
     }
-  }, [combatState.phase]);
+  }, [combatState.phase, inputHandler]);
 
   // Available fonts (matching what's in index.css)
   const availableFonts = [
