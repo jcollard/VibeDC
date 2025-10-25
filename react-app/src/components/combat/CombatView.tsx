@@ -101,31 +101,51 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     UISettings.isIntegerScalingEnabled()
   );
 
-  // Calculate canvas display dimensions based on integer scaling setting
-  const canvasDisplayStyle = useMemo(() => {
-    const containerRef = displayCanvasRef.current?.parentElement;
-    if (!containerRef) {
-      return { width: '100%', height: '100%' };
-    }
+  // Track manual scale factor
+  const [manualScale, setManualScale] = useState<number>(
+    UISettings.getManualScale()
+  );
 
-    const scaledDimensions = UISettings.getIntegerScaledDimensions(
-      CANVAS_WIDTH,
-      CANVAS_HEIGHT,
-      containerRef.clientWidth,
-      containerRef.clientHeight
-    );
+  // Track canvas display style for integer scaling
+  const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
+    width: '100%',
+    height: '100%',
+  });
 
-    if (scaledDimensions) {
-      // Integer scaling enabled - use exact pixel dimensions
-      return {
-        width: `${scaledDimensions.width}px`,
-        height: `${scaledDimensions.height}px`,
-      };
-    } else {
-      // Integer scaling disabled - use percentage to fill container
-      return { width: '100%', height: '100%' };
-    }
-  }, [windowSize.width, windowSize.height, integerScalingEnabled]);
+  // Calculate and update canvas display dimensions based on integer scaling setting
+  useEffect(() => {
+    const updateCanvasStyle = () => {
+      const containerRef = displayCanvasRef.current?.parentElement;
+      if (!containerRef) {
+        setCanvasDisplayStyle({ width: '100%', height: '100%' });
+        return;
+      }
+
+      const scaledDimensions = UISettings.getIntegerScaledDimensions(
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT,
+        containerRef.clientWidth,
+        containerRef.clientHeight
+      );
+
+      if (scaledDimensions) {
+        // Integer scaling enabled - use exact pixel dimensions
+        setCanvasDisplayStyle({
+          width: `${scaledDimensions.width}px`,
+          height: `${scaledDimensions.height}px`,
+        });
+      } else {
+        // Integer scaling disabled - use percentage to fill container
+        setCanvasDisplayStyle({ width: '100%', height: '100%' });
+      }
+    };
+
+    // Update immediately
+    updateCanvasStyle();
+
+    // Also update on next frame to ensure container is measured
+    requestAnimationFrame(updateCanvasStyle);
+  }, [windowSize.width, windowSize.height, integerScalingEnabled, manualScale]);
 
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
@@ -137,7 +157,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const handleIntegerScalingToggle = useCallback((enabled: boolean) => {
     UISettings.setIntegerScaling(enabled);
     setIntegerScalingEnabled(enabled);
-    // State change will trigger useMemo recalculation via dependency
+    // State change will trigger useEffect recalculation via dependency
+  }, []);
+
+  // Handle manual scale change
+  const handleManualScaleChange = useCallback((scale: number) => {
+    UISettings.setManualScale(scale);
+    setManualScale(scale);
+    // State change will trigger useEffect recalculation via dependency
   }, []);
 
   // Track the last displayed unit for info panel persistence
@@ -674,6 +701,33 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             />
             <span>Integer Scaling (pixel-perfect)</span>
           </label>
+
+          {/* Manual Scale Selector */}
+          <label style={{ display: 'block', marginBottom: '4px' }}>
+            Scale Factor:
+          </label>
+          <select
+            value={manualScale}
+            onChange={(e) => handleManualScaleChange(Number(e.target.value))}
+            style={{
+              width: '200px',
+              padding: '4px',
+              background: '#222',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              color: '#fff',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              marginBottom: '16px',
+            }}
+          >
+            <option value={0}>Auto</option>
+            <option value={1}>1x</option>
+            <option value={2}>2x</option>
+            <option value={3}>3x</option>
+            <option value={4}>4x</option>
+            <option value={5}>5x</option>
+          </select>
 
             {/* Title Font Atlas Selector */}
             <label style={{ display: 'block', marginBottom: '4px' }}>

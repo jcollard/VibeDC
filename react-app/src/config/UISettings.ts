@@ -11,6 +11,13 @@ export interface UISettingsConfig {
    * When false, the canvas will scale to fit the available space (may use fractional scaling)
    */
   integerScaling: boolean;
+
+  /**
+   * Manual scale factor (1-5)
+   * When set to a value > 0, this overrides automatic scale calculation
+   * When set to 0 (or null), automatic scaling is used based on available space
+   */
+  manualScale: number;
 }
 
 /**
@@ -18,6 +25,7 @@ export interface UISettingsConfig {
  */
 const DEFAULT_SETTINGS: UISettingsConfig = {
   integerScaling: true, // Default to integer scaling for crisp pixel art
+  manualScale: 0, // 0 = automatic scaling
 };
 
 /**
@@ -46,6 +54,20 @@ export class UISettings {
    */
   static isIntegerScalingEnabled(): boolean {
     return this.settings.integerScaling;
+  }
+
+  /**
+   * Set manual scale factor (0 = automatic, 1-5 = fixed scale)
+   */
+  static setManualScale(scale: number): void {
+    this.settings.manualScale = Math.max(0, Math.min(5, Math.floor(scale)));
+  }
+
+  /**
+   * Get the current manual scale factor
+   */
+  static getManualScale(): number {
+    return this.settings.manualScale;
   }
 
   /**
@@ -94,12 +116,18 @@ export class UISettings {
       return null;
     }
 
-    const scale = this.calculateMaxIntegerScale(
-      canvasWidth,
-      canvasHeight,
-      containerWidth,
-      containerHeight
-    );
+    // Use manual scale if set, otherwise calculate automatically
+    let scale: number;
+    if (this.settings.manualScale > 0) {
+      scale = this.settings.manualScale;
+    } else {
+      scale = this.calculateMaxIntegerScale(
+        canvasWidth,
+        canvasHeight,
+        containerWidth,
+        containerHeight
+      );
+    }
 
     return {
       width: canvasWidth * scale,
