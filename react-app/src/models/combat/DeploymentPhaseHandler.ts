@@ -12,6 +12,7 @@ import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
 import { CanvasButton } from '../../components/ui/CanvasButton';
 import { CombatConstants } from './CombatConstants';
+import type { CombatUIStateManager } from './CombatUIState';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -61,15 +62,45 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   private readonly minAlpha = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.MIN_ALPHA;
   private readonly maxAlpha = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.MAX_ALPHA;
 
-  // Selection state
-  private selectedZoneIndex: number | null = null;
+  // UI state manager (optional - will use internal state if not provided)
+  private uiStateManager: CombatUIStateManager | null = null;
 
-  // Hover state for character selection
+  // Internal state (used when UIStateManager not provided)
+  private selectedZoneIndex: number | null = null;
   private hoveredCharacterIndex: number | null = null;
   private lastDialogBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   // Deploy button
   private deployButton: CanvasButton | null = null;
+
+  /**
+   * @param uiStateManager - Optional UI state manager for centralized state management
+   */
+  constructor(uiStateManager?: CombatUIStateManager) {
+    this.uiStateManager = uiStateManager || null;
+  }
+
+  /**
+   * Set the selected zone index in UI state
+   */
+  private setSelectedZoneIndex(index: number | null): void {
+    if (this.uiStateManager) {
+      this.uiStateManager.selectZone(index);
+    } else {
+      this.selectedZoneIndex = index;
+    }
+  }
+
+  /**
+   * Set the hovered character index in UI state
+   */
+  private setHoveredCharacterIndex(index: number | null): void {
+    if (this.uiStateManager) {
+      this.uiStateManager.setHoveredCharacter(index);
+    } else {
+      this.hoveredCharacterIndex = index;
+    }
+  }
 
   /**
    * Update animation state
@@ -111,7 +142,8 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
     if (clickedZoneIndex !== -1) {
       // Toggle selection: if already selected, deselect; otherwise select
-      this.selectedZoneIndex = this.selectedZoneIndex === clickedZoneIndex ? null : clickedZoneIndex;
+      const currentSelection = this.getSelectedZoneIndex();
+      this.setSelectedZoneIndex(currentSelection === clickedZoneIndex ? null : clickedZoneIndex);
       return true;
     }
 
@@ -122,6 +154,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * Get the currently selected zone index
    */
   getSelectedZoneIndex(): number | null {
+    if (this.uiStateManager) {
+      return this.uiStateManager.getState().selectedZoneIndex;
+    }
     return this.selectedZoneIndex;
   }
 
@@ -129,7 +164,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * Clear the selected deployment zone
    */
   clearSelectedZone(): void {
-    this.selectedZoneIndex = null;
+    this.setSelectedZoneIndex(null);
   }
 
   /**
@@ -146,8 +181,8 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     characterCount: number
   ): boolean {
     // Only process hover if a zone is selected (dialog is visible)
-    if (this.selectedZoneIndex === null || !this.lastDialogBounds) {
-      this.hoveredCharacterIndex = null;
+    if (this.getSelectedZoneIndex() === null || !this.lastDialogBounds) {
+      this.setHoveredCharacterIndex(null);
       return false;
     }
 
@@ -170,15 +205,15 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
 
       if (rowIndex >= 0 && rowIndex < characterCount) {
-        this.hoveredCharacterIndex = rowIndex;
+        this.setHoveredCharacterIndex(rowIndex);
       } else {
-        this.hoveredCharacterIndex = null;
+        this.setHoveredCharacterIndex(null);
       }
 
       return true;
     }
 
-    this.hoveredCharacterIndex = null;
+    this.setHoveredCharacterIndex(null);
     return false;
   }
 
@@ -186,6 +221,9 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * Get the currently hovered character index
    */
   getHoveredCharacterIndex(): number | null {
+    if (this.uiStateManager) {
+      return this.uiStateManager.getState().hoveredCharacterIndex;
+    }
     return this.hoveredCharacterIndex;
   }
 
@@ -203,7 +241,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     characterCount: number
   ): number | null {
     // Only process click if a zone is selected (dialog is visible)
-    if (this.selectedZoneIndex === null || !this.lastDialogBounds) {
+    if (this.getSelectedZoneIndex() === null || !this.lastDialogBounds) {
       return null;
     }
 
@@ -431,7 +469,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       ctx.restore();
 
       // Draw the border sprite only if this zone is selected
-      if (this.selectedZoneIndex === index) {
+      if (this.getSelectedZoneIndex() === index) {
         const borderSrcX = borderSprite.x * spriteSize;
         const borderSrcY = borderSprite.y * spriteSize;
         const borderSrcWidth = (borderSprite.width || 1) * spriteSize;
@@ -567,12 +605,13 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     spriteImages: Map<string, HTMLImageElement>
   ): void {
     // Only show dialog if a deployment zone is selected
-    if (this.selectedZoneIndex === null) {
+    const selectedZoneIndex = this.getSelectedZoneIndex();
+    if (selectedZoneIndex === null) {
       return;
     }
 
     // Get the selected deployment zone position
-    const selectedZone = encounter.playerDeploymentZones[this.selectedZoneIndex];
+    const selectedZone = encounter.playerDeploymentZones[selectedZoneIndex];
     if (!selectedZone) {
       return;
     }

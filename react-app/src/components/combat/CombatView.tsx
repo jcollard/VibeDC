@@ -15,6 +15,9 @@ import { SequenceParallel } from '../../models/combat/SequenceParallel';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
+import { FontAssetLoader } from '../../services/FontAssetLoader';
+import { CombatUIStateManager } from '../../models/combat/CombatUIState';
+import { useCombatUIState } from '../../hooks/useCombatUIState';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -40,8 +43,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     unitManifest: new CombatUnitManifest(),
   });
 
-  // Initialize phase handler based on current phase
-  const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler());
+  // Initialize UI state manager
+  const uiStateManager = useMemo(() => new CombatUIStateManager(), []);
+  // Subscribe to UI state changes to trigger re-renders when state changes
+  useCombatUIState(uiStateManager);
+
+  // Initialize phase handler based on current phase (pass UI state manager)
+  const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler(uiStateManager));
 
   // Initialize cinematic manager
   const cinematicManagerRef = useRef<CinematicManager>(new CinematicManager());
@@ -65,6 +73,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Sprite asset loader
   const spriteLoader = useMemo(() => new SpriteAssetLoader(), []);
+
+  // Font asset loader
+  const fontLoader = useMemo(() => new FontAssetLoader(), []);
 
   // Store loaded sprite images
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -96,32 +107,23 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track if the selected fonts are loaded
   const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
 
-  // Load the selected fonts
+  // Load the selected fonts using FontAssetLoader
   useEffect(() => {
     setFontsLoaded(false);
 
-    // Use the Font Loading API to ensure the fonts are ready
     const loadFonts = async () => {
-      try {
-        // Load header font at various sizes
-        await document.fonts.load(`48px "${headerFont}"`);
-        await document.fonts.load(`32px "${headerFont}"`);
+      const result = await fontLoader.loadFonts(headerFont, dialogFont);
 
-        // Load dialog font at various sizes
-        await document.fonts.load(`24px "${dialogFont}"`);
-        await document.fonts.load(`16px "${dialogFont}"`);
+      // Always set as loaded (even on error) to prevent blocking
+      setFontsLoaded(true);
 
-        console.log(`CombatView: Fonts "${headerFont}" and "${dialogFont}" loaded successfully`);
-        setFontsLoaded(true);
-      } catch (error) {
-        console.warn(`CombatView: Failed to load fonts`, error);
-        // Still set as loaded to prevent blocking
-        setFontsLoaded(true);
+      if (!result.loaded && result.error) {
+        console.warn('Font loading had issues:', result.error);
       }
     };
 
     loadFonts();
-  }, [headerFont, dialogFont]);
+  }, [headerFont, dialogFont, fontLoader]);
 
   // Listen for window resize
   useEffect(() => {
