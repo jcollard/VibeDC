@@ -1,0 +1,95 @@
+# Font definitions example
+# This file shows the structure for defining pixel-perfect fonts for the game
+#
+# To create a new font:
+# 1. Use the Font Registry Panel (F2 → Font Registry → Generate Font)
+# 2. Upload a TTF file and configure the parameters
+# 3. Download the atlas PNG and YAML definition
+# 4. Place the PNG in /public/fonts/
+# 5. Load this YAML file in your game initialization code
+
+fonts:
+  # Example: 12x12 pixel font for UI text
+  - id: "dungeon-12"
+    atlasPath: "/fonts/dungeon-12-atlas.png"
+    charWidth: 12
+    charHeight: 12
+    lineHeight: 14
+    charSpacing: 1
+    baselineOffset: 10
+    charOffsetX: 0
+    charOffsetY: 0
+    fallbackChar: "?"
+    charsPerRow: 16
+    # ASCII printable characters (32-126)
+    charSet: [" ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~"]
+    tags: ["pixel", "ui", "game"]
+
+  # Example: 8x8 pixel font for compact text
+  - id: "tiny-8"
+    atlasPath: "/fonts/tiny-8-atlas.png"
+    charWidth: 8
+    charHeight: 8
+    lineHeight: 10
+    charSpacing: 0
+    baselineOffset: 6
+    charOffsetX: 0
+    charOffsetY: 0
+    fallbackChar: "?"
+    charsPerRow: 16
+    charSet: [" ", "!", "\"", "#", "$", "%", "&", "'", "(", ")", "*", "+", ",", "-", ".", "/", "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", ":", ";", "<", "=", ">", "?", "@", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "[", "\\", "]", "^", "_", "`", "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", "w", "x", "y", "z", "{", "|", "}", "~"]
+    tags: ["pixel", "compact"]
+
+# Font Definition Properties:
+#
+# id: Unique identifier for the font (string)
+#   - Used to reference the font in code
+#
+# atlasPath: Path to the font atlas image (string)
+#   - Relative to the public directory
+#   - Should be a PNG with transparent background
+#
+# charWidth: Width of each character cell in pixels (number)
+#   - All characters occupy the same width (fixed-width font)
+#
+# charHeight: Height of each character cell in pixels (number)
+#   - All characters occupy the same height
+#
+# lineHeight: Vertical spacing between lines in pixels (number, optional)
+#   - Defaults to charHeight if not specified
+#   - Usually slightly larger than charHeight for readability
+#
+# charSpacing: Horizontal spacing between characters in pixels (number, optional)
+#   - Defaults to 0 if not specified
+#   - Adds extra space between characters when rendering
+#
+# baselineOffset: Baseline position from top of cell in pixels (number, optional)
+#   - Defaults to 0 if not specified
+#   - Controls vertical alignment of characters within their cell
+#   - Usually set to position characters properly within the cell height
+#
+# charOffsetX: Fine-tune horizontal position within cell (number, optional)
+#   - Defaults to 0 if not specified
+#   - Can shift characters left (negative) or right (positive)
+#
+# charOffsetY: Fine-tune vertical position within cell (number, optional)
+#   - Defaults to 0 if not specified
+#   - Can shift characters up (negative) or down (positive)
+#
+# fallbackChar: Character to display for undefined characters (string, optional)
+#   - Defaults to "?" if not specified
+#   - Should be a character that exists in charSet
+#
+# charsPerRow: Number of characters per row in the atlas (number)
+#   - Used to calculate grid position of each character
+#   - Common values: 16 (for 16x6 grid of 95 ASCII chars)
+#
+# charSet: Array of characters in the atlas (array of strings)
+#   - Characters are mapped by index to positions in the atlas
+#   - Index 0 = top-left, incrementing left-to-right, top-to-bottom
+#   - For ASCII 32-126, start with space character
+#   - Must match the actual atlas image layout
+#
+# tags: Optional categorization tags (array of strings, optional)
+#   - Used for filtering and organization in the Font Registry Panel
+#   - Examples: "pixel", "ui", "game", "compact", "readable"

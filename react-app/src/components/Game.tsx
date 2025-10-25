@@ -4,6 +4,7 @@ import { DebugPanel } from './DebugPanel';
 import { MapEditor } from './MapEditor';
 import { DeveloperPanel } from './developer/DeveloperPanel';
 import { SpriteRegistryPanel } from './developer/SpriteRegistryPanel';
+import { FontRegistryPanel } from './developer/FontRegistryPanel';
 import { EnemyRegistryPanel } from './developer/EnemyRegistryPanel';
 import { PartyMemberRegistryPanel } from './developer/PartyMemberRegistryPanel';
 import { AbilityRegistryPanel } from './developer/AbilityRegistryPanel';
@@ -45,6 +46,9 @@ export const Game: React.FC = () => {
 
   // Sprite registry panel visibility (development only)
   const [spriteRegistryVisible, setSpriteRegistryVisible] = useState<boolean>(false);
+
+  // Font registry panel visibility (development only)
+  const [fontRegistryVisible, setFontRegistryVisible] = useState<boolean>(false);
 
   // Enemy registry panel visibility (development only)
   const [enemyRegistryVisible, setEnemyRegistryVisible] = useState<boolean>(false);
@@ -466,6 +470,10 @@ export const Game: React.FC = () => {
                   setSpriteRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenFontRegistry={() => {
+                  setFontRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenEnemyRegistry={() => {
                   setEnemyRegistryVisible(true);
                   setDeveloperPanelVisible(false);
@@ -505,6 +513,13 @@ export const Game: React.FC = () => {
             {import.meta.env.DEV && spriteRegistryVisible && (
               <SpriteRegistryPanel
                 onClose={() => setSpriteRegistryVisible(false)}
+              />
+            )}
+
+            {/* Font registry panel - only available in development mode */}
+            {import.meta.env.DEV && fontRegistryVisible && (
+              <FontRegistryPanel
+                onClose={() => setFontRegistryVisible(false)}
               />
             )}
 

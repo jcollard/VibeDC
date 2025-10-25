@@ -4,6 +4,7 @@ interface DeveloperPanelProps {
   onClose?: () => void;
   onOpenMapEditor?: () => void;
   onOpenSpriteRegistry?: () => void;
+  onOpenFontRegistry?: () => void;
   onOpenEnemyRegistry?: () => void;
   onOpenPartyMemberRegistry?: () => void;
   onOpenAbilityRegistry?: () => void;
@@ -22,6 +23,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onClose,
   onOpenMapEditor,
   onOpenSpriteRegistry,
+  onOpenFontRegistry,
   onOpenEnemyRegistry,
   onOpenPartyMemberRegistry,
   onOpenAbilityRegistry,
@@ -45,6 +47,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Sprite',
       available: !!onOpenSpriteRegistry,
       onClick: onOpenSpriteRegistry,
+    },
+    {
+      name: 'Font Registry',
+      description: 'Browse fonts and generate atlases',
+      shortcut: 'F2 → Font',
+      available: !!onOpenFontRegistry,
+      onClick: onOpenFontRegistry,
     },
     {
       name: 'Enemy Registry',
