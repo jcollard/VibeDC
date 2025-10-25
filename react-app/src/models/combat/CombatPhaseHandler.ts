@@ -24,6 +24,8 @@ export interface PhaseRenderContext {
   dialogFont: string;
   titleAtlasFontId?: string;
   messageAtlasFontId?: string;
+  dialogAtlasFontId?: string;
+  fontAtlasImages?: Map<string, HTMLImageElement>;
 }
 
 /**

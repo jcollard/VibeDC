@@ -16,6 +16,7 @@ export class FontAtlasRenderer {
    * @param atlasImage - Loaded font atlas image
    * @param scale - Scale factor for rendering (default 1)
    * @param alignment - Text alignment: 'left', 'center', 'right' (default 'left')
+   * @param color - Text color (default white/no tint)
    * @returns Width of rendered text in pixels (at scale 1)
    */
   static renderText(
@@ -26,7 +27,8 @@ export class FontAtlasRenderer {
     fontId: string,
     atlasImage: HTMLImageElement,
     scale: number = 1,
-    alignment: 'left' | 'center' | 'right' = 'left'
+    alignment: 'left' | 'center' | 'right' = 'left',
+    color?: string
   ): number {
     const font = FontRegistry.getById(fontId);
     if (!font) {
@@ -48,22 +50,69 @@ export class FontAtlasRenderer {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    // Render each character
-    for (const char of text) {
-      const coords = FontRegistry.getCharCoordinates(font, char);
-      if (coords) {
-        ctx.drawImage(
-          atlasImage,
-          coords.x,
-          coords.y,
-          coords.width,
-          font.charHeight,
-          Math.round(currentX),
-          Math.round(y),
-          Math.round(coords.width * scale),
-          Math.round(font.charHeight * scale)
-        );
-        currentX += coords.width * scale + (font.charSpacing || 0) * scale;
+    // If color is specified, use a temporary canvas to tint the text
+    if (color) {
+      // Create a temporary canvas for each character to apply color tinting
+      const tempCanvas = document.createElement('canvas');
+      const tempCtx = tempCanvas.getContext('2d');
+
+      if (tempCtx) {
+        // Render each character with color tinting
+        for (const char of text) {
+          const coords = FontRegistry.getCharCoordinates(font, char);
+          if (coords) {
+            // Size temp canvas to fit the scaled character
+            tempCanvas.width = Math.round(coords.width * scale);
+            tempCanvas.height = Math.round(font.charHeight * scale);
+
+            // Draw the character from atlas to temp canvas
+            tempCtx.imageSmoothingEnabled = false;
+            tempCtx.drawImage(
+              atlasImage,
+              coords.x,
+              coords.y,
+              coords.width,
+              font.charHeight,
+              0,
+              0,
+              tempCanvas.width,
+              tempCanvas.height
+            );
+
+            // Apply color tint using globalCompositeOperation
+            tempCtx.globalCompositeOperation = 'source-in';
+            tempCtx.fillStyle = color;
+            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
+
+            // Draw the tinted character to the main canvas
+            ctx.drawImage(
+              tempCanvas,
+              Math.round(currentX),
+              Math.round(y)
+            );
+
+            currentX += coords.width * scale + (font.charSpacing || 0) * scale;
+          }
+        }
+      }
+    } else {
+      // Render each character without color tinting (original behavior)
+      for (const char of text) {
+        const coords = FontRegistry.getCharCoordinates(font, char);
+        if (coords) {
+          ctx.drawImage(
+            atlasImage,
+            coords.x,
+            coords.y,
+            coords.width,
+            font.charHeight,
+            Math.round(currentX),
+            Math.round(y),
+            Math.round(coords.width * scale),
+            Math.round(font.charHeight * scale)
+          );
+          currentX += coords.width * scale + (font.charSpacing || 0) * scale;
+        }
       }
     }
 

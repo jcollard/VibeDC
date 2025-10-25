@@ -93,8 +93,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track if sprites are loaded
   const [spritesLoaded, setSpritesLoaded] = useState(false);
 
-  // Store loaded font atlas image
-  const fontAtlasImageRef = useRef<HTMLImageElement | null>(null);
+  // Store loaded font atlas images (keyed by font ID)
+  const fontAtlasImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -107,6 +107,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
   const [messageAtlasFont, setMessageAtlasFont] = useState<string>('9px-habbo');
+  const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('9px-habbo');
 
   // Track unit info dialog font size for testing
   const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(36);
@@ -158,22 +159,36 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load font atlas image
+  // Load font atlas images for all fonts in FontRegistry
   useEffect(() => {
-    const loadFontAtlas = async () => {
-      const img = new Image();
-      img.src = '/fonts/15px-dungeonslant-atlas.png';
-      await new Promise<void>((resolve, reject) => {
-        img.onload = () => {
-          fontAtlasImageRef.current = img;
-          console.log('Font atlas loaded successfully');
-          resolve();
-        };
-        img.onerror = () => reject(new Error('Failed to load font atlas'));
-      });
+    const loadFontAtlases = async () => {
+      const fontIds = FontRegistry.getAllIds();
+      const images = new Map<string, HTMLImageElement>();
+
+      for (const fontId of fontIds) {
+        const font = FontRegistry.getById(fontId);
+        if (!font) continue;
+
+        try {
+          const img = new Image();
+          img.src = font.atlasPath;
+          await new Promise<void>((resolve, reject) => {
+            img.onload = () => {
+              images.set(fontId, img);
+              resolve();
+            };
+            img.onerror = () => reject(new Error(`Failed to load font atlas: ${font.atlasPath}`));
+          });
+        } catch (error) {
+          console.error(`Failed to load font atlas for ${fontId}:`, error);
+        }
+      }
+
+      fontAtlasImagesRef.current = images;
+      console.log(`Loaded ${images.size} font atlases`);
     };
 
-    loadFontAtlas().catch(console.error);
+    loadFontAtlases().catch(console.error);
   }, []);
 
   // Load sprite images using SpriteAssetLoader
@@ -328,6 +343,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         dialogFont,
         titleAtlasFontId: titleAtlasFont,
         messageAtlasFontId: messageAtlasFont,
+        dialogAtlasFontId: dialogAtlasFont,
+        fontAtlasImages: fontAtlasImagesRef.current,
       });
     }
 
@@ -408,7 +425,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont]);
+  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont]);
 
   // Animation loop
   useEffect(() => {
@@ -783,6 +800,32 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             <select
               value={messageAtlasFont}
               onChange={(e) => setMessageAtlasFont(e.target.value)}
+              style={{
+                width: '200px',
+                padding: '4px',
+                background: '#222',
+                border: '1px solid #555',
+                borderRadius: '3px',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                marginBottom: '8px',
+              }}
+            >
+              {FontRegistry.getAllIds().sort().map((fontId) => (
+                <option key={fontId} value={fontId}>
+                  {fontId}
+                </option>
+              ))}
+            </select>
+
+            {/* Dialog Font Atlas Selector */}
+            <label style={{ display: 'block', marginBottom: '4px' }}>
+              Dialog Font Atlas (Party Selection):
+            </label>
+            <select
+              value={dialogAtlasFont}
+              onChange={(e) => setDialogAtlasFont(e.target.value)}
               style={{
                 width: '200px',
                 padding: '4px',

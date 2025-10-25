@@ -121,6 +121,7 @@ export async function loadFonts(urls: string[]): Promise<FontDefinition[]> {
 export async function loadAllFonts(): Promise<FontDefinition[]> {
   const fontFiles = [
     '/src/data/fonts/8px-habbo8.yaml',
+    '/src/data/fonts/9px-habbo.yaml',
     '/src/data/fonts/10px-bitfantasy.yaml',
     '/src/data/fonts/15px-dungeonslant.yaml',
   ];

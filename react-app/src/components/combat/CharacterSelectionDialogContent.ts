@@ -2,6 +2,8 @@ import { DialogContent } from '../../utils/DialogRenderer';
 import type { ContentBounds } from '../../utils/DialogRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import type { PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../utils/FontRegistry';
 
 /**
  * Dialog content for character selection
@@ -9,7 +11,8 @@ import type { PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
 export class CharacterSelectionDialogContent extends DialogContent {
   private title: string;
   private partyMembers: PartyMemberDefinition[];
-  private font: string;
+  private fontId: string;
+  private fontAtlasImage: HTMLImageElement | null;
   private spriteImages: Map<string, HTMLImageElement>;
   private tileSize: number;
   private spriteSize: number;
@@ -19,7 +22,8 @@ export class CharacterSelectionDialogContent extends DialogContent {
   constructor(
     title: string,
     partyMembers: PartyMemberDefinition[],
-    font: string,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement | null,
     spriteImages: Map<string, HTMLImageElement>,
     tileSize: number,
     spriteSize: number,
@@ -29,7 +33,8 @@ export class CharacterSelectionDialogContent extends DialogContent {
     super();
     this.title = title;
     this.partyMembers = partyMembers;
-    this.font = font;
+    this.fontId = fontId;
+    this.fontAtlasImage = fontAtlasImage;
     this.spriteImages = spriteImages;
     this.tileSize = tileSize;
     this.spriteSize = spriteSize;
@@ -38,22 +43,40 @@ export class CharacterSelectionDialogContent extends DialogContent {
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const TITLE_FONT_SIZE = 32;
-    const NAME_FONT_SIZE = 32; // Match the title font size
+    if (!this.fontAtlasImage) {
+      console.warn('Font atlas image not loaded');
+      return;
+    }
+
+    const font = FontRegistry.getById(this.fontId);
+    if (!font) {
+      console.warn(`Font '${this.fontId}' not found in registry`);
+      return;
+    }
+
+    const TITLE_SCALE = 2; // Scale for title (9px * 2 = 18px)
+    const NAME_SCALE = 2; // Scale for names (9px * 2 = 18px)
     const SPRITE_SIZE_PIXELS = this.tileSize * 1; // Characters are 1x1 tiles (48px)
     const ROW_HEIGHT = 48; // Each row is exactly 48px tall
     const TITLE_SPACING = 8; // Space after title
     const NAME_OFFSET = 8; // Horizontal space between sprite and name
 
-    // Render title
-    ctx.fillStyle = '#000000';
-    ctx.font = `bold ${TITLE_FONT_SIZE}px "${this.font}", monospace`;
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'top';
-    ctx.fillText(this.title, x, y);
+    // Render title using FontAtlasRenderer
+    const titleHeight = font.charHeight * TITLE_SCALE;
+    FontAtlasRenderer.renderText(
+      ctx,
+      this.title,
+      x,
+      y,
+      this.fontId,
+      this.fontAtlasImage,
+      TITLE_SCALE,
+      'left',
+      '#000000' // Black color
+    );
 
     // Render character sprites in a column with names to the right
-    const firstRowY = y + TITLE_FONT_SIZE + TITLE_SPACING; // Below title with small spacing
+    const firstRowY = y + titleHeight + TITLE_SPACING; // Below title with small spacing
 
     this.partyMembers.forEach((member, index) => {
       if (!member.spriteId) return;
@@ -81,44 +104,51 @@ export class CharacterSelectionDialogContent extends DialogContent {
       // Draw character name to the right of sprite (truncated to 13 characters)
       const truncatedName = member.name.substring(0, 13);
 
-      // Use highlight color if this row is hovered
-      ctx.fillStyle = this.hoveredIndex === index ? this.highlightColor : '#000000';
-      ctx.font = `${NAME_FONT_SIZE}px "${this.font}", monospace`;
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(truncatedName, x + SPRITE_SIZE_PIXELS + NAME_OFFSET, rowY + (SPRITE_SIZE_PIXELS / 2));
+      // Render name using FontAtlasRenderer with appropriate color
+      const nameY = rowY + (SPRITE_SIZE_PIXELS / 2) - (font.charHeight * NAME_SCALE / 2);
+      const textColor = this.hoveredIndex === index ? this.highlightColor : '#000000';
+
+      if (this.fontAtlasImage) {
+        FontAtlasRenderer.renderText(
+          ctx,
+          truncatedName,
+          x + SPRITE_SIZE_PIXELS + NAME_OFFSET,
+          nameY,
+          this.fontId,
+          this.fontAtlasImage,
+          NAME_SCALE,
+          'left',
+          textColor
+        );
+      }
     });
   }
 
   protected getBounds(): ContentBounds {
-    const TITLE_FONT_SIZE = 32;
-    const NAME_FONT_SIZE = 32; // Match the title font size
+    const font = FontRegistry.getById(this.fontId);
+    if (!font) {
+      console.warn(`Font '${this.fontId}' not found in registry`);
+      // Fallback to estimates
+      const totalWidth = this.title.length * 20;
+      const totalHeight = 40 + (48 * this.partyMembers.length);
+      return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
+    }
+
+    const TITLE_SCALE = 2; // Scale for title (9px * 2 = 18px)
+    const NAME_SCALE = 2; // Scale for names (9px * 2 = 18px)
     const SPRITE_SIZE_PIXELS = this.tileSize * 1;
     const ROW_HEIGHT = 48; // Each row is exactly 48px tall
     const TITLE_SPACING = 8; // Space after title
     const NAME_OFFSET = 8;
 
-    // Create a temporary canvas to measure text width accurately
-    const tempCanvas = document.createElement('canvas');
-    const tempCtx = tempCanvas.getContext('2d');
-
-    if (!tempCtx) {
-      // Fallback to estimates if context not available
-      const totalWidth = this.title.length * 20;
-      const totalHeight = TITLE_FONT_SIZE + TITLE_SPACING + (ROW_HEIGHT * this.partyMembers.length);
-      return { width: totalWidth, height: totalHeight, minX: 0, minY: 0, maxX: totalWidth, maxY: totalHeight };
-    }
-
-    // Measure title width
-    tempCtx.font = `bold ${TITLE_FONT_SIZE}px "${this.font}", monospace`;
-    const titleWidth = tempCtx.measureText(this.title).width;
+    // Measure title width using FontAtlasRenderer
+    const titleWidth = FontAtlasRenderer.measureTextByFontId(this.title, this.fontId) * TITLE_SCALE;
 
     // Measure character list width (sprite + offset + longest name)
-    tempCtx.font = `${NAME_FONT_SIZE}px "${this.font}", monospace`;
     let maxNameWidth = 0;
     this.partyMembers.forEach(member => {
       const truncatedName = member.name.substring(0, 13);
-      const nameWidth = tempCtx.measureText(truncatedName).width;
+      const nameWidth = FontAtlasRenderer.measureTextByFontId(truncatedName, this.fontId) * NAME_SCALE;
       maxNameWidth = Math.max(maxNameWidth, nameWidth);
     });
     const characterListWidth = SPRITE_SIZE_PIXELS + NAME_OFFSET + maxNameWidth;
@@ -128,7 +158,8 @@ export class CharacterSelectionDialogContent extends DialogContent {
 
     // Calculate height: title + spacing + (rows at 48px each, no gaps)
     // Each row is exactly 48px tall
-    const totalHeight = TITLE_FONT_SIZE + TITLE_SPACING + (ROW_HEIGHT * this.partyMembers.length);
+    const titleHeight = font.charHeight * TITLE_SCALE;
+    const totalHeight = titleHeight + TITLE_SPACING + (ROW_HEIGHT * this.partyMembers.length);
 
     return {
       width: totalWidth,

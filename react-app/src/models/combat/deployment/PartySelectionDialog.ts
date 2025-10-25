@@ -153,7 +153,8 @@ export class PartySelectionDialog {
    * @param spriteSize - Size of sprites in the sprite sheet
    * @param offsetX - X offset of the map on canvas
    * @param offsetY - Y offset of the map on canvas
-   * @param dialogFont - Font to use for dialog text
+   * @param dialogFontId - Font ID from FontRegistry to use for dialog text
+   * @param fontAtlasImage - Font atlas image for rendering
    * @param spriteImages - Map of loaded sprite images
    * @param selectedZoneIndex - Currently selected zone index (null if none selected)
    */
@@ -165,7 +166,8 @@ export class PartySelectionDialog {
     spriteSize: number,
     offsetX: number,
     offsetY: number,
-    dialogFont: string,
+    dialogFontId: string,
+    fontAtlasImage: HTMLImageElement | null,
     spriteImages: Map<string, HTMLImageElement>,
     selectedZoneIndex: number | null
   ): void {
@@ -187,7 +189,8 @@ export class PartySelectionDialog {
     const dialogContent = new CharacterSelectionDialogContent(
       'Select a Character',
       partyMembers,
-      dialogFont,
+      dialogFontId,
+      fontAtlasImage,
       spriteImages,
       tileSize,
       spriteSize,

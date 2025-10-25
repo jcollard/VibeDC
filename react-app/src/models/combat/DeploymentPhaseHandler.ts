@@ -334,7 +334,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
    * Render deployment phase UI elements (header and dialog - rendered after units)
    */
   renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont, titleAtlasFontId, messageAtlasFontId } = context;
+    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont, titleAtlasFontId, messageAtlasFontId, dialogAtlasFontId, fontAtlasImages } = context;
 
     // Render "Deploy Units" header
     this.ui.renderPhaseHeader(ctx, canvasWidth, headerFont, titleAtlasFontId || '15px-dungeonslant');
@@ -383,6 +383,10 @@ export class DeploymentPhaseHandler extends PhaseBase {
       this.deployButton.render(ctx, spriteImages);
     }
 
+    // Get the dialog font atlas image
+    const dialogFontIdToUse = dialogAtlasFontId || '9px-habbo';
+    const fontAtlasImage = fontAtlasImages?.get(dialogFontIdToUse) || null;
+
     // Render character selection dialog
     this.partyDialog.render(
       ctx,
@@ -392,7 +396,8 @@ export class DeploymentPhaseHandler extends PhaseBase {
       spriteSize,
       offsetX,
       offsetY,
-      dialogFont,
+      dialogFontIdToUse,
+      fontAtlasImage,
       spriteImages,
       this.getSelectedZoneIndex()
     );
