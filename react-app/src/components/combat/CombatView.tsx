@@ -21,6 +21,7 @@ import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
 import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
 import { renderDialogWithContent } from '../../utils/DialogRenderer';
+import { FontRegistry } from '../../utils/FontRegistry';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -102,6 +103,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [headerFont, setHeaderFont] = useState<string>('DungeonSlant');
   const [dialogFont, setDialogFont] = useState<string>('Habbo');
   const [buttonFont, setButtonFont] = useState<string>('Bitfantasy');
+
+  // Track selected font atlases from FontRegistry
+  const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
+  const [messageAtlasFont, setMessageAtlasFont] = useState<string>('8px-habbo8');
 
   // Track unit info dialog font size for testing
   const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(36);
@@ -321,6 +326,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         spriteImages: spriteImagesRef.current,
         headerFont,
         dialogFont,
+        titleAtlasFontId: titleAtlasFont,
+        messageAtlasFontId: messageAtlasFont,
       });
     }
 
@@ -401,7 +408,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer, uiState]);
+  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont]);
 
   // Animation loop
   useEffect(() => {
@@ -735,6 +742,64 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             }}
           >
             Select a Character
+          </div>
+
+          {/* Font Atlas Selectors */}
+          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #555' }}>
+            <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '11px' }}>
+              Font Atlas (from FontRegistry)
+            </div>
+
+            {/* Title Font Atlas Selector */}
+            <label style={{ display: 'block', marginBottom: '4px' }}>
+              Title Font Atlas:
+            </label>
+            <select
+              value={titleAtlasFont}
+              onChange={(e) => setTitleAtlasFont(e.target.value)}
+              style={{
+                width: '200px',
+                padding: '4px',
+                background: '#222',
+                border: '1px solid #555',
+                borderRadius: '3px',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+                marginBottom: '8px',
+              }}
+            >
+              {FontRegistry.getAllIds().sort().map((fontId) => (
+                <option key={fontId} value={fontId}>
+                  {fontId}
+                </option>
+              ))}
+            </select>
+
+            {/* Message Font Atlas Selector */}
+            <label style={{ display: 'block', marginBottom: '4px' }}>
+              Message Font Atlas:
+            </label>
+            <select
+              value={messageAtlasFont}
+              onChange={(e) => setMessageAtlasFont(e.target.value)}
+              style={{
+                width: '200px',
+                padding: '4px',
+                background: '#222',
+                border: '1px solid #555',
+                borderRadius: '3px',
+                color: '#fff',
+                fontFamily: 'monospace',
+                fontSize: '11px',
+              }}
+            >
+              {FontRegistry.getAllIds().sort().map((fontId) => (
+                <option key={fontId} value={fontId}>
+                  {fontId}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Unit Info Font Size Slider */}

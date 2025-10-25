@@ -1,0 +1,109 @@
+# Font definition for 9px-habbo
+# Generated from font atlas generator
+# AA Threshold: 200
+
+fonts:
+  - id: "9px-habbo"
+    atlasPath: "/fonts/9px-habbo-atlas.png"
+    charHeight: 16
+    lineHeight: 16
+    charSpacing: 0
+    baselineOffset: 0
+    fallbackChar: "?"
+    tags: ["pixel", "game", "variable-width"]
+    characters:
+      - { char: " ", x: 0, y: 0, width: 8 }
+      - { char: "!", x: 8, y: 0, width: 3 }
+      - { char: "\"", x: 16, y: 0, width: 5 }
+      - { char: "#", x: 24, y: 0, width: 7 }
+      - { char: "$", x: 32, y: 0, width: 8 }
+      - { char: "%", x: 40, y: 0, width: 8 }
+      - { char: "&", x: 48, y: 0, width: 7 }
+      - { char: "'", x: 56, y: 0, width: 3 }
+      - { char: "(", x: 64, y: 0, width: 5 }
+      - { char: ")", x: 72, y: 0, width: 5 }
+      - { char: "*", x: 80, y: 0, width: 6 }
+      - { char: "+", x: 88, y: 0, width: 6 }
+      - { char: ",", x: 96, y: 0, width: 4 }
+      - { char: "-", x: 104, y: 0, width: 5 }
+      - { char: ".", x: 112, y: 0, width: 4 }
+      - { char: "/", x: 120, y: 0, width: 8 }
+      - { char: "0", x: 0, y: 16, width: 6 }
+      - { char: "1", x: 8, y: 16, width: 4 }
+      - { char: "2", x: 16, y: 16, width: 6 }
+      - { char: "3", x: 24, y: 16, width: 6 }
+      - { char: "4", x: 32, y: 16, width: 6 }
+      - { char: "5", x: 40, y: 16, width: 6 }
+      - { char: "6", x: 48, y: 16, width: 6 }
+      - { char: "7", x: 56, y: 16, width: 6 }
+      - { char: "8", x: 64, y: 16, width: 6 }
+      - { char: "9", x: 72, y: 16, width: 6 }
+      - { char: ":", x: 80, y: 16, width: 4 }
+      - { char: ";", x: 88, y: 16, width: 4 }
+      - { char: "<", x: 96, y: 16, width: 5 }
+      - { char: "=", x: 104, y: 16, width: 6 }
+      - { char: ">", x: 112, y: 16, width: 5 }
+      - { char: "?", x: 120, y: 16, width: 6 }
+      - { char: "@", x: 0, y: 32, width: 8 }
+      - { char: "A", x: 8, y: 32, width: 6 }
+      - { char: "B", x: 16, y: 32, width: 6 }
+      - { char: "C", x: 24, y: 32, width: 6 }
+      - { char: "D", x: 32, y: 32, width: 6 }
+      - { char: "E", x: 40, y: 32, width: 6 }
+      - { char: "F", x: 48, y: 32, width: 6 }
+      - { char: "G", x: 56, y: 32, width: 6 }
+      - { char: "H", x: 64, y: 32, width: 6 }
+      - { char: "I", x: 72, y: 32, width: 5 }
+      - { char: "J", x: 80, y: 32, width: 6 }
+      - { char: "K", x: 88, y: 32, width: 6 }
+      - { char: "L", x: 96, y: 32, width: 6 }
+      - { char: "M", x: 104, y: 32, width: 7 }
+      - { char: "N", x: 112, y: 32, width: 6 }
+      - { char: "O", x: 120, y: 32, width: 6 }
+      - { char: "P", x: 0, y: 48, width: 6 }
+      - { char: "Q", x: 8, y: 48, width: 7 }
+      - { char: "R", x: 16, y: 48, width: 6 }
+      - { char: "S", x: 24, y: 48, width: 6 }
+      - { char: "T", x: 32, y: 48, width: 6 }
+      - { char: "U", x: 40, y: 48, width: 6 }
+      - { char: "V", x: 48, y: 48, width: 6 }
+      - { char: "W", x: 56, y: 48, width: 8 }
+      - { char: "X", x: 64, y: 48, width: 6 }
+      - { char: "Y", x: 72, y: 48, width: 6 }
+      - { char: "Z", x: 80, y: 48, width: 6 }
+      - { char: "[", x: 88, y: 48, width: 5 }
+      - { char: "\\", x: 96, y: 48, width: 8 }
+      - { char: "]", x: 104, y: 48, width: 5 }
+      - { char: "^", x: 112, y: 48, width: 5 }
+      - { char: "_", x: 120, y: 48, width: 6 }
+      - { char: "`", x: 0, y: 64, width: 4 }
+      - { char: "a", x: 8, y: 64, width: 6 }
+      - { char: "b", x: 16, y: 64, width: 6 }
+      - { char: "c", x: 24, y: 64, width: 6 }
+      - { char: "d", x: 32, y: 64, width: 6 }
+      - { char: "e", x: 40, y: 64, width: 6 }
+      - { char: "f", x: 48, y: 64, width: 5 }
+      - { char: "g", x: 56, y: 64, width: 6 }
+      - { char: "h", x: 64, y: 64, width: 6 }
+      - { char: "i", x: 72, y: 64, width: 3 }
+      - { char: "j", x: 80, y: 64, width: 4 }
+      - { char: "k", x: 88, y: 64, width: 5 }
+      - { char: "l", x: 96, y: 64, width: 3 }
+      - { char: "m", x: 104, y: 64, width: 8 }
+      - { char: "n", x: 112, y: 64, width: 6 }
+      - { char: "o", x: 120, y: 64, width: 6 }
+      - { char: "p", x: 0, y: 80, width: 6 }
+      - { char: "q", x: 8, y: 80, width: 6 }
+      - { char: "r", x: 16, y: 80, width: 5 }
+      - { char: "s", x: 24, y: 80, width: 6 }
+      - { char: "t", x: 32, y: 80, width: 5 }
+      - { char: "u", x: 40, y: 80, width: 6 }
+      - { char: "v", x: 48, y: 80, width: 6 }
+      - { char: "w", x: 56, y: 80, width: 8 }
+      - { char: "x", x: 64, y: 80, width: 6 }
+      - { char: "y", x: 72, y: 80, width: 6 }
+      - { char: "z", x: 80, y: 80, width: 6 }
+      - { char: "{", x: 88, y: 80, width: 5 }
+      - { char: "|", x: 96, y: 80, width: 3 }
+      - { char: "}", x: 104, y: 80, width: 5 }
+      - { char: "~", x: 112, y: 80, width: 6 }

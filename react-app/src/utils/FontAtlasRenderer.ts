@@ -72,97 +72,6 @@ export class FontAtlasRenderer {
   }
 
   /**
-   * Render text with a drop shadow
-   * @param ctx - Canvas rendering context
-   * @param text - Text to render
-   * @param x - X position
-   * @param y - Y position
-   * @param fontId - Font ID from FontRegistry
-   * @param atlasImage - Loaded font atlas image
-   * @param scale - Scale factor for rendering
-   * @param alignment - Text alignment
-   * @param shadowColor - Color of the shadow (default black)
-   * @param shadowOffsetX - Shadow offset X in pixels (default 2)
-   * @param shadowOffsetY - Shadow offset Y in pixels (default 2)
-   * @returns Width of rendered text in pixels (at scale 1)
-   */
-  static renderTextWithShadow(
-    ctx: CanvasRenderingContext2D,
-    text: string,
-    x: number,
-    y: number,
-    fontId: string,
-    atlasImage: HTMLImageElement,
-    scale: number = 1,
-    alignment: 'left' | 'center' | 'right' = 'left',
-    shadowColor: string = '#000000',
-    shadowOffsetX: number = 2,
-    shadowOffsetY: number = 2
-  ): number {
-    const font = FontRegistry.getById(fontId);
-    if (!font) {
-      console.warn(`Font '${fontId}' not found in registry`);
-      return 0;
-    }
-
-    // Calculate text width for alignment
-    const textWidth = this.measureText(text, font);
-
-    // Adjust starting X based on alignment
-    let startX = x;
-    if (alignment === 'center') {
-      startX = x - (textWidth * scale) / 2;
-    } else if (alignment === 'right') {
-      startX = x - textWidth * scale;
-    }
-
-    ctx.save();
-
-    // Render shadow by tinting the font atlas
-    // We'll render the text 4 times with offsets to create a shadow effect
-    const shadowOffsets = [
-      { x: -shadowOffsetX, y: -shadowOffsetY },
-      { x: shadowOffsetX, y: -shadowOffsetY },
-      { x: -shadowOffsetX, y: shadowOffsetY },
-      { x: shadowOffsetX, y: shadowOffsetY },
-    ];
-
-    for (const offset of shadowOffsets) {
-      ctx.globalCompositeOperation = 'source-over';
-      ctx.fillStyle = shadowColor;
-      ctx.fillRect(startX + offset.x, y + offset.y, textWidth * scale, font.charHeight * scale);
-      ctx.globalCompositeOperation = 'destination-in';
-
-      let currentX = startX + offset.x;
-      for (const char of text) {
-        const coords = FontRegistry.getCharCoordinates(font, char);
-        if (coords) {
-          ctx.drawImage(
-            atlasImage,
-            coords.x,
-            coords.y,
-            coords.width,
-            font.charHeight,
-            Math.round(currentX),
-            Math.round(y + offset.y),
-            Math.round(coords.width * scale),
-            Math.round(font.charHeight * scale)
-          );
-          currentX += coords.width * scale + (font.charSpacing || 0) * scale;
-        }
-      }
-    }
-
-    ctx.globalCompositeOperation = 'source-over';
-
-    // Render main text
-    this.renderText(ctx, text, x, y, fontId, atlasImage, scale, alignment);
-
-    ctx.restore();
-    return textWidth;
-  }
-
-  /**
    * Measure the width of text in pixels (at scale 1)
    * @param text - Text to measure
    * @param font - Font definition
@@ -207,8 +116,8 @@ export class FontAtlasRenderer {
    * @param fontId - Font ID from FontRegistry
    * @param atlasImage - Loaded font atlas image
    * @param scale - Scale factor for rendering
-   * @param shadowOffsetX - Shadow offset X in pixels
-   * @param shadowOffsetY - Shadow offset Y in pixels
+   * @param shadowOffsetX - Shadow offset X in pixels (unused, kept for compatibility)
+   * @param shadowOffsetY - Shadow offset Y in pixels (unused, kept for compatibility)
    */
   static renderTitleWithBackground(
     ctx: CanvasRenderingContext2D,
@@ -220,8 +129,8 @@ export class FontAtlasRenderer {
     fontId: string,
     atlasImage: HTMLImageElement,
     scale: number = 1,
-    shadowOffsetX: number = 2,
-    shadowOffsetY: number = 2
+    _shadowOffsetX: number = 2,
+    _shadowOffsetY: number = 2
   ): void {
     const font = FontRegistry.getById(fontId);
     if (!font) {
@@ -236,8 +145,8 @@ export class FontAtlasRenderer {
     // Calculate centered position
     const textY = y + backgroundHeight / 2 - (font.charHeight * scale) / 2;
 
-    // Render centered title with shadow
-    this.renderTextWithShadow(
+    // Render centered title
+    this.renderText(
       ctx,
       text,
       canvasWidth / 2,
@@ -245,10 +154,7 @@ export class FontAtlasRenderer {
       fontId,
       atlasImage,
       scale,
-      'center',
-      '#000000',
-      shadowOffsetX,
-      shadowOffsetY
+      'center'
     );
   }
 }

@@ -334,13 +334,13 @@ export class DeploymentPhaseHandler extends PhaseBase {
    * Render deployment phase UI elements (header and dialog - rendered after units)
    */
   renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
+    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont, titleAtlasFontId, messageAtlasFontId } = context;
 
     // Render "Deploy Units" header
-    this.ui.renderPhaseHeader(ctx, canvasWidth, headerFont);
+    this.ui.renderPhaseHeader(ctx, canvasWidth, headerFont, titleAtlasFontId || '15px-dungeonslant');
 
     // Render waylaid message (8px below title)
-    this.ui.renderWaylaidMessage(ctx, canvasWidth, dialogFont);
+    this.ui.renderWaylaidMessage(ctx, canvasWidth, dialogFont, messageAtlasFontId || '8px-habbo8');
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;

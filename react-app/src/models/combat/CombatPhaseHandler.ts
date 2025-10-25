@@ -22,6 +22,8 @@ export interface PhaseRenderContext {
   spriteImages: Map<string, HTMLImageElement>;
   headerFont: string;
   dialogFont: string;
+  titleAtlasFontId?: string;
+  messageAtlasFontId?: string;
 }
 
 /**
