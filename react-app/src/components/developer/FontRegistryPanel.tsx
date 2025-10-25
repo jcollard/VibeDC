@@ -340,6 +340,12 @@ export const FontRegistryPanel: React.FC<FontRegistryPanelProps> = ({ onClose })
         display: 'flex',
         flexDirection: 'column',
       }}
+      onKeyDown={(e) => e.stopPropagation()}
+      onKeyUp={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div

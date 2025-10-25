@@ -21,7 +21,7 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const [charSpacing, setCharSpacing] = useState<number>(1);
   const [baselineOffset, setBaselineOffset] = useState<number>(1);
   const [charsPerRow, setCharsPerRow] = useState<number>(16);
-  const [previewScale, setPreviewScale] = useState<number>(4);
+  const [previewScale, setPreviewScale] = useState<number>(2);
   const [antialiasThreshold, setAntialiasThreshold] = useState<number>(200);
   const [applyThreshold, setApplyThreshold] = useState<boolean>(true);
   const [demoText, setDemoText] = useState<string>('Lorem ipsum dolor sit amet, consectetur adipiscing elit.');
@@ -213,21 +213,32 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     const charWidthWithSpacing = charWidth + charSpacing;
     const charsPerLine = Math.floor(maxLineWidth / charWidthWithSpacing);
 
-    // Word wrap the text
-    const words = demoText.split(' ');
+    // Split by newlines first, then word wrap each line
+    const inputLines = demoText.split('\n');
     const lines: string[] = [];
-    let currentLine = '';
 
-    for (const word of words) {
-      const testLine = currentLine ? `${currentLine} ${word}` : word;
-      if (testLine.length <= charsPerLine) {
-        currentLine = testLine;
-      } else {
-        if (currentLine) lines.push(currentLine);
-        currentLine = word;
+    for (const inputLine of inputLines) {
+      if (!inputLine.trim()) {
+        // Empty line - preserve it
+        lines.push('');
+        continue;
       }
+
+      // Word wrap this line
+      const words = inputLine.split(' ');
+      let currentLine = '';
+
+      for (const word of words) {
+        const testLine = currentLine ? `${currentLine} ${word}` : word;
+        if (testLine.length <= charsPerLine) {
+          currentLine = testLine;
+        } else {
+          if (currentLine) lines.push(currentLine);
+          currentLine = word;
+        }
+      }
+      if (currentLine) lines.push(currentLine);
     }
-    if (currentLine) lines.push(currentLine);
 
     // Calculate canvas size
     const maxCharsInLine = Math.max(...lines.map(line => line.length));
@@ -353,6 +364,12 @@ fonts:
         margin: 0,
         padding: 0,
       }}
+      onKeyDown={(e) => e.stopPropagation()}
+      onKeyUp={(e) => e.stopPropagation()}
+      onMouseDown={(e) => e.stopPropagation()}
+      onMouseUp={(e) => e.stopPropagation()}
+      onClick={(e) => e.stopPropagation()}
+      onWheel={(e) => e.stopPropagation()}
     >
       {/* Header */}
       <div
