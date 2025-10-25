@@ -220,15 +220,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         new MessageFadeInSequence(
           CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          dialogFont,
-          CombatConstants.FONTS.MESSAGE_SIZE,
+          '10px-bitfantasy', // Font ID
+          2, // Scale factor (10px * 2 = 20px)
           deploymentInstructionY
         ),
         new MessageFadeInSequence(
           CombatConstants.TEXT.WAYLAID_MESSAGE,
           CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          dialogFont,
-          CombatConstants.FONTS.MESSAGE_SIZE,
+          '9px-habbo', // Font ID
+          2, // Scale factor (9px * 2 = 18px)
           waylaidMessageY
         )
       ]);

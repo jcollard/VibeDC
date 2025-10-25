@@ -2,6 +2,7 @@ import type { CinematicSequence, CinematicRenderContext } from './CinematicSeque
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { FontRegistry } from '../../utils/FontRegistry';
 
 /**
  * Represents a part of a message - either text or a sprite
@@ -20,32 +21,68 @@ export class MessageFadeInSequence implements CinematicSequence {
   private elapsedTime = 0;
   private readonly duration: number;
   private readonly message: string;
-  private readonly fontSize: number;
+  private readonly scale: number;
   private readonly yPosition: number;
-  private readonly font: string;
+  private readonly fontId: string;
   private complete = false;
   private messageParts: MessagePart[] = [];
+  private fontAtlasImage: HTMLImageElement | null = null;
+  private fontAtlasLoading: Promise<HTMLImageElement> | null = null;
 
   /**
    * @param message - The message to display (use [sprite:id] to embed sprites)
    * @param duration - Duration of the fade-in effect in seconds (default: 2)
-   * @param font - Font to use (default: Bitfantasy)
-   * @param fontSize - Font size in pixels (default: 24)
+   * @param fontId - Font ID from FontRegistry (default: '10px-bitfantasy')
+   * @param scale - Scale factor for font rendering (default: 2)
    * @param yPosition - Y position on screen (default: 140)
    */
   constructor(
     message: string,
     duration: number = 2.0,
-    font: string = 'Bitfantasy',
-    fontSize: number = 24,
+    fontId: string = '10px-bitfantasy',
+    scale: number = 2,
     yPosition: number = 140
   ) {
     this.message = message;
     this.duration = duration;
-    this.font = font;
-    this.fontSize = fontSize;
+    this.fontId = fontId;
+    this.scale = scale;
     this.yPosition = yPosition;
     this.parseMessage();
+  }
+
+  /**
+   * Load the font atlas image
+   */
+  private async loadFontAtlas(): Promise<HTMLImageElement> {
+    if (this.fontAtlasImage) {
+      return this.fontAtlasImage;
+    }
+
+    if (this.fontAtlasLoading) {
+      return this.fontAtlasLoading;
+    }
+
+    const fontDef = FontRegistry.getById(this.fontId);
+    if (!fontDef) {
+      throw new Error(`Font '${this.fontId}' not found in FontRegistry`);
+    }
+
+    this.fontAtlasLoading = new Promise<HTMLImageElement>((resolve, reject) => {
+      const img = new Image();
+      img.src = fontDef.atlasPath;
+      img.onload = () => {
+        this.fontAtlasImage = img;
+        this.fontAtlasLoading = null;
+        resolve(img);
+      };
+      img.onerror = () => {
+        this.fontAtlasLoading = null;
+        reject(new Error(`Failed to load font atlas for '${this.fontId}' at ${fontDef.atlasPath}`));
+      };
+    });
+
+    return this.fontAtlasLoading;
   }
 
   /**
@@ -94,6 +131,10 @@ export class MessageFadeInSequence implements CinematicSequence {
   start(_state: CombatState, _encounter: CombatEncounter): void {
     this.elapsedTime = 0;
     this.complete = false;
+    // Start loading font atlas
+    if (!this.fontAtlasImage && !this.fontAtlasLoading) {
+      this.loadFontAtlas().catch(console.error);
+    }
   }
 
   update(deltaTime: number): boolean {
@@ -117,16 +158,22 @@ export class MessageFadeInSequence implements CinematicSequence {
   render(_state: CombatState, _encounter: CombatEncounter, context: CinematicRenderContext): void {
     const { ctx, canvasWidth, spriteSize, spriteImages } = context;
 
+    // Skip rendering if font atlas not loaded yet
+    if (!this.fontAtlasImage) {
+      return;
+    }
+
+    const fontDef = FontRegistry.getById(this.fontId);
+    if (!fontDef) return;
+
     const visibleChars = this.getVisibleCharacterCount();
     if (visibleChars === 0) return;
 
-    // Set up text rendering
     ctx.save();
-    ctx.font = `${this.fontSize}px "${this.font}", monospace`;
-    ctx.textBaseline = 'top';
+    ctx.imageSmoothingEnabled = false;
 
     // Measure the full message to center it
-    const fullWidth = this.measureMessageWidth(ctx, this.getTotalCharacterCount(), spriteImages, spriteSize);
+    const fullWidth = this.measureMessageWidth();
     let currentX = (canvasWidth - fullWidth) / 2;
     const currentY = this.yPosition;
 
@@ -136,22 +183,29 @@ export class MessageFadeInSequence implements CinematicSequence {
       if (charsRendered >= visibleChars) break;
 
       if (part.type === 'text') {
-        // Render text characters one by one
+        // Render text characters one by one using font atlas
         const charsToShow = Math.min(part.content.length, visibleChars - charsRendered);
         const visibleText = part.content.substring(0, charsToShow);
 
-        // Draw shadow
-        ctx.fillStyle = '#000000';
-        ctx.fillText(visibleText, currentX - 1, currentY - 1);
-        ctx.fillText(visibleText, currentX + 1, currentY - 1);
-        ctx.fillText(visibleText, currentX - 1, currentY + 1);
-        ctx.fillText(visibleText, currentX + 1, currentY + 1);
+        // Render each character individually
+        for (const char of visibleText) {
+          const coords = FontRegistry.getCharCoordinates(fontDef, char);
+          if (coords) {
+            ctx.drawImage(
+              this.fontAtlasImage,
+              coords.x,
+              coords.y,
+              coords.width,
+              fontDef.charHeight,
+              Math.round(currentX),
+              Math.round(currentY),
+              Math.round(coords.width * this.scale),
+              Math.round(fontDef.charHeight * this.scale)
+            );
+            currentX += coords.width * this.scale + (fontDef.charSpacing || 0) * this.scale;
+          }
+        }
 
-        // Draw main text
-        ctx.fillStyle = '#ffffff';
-        ctx.fillText(visibleText, currentX, currentY);
-
-        currentX += ctx.measureText(visibleText).width;
         charsRendered += charsToShow;
       } else if (part.type === 'sprite') {
         // Only render sprite if we've revealed it
@@ -166,14 +220,14 @@ export class MessageFadeInSequence implements CinematicSequence {
               const srcHeight = (spriteDef.height || 1) * spriteSize;
 
               // Draw sprite at text height
-              const spriteDisplaySize = this.fontSize;
+              const spriteDisplaySize = fontDef.charHeight * this.scale;
               ctx.drawImage(
                 spriteImage,
                 srcX, srcY, srcWidth, srcHeight,
                 currentX, currentY, spriteDisplaySize, spriteDisplaySize
               );
 
-              currentX += spriteDisplaySize + 4; // Sprite width + small gap
+              currentX += spriteDisplaySize + 4 * this.scale; // Sprite width + small gap
             }
           }
           charsRendered += 1;
@@ -187,24 +241,25 @@ export class MessageFadeInSequence implements CinematicSequence {
   /**
    * Measure the full width of the message with all characters visible
    */
-  private measureMessageWidth(
-    ctx: CanvasRenderingContext2D,
-    charCount: number,
-    _spriteImages: Map<string, HTMLImageElement>,
-    _spriteSize: number
-  ): number {
+  private measureMessageWidth(): number {
+    const fontDef = FontRegistry.getById(this.fontId);
+    if (!fontDef) return 0;
+
     let width = 0;
-    let charsProcessed = 0;
 
     for (const part of this.messageParts) {
-      if (charsProcessed >= charCount) break;
-
       if (part.type === 'text') {
-        width += ctx.measureText(part.content).width;
-        charsProcessed += part.content.length;
+        // Measure text using font atlas
+        for (const char of part.content) {
+          const charWidth = FontRegistry.getCharWidth(fontDef, char);
+          width += charWidth * this.scale + (fontDef.charSpacing || 0) * this.scale;
+        }
+        // Remove trailing spacing after last character in this text part
+        if (part.content.length > 0 && fontDef.charSpacing) {
+          width -= fontDef.charSpacing * this.scale;
+        }
       } else if (part.type === 'sprite') {
-        width += this.fontSize + 4; // Sprite size + gap
-        charsProcessed += 1;
+        width += fontDef.charHeight * this.scale + 4 * this.scale; // Sprite size + gap
       }
     }
 
