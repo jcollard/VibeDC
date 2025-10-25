@@ -21,10 +21,10 @@ export class TitleFadeInSequence implements CinematicSequence {
   /**
    * @param title - The text to display
    * @param duration - Duration of the fade-in effect in seconds (default: 1)
-   * @param scale - Scale factor for font atlas rendering (default: 3)
-   * @param yPosition - Y position on screen (default: 20, matching DeploymentPhaseHandler)
+   * @param scale - Scale factor for font atlas rendering (default: 1, reduced from 3)
+   * @param yPosition - Y position on screen (default: 5, reduced from 20)
    */
-  constructor(title: string, duration: number = 1.0, scale: number = 3, yPosition: number = 20) {
+  constructor(title: string, duration: number = 1.0, scale: number = 1, yPosition: number = 5) {
     this.title = title;
     this.duration = duration;
     this.scale = scale;
@@ -115,7 +115,7 @@ export class TitleFadeInSequence implements CinematicSequence {
     // Create a temporary canvas for rendering the text
     const tempCanvas = document.createElement('canvas');
     tempCanvas.width = canvasWidth;
-    tempCanvas.height = 100; // Enough height for the text and background
+    tempCanvas.height = 25; // Enough height for the text and background (reduced from 100)
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
 

@@ -33,15 +33,15 @@ export class MessageFadeInSequence implements CinematicSequence {
    * @param message - The message to display (use [sprite:id] to embed sprites)
    * @param duration - Duration of the fade-in effect in seconds (default: 2)
    * @param fontId - Font ID from FontRegistry (default: '10px-bitfantasy')
-   * @param scale - Scale factor for font rendering (default: 2)
-   * @param yPosition - Y position on screen (default: 140)
+   * @param scale - Scale factor for font rendering (default: 1, reduced from 2)
+   * @param yPosition - Y position on screen (default: 35, reduced from 140)
    */
   constructor(
     message: string,
     duration: number = 2.0,
     fontId: string = '10px-bitfantasy',
-    scale: number = 2,
-    yPosition: number = 140
+    scale: number = 1,
+    yPosition: number = 35
   ) {
     this.message = message;
     this.duration = duration;
