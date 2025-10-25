@@ -24,16 +24,6 @@ import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
 // import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
 // import { renderDialogWithContent } from '../../utils/DialogRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
-import { CombatLayout1TraditionalRenderer } from '../../models/combat/layouts/CombatLayout1TraditionalRenderer';
-import { CombatLayout1bCompactRenderer } from '../../models/combat/layouts/CombatLayout1bCompactRenderer';
-import { CombatLayout1cWideRenderer } from '../../models/combat/layouts/CombatLayout1cWideRenderer';
-import { CombatLayout2BottomHUDRenderer } from '../../models/combat/layouts/CombatLayout2BottomHUDRenderer';
-import { CombatLayout3SplitScreenRenderer } from '../../models/combat/layouts/CombatLayout3SplitScreenRenderer';
-import { CombatLayout3bWideRenderer } from '../../models/combat/layouts/CombatLayout3bWideRenderer';
-import { CombatLayout4CornerPanelsRenderer } from '../../models/combat/layouts/CombatLayout4CornerPanelsRenderer';
-import { CombatLayout5TopBarRenderer } from '../../models/combat/layouts/CombatLayout5TopBarRenderer';
-import { CombatLayout5bMinimalRenderer } from '../../models/combat/layouts/CombatLayout5bMinimalRenderer';
-import { CombatLayout5cDetailedRenderer } from '../../models/combat/layouts/CombatLayout5cDetailedRenderer';
 import { CombatLayout6LeftMapRenderer } from '../../models/combat/layouts/CombatLayout6LeftMapRenderer';
 
 interface CombatViewProps {
@@ -192,32 +182,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
 
-  // Track selected combat layout - default to layout6
-  const [selectedLayout, setSelectedLayout] = useState<string>('layout6');
-
   // Track debug grid overlay
   const [showDebugGrid, setShowDebugGrid] = useState<boolean>(false);
 
-  // Layout renderers (memoized to prevent recreation)
-  const layoutRenderers = useMemo(() => ({
-    layout1: new CombatLayout1TraditionalRenderer(),
-    layout1b: new CombatLayout1bCompactRenderer(),
-    layout1c: new CombatLayout1cWideRenderer(),
-    layout2: new CombatLayout2BottomHUDRenderer(),
-    layout3: new CombatLayout3SplitScreenRenderer(),
-    layout3b: new CombatLayout3bWideRenderer(),
-    layout4: new CombatLayout4CornerPanelsRenderer(),
-    layout5: new CombatLayout5TopBarRenderer(),
-    layout5b: new CombatLayout5bMinimalRenderer(),
-    layout5c: new CombatLayout5cDetailedRenderer(),
-    layout6: new CombatLayout6LeftMapRenderer(),
-  }), []);
-
-  // Get current layout renderer
-  const currentLayoutRenderer = useMemo(() => {
-    if (selectedLayout === 'none') return null;
-    return layoutRenderers[selectedLayout as keyof typeof layoutRenderers] || null;
-  }, [selectedLayout, layoutRenderers]);
+  // Layout renderer (always use Layout 6)
+  const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
 
   // Update UIConfig when highlight color changes
   useEffect(() => {
@@ -353,21 +322,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const mapWidth = combatState.map.width * TILE_SIZE;
     const mapHeight = combatState.map.height * TILE_SIZE;
 
-    // Calculate offset based on whether a layout is active
-    let offsetX: number, offsetY: number;
-
-    if (currentLayoutRenderer) {
-      // Use layout's viewport for map positioning
-      const viewport = currentLayoutRenderer.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
-      // Center map within the viewport
-      offsetX = viewport.x + (viewport.width - mapWidth) / 2;
-      offsetY = viewport.y + (viewport.height - mapHeight) / 2;
-    } else {
-      // Default: center map on entire canvas
-      const defaultOffset = renderer.calculateMapOffset(mapWidth, mapHeight);
-      offsetX = defaultOffset.offsetX;
-      offsetY = defaultOffset.offsetY;
-    }
+    // Use layout's viewport for map positioning
+    const viewport = layoutRenderer.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
+    // Center map within the viewport
+    const offsetX = viewport.x + (viewport.width - mapWidth) / 2;
+    const offsetY = viewport.y + (viewport.height - mapHeight) / 2;
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
@@ -516,25 +475,23 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
     */
 
-    // Render layout UI (if a layout is selected)
-    if (currentLayoutRenderer) {
-      const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
-      const combatLog = ['Turn 1: Battle begins', 'Goblin attacks!', 'Hero defends']; // TODO: Real combat log
+    // Render layout UI
+    const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
+    const combatLog = ['Turn 1: Battle begins', 'Goblin attacks!', 'Hero defends']; // TODO: Real combat log
 
-      currentLayoutRenderer.renderLayout({
-        ctx,
-        canvasWidth: CANVAS_WIDTH,
-        canvasHeight: CANVAS_HEIGHT,
-        spriteSize: SPRITE_SIZE,
-        fontId: unitInfoAtlasFont,
-        fontAtlasImage: layoutFontAtlas,
-        spriteImages: spriteImagesRef.current,
-        currentUnit: lastDisplayedUnitRef.current,
-        targetUnit: null, // TODO: Add target tracking
-        combatLog,
-        turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
-      });
-    }
+    layoutRenderer.renderLayout({
+      ctx,
+      canvasWidth: CANVAS_WIDTH,
+      canvasHeight: CANVAS_HEIGHT,
+      spriteSize: SPRITE_SIZE,
+      fontId: unitInfoAtlasFont,
+      fontAtlasImage: layoutFontAtlas,
+      spriteImages: spriteImagesRef.current,
+      currentUnit: lastDisplayedUnitRef.current,
+      targetUnit: null, // TODO: Add target tracking
+      combatLog,
+      turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
+    });
 
     // Render debug grid overlay (if enabled)
     if (showDebugGrid) {
@@ -546,7 +503,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, currentLayoutRenderer, showDebugGrid]);
+  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, showDebugGrid]);
 
   // Animation loop
   useEffect(() => {
@@ -958,44 +915,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               cursor: 'pointer',
             }}
           />
-
-          {/* Combat Layout Selector */}
-          <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
-            Combat Layout:
-          </label>
-          <select
-            value={selectedLayout}
-            onChange={(e) => setSelectedLayout(e.target.value)}
-            style={{
-              width: '200px',
-              padding: '4px',
-              background: '#222',
-              border: '1px solid #555',
-              borderRadius: '3px',
-              color: '#fff',
-              fontFamily: 'monospace',
-              fontSize: '11px',
-            }}
-          >
-            <option value="none">None (Default)</option>
-            <optgroup label="Traditional RPG Layouts">
-              <option value="layout1">Layout 1: Traditional (96px sidebars)</option>
-              <option value="layout1b">Layout 1b: Compact (72px sidebars)</option>
-              <option value="layout1c">Layout 1c: Wide (flipped)</option>
-            </optgroup>
-            <option value="layout2">Layout 2: Bottom HUD</option>
-            <optgroup label="Split Screen Layouts">
-              <option value="layout3">Layout 3: Split Screen (120px panel)</option>
-              <option value="layout3b">Layout 3b: Wide Split (144px panel)</option>
-            </optgroup>
-            <option value="layout4">Layout 4: Corner Panels</option>
-            <optgroup label="Top/Bottom Bar Layouts">
-              <option value="layout5">Layout 5: Top Bar (36px bars)</option>
-              <option value="layout5b">Layout 5b: Minimal (24px bars)</option>
-              <option value="layout5c">Layout 5c: Detailed (48px bars)</option>
-            </optgroup>
-            <option value="layout6">Layout 6: Left Map w/ Turn Order</option>
-          </select>
         </div>
       )}
 
