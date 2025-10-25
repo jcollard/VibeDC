@@ -2,7 +2,6 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
-import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { DeploymentPhaseHandler, createUnitFromPartyMember } from '../../models/combat/DeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -18,6 +17,7 @@ import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
 import { FontAssetLoader } from '../../services/FontAssetLoader';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
+import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -76,6 +76,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Font asset loader
   const fontLoader = useMemo(() => new FontAssetLoader(), []);
+
+  // Combat renderer for map and unit rendering
+  const renderer = useMemo(
+    () => new CombatRenderer(CANVAS_WIDTH, CANVAS_HEIGHT, TILE_SIZE, SPRITE_SIZE),
+    []
+  );
 
   // Store loaded sprite images
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
@@ -220,18 +226,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const mapHeight = combatState.map.height * TILE_SIZE;
 
     // Calculate offset to center the map on the canvas
-    const offsetX = (CANVAS_WIDTH - mapWidth) / 2;
-    const offsetY = (CANVAS_HEIGHT - mapHeight) / 2;
+    const { offsetX, offsetY } = renderer.calculateMapOffset(mapWidth, mapHeight);
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
 
-    // Clear the buffer
-    ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    // Disable image smoothing for pixel-perfect rendering
-    ctx.imageSmoothingEnabled = false;
+    // Clear and prepare the buffer canvas
+    renderer.clearCanvas(ctx);
 
     // Check if a cinematic is playing
     const cinematicPlaying = cinematicManagerRef.current.isPlayingCinematic();
@@ -252,53 +253,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Copy buffer to display canvas and return early
       const displayCtx = displayCanvas.getContext('2d');
       if (displayCtx) {
-        displayCtx.imageSmoothingEnabled = false;
-        displayCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-        displayCtx.drawImage(bufferCanvas, 0, 0);
+        renderer.displayBuffer(displayCtx, bufferCanvas);
       }
       return;
     }
 
-    // Render each cell with offset to center the map
-    const allCells = combatState.map.getAllCells();
-
-    for (const { position, cell } of allCells) {
-      const x = position.x * TILE_SIZE + offsetX;
-      const y = position.y * TILE_SIZE + offsetY;
-
-      if (cell.spriteId) {
-        const spriteDef = SpriteRegistry.getById(cell.spriteId);
-        if (spriteDef) {
-          const spriteImage = spriteImagesRef.current.get(spriteDef.spriteSheet);
-          if (spriteImage) {
-            // Calculate source rectangle in the sprite sheet (12x12 sprites)
-            const srcX = spriteDef.x * SPRITE_SIZE;
-            const srcY = spriteDef.y * SPRITE_SIZE;
-            const srcWidth = (spriteDef.width || 1) * SPRITE_SIZE;
-            const srcHeight = (spriteDef.height || 1) * SPRITE_SIZE;
-
-            // Draw the sprite scaled up 4x
-            ctx.drawImage(
-              spriteImage,
-              srcX, srcY, srcWidth, srcHeight,
-              x, y, TILE_SIZE, TILE_SIZE
-            );
-          } else {
-            console.warn(`CombatView: Sprite image not loaded for ${cell.spriteId}`);
-          }
-        } else {
-          console.warn(`CombatView: Sprite definition not found for ${cell.spriteId}`);
-        }
-      } else {
-        // Render a default tile based on terrain type
-        ctx.fillStyle = cell.walkable ? '#444444' : '#222222';
-        ctx.fillRect(x, y, TILE_SIZE, TILE_SIZE);
-
-        // Draw grid lines
-        ctx.strokeStyle = '#666666';
-        ctx.strokeRect(x, y, TILE_SIZE, TILE_SIZE);
-      }
-    }
+    // Render the combat map
+    renderer.renderMap(ctx, combatState.map, spriteImagesRef.current, offsetX, offsetY);
 
     // Render phase-specific overlays using the phase handler (before units so deployment zones appear below)
     phaseHandlerRef.current.render(combatState, encounter, {
@@ -315,34 +276,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     });
 
     // Render deployed units from the manifest (after deployment zones so they appear on top)
-    const allUnits = combatState.unitManifest.getAllUnits();
-    for (const { unit, position } of allUnits) {
-      const x = position.x * TILE_SIZE + offsetX;
-      const y = position.y * TILE_SIZE + offsetY;
-
-      // Get the unit's sprite
-      const spriteId = unit.spriteId;
-      if (spriteId) {
-        const spriteDef = SpriteRegistry.getById(spriteId);
-        if (spriteDef) {
-          const spriteImage = spriteImagesRef.current.get(spriteDef.spriteSheet);
-          if (spriteImage) {
-            // Calculate source rectangle in the sprite sheet
-            const srcX = spriteDef.x * SPRITE_SIZE;
-            const srcY = spriteDef.y * SPRITE_SIZE;
-            const srcWidth = (spriteDef.width || 1) * SPRITE_SIZE;
-            const srcHeight = (spriteDef.height || 1) * SPRITE_SIZE;
-
-            // Draw the unit sprite
-            ctx.drawImage(
-              spriteImage,
-              srcX, srcY, srcWidth, srcHeight,
-              x, y, TILE_SIZE, TILE_SIZE
-            );
-          }
-        }
-      }
-    }
+    renderer.renderUnits(ctx, combatState.unitManifest, spriteImagesRef.current, offsetX, offsetY);
 
     // Render phase UI elements (header, dialogs) after units so they appear on top
     if (phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
@@ -363,11 +297,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Copy buffer to display canvas
     const displayCtx = displayCanvas.getContext('2d');
     if (displayCtx) {
-      displayCtx.imageSmoothingEnabled = false;
-      displayCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
-      displayCtx.drawImage(bufferCanvas, 0, 0);
+      renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, encounter]);
+  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, encounter, renderer]);
 
   // Animation loop
   useEffect(() => {

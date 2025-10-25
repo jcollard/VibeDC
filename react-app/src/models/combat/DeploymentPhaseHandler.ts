@@ -1,4 +1,4 @@
-import type { CombatPhaseHandler, PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
+import type { PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import type { CombatUnit } from './CombatUnit';
@@ -14,6 +14,7 @@ import { DeploymentUI } from './deployment/DeploymentUI';
 import { DeploymentZoneRenderer } from './deployment/DeploymentZoneRenderer';
 import { UnitDeploymentManager } from './deployment/UnitDeploymentManager';
 import { PartySelectionDialog } from './deployment/PartySelectionDialog';
+import { PhaseBase } from './PhaseBase';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -52,11 +53,9 @@ export function createUnitFromPartyMember(member: PartyMemberDefinition): Combat
 /**
  * DeploymentPhaseHandler manages the deployment phase of combat where players
  * position their units on designated deployment zones before battle begins.
+ * Extends PhaseBase for common phase infrastructure.
  */
-export class DeploymentPhaseHandler implements CombatPhaseHandler {
-  // Animation state (for non-zone animations)
-  private elapsedTime = 0; // Time in seconds since phase started
-
+export class DeploymentPhaseHandler extends PhaseBase {
   // Deploy button
   private deployButton: CanvasButton | null = null;
 
@@ -76,6 +75,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * @param uiStateManager - Optional UI state manager for centralized state management
    */
   constructor(uiStateManager?: CombatUIStateManager) {
+    super();
     this.ui = new DeploymentUI();
     this.zoneRenderer = new DeploymentZoneRenderer();
     this.deploymentManager = new UnitDeploymentManager(uiStateManager);
@@ -83,13 +83,12 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   }
 
   /**
-   * Update animation state
+   * Update deployment phase animations (zone pulsing)
    * @param state - Current combat state
    * @param encounter - Current encounter
    * @param deltaTime - Time elapsed since last update in seconds
    */
-  update(state: CombatState, _encounter: CombatEncounter, deltaTime: number): CombatState | null {
-    this.elapsedTime += deltaTime;
+  protected updatePhase(state: CombatState, _encounter: CombatEncounter, deltaTime: number): CombatState | null {
     this.zoneRenderer.update(deltaTime);
     return state; // No state changes, just internal animation
   }
