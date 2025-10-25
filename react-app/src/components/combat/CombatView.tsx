@@ -96,6 +96,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
+  // Track integer scaling setting
+  const [integerScalingEnabled, setIntegerScalingEnabled] = useState<boolean>(
+    UISettings.isIntegerScalingEnabled()
+  );
+
   // Calculate canvas display dimensions based on integer scaling setting
   const canvasDisplayStyle = useMemo(() => {
     const containerRef = displayCanvasRef.current?.parentElement;
@@ -120,13 +125,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Integer scaling disabled - use percentage to fill container
       return { width: '100%', height: '100%' };
     }
-  }, [windowSize.width, windowSize.height]);
+  }, [windowSize.width, windowSize.height, integerScalingEnabled]);
 
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
   const [messageAtlasFont, setMessageAtlasFont] = useState<string>('7px-04b03');
   const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('7px-04b03');
   const [unitInfoAtlasFont, setUnitInfoAtlasFont] = useState<string>('7px-04b03');
+
+  // Handle integer scaling toggle
+  const handleIntegerScalingToggle = useCallback((enabled: boolean) => {
+    UISettings.setIntegerScaling(enabled);
+    setIntegerScalingEnabled(enabled);
+    // State change will trigger useMemo recalculation via dependency
+  }, []);
 
   // Track the last displayed unit for info panel persistence
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
@@ -628,7 +640,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         zIndex: 3000,
       }}
     >
-      {/* Font Diagnostic Panel */}
+      {/* Developer Settings Panel */}
       {import.meta.env.DEV && (
         <div
           style={{
@@ -645,7 +657,23 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             zIndex: 4000,
           }}
         >
-          <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>Font Atlas Diagnostics</div>
+          <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>Developer Settings</div>
+
+          {/* Integer Scaling Toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={integerScalingEnabled}
+              onChange={(e) => handleIntegerScalingToggle(e.target.checked)}
+              style={{
+                marginRight: '8px',
+                cursor: 'pointer',
+                width: '16px',
+                height: '16px',
+              }}
+            />
+            <span>Integer Scaling (pixel-perfect)</span>
+          </label>
 
             {/* Title Font Atlas Selector */}
             <label style={{ display: 'block', marginBottom: '4px' }}>
