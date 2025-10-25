@@ -15,7 +15,6 @@ import { SequenceParallel } from '../../models/combat/SequenceParallel';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
-import { FontAssetLoader } from '../../services/FontAssetLoader';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
@@ -78,9 +77,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Sprite asset loader
   const spriteLoader = useMemo(() => new SpriteAssetLoader(), []);
 
-  // Font asset loader
-  const fontLoader = useMemo(() => new FontAssetLoader(), []);
-
   // Combat renderer for map and unit rendering
   const renderer = useMemo(
     () => new CombatRenderer(CANVAS_WIDTH, CANVAS_HEIGHT, TILE_SIZE, SPRITE_SIZE),
@@ -99,18 +95,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
-  // Track selected fonts for testing
-  const [headerFont, setHeaderFont] = useState<string>('DungeonSlant');
-  const [dialogFont, setDialogFont] = useState<string>('Habbo');
-  const [buttonFont, setButtonFont] = useState<string>('Bitfantasy');
-
   // Track selected font atlases from FontRegistry
   const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
   const [messageAtlasFont, setMessageAtlasFont] = useState<string>('9px-habbo');
   const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('9px-habbo');
-
-  // Track unit info dialog font size for testing
-  const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(36);
 
   // Track the last displayed unit for info panel persistence
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
@@ -122,32 +110,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   useEffect(() => {
     UIConfig.setHighlightColor(highlightColor);
   }, [highlightColor]);
-
-  // Update UIConfig when button font changes
-  useEffect(() => {
-    UIConfig.setButtonFont(buttonFont);
-  }, [buttonFont]);
-
-  // Track if the selected fonts are loaded
-  const [fontsLoaded, setFontsLoaded] = useState<boolean>(false);
-
-  // Load the selected fonts using FontAssetLoader
-  useEffect(() => {
-    setFontsLoaded(false);
-
-    const loadFonts = async () => {
-      const result = await fontLoader.loadFonts(headerFont, dialogFont);
-
-      // Always set as loaded (even on error) to prevent blocking
-      setFontsLoaded(true);
-
-      if (!result.loaded && result.error) {
-        console.warn('Font loading had issues:', result.error);
-      }
-    };
-
-    loadFonts();
-  }, [headerFont, dialogFont, fontLoader]);
 
   // Listen for window resize
   useEffect(() => {
@@ -213,7 +175,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Start the intro cinematic sequence when encounter loads (only once)
   useEffect(() => {
-    if (spritesLoaded && fontsLoaded && !introCinematicPlayedRef.current) {
+    if (spritesLoaded && !introCinematicPlayedRef.current) {
       // Calculate message positions
       // Title and waylaid message at very top of screen
       const titleY = CombatConstants.UI.TITLE_Y_POSITION;
@@ -250,12 +212,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       cinematicManagerRef.current.play(introSequence, combatState, encounter);
       introCinematicPlayedRef.current = true;
     }
-  }, [spritesLoaded, fontsLoaded, combatState, encounter, dialogFont]);
+  }, [spritesLoaded, combatState, encounter]);
 
   // Render function - draws one frame to the canvas
   const renderFrame = useCallback(() => {
     const displayCanvas = displayCanvasRef.current;
-    if (!displayCanvas || !spritesLoaded || !fontsLoaded) {
+    if (!displayCanvas || !spritesLoaded) {
       return;
     }
 
@@ -321,8 +283,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       offsetX,
       offsetY,
       spriteImages: spriteImagesRef.current,
-      headerFont,
-      dialogFont,
     });
 
     // Render deployed units from the manifest (after deployment zones so they appear on top)
@@ -339,8 +299,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         offsetX,
         offsetY,
         spriteImages: spriteImagesRef.current,
-        headerFont,
-        dialogFont,
         titleAtlasFontId: titleAtlasFont,
         messageAtlasFontId: messageAtlasFont,
         dialogAtlasFontId: dialogAtlasFont,
@@ -430,11 +388,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont]);
+  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont]);
 
   // Animation loop
   useEffect(() => {
-    if (!spritesLoaded || !fontsLoaded) {
+    if (!spritesLoaded) {
       return;
     }
 
@@ -468,7 +426,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [spritesLoaded, fontsLoaded, renderFrame, combatState, encounter]);
+  }, [spritesLoaded, renderFrame, combatState, encounter]);
 
   // Handle canvas mouse down for button active state
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -625,35 +583,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
   }, [combatState.phase, combatState.map, inputHandler, uiStateManager, renderer]);
 
-  // Available fonts (matching what's in index.css)
-  const availableFonts = [
-    'OldWizard',
-    'Bitfantasy',
-    'CelticTime',
-    'HelvetiPixel',
-    'KingsQuest6',
-    'Questgiver',
-    'AdventurerSmallCyr',
-    'FancyPixels',
-    'DOS-V',
-    'PixelTimesNewRoman',
-    'TimesNewPixel',
-    'DeckardsRegularSerif',
-    'NewPixelTimes',
-    'Sword',
-    'WizardsManse',
-    'DungeonSlant',
-    'Squirrel',
-    'Gothbit',
-    'IBM_VGA',
-    'Royalati',
-    'Tiny04b03',
-    'TinyJ2',
-    'Habbo8',
-    'IBM_BIOS',
-    'Habbo',
-  ];
-
   return (
     <div
       style={{
@@ -689,88 +618,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             zIndex: 4000,
           }}
         >
-          <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>Font Diagnostics</div>
-
-          {/* Header Font Selector */}
-          <label style={{ display: 'block', marginBottom: '4px' }}>
-            Header Font:
-          </label>
-          <select
-            value={headerFont}
-            onChange={(e) => setHeaderFont(e.target.value)}
-            style={{
-              width: '200px',
-              padding: '4px',
-              background: '#222',
-              border: '1px solid #555',
-              borderRadius: '3px',
-              color: '#fff',
-              fontFamily: 'monospace',
-              fontSize: '11px',
-              marginBottom: '8px',
-            }}
-          >
-            {availableFonts.map((font) => (
-              <option key={font} value={font}>
-                {font}
-              </option>
-            ))}
-          </select>
-          <div
-            style={{
-              marginBottom: '12px',
-              padding: '8px',
-              background: '#111',
-              borderRadius: '3px',
-              fontFamily: headerFont,
-              fontSize: '16px',
-            }}
-          >
-            Deploy Units
-          </div>
-
-          {/* Dialog Font Selector */}
-          <label style={{ display: 'block', marginBottom: '4px' }}>
-            Dialog Font:
-          </label>
-          <select
-            value={dialogFont}
-            onChange={(e) => setDialogFont(e.target.value)}
-            style={{
-              width: '200px',
-              padding: '4px',
-              background: '#222',
-              border: '1px solid #555',
-              borderRadius: '3px',
-              color: '#fff',
-              fontFamily: 'monospace',
-              fontSize: '11px',
-            }}
-          >
-            {availableFonts.map((font) => (
-              <option key={font} value={font}>
-                {font}
-              </option>
-            ))}
-          </select>
-          <div
-            style={{
-              marginTop: '8px',
-              padding: '8px',
-              background: '#111',
-              borderRadius: '3px',
-              fontFamily: dialogFont,
-              fontSize: '16px',
-            }}
-          >
-            Select a Character
-          </div>
-
-          {/* Font Atlas Selectors */}
-          <div style={{ marginTop: '16px', paddingTop: '12px', borderTop: '1px solid #555' }}>
-            <div style={{ marginBottom: '8px', fontWeight: 'bold', fontSize: '11px' }}>
-              Font Atlas (from FontRegistry)
-            </div>
+          <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>Font Atlas Diagnostics</div>
 
             {/* Title Font Atlas Selector */}
             <label style={{ display: 'block', marginBottom: '4px' }}>
@@ -848,36 +696,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
                 </option>
               ))}
             </select>
-          </div>
-
-          {/* Unit Info Font Size Slider */}
-          <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
-            Unit Info Font Size: {unitInfoFontSize}px
-          </label>
-          <input
-            type="range"
-            min="8"
-            max="32"
-            step="1"
-            value={unitInfoFontSize}
-            onChange={(e) => setUnitInfoFontSize(Number(e.target.value))}
-            style={{
-              width: '200px',
-              cursor: 'pointer',
-            }}
-          />
-          <div
-            style={{
-              marginTop: '8px',
-              padding: '8px',
-              background: '#111',
-              borderRadius: '3px',
-              fontFamily: dialogFont,
-              fontSize: `${unitInfoFontSize}px`,
-            }}
-          >
-            HP: 100/100
-          </div>
 
           {/* Highlight Color Picker */}
           <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
@@ -897,53 +715,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               cursor: 'pointer',
             }}
           />
-          <div
-            style={{
-              marginTop: '8px',
-              padding: '8px',
-              background: '#111',
-              borderRadius: '3px',
-              fontFamily: dialogFont,
-              fontSize: '16px',
-              color: highlightColor,
-            }}
-          >
-            Highlighted Text Preview
-          </div>
-
-          {/* Button Font Selector */}
-          <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
-            Button Font:
-          </label>
-          <select
-            value={buttonFont}
-            onChange={(e) => setButtonFont(e.target.value)}
-            style={{
-              width: '200px',
-              padding: '4px',
-              background: '#222',
-              color: '#fff',
-              border: '1px solid #555',
-              borderRadius: '3px',
-              cursor: 'pointer',
-            }}
-          >
-            {availableFonts.map(font => (
-              <option key={font} value={font}>{font}</option>
-            ))}
-          </select>
-          <div
-            style={{
-              marginTop: '8px',
-              padding: '8px',
-              background: '#111',
-              borderRadius: '3px',
-              fontFamily: buttonFont,
-              fontSize: '18px',
-            }}
-          >
-            Start Combat
-          </div>
         </div>
       )}
 

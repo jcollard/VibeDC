@@ -333,13 +333,13 @@ export class DeploymentPhaseHandler extends PhaseBase {
    * Render deployment phase UI elements (header and dialog - rendered after units)
    */
   renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont, titleAtlasFontId, messageAtlasFontId, dialogAtlasFontId, fontAtlasImages } = context;
+    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, titleAtlasFontId, messageAtlasFontId, dialogAtlasFontId, fontAtlasImages } = context;
 
     // Render "Deploy Units" header
-    this.ui.renderPhaseHeader(ctx, canvasWidth, headerFont, titleAtlasFontId || '15px-dungeonslant');
+    this.ui.renderPhaseHeader(ctx, canvasWidth, '', titleAtlasFontId || '15px-dungeonslant');
 
     // Render waylaid message (8px below title)
-    this.ui.renderWaylaidMessage(ctx, canvasWidth, dialogFont, messageAtlasFontId || '9px-habbo');
+    this.ui.renderWaylaidMessage(ctx, canvasWidth, '', messageAtlasFontId || '9px-habbo');
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;
@@ -354,7 +354,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
     // Render instruction message only if button is NOT visible
     if (!shouldShowButton) {
-      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, dialogFont, instructionY, messageAtlasFontId || '9px-habbo');
+      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, '', instructionY, messageAtlasFontId || '9px-habbo');
     }
 
     // Initialize and render Start Combat button below map (only if deployment is complete)
