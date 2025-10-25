@@ -1,0 +1,109 @@
+# Font definition for 7px-5x7tinyj2
+# Generated from font atlas generator
+# AA Threshold: 200
+
+fonts:
+  - id: "7px-5x7tinyj2"
+    atlasPath: "/fonts/7px-5x7tinyj2-atlas.png"
+    charHeight: 8
+    lineHeight: 8
+    charSpacing: 0
+    baselineOffset: 0
+    fallbackChar: "?"
+    tags: ["pixel", "game", "variable-width"]
+    characters:
+      - { char: " ", x: 0, y: 0, width: 4 }
+      - { char: "!", x: 6, y: 0, width: 4 }
+      - { char: "\"", x: 12, y: 0, width: 4 }
+      - { char: "#", x: 18, y: 0, width: 6 }
+      - { char: "$", x: 24, y: 0, width: 6 }
+      - { char: "%", x: 30, y: 0, width: 5 }
+      - { char: "&", x: 36, y: 0, width: 6 }
+      - { char: "'", x: 42, y: 0, width: 3 }
+      - { char: "(", x: 48, y: 0, width: 3 }
+      - { char: ")", x: 54, y: 0, width: 3 }
+      - { char: "*", x: 60, y: 0, width: 6 }
+      - { char: "+", x: 66, y: 0, width: 4 }
+      - { char: ",", x: 72, y: 0, width: 3 }
+      - { char: "-", x: 78, y: 0, width: 4 }
+      - { char: ".", x: 84, y: 0, width: 3 }
+      - { char: "/", x: 90, y: 0, width: 4 }
+      - { char: "0", x: 0, y: 8, width: 5 }
+      - { char: "1", x: 6, y: 8, width: 5 }
+      - { char: "2", x: 12, y: 8, width: 5 }
+      - { char: "3", x: 18, y: 8, width: 5 }
+      - { char: "4", x: 24, y: 8, width: 5 }
+      - { char: "5", x: 30, y: 8, width: 5 }
+      - { char: "6", x: 36, y: 8, width: 5 }
+      - { char: "7", x: 42, y: 8, width: 5 }
+      - { char: "8", x: 48, y: 8, width: 5 }
+      - { char: "9", x: 54, y: 8, width: 5 }
+      - { char: ":", x: 60, y: 8, width: 3 }
+      - { char: ";", x: 66, y: 8, width: 3 }
+      - { char: "<", x: 72, y: 8, width: 4 }
+      - { char: "=", x: 78, y: 8, width: 4 }
+      - { char: ">", x: 84, y: 8, width: 4 }
+      - { char: "?", x: 90, y: 8, width: 6 }
+      - { char: "@", x: 0, y: 16, width: 6 }
+      - { char: "A", x: 6, y: 16, width: 6 }
+      - { char: "B", x: 12, y: 16, width: 6 }
+      - { char: "C", x: 18, y: 16, width: 6 }
+      - { char: "D", x: 24, y: 16, width: 6 }
+      - { char: "E", x: 30, y: 16, width: 6 }
+      - { char: "F", x: 36, y: 16, width: 6 }
+      - { char: "G", x: 42, y: 16, width: 6 }
+      - { char: "H", x: 48, y: 16, width: 6 }
+      - { char: "I", x: 54, y: 16, width: 4 }
+      - { char: "J", x: 60, y: 16, width: 6 }
+      - { char: "K", x: 66, y: 16, width: 6 }
+      - { char: "L", x: 72, y: 16, width: 6 }
+      - { char: "M", x: 78, y: 16, width: 6 }
+      - { char: "N", x: 84, y: 16, width: 6 }
+      - { char: "O", x: 90, y: 16, width: 6 }
+      - { char: "P", x: 0, y: 24, width: 6 }
+      - { char: "Q", x: 6, y: 24, width: 6 }
+      - { char: "R", x: 12, y: 24, width: 6 }
+      - { char: "S", x: 18, y: 24, width: 6 }
+      - { char: "T", x: 24, y: 24, width: 6 }
+      - { char: "U", x: 30, y: 24, width: 6 }
+      - { char: "V", x: 36, y: 24, width: 6 }
+      - { char: "W", x: 42, y: 24, width: 6 }
+      - { char: "X", x: 48, y: 24, width: 6 }
+      - { char: "Y", x: 54, y: 24, width: 6 }
+      - { char: "Z", x: 60, y: 24, width: 6 }
+      - { char: "[", x: 66, y: 24, width: 3 }
+      - { char: "\\", x: 72, y: 24, width: 4 }
+      - { char: "]", x: 78, y: 24, width: 3 }
+      - { char: "^", x: 84, y: 24, width: 4 }
+      - { char: "_", x: 90, y: 24, width: 4 }
+      - { char: "`", x: 0, y: 32, width: 3 }
+      - { char: "a", x: 6, y: 32, width: 5 }
+      - { char: "b", x: 12, y: 32, width: 5 }
+      - { char: "c", x: 18, y: 32, width: 5 }
+      - { char: "d", x: 24, y: 32, width: 5 }
+      - { char: "e", x: 30, y: 32, width: 5 }
+      - { char: "f", x: 36, y: 32, width: 4 }
+      - { char: "g", x: 42, y: 32, width: 5 }
+      - { char: "h", x: 48, y: 32, width: 5 }
+      - { char: "i", x: 54, y: 32, width: 3 }
+      - { char: "j", x: 60, y: 32, width: 3 }
+      - { char: "k", x: 66, y: 32, width: 5 }
+      - { char: "l", x: 72, y: 32, width: 3 }
+      - { char: "m", x: 78, y: 32, width: 6 }
+      - { char: "n", x: 84, y: 32, width: 5 }
+      - { char: "o", x: 90, y: 32, width: 5 }
+      - { char: "p", x: 0, y: 40, width: 5 }
+      - { char: "q", x: 6, y: 40, width: 5 }
+      - { char: "r", x: 12, y: 40, width: 5 }
+      - { char: "s", x: 18, y: 40, width: 5 }
+      - { char: "t", x: 24, y: 40, width: 4 }
+      - { char: "u", x: 30, y: 40, width: 5 }
+      - { char: "v", x: 36, y: 40, width: 5 }
+      - { char: "w", x: 42, y: 40, width: 6 }
+      - { char: "x", x: 48, y: 40, width: 5 }
+      - { char: "y", x: 54, y: 40, width: 5 }
+      - { char: "z", x: 60, y: 40, width: 5 }
+      - { char: "{", x: 66, y: 40, width: 4 }
+      - { char: "|", x: 72, y: 40, width: 3 }
+      - { char: "}", x: 78, y: 40, width: 4 }
+      - { char: "~", x: 84, y: 40, width: 5 }

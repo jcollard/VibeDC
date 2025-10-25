@@ -26,6 +26,8 @@ import enemyYaml from './enemy-definitions.yaml?raw';
 import partyYaml from './party-definitions.yaml?raw';
 import equipmentYaml from './equipment-definitions.yaml?raw';
 import tilesetYaml from './tileset-database.yaml?raw';
+import font7px04b03Yaml from './fonts/7px-04b03.yaml?raw';
+import font7px5x7tinyj2Yaml from './fonts/7px-5x7tinyj2.yaml?raw';
 import font8pxYaml from './fonts/8px-habbo8.yaml?raw';
 import font9pxYaml from './fonts/9px-habbo.yaml?raw';
 import font10pxYaml from './fonts/10px-bitfantasy.yaml?raw';
@@ -233,6 +235,8 @@ export function loadPartyMembers(): void {
  */
 export async function loadFonts(): Promise<void> {
   const fontYamls = [
+    { name: '7px-04b03', yaml: font7px04b03Yaml },
+    { name: '7px-5x7tinyj2', yaml: font7px5x7tinyj2Yaml },
     { name: '8px-habbo8', yaml: font8pxYaml },
     { name: '9px-habbo', yaml: font9pxYaml },
     { name: '10px-bitfantasy', yaml: font10pxYaml },
