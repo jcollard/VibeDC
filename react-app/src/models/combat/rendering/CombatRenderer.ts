@@ -1,4 +1,5 @@
 import { SpriteRegistry } from '../../../utils/SpriteRegistry';
+import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 import type { CombatMap } from '../CombatMap';
 import type { CombatUnitManifest } from '../CombatUnitManifest';
 
@@ -59,17 +60,16 @@ export class CombatRenderer {
         if (spriteDef) {
           const spriteImage = spriteImages.get(spriteDef.spriteSheet);
           if (spriteImage) {
-            // Calculate source rectangle in the sprite sheet
-            const srcX = spriteDef.x * this.spriteSize;
-            const srcY = spriteDef.y * this.spriteSize;
-            const srcWidth = (spriteDef.width || 1) * this.spriteSize;
-            const srcHeight = (spriteDef.height || 1) * this.spriteSize;
-
-            // Draw the sprite scaled to tile size
-            ctx.drawImage(
+            // Draw the sprite scaled to tile size with pixel-perfect rendering
+            SpriteRenderer.renderSprite(
+              ctx,
               spriteImage,
-              srcX, srcY, srcWidth, srcHeight,
-              x, y, this.tileSize, this.tileSize
+              spriteDef,
+              this.spriteSize,
+              x,
+              y,
+              this.tileSize,
+              this.tileSize
             );
           } else {
             console.warn(`CombatRenderer: Sprite image not loaded for ${cell.spriteId}`);
@@ -117,17 +117,16 @@ export class CombatRenderer {
         if (spriteDef) {
           const spriteImage = spriteImages.get(spriteDef.spriteSheet);
           if (spriteImage) {
-            // Calculate source rectangle in the sprite sheet
-            const srcX = spriteDef.x * this.spriteSize;
-            const srcY = spriteDef.y * this.spriteSize;
-            const srcWidth = (spriteDef.width || 1) * this.spriteSize;
-            const srcHeight = (spriteDef.height || 1) * this.spriteSize;
-
-            // Draw the unit sprite
-            ctx.drawImage(
+            // Draw the unit sprite with pixel-perfect rendering
+            SpriteRenderer.renderSprite(
+              ctx,
               spriteImage,
-              srcX, srcY, srcWidth, srcHeight,
-              x, y, this.tileSize, this.tileSize
+              spriteDef,
+              this.spriteSize,
+              x,
+              y,
+              this.tileSize,
+              this.tileSize
             );
           }
         }
