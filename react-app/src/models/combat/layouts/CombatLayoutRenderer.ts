@@ -1,0 +1,45 @@
+import type { CombatUnit } from '../CombatUnit';
+
+/**
+ * Rendering context passed to layout renderers
+ */
+export interface LayoutRenderContext {
+  ctx: CanvasRenderingContext2D;
+  canvasWidth: number;
+  canvasHeight: number;
+  spriteSize: number;
+  fontId: string;
+  fontAtlasImage: HTMLImageElement | null;
+  spriteImages: Map<string, HTMLImageElement>;
+  currentUnit: CombatUnit | null;
+  targetUnit: CombatUnit | null;
+  combatLog: string[];
+  turnOrder: CombatUnit[];
+}
+
+/**
+ * Base interface for combat layout renderers
+ * Each layout renders UI elements directly to the canvas
+ */
+export interface CombatLayoutRenderer {
+  /**
+   * Render the layout UI elements to the canvas
+   * This is called after the map and units have been rendered
+   * @param context - Rendering context with all necessary data
+   */
+  renderLayout(context: LayoutRenderContext): void;
+
+  /**
+   * Get the viewport rectangle for map rendering
+   * Returns the area where the map should be rendered
+   * @param canvasWidth - Full canvas width
+   * @param canvasHeight - Full canvas height
+   * @returns Object with x, y, width, height for the map viewport
+   */
+  getMapViewport(canvasWidth: number, canvasHeight: number): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  };
+}
