@@ -96,8 +96,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track selected fonts for testing
   const [headerFont, setHeaderFont] = useState<string>('DungeonSlant');
-  const [dialogFont, setDialogFont] = useState<string>('Bitfantasy');
+  const [dialogFont, setDialogFont] = useState<string>('Habbo');
   const [buttonFont, setButtonFont] = useState<string>('Bitfantasy');
+
+  // Track unit info dialog font size for testing
+  const [unitInfoFontSize, setUnitInfoFontSize] = useState<number>(32);
 
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
@@ -305,7 +308,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         dialogFont,
         spriteImagesRef.current,
         TILE_SIZE,
-        SPRITE_SIZE
+        SPRITE_SIZE,
+        unitInfoFontSize
       );
 
       // Calculate dialog size
@@ -337,7 +341,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, encounter, renderer]);
+  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer]);
 
   // Animation loop
   useEffect(() => {
@@ -649,6 +653,35 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             }}
           >
             Select a Character
+          </div>
+
+          {/* Unit Info Font Size Slider */}
+          <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
+            Unit Info Font Size: {unitInfoFontSize}px
+          </label>
+          <input
+            type="range"
+            min="8"
+            max="32"
+            step="1"
+            value={unitInfoFontSize}
+            onChange={(e) => setUnitInfoFontSize(Number(e.target.value))}
+            style={{
+              width: '200px',
+              cursor: 'pointer',
+            }}
+          />
+          <div
+            style={{
+              marginTop: '8px',
+              padding: '8px',
+              background: '#111',
+              borderRadius: '3px',
+              fontFamily: dialogFont,
+              fontSize: `${unitInfoFontSize}px`,
+            }}
+          >
+            HP: 100/100
           </div>
 
           {/* Highlight Color Picker */}

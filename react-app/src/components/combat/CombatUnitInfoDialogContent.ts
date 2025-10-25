@@ -12,13 +12,15 @@ export class CombatUnitInfoDialogContent extends DialogContent {
   private spriteImages: Map<string, HTMLImageElement>;
   private tileSize: number;
   private spriteSize: number;
+  private fontSize: number;
 
   constructor(
     unit: CombatUnit,
     font: string,
     spriteImages: Map<string, HTMLImageElement>,
     tileSize: number,
-    spriteSize: number
+    spriteSize: number,
+    fontSize: number = 16
   ) {
     super();
     this.unit = unit;
@@ -26,14 +28,15 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     this.spriteImages = spriteImages;
     this.tileSize = tileSize;
     this.spriteSize = spriteSize;
+    this.fontSize = fontSize;
   }
 
   render(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const FONT_SIZE = 16;
-    const LINE_HEIGHT = 18;
+    const FONT_SIZE = this.fontSize;
+    const LINE_HEIGHT = Math.ceil(this.fontSize * 1.125); // 1.125x font size for line height
     const SPRITE_SIZE_PIXELS = this.tileSize; // 48px
-    const NAME_FONT_SIZE = 20;
-    const SPACING = 4;
+    const NAME_FONT_SIZE = Math.ceil(this.fontSize * 1.25); // 1.25x font size for name
+    const SPACING = 8;
 
     let currentY = y;
 
@@ -65,30 +68,33 @@ export class CombatUnitInfoDialogContent extends DialogContent {
     currentY += SPRITE_SIZE_PIXELS + SPACING;
 
     // Prepare stats with labels and max digits
+    // Layout: Row 1: HP/MP, Row 2: SPD/MV, Row 3: P.Pow/M.Pow, Row 4: P.Ev/M.Ev, Row 5: Cour/Attn
+    // TEST: Display 999 for all values to test maximum width
     const stats = [
-      { label: 'HP', value: `${this.unit.health}/${this.unit.maxHealth}`, maxDigits: 7 }, // "999/999"
-      { label: 'MP', value: `${this.unit.mana}/${this.unit.maxMana}`, maxDigits: 7 },
-      { label: 'PP', value: this.unit.physicalPower.toString(), maxDigits: 2 },
-      { label: 'MgP', value: this.unit.magicPower.toString(), maxDigits: 2 },
-      { label: 'SPD', value: this.unit.speed.toString(), maxDigits: 2 },
-      { label: 'MOV', value: this.unit.movement.toString(), maxDigits: 1 },
-      { label: 'PE', value: this.unit.physicalEvade.toString(), maxDigits: 2 },
-      { label: 'ME', value: this.unit.magicEvade.toString(), maxDigits: 2 },
-      { label: 'C', value: this.unit.courage.toString(), maxDigits: 2 },
-      { label: 'A', value: this.unit.attunement.toString(), maxDigits: 2 },
+      { label: 'HP', value: '999/999', maxDigits: 7 },
+      { label: 'MP', value: '999/999', maxDigits: 7 },
+      { label: 'SPD', value: '99', maxDigits: 2 },
+      { label: 'MV', value: '9', maxDigits: 1 },
+      { label: 'P.Pow', value: '99', maxDigits: 2 },
+      { label: 'M.Pow', value: '99', maxDigits: 2 },
+      { label: 'P.Ev', value: '99', maxDigits: 2 },
+      { label: 'M.Ev', value: '99', maxDigits: 2 },
+      { label: 'Cour', value: '99', maxDigits: 2 },
+      { label: 'Attn', value: '99', maxDigits: 2 },
     ];
 
-    // Render stats in two columns
+    // Render stats in two columns (row-major order)
     ctx.font = `${FONT_SIZE}px "${this.font}", monospace`;
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
-    const COL_WIDTH = 90;
-    const statsPerColumn = Math.ceil(stats.length / 2);
+    // Scale column width based on font size (approximately 5.5x font size)
+    const COL_WIDTH = Math.ceil(this.fontSize * 5.5);
 
     stats.forEach((stat, index) => {
-      const column = Math.floor(index / statsPerColumn);
-      const row = index % statsPerColumn;
+      // Row-major order: fill left to right, then move to next row
+      const row = Math.floor(index / 2);
+      const column = index % 2;
       const statX = x + (column * COL_WIDTH);
       const statY = currentY + (row * LINE_HEIGHT);
 
@@ -105,11 +111,11 @@ export class CombatUnitInfoDialogContent extends DialogContent {
   }
 
   protected getBounds(): ContentBounds {
-    const LINE_HEIGHT = 18;
-    const SPRITE_SIZE_PIXELS = this.tileSize;
-    const NAME_FONT_SIZE = 20;
-    const SPACING = 4;
-    const COL_WIDTH = 90;
+    const LINE_HEIGHT = Math.ceil(this.fontSize * 1.125);
+    const SPRITE_SIZE_PIXELS = this.tileSize; // 48px
+    const NAME_FONT_SIZE = Math.ceil(this.fontSize * 1.25);
+    const SPACING = 8;
+    const COL_WIDTH = Math.ceil(this.fontSize * 5.5);
 
     // Create a temporary canvas to measure text width accurately
     const tempCanvas = document.createElement('canvas');
