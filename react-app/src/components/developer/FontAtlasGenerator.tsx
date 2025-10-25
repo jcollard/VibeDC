@@ -32,6 +32,10 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
   const previewCanvasRef = useRef<HTMLCanvasElement>(null);
   const demoCanvasRef = useRef<HTMLCanvasElement>(null);
   const [charWidths, setCharWidths] = useState<number[]>([]);
+  const [showDebugGrid, setShowDebugGrid] = useState<boolean>(false);
+  const [selectedCharIndex, setSelectedCharIndex] = useState<number | null>(null);
+  const [charPositions, setCharPositions] = useState<{ x: number; y: number; width: number; height: number }[]>([]);
+  const selectedCharCanvasRef = useRef<HTMLCanvasElement>(null);
 
   // ASCII printable characters (32-126)
   const charSet = generateASCIICharSet();
@@ -159,6 +163,8 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
 
     // Measure character widths if using variable width
     const measuredWidths: number[] = [];
+    const positions: { x: number; y: number; width: number; height: number }[] = [];
+
     if (useVariableWidth) {
       charSet.forEach(char => {
         const metrics = ctx.measureText(char);
@@ -202,27 +208,38 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     charSet.forEach((char, index) => {
       const col = index % charsPerRow;
       const row = Math.floor(index / charsPerRow);
-      const x = col * charWidth;
-      const y = row * charHeight;
+      const cellX = col * charWidth;
+      const cellY = row * charHeight;
       const charActualWidth = measuredWidths[index];
+
+      // Center character horizontally if using variable width
+      const xOffset = useVariableWidth ? Math.floor((charWidth - charActualWidth) / 2) : 0;
+
+      // Store actual character position (not cell position)
+      positions.push({
+        x: cellX + xOffset,
+        y: cellY,
+        width: charActualWidth,
+        height: charHeight
+      });
 
       // Save context state
       ctx.save();
 
       // Clip to character cell to prevent overflow
       ctx.beginPath();
-      ctx.rect(x, y, charWidth, charHeight);
+      ctx.rect(cellX, cellY, charWidth, charHeight);
       ctx.clip();
 
-      // Center character horizontally if using variable width
-      const xOffset = useVariableWidth ? Math.floor((charWidth - charActualWidth) / 2) : 0;
-
       // Draw character at baseline offset
-      ctx.fillText(char, x + xOffset, y + baselineOffset);
+      ctx.fillText(char, cellX + xOffset, cellY + baselineOffset);
 
       // Restore context state
       ctx.restore();
     });
+
+    // Store character positions
+    setCharPositions(positions);
 
     // Apply threshold to remove antialiasing (make pixel-perfect)
     if (applyThreshold) {
@@ -274,23 +291,23 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     ctx.imageSmoothingEnabled = false;
     ctx.drawImage(sourceCanvas, 0, 0, width, height);
 
-    // Draw grid overlay to visualize character cells (optional debug)
-    // Uncomment to see cell boundaries
-    // ctx.strokeStyle = 'rgba(255, 0, 0, 0.3)';
-    // ctx.lineWidth = 1;
-    // const rows = Math.ceil(charSet.length / charsPerRow);
-    // for (let row = 0; row <= rows; row++) {
-    //   ctx.beginPath();
-    //   ctx.moveTo(0, row * charHeight * previewScale);
-    //   ctx.lineTo(width, row * charHeight * previewScale);
-    //   ctx.stroke();
-    // }
-    // for (let col = 0; col <= charsPerRow; col++) {
-    //   ctx.beginPath();
-    //   ctx.moveTo(col * charWidth * previewScale, 0);
-    //   ctx.lineTo(col * charWidth * previewScale, height);
-    //   ctx.stroke();
-    // }
+    // Draw debug grid overlay if enabled
+    if (showDebugGrid && charPositions.length > 0) {
+      charPositions.forEach((pos, index) => {
+        ctx.strokeStyle = selectedCharIndex === index ? 'rgba(255, 165, 0, 0.8)' : 'rgba(255, 255, 0, 0.4)';
+        ctx.fillStyle = selectedCharIndex === index ? 'rgba(255, 165, 0, 0.2)' : 'rgba(255, 255, 0, 0.1)';
+        ctx.lineWidth = selectedCharIndex === index ? 2 : 1;
+
+        // Draw box around actual character bounds (pos already includes offset)
+        const scaledX = pos.x * previewScale;
+        const scaledY = pos.y * previewScale;
+        const scaledWidth = pos.width * previewScale;
+        const scaledHeight = pos.height * previewScale;
+
+        ctx.fillRect(scaledX, scaledY, scaledWidth, scaledHeight);
+        ctx.strokeRect(scaledX, scaledY, scaledWidth, scaledHeight);
+      });
+    }
   };
 
   // Auto-generate when font is loaded and parameters change
@@ -300,10 +317,10 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
     }
   }, [fontLoaded, charWidth, charHeight, fontSize, baselineOffset, charsPerRow, applyThreshold, antialiasThreshold, useVariableWidth]);
 
-  // Update preview when scale changes
+  // Update preview when scale, debug grid, or selection changes
   useEffect(() => {
     updatePreview();
-  }, [previewScale]);
+  }, [previewScale, showDebugGrid, selectedCharIndex, charPositions]);
 
   // Render demo text using the generated atlas
   const renderDemoText = useCallback(() => {
@@ -396,6 +413,93 @@ export const FontAtlasGenerator: React.FC<FontAtlasGeneratorProps> = ({ onClose 
       renderDemoText();
     }
   }, [fontLoaded, demoText, demoScale, charWidth, charHeight, charSpacing, lineHeight, renderDemoText]);
+
+  // Handle click on preview canvas to select character
+  const handlePreviewClick = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!showDebugGrid || !previewCanvasRef.current || charPositions.length === 0) return;
+
+    const canvas = previewCanvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const clickX = (e.clientX - rect.left) / previewScale;
+    const clickY = (e.clientY - rect.top) / previewScale;
+
+    // Find which character was clicked (pos already includes offset)
+    for (let i = 0; i < charPositions.length; i++) {
+      const pos = charPositions[i];
+
+      if (clickX >= pos.x && clickX < pos.x + pos.width &&
+          clickY >= pos.y && clickY < pos.y + pos.height) {
+        setSelectedCharIndex(i);
+        renderSelectedCharPreview(i);
+        return;
+      }
+    }
+
+    // Clicked outside any character
+    setSelectedCharIndex(null);
+  };
+
+  // Render 4x preview of selected character
+  const renderSelectedCharPreview = (index: number) => {
+    if (!canvasRef.current || !selectedCharCanvasRef.current) return;
+
+    const atlasCanvas = canvasRef.current;
+    const previewCanvas = selectedCharCanvasRef.current;
+    const ctx = previewCanvas.getContext('2d');
+    if (!ctx) return;
+
+    const pos = charPositions[index];
+    const scale = 4;
+
+    // Position already includes offset, use it directly
+    const sourceX = pos.x;
+    const sourceY = pos.y;
+    const sourceWidth = pos.width;
+    const sourceHeight = pos.height;
+
+    // Size canvas to fit the actual character bounds
+    previewCanvas.width = sourceWidth * scale;
+    previewCanvas.height = sourceHeight * scale;
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.clearRect(0, 0, previewCanvas.width, previewCanvas.height);
+
+    // Draw only the character within its bounds
+    ctx.drawImage(
+      atlasCanvas,
+      sourceX, sourceY, sourceWidth, sourceHeight,
+      0, 0, sourceWidth * scale, sourceHeight * scale
+    );
+  };
+
+  // Update selected character preview when selection or atlas changes
+  useEffect(() => {
+    if (selectedCharIndex !== null && charPositions.length > 0) {
+      renderSelectedCharPreview(selectedCharIndex);
+    }
+  }, [selectedCharIndex, charPositions, charWidth, charHeight]);
+
+  // Handle character property changes
+  const updateCharacterProperty = (property: 'x' | 'y' | 'width' | 'height', value: number) => {
+    if (selectedCharIndex === null) return;
+
+    const newPositions = [...charPositions];
+    newPositions[selectedCharIndex] = {
+      ...newPositions[selectedCharIndex],
+      [property]: value
+    };
+    setCharPositions(newPositions);
+
+    // Update charWidths if width changed
+    if (property === 'width') {
+      const newWidths = [...charWidths];
+      newWidths[selectedCharIndex] = value;
+      setCharWidths(newWidths);
+    }
+
+    // Regenerate atlas with new positions
+    // This will be handled by the useEffect dependency on charPositions
+  };
 
   // Download the atlas image
   const downloadAtlas = () => {
@@ -725,6 +829,26 @@ ${charactersYAML}
                   )}
                 </div>
 
+                {/* Debug Grid Toggle */}
+                <div style={{ marginBottom: '8px' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                    <input
+                      type="checkbox"
+                      checked={showDebugGrid}
+                      onChange={(e) => setShowDebugGrid(e.target.checked)}
+                      style={{ cursor: 'pointer' }}
+                    />
+                    <span style={{ fontSize: '11px', color: '#aaa' }}>
+                      Show Character Grid
+                    </span>
+                  </label>
+                  {showDebugGrid && (
+                    <div style={{ fontSize: '9px', color: '#666', marginTop: '4px', marginLeft: '24px' }}>
+                      Click characters to edit properties
+                    </div>
+                  )}
+                </div>
+
                 {/* Pixel-Perfect Toggle */}
                 <div style={{ marginBottom: '8px' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
@@ -893,10 +1017,12 @@ ${charactersYAML}
               {fontLoaded ? (
                 <canvas
                   ref={previewCanvasRef}
+                  onClick={handlePreviewClick}
                   style={{
                     border: '1px solid rgba(255, 255, 255, 0.2)',
                     imageRendering: 'pixelated',
                     display: 'block',
+                    cursor: showDebugGrid ? 'pointer' : 'default',
                   } as React.CSSProperties}
                 />
               ) : (
@@ -929,6 +1055,137 @@ ${charactersYAML}
               );
             })()}
           </div>
+
+          {/* Character Editor Panel */}
+          {fontLoaded && showDebugGrid && selectedCharIndex !== null && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', paddingTop: '20px', borderTop: '1px solid rgba(255, 255, 255, 0.1)' }}>
+              <div style={{ fontWeight: 'bold', fontSize: '13px' }}>
+                Character Editor: "{charSet[selectedCharIndex]}" (#{selectedCharIndex}, ASCII {charSet[selectedCharIndex].charCodeAt(0)})
+              </div>
+
+              {/* 4x Character Preview */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <div style={{ fontSize: '11px', color: '#aaa' }}>Preview (4x scale):</div>
+                <div
+                  style={{
+                    background: 'rgba(0, 0, 0, 0.5)',
+                    borderRadius: '4px',
+                    padding: '10px',
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                  }}
+                >
+                  <canvas
+                    ref={selectedCharCanvasRef}
+                    style={{
+                      border: '1px solid rgba(255, 255, 255, 0.2)',
+                      imageRendering: 'pixelated',
+                    } as React.CSSProperties}
+                  />
+                </div>
+              </div>
+
+              {/* Character Properties */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
+                {/* X Position */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+                    X Position: {charPositions[selectedCharIndex]?.x ?? 0}
+                  </label>
+                  <input
+                    type="number"
+                    value={charPositions[selectedCharIndex]?.x ?? 0}
+                    onChange={(e) => updateCharacterProperty('x', Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid #666',
+                      borderRadius: '3px',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+
+                {/* Y Position */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+                    Y Position: {charPositions[selectedCharIndex]?.y ?? 0}
+                  </label>
+                  <input
+                    type="number"
+                    value={charPositions[selectedCharIndex]?.y ?? 0}
+                    onChange={(e) => updateCharacterProperty('y', Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid #666',
+                      borderRadius: '3px',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+
+                {/* Width */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+                    Width: {charPositions[selectedCharIndex]?.width ?? charWidth}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={charWidth}
+                    value={charPositions[selectedCharIndex]?.width ?? charWidth}
+                    onChange={(e) => updateCharacterProperty('width', Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid #666',
+                      borderRadius: '3px',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+
+                {/* Height */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '4px', fontSize: '11px', color: '#aaa' }}>
+                    Height: {charPositions[selectedCharIndex]?.height ?? charHeight}
+                  </label>
+                  <input
+                    type="number"
+                    min="1"
+                    max={charHeight}
+                    value={charPositions[selectedCharIndex]?.height ?? charHeight}
+                    onChange={(e) => updateCharacterProperty('height', Number(e.target.value))}
+                    style={{
+                      width: '100%',
+                      padding: '6px',
+                      background: 'rgba(0, 0, 0, 0.3)',
+                      border: '1px solid #666',
+                      borderRadius: '3px',
+                      color: '#fff',
+                      fontSize: '11px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ fontSize: '9px', color: '#666', marginTop: '4px' }}>
+                Tip: Adjust these values to fine-tune individual character positioning and dimensions
+              </div>
+            </div>
+          )}
 
           {/* Demo Text Section */}
           {fontLoaded && (
