@@ -18,6 +18,8 @@ import { FontAssetLoader } from '../../services/FontAssetLoader';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
+import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
+import { renderDialogWithContent } from '../../utils/DialogRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -292,6 +294,42 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         headerFont,
         dialogFont,
       });
+    }
+
+    // TEST: Render unit info dialog for first party member at bottom-right
+    const partyMembers = PartyMemberRegistry.getAll();
+    if (partyMembers.length > 0) {
+      const testUnit = createUnitFromPartyMember(partyMembers[0]);
+      const unitInfoDialog = new CombatUnitInfoDialogContent(
+        testUnit,
+        dialogFont,
+        spriteImagesRef.current,
+        TILE_SIZE,
+        SPRITE_SIZE
+      );
+
+      // Calculate dialog size
+      const bounds = unitInfoDialog.measure(0);
+      const BORDER_INSET = 6 * 4; // Scale of 4
+      const PADDING = 6;
+      const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
+      const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
+
+      // Position at bottom-right with 10px margin
+      const dialogX = CANVAS_WIDTH - dialogWidth - 10;
+      const dialogY = CANVAS_HEIGHT - dialogHeight - 10;
+
+      renderDialogWithContent(
+        ctx,
+        unitInfoDialog,
+        dialogX,
+        dialogY,
+        SPRITE_SIZE,
+        spriteImagesRef.current,
+        undefined, // Use default 9-slice sprites
+        PADDING,
+        4 // Scale
+      );
     }
 
     // Copy buffer to display canvas
