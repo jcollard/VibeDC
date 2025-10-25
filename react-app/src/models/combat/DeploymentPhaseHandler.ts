@@ -2,17 +2,18 @@ import type { CombatPhaseHandler, PhaseSprites, PhaseRenderContext } from './Com
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import type { CombatUnit } from './CombatUnit';
-import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { PartyMemberRegistry, type PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
-import { renderDialogWithContent, getNineSliceSpriteIds } from '../../utils/DialogRenderer';
-import { TextRenderingUtils } from '../../utils/TextRenderingUtils';
-import { CharacterSelectionDialogContent } from '../../components/combat/CharacterSelectionDialogContent';
+import { getNineSliceSpriteIds } from '../../utils/DialogRenderer';
 import { UIConfig } from '../../config/UIConfig';
 import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClassRegistry } from '../../utils/UnitClassRegistry';
 import { CanvasButton } from '../../components/ui/CanvasButton';
 import { CombatConstants } from './CombatConstants';
 import type { CombatUIStateManager } from './CombatUIState';
+import { DeploymentUI } from './deployment/DeploymentUI';
+import { DeploymentZoneRenderer } from './deployment/DeploymentZoneRenderer';
+import { UnitDeploymentManager } from './deployment/UnitDeploymentManager';
+import { PartySelectionDialog } from './deployment/PartySelectionDialog';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -53,53 +54,32 @@ export function createUnitFromPartyMember(member: PartyMemberDefinition): Combat
  * position their units on designated deployment zones before battle begins.
  */
 export class DeploymentPhaseHandler implements CombatPhaseHandler {
-  private readonly deploymentSprite = 'gradients-7'; // Fill sprite for deployment zones
-  private readonly borderSprite = 'particles-5'; // Border sprite for deployment zones
-
-  // Animation state
+  // Animation state (for non-zone animations)
   private elapsedTime = 0; // Time in seconds since phase started
-  private readonly cycleTime = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.CYCLE_TIME;
-  private readonly minAlpha = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.MIN_ALPHA;
-  private readonly maxAlpha = CombatConstants.ANIMATION.DEPLOYMENT_ZONE.MAX_ALPHA;
-
-  // UI state manager (optional - will use internal state if not provided)
-  private uiStateManager: CombatUIStateManager | null = null;
-
-  // Internal state (used when UIStateManager not provided)
-  private selectedZoneIndex: number | null = null;
-  private hoveredCharacterIndex: number | null = null;
-  private lastDialogBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   // Deploy button
   private deployButton: CanvasButton | null = null;
+
+  // UI renderer
+  private ui: DeploymentUI;
+
+  // Zone renderer
+  private zoneRenderer: DeploymentZoneRenderer;
+
+  // Deployment manager
+  private deploymentManager: UnitDeploymentManager;
+
+  // Party selection dialog
+  private partyDialog: PartySelectionDialog;
 
   /**
    * @param uiStateManager - Optional UI state manager for centralized state management
    */
   constructor(uiStateManager?: CombatUIStateManager) {
-    this.uiStateManager = uiStateManager || null;
-  }
-
-  /**
-   * Set the selected zone index in UI state
-   */
-  private setSelectedZoneIndex(index: number | null): void {
-    if (this.uiStateManager) {
-      this.uiStateManager.selectZone(index);
-    } else {
-      this.selectedZoneIndex = index;
-    }
-  }
-
-  /**
-   * Set the hovered character index in UI state
-   */
-  private setHoveredCharacterIndex(index: number | null): void {
-    if (this.uiStateManager) {
-      this.uiStateManager.setHoveredCharacter(index);
-    } else {
-      this.hoveredCharacterIndex = index;
-    }
+    this.ui = new DeploymentUI();
+    this.zoneRenderer = new DeploymentZoneRenderer();
+    this.deploymentManager = new UnitDeploymentManager(uiStateManager);
+    this.partyDialog = new PartySelectionDialog(uiStateManager);
   }
 
   /**
@@ -110,18 +90,13 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    */
   update(state: CombatState, _encounter: CombatEncounter, deltaTime: number): CombatState | null {
     this.elapsedTime += deltaTime;
+    this.zoneRenderer.update(deltaTime);
     return state; // No state changes, just internal animation
   }
 
   /**
    * Handle click on the canvas to select deployment zones
-   * @param canvasX - X coordinate on canvas (in pixels)
-   * @param canvasY - Y coordinate on canvas (in pixels)
-   * @param tileSize - Size of each tile in pixels
-   * @param offsetX - X offset of the map on canvas
-   * @param offsetY - Y offset of the map on canvas
-   * @param encounter - Current encounter
-   * @returns True if a zone was clicked
+   * Delegates to UnitDeploymentManager
    */
   handleClick(
     canvasX: number,
@@ -131,143 +106,65 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     offsetY: number,
     encounter: CombatEncounter
   ): boolean {
-    // Convert canvas coordinates to tile coordinates
-    const tileX = Math.floor((canvasX - offsetX) / tileSize);
-    const tileY = Math.floor((canvasY - offsetY) / tileSize);
-
-    // Check if click is on a deployment zone
-    const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(
-      zone => zone.x === tileX && zone.y === tileY
-    );
-
-    if (clickedZoneIndex !== -1) {
-      // Toggle selection: if already selected, deselect; otherwise select
-      const currentSelection = this.getSelectedZoneIndex();
-      this.setSelectedZoneIndex(currentSelection === clickedZoneIndex ? null : clickedZoneIndex);
-      return true;
-    }
-
-    return false;
+    return this.deploymentManager.handleClick(canvasX, canvasY, tileSize, offsetX, offsetY, encounter);
   }
 
   /**
    * Get the currently selected zone index
+   * Delegates to UnitDeploymentManager
    */
   getSelectedZoneIndex(): number | null {
-    if (this.uiStateManager) {
-      return this.uiStateManager.getState().selectedZoneIndex;
-    }
-    return this.selectedZoneIndex;
+    return this.deploymentManager.getSelectedZoneIndex();
   }
 
   /**
    * Clear the selected deployment zone
+   * Delegates to UnitDeploymentManager
    */
   clearSelectedZone(): void {
-    this.setSelectedZoneIndex(null);
+    this.deploymentManager.clearSelectedZone();
   }
 
   /**
    * Handle mouse move to detect hover over character rows in the dialog
-   * Uses the last rendered dialog bounds
-   * @param canvasX - X coordinate on canvas (in pixels)
-   * @param canvasY - Y coordinate on canvas (in pixels)
-   * @param characterCount - Number of characters in the list
-   * @returns True if hovering over the dialog
+   * Delegates to PartySelectionDialog
    */
   handleMouseMove(
     canvasX: number,
     canvasY: number,
     characterCount: number
   ): boolean {
-    // Only process hover if a zone is selected (dialog is visible)
-    if (this.getSelectedZoneIndex() === null || !this.lastDialogBounds) {
-      this.setHoveredCharacterIndex(null);
-      return false;
-    }
-
-    const { x: dialogX, y: dialogY, width: dialogWidth, height: dialogHeight } = this.lastDialogBounds;
-
-    // Check if mouse is inside dialog bounds
-    if (
-      canvasX >= dialogX &&
-      canvasX <= dialogX + dialogWidth &&
-      canvasY >= dialogY &&
-      canvasY <= dialogY + dialogHeight
-    ) {
-      // Calculate which character row is being hovered
-      // Match CharacterSelectionDialogContent's layout
-      const ROW_HEIGHT = 48;
-      const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const BORDER_PADDING = 24; // 0.5 tiles (24px at 48px tile size)
-
-      const relativeY = canvasY - dialogY - BORDER_PADDING - TITLE_HEIGHT;
-      const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
-
-      if (rowIndex >= 0 && rowIndex < characterCount) {
-        this.setHoveredCharacterIndex(rowIndex);
-      } else {
-        this.setHoveredCharacterIndex(null);
-      }
-
-      return true;
-    }
-
-    this.setHoveredCharacterIndex(null);
-    return false;
+    return this.partyDialog.handleMouseMove(
+      canvasX,
+      canvasY,
+      characterCount,
+      this.getSelectedZoneIndex()
+    );
   }
 
   /**
    * Get the currently hovered character index
+   * Delegates to PartySelectionDialog
    */
   getHoveredCharacterIndex(): number | null {
-    if (this.uiStateManager) {
-      return this.uiStateManager.getState().hoveredCharacterIndex;
-    }
-    return this.hoveredCharacterIndex;
+    return this.partyDialog.getHoveredCharacterIndex();
   }
 
   /**
    * Handle click on character in the selection dialog
-   * Uses the last rendered dialog bounds
-   * @param canvasX - X coordinate on canvas (in pixels)
-   * @param canvasY - Y coordinate on canvas (in pixels)
-   * @param characterCount - Number of characters in the list
-   * @returns Character index if clicked, null otherwise
+   * Delegates to PartySelectionDialog
    */
   handleCharacterClick(
     canvasX: number,
     canvasY: number,
     characterCount: number
   ): number | null {
-    // Only process click if a zone is selected (dialog is visible)
-    if (this.getSelectedZoneIndex() === null || !this.lastDialogBounds) {
-      return null;
-    }
-
-    const { x: dialogX, y: dialogY, width: dialogWidth, height: dialogHeight } = this.lastDialogBounds;
-
-    // Check if click is inside dialog bounds
-    if (
-      canvasX >= dialogX &&
-      canvasX <= dialogX + dialogWidth &&
-      canvasY >= dialogY &&
-      canvasY <= dialogY + dialogHeight
-    ) {
-      // Calculate which character row was clicked
-      const ROW_HEIGHT = 48;
-      const TITLE_HEIGHT = 32 + 8; // Title font size + spacing
-      const BORDER_PADDING = 24; // 0.5 tiles (24px at 48px tile size)
-
-      const relativeY = canvasY - dialogY - BORDER_PADDING - TITLE_HEIGHT;
-      const rowIndex = Math.floor(relativeY / ROW_HEIGHT);
-
-      if (rowIndex >= 0 && rowIndex < characterCount) {
-        return rowIndex;
-      }
-    }
-
-    return null;
+    return this.partyDialog.handleCharacterClick(
+      canvasX,
+      canvasY,
+      characterCount,
+      this.getSelectedZoneIndex()
+    );
   }
 
   /**
@@ -301,32 +198,13 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
   }
 
   /**
-   * Calculate the current alpha value for deployment zone animation
-   * Oscillates between minAlpha and maxAlpha over cycleTime
-   * Starts at minAlpha (0) and fades in
-   */
-  private calculateAlpha(): number {
-    // Get position in current cycle (0 to 1)
-    const cyclePosition = (this.elapsedTime % this.cycleTime) / this.cycleTime;
-
-    // Use sine wave for smooth oscillation, offset by -π/2 to start at minimum
-    // This makes sin start at -1 (minAlpha) and oscillate to 1 (maxAlpha)
-    const sineValue = Math.sin((cyclePosition * Math.PI * 2) - (Math.PI / 2));
-
-    // Map sine wave (-1 to 1) to alpha range (minAlpha to maxAlpha)
-    const normalizedValue = (sineValue + 1) / 2; // Convert to 0-1 range
-    return this.minAlpha + (normalizedValue * (this.maxAlpha - this.minAlpha));
-  }
-
-  /**
    * Get all sprites needed for the deployment phase
    */
   getRequiredSprites(_state: CombatState, _encounter: CombatEncounter): PhaseSprites {
     const spriteIds = new Set<string>();
 
     // Add deployment zone sprites
-    spriteIds.add(this.deploymentSprite);
-    spriteIds.add(this.borderSprite);
+    this.zoneRenderer.getRequiredSprites().forEach(id => spriteIds.add(id));
 
     // Add button sprites (normal, hover, active)
     spriteIds.add('ui-simple-4');
@@ -355,7 +233,16 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
 
     // Render deployment zones (this happens before units are drawn)
-    this.renderDeploymentZones(encounter, ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages);
+    this.zoneRenderer.render(
+      encounter,
+      ctx,
+      tileSize,
+      spriteSize,
+      offsetX,
+      offsetY,
+      spriteImages,
+      this.getSelectedZoneIndex()
+    );
   }
 
   /**
@@ -365,15 +252,15 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
 
     // Render "Deploy Units" header
-    this.renderPhaseHeader(ctx, canvasWidth, headerFont);
+    this.ui.renderPhaseHeader(ctx, canvasWidth, headerFont);
 
     // Render waylaid message (8px below title)
-    this.renderWaylaidMessage(ctx, canvasWidth, dialogFont);
+    this.ui.renderWaylaidMessage(ctx, canvasWidth, dialogFont);
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;
     const mapOffsetY = (canvasHeight - mapHeight) / 2;
-    const instructionY = mapOffsetY + mapHeight + 8;
+    const instructionY = mapOffsetY + mapHeight + CombatConstants.UI.MESSAGE_SPACING;
 
     // Check if all units are deployed or all zones are occupied
     const partySize = PartyMemberRegistry.getAll().length;
@@ -383,7 +270,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
     // Render instruction message only if button is NOT visible
     if (!shouldShowButton) {
-      this.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, dialogFont, instructionY);
+      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, dialogFont, instructionY);
     }
 
     // Initialize and render Start Combat button below map (only if deployment is complete)
@@ -412,278 +299,17 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     }
 
     // Render character selection dialog
-    this.renderCharacterSelectionDialog(ctx, encounter, canvasWidth, tileSize, spriteSize, offsetX, offsetY, dialogFont, spriteImages);
-  }
-
-  /**
-   * Render the deployment zone overlays on the map
-   */
-  private renderDeploymentZones(
-    encounter: CombatEncounter,
-    ctx: CanvasRenderingContext2D,
-    tileSize: number,
-    spriteSize: number,
-    offsetX: number,
-    offsetY: number,
-    spriteImages: Map<string, HTMLImageElement>
-  ): void {
-    const deploymentSprite = SpriteRegistry.getById(this.deploymentSprite);
-    const borderSprite = SpriteRegistry.getById(this.borderSprite);
-
-    if (!deploymentSprite || !borderSprite) {
-      console.warn(`DeploymentPhaseHandler: Sprites "${this.deploymentSprite}" or "${this.borderSprite}" not found`);
-      return;
-    }
-
-    const spriteImage = spriteImages.get(deploymentSprite.spriteSheet);
-    const borderImage = spriteImages.get(borderSprite.spriteSheet);
-
-    if (!spriteImage || !borderImage) {
-      console.warn('DeploymentPhaseHandler: Deployment sprite images not loaded');
-      return;
-    }
-
-    // Calculate animated alpha value
-    const currentAlpha = this.calculateAlpha();
-
-    // Render each deployment zone
-    encounter.playerDeploymentZones.forEach((zone, index) => {
-      const x = zone.x * tileSize + offsetX;
-      const y = zone.y * tileSize + offsetY;
-
-      // Draw the fill sprite with animated transparency
-      ctx.save();
-      ctx.globalAlpha = currentAlpha;
-
-      const srcX = deploymentSprite.x * spriteSize;
-      const srcY = deploymentSprite.y * spriteSize;
-      const srcWidth = (deploymentSprite.width || 1) * spriteSize;
-      const srcHeight = (deploymentSprite.height || 1) * spriteSize;
-
-      ctx.drawImage(
-        spriteImage,
-        srcX, srcY, srcWidth, srcHeight,
-        x, y, tileSize, tileSize
-      );
-
-      ctx.restore();
-
-      // Draw the border sprite only if this zone is selected
-      if (this.getSelectedZoneIndex() === index) {
-        const borderSrcX = borderSprite.x * spriteSize;
-        const borderSrcY = borderSprite.y * spriteSize;
-        const borderSrcWidth = (borderSprite.width || 1) * spriteSize;
-        const borderSrcHeight = (borderSprite.height || 1) * spriteSize;
-
-        ctx.drawImage(
-          borderImage,
-          borderSrcX, borderSrcY, borderSrcWidth, borderSrcHeight,
-          x, y, tileSize, tileSize
-        );
-      }
-    });
-  }
-
-  /**
-   * Render the "Deploy Units" header message
-   */
-  private renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasSize: number, headerFont: string): void {
-    TextRenderingUtils.renderTitleWithBackground(
+    this.partyDialog.render(
       ctx,
-      CombatConstants.TEXT.DEPLOY_TITLE,
-      canvasSize,
-      CombatConstants.UI.TITLE_Y_POSITION,
-      CombatConstants.UI.TITLE_HEIGHT,
-      CombatConstants.RENDERING.BACKGROUND_ALPHA,
-      headerFont,
-      CombatConstants.FONTS.TITLE_SIZE,
-      CombatConstants.RENDERING.TEXT_COLOR,
-      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET
-    );
-  }
-
-  /**
-   * Render the instruction message with embedded sprite
-   */
-  private renderInstructionMessage(
-    ctx: CanvasRenderingContext2D,
-    canvasSize: number,
-    spriteSize: number,
-    spriteImages: Map<string, HTMLImageElement>,
-    font: string,
-    yPosition: number
-  ): void {
-    const fontSize = CombatConstants.FONTS.MESSAGE_SIZE;
-    const message = 'Click ';
-    const message2 = ' to deploy a unit.';
-
-    // Set up text rendering
-    ctx.save();
-    ctx.font = `${fontSize}px "${font}", monospace`;
-    ctx.textBaseline = 'top';
-
-    // Measure text parts
-    const part1Width = ctx.measureText(message).width;
-    const part2Width = ctx.measureText(message2).width;
-    const spriteDisplaySize = fontSize;
-    const totalWidth = part1Width + spriteDisplaySize + 4 + part2Width;
-    let currentX = (canvasSize - totalWidth) / 2;
-
-    // Render "Click "
-    ctx.fillStyle = '#000000';
-    ctx.fillText(message, currentX - 1, yPosition - 1);
-    ctx.fillText(message, currentX + 1, yPosition - 1);
-    ctx.fillText(message, currentX - 1, yPosition + 1);
-    ctx.fillText(message, currentX + 1, yPosition + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(message, currentX, yPosition);
-    currentX += part1Width;
-
-    // Render deployment zone sprite
-    const spriteDef = SpriteRegistry.getById(this.deploymentSprite);
-    if (spriteDef) {
-      const spriteImage = spriteImages.get(spriteDef.spriteSheet);
-      if (spriteImage) {
-        const srcX = spriteDef.x * spriteSize;
-        const srcY = spriteDef.y * spriteSize;
-        const srcWidth = (spriteDef.width || 1) * spriteSize;
-        const srcHeight = (spriteDef.height || 1) * spriteSize;
-
-        ctx.drawImage(
-          spriteImage,
-          srcX, srcY, srcWidth, srcHeight,
-          currentX, yPosition, spriteDisplaySize, spriteDisplaySize
-        );
-      }
-    }
-    currentX += spriteDisplaySize + 4;
-
-    // Render " to deploy a unit."
-    ctx.fillStyle = '#000000';
-    ctx.fillText(message2, currentX - 1, yPosition - 1);
-    ctx.fillText(message2, currentX + 1, yPosition - 1);
-    ctx.fillText(message2, currentX - 1, yPosition + 1);
-    ctx.fillText(message2, currentX + 1, yPosition + 1);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText(message2, currentX, yPosition);
-
-    ctx.restore();
-  }
-
-  /**
-   * Render the waylaid message below the Deploy Units title
-   */
-  private renderWaylaidMessage(
-    ctx: CanvasRenderingContext2D,
-    canvasSize: number,
-    font: string
-  ): void {
-    TextRenderingUtils.renderCenteredMessage(
-      ctx,
-      CombatConstants.TEXT.WAYLAID_MESSAGE,
-      canvasSize,
-      CombatConstants.UI.WAYLAID_MESSAGE_Y,
-      font,
-      CombatConstants.FONTS.MESSAGE_SIZE,
-      CombatConstants.RENDERING.TEXT_COLOR,
-      CombatConstants.RENDERING.TEXT_SHADOW_OFFSET
-    );
-  }
-
-  /**
-   * Render the character selection dialog
-   */
-  private renderCharacterSelectionDialog(
-    ctx: CanvasRenderingContext2D,
-    encounter: CombatEncounter,
-    canvasSize: number,
-    tileSize: number,
-    spriteSize: number,
-    offsetX: number,
-    offsetY: number,
-    dialogFont: string,
-    spriteImages: Map<string, HTMLImageElement>
-  ): void {
-    // Only show dialog if a deployment zone is selected
-    const selectedZoneIndex = this.getSelectedZoneIndex();
-    if (selectedZoneIndex === null) {
-      return;
-    }
-
-    // Get the selected deployment zone position
-    const selectedZone = encounter.playerDeploymentZones[selectedZoneIndex];
-    if (!selectedZone) {
-      return;
-    }
-
-    // Get all party members (supports 1-4 members)
-    const partyMembers = PartyMemberRegistry.getAll();
-
-    // Create dialog content with hover state and highlight color
-    const dialogContent = new CharacterSelectionDialogContent(
-      'Select a Character',
-      partyMembers,
+      encounter,
+      canvasWidth,
+      tileSize,
+      spriteSize,
+      offsetX,
+      offsetY,
       dialogFont,
       spriteImages,
-      tileSize,
-      spriteSize,
-      this.hoveredCharacterIndex,
-      UIConfig.getHighlightColor()
-    );
-
-    // Measure the content bounds
-    const bounds = dialogContent.measure(tileSize);
-
-    // Calculate dialog size using the same logic as renderDialogWithContent
-    const contentWidth = bounds.maxX - bounds.minX;
-    const contentHeight = bounds.maxY - bounds.minY;
-    const paddingPixels = 0; // Using 0 padding as in the render call
-
-    const totalWidthPixels = contentWidth + (paddingPixels * 2);
-    const totalHeightPixels = contentHeight + (paddingPixels * 2);
-
-    // Convert to tiles (this is the interior size)
-    const interiorWidth = Math.ceil(totalWidthPixels / tileSize) - 1;
-    const interiorHeight = Math.ceil(totalHeightPixels / tileSize) - 1;
-
-    // The actual dialog size includes the 9-slice borders (1 tile on each side)
-    const actualDialogWidth = (interiorWidth + 2) * tileSize;
-    const actualDialogHeight = (interiorHeight + 2) * tileSize;
-
-    // Calculate the top-left corner of the selected zone in canvas coordinates
-    const zoneX = selectedZone.x * tileSize + offsetX;
-    const zoneY = selectedZone.y * tileSize + offsetY;
-
-    // Calculate zone center
-    const zoneCenterX = zoneX + (tileSize / 2);
-
-    // Position dialog centered horizontally above the selected zone
-    const dialogX = zoneCenterX - (actualDialogWidth / 2);
-    const dialogY = zoneY - actualDialogHeight - 20; // 20px gap above the zone
-
-    // Clamp dialog to stay within canvas bounds
-    const clampedDialogX = Math.max(10, Math.min(dialogX, canvasSize - actualDialogWidth - 10));
-    const clampedDialogY = Math.max(10, Math.min(dialogY, canvasSize - actualDialogHeight - 10));
-
-    // Store dialog bounds for hover detection
-    this.lastDialogBounds = {
-      x: clampedDialogX,
-      y: clampedDialogY,
-      width: actualDialogWidth,
-      height: actualDialogHeight
-    };
-
-    // Render dialog with auto-sizing, clamped to canvas bounds
-    renderDialogWithContent(
-      ctx,
-      dialogContent,
-      clampedDialogX,
-      clampedDialogY,
-      tileSize,
-      spriteSize,
-      spriteImages,
-      undefined, // Use default 9-slice sprites
-      0 // DEBUG: 0px padding
+      this.getSelectedZoneIndex()
     );
   }
 }
