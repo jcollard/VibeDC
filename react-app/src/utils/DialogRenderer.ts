@@ -186,26 +186,33 @@ export function renderNineSliceDialog(
     );
   };
 
+  // Round all positions and dimensions to avoid sub-pixel rendering artifacts
+  const roundedX = Math.round(x);
+  const roundedY = Math.round(y);
+  const roundedWidth = Math.round(width);
+  const roundedHeight = Math.round(height);
+  const roundedScaledSpriteSize = Math.round(scaledSpriteSize);
+
   // Draw corners (scaled)
-  drawCornerSprite(nineSlice.topLeft, x, y);
-  drawCornerSprite(nineSlice.topRight, x + width - scaledSpriteSize, y);
-  drawCornerSprite(nineSlice.bottomLeft, x, y + height - scaledSpriteSize);
-  drawCornerSprite(nineSlice.bottomRight, x + width - scaledSpriteSize, y + height - scaledSpriteSize);
+  drawCornerSprite(nineSlice.topLeft, roundedX, roundedY);
+  drawCornerSprite(nineSlice.topRight, roundedX + roundedWidth - roundedScaledSpriteSize, roundedY);
+  drawCornerSprite(nineSlice.bottomLeft, roundedX, roundedY + roundedHeight - roundedScaledSpriteSize);
+  drawCornerSprite(nineSlice.bottomRight, roundedX + roundedWidth - roundedScaledSpriteSize, roundedY + roundedHeight - roundedScaledSpriteSize);
 
   // Draw top and bottom edges (stretched horizontally)
-  const horizontalEdgeWidth = width - (scaledSpriteSize * 2);
-  drawEdgeSprite(nineSlice.topCenter, x + scaledSpriteSize, y, horizontalEdgeWidth, scaledSpriteSize);
-  drawEdgeSprite(nineSlice.bottomCenter, x + scaledSpriteSize, y + height - scaledSpriteSize, horizontalEdgeWidth, scaledSpriteSize);
+  const horizontalEdgeWidth = roundedWidth - (roundedScaledSpriteSize * 2);
+  drawEdgeSprite(nineSlice.topCenter, roundedX + roundedScaledSpriteSize, roundedY, horizontalEdgeWidth, roundedScaledSpriteSize);
+  drawEdgeSprite(nineSlice.bottomCenter, roundedX + roundedScaledSpriteSize, roundedY + roundedHeight - roundedScaledSpriteSize, horizontalEdgeWidth, roundedScaledSpriteSize);
 
   // Draw left and right edges (stretched vertically)
-  const verticalEdgeHeight = height - (scaledSpriteSize * 2);
-  drawEdgeSprite(nineSlice.middleLeft, x, y + scaledSpriteSize, scaledSpriteSize, verticalEdgeHeight);
-  drawEdgeSprite(nineSlice.middleRight, x + width - scaledSpriteSize, y + scaledSpriteSize, scaledSpriteSize, verticalEdgeHeight);
+  const verticalEdgeHeight = roundedHeight - (roundedScaledSpriteSize * 2);
+  drawEdgeSprite(nineSlice.middleLeft, roundedX, roundedY + roundedScaledSpriteSize, roundedScaledSpriteSize, verticalEdgeHeight);
+  drawEdgeSprite(nineSlice.middleRight, roundedX + roundedWidth - roundedScaledSpriteSize, roundedY + roundedScaledSpriteSize, roundedScaledSpriteSize, verticalEdgeHeight);
 
   // Draw center (scaled to fill interior) - solid color sprite
-  const centerWidth = width - (scaledSpriteSize * 2);
-  const centerHeight = height - (scaledSpriteSize * 2);
-  drawEdgeSprite(nineSlice.middleCenter, x + scaledSpriteSize, y + scaledSpriteSize, centerWidth, centerHeight);
+  const centerWidth = roundedWidth - (roundedScaledSpriteSize * 2);
+  const centerHeight = roundedHeight - (roundedScaledSpriteSize * 2);
+  drawEdgeSprite(nineSlice.middleCenter, roundedX + roundedScaledSpriteSize, roundedY + roundedScaledSpriteSize, centerWidth, centerHeight);
 }
 
 /**
