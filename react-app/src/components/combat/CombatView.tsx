@@ -49,7 +49,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Initialize UI state manager
   const uiStateManager = useMemo(() => new CombatUIStateManager(), []);
   // Subscribe to UI state changes to trigger re-renders when state changes
-  useCombatUIState(uiStateManager);
+  const uiState = useCombatUIState(uiStateManager);
 
   // Initialize phase handler based on current phase (pass UI state manager)
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler(uiStateManager));
@@ -304,28 +304,27 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
 
     // Render unit info dialog in deployment phase
-    // Show for: 1) hovered character in selection dialog, 2) hovered placed unit on map, 3) last displayed unit
+    // Show for: 1) hovered placed unit on map, 2) hovered character in selection dialog, 3) last displayed unit
     const phaseHandler = phaseHandlerRef.current;
     if (phaseHandler instanceof DeploymentPhaseHandler) {
       let unitToDisplay: CombatUnit | null = null;
 
-      // Priority 1: Check if hovering over a character in the selection dialog
-      const hoveredCharacterIndex = phaseHandler.getHoveredCharacterIndex();
-      if (hoveredCharacterIndex !== null) {
-        const partyMembers = PartyMemberRegistry.getAll();
-        if (hoveredCharacterIndex >= 0 && hoveredCharacterIndex < partyMembers.length) {
-          const hoveredMember = partyMembers[hoveredCharacterIndex];
-          unitToDisplay = createUnitFromPartyMember(hoveredMember);
+      // Priority 1: Check if hovering over a placed unit on the map
+      if (uiState.hoveredCell) {
+        const hoveredUnit = combatState.unitManifest.getUnitAtPosition(uiState.hoveredCell);
+        if (hoveredUnit) {
+          unitToDisplay = hoveredUnit;
         }
       }
 
-      // Priority 2: Check if hovering over a placed unit on the map
+      // Priority 2: Check if hovering over a character in the selection dialog
       if (!unitToDisplay) {
-        const uiState = uiStateManager.getState();
-        if (uiState.hoveredCell) {
-          const hoveredUnit = combatState.unitManifest.getUnitAtPosition(uiState.hoveredCell);
-          if (hoveredUnit) {
-            unitToDisplay = hoveredUnit;
+        const hoveredCharacterIndex = phaseHandler.getHoveredCharacterIndex();
+        if (hoveredCharacterIndex !== null) {
+          const partyMembers = PartyMemberRegistry.getAll();
+          if (hoveredCharacterIndex >= 0 && hoveredCharacterIndex < partyMembers.length) {
+            const hoveredMember = partyMembers[hoveredCharacterIndex];
+            unitToDisplay = createUnitFromPartyMember(hoveredMember);
           }
         }
       }
@@ -381,7 +380,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer]);
+  }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, unitInfoFontSize, encounter, renderer, uiState]);
 
   // Animation loop
   useEffect(() => {
@@ -551,8 +550,30 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const partySize = PartyMemberRegistry.getAll().length;
       handler.handleMouseMove(canvasX, canvasY, partySize);
       handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
+
+      // Update hovered cell for map tile detection
+      // Calculate map offset to account for centered map
+      const mapWidth = combatState.map.width * TILE_SIZE;
+      const mapHeight = combatState.map.height * TILE_SIZE;
+      const { offsetX, offsetY } = renderer.calculateMapOffset(mapWidth, mapHeight);
+
+      // Convert canvas coordinates to map coordinates by subtracting offset
+      const mapX = canvasX - offsetX;
+      const mapY = canvasY - offsetY;
+
+      // Convert map coordinates to tile coordinates
+      const tileX = Math.floor(mapX / TILE_SIZE);
+      const tileY = Math.floor(mapY / TILE_SIZE);
+
+      // Check if the tile is within map bounds
+      if (tileX >= 0 && tileX < combatState.map.width &&
+          tileY >= 0 && tileY < combatState.map.height) {
+        uiStateManager.setHoveredCell({ x: tileX, y: tileY });
+      } else {
+        uiStateManager.setHoveredCell(null);
+      }
     }
-  }, [combatState.phase, inputHandler]);
+  }, [combatState.phase, combatState.map, inputHandler, uiStateManager, renderer]);
 
   // Available fonts (matching what's in index.css)
   const availableFonts = [
