@@ -13,7 +13,8 @@ export interface PhaseSprites {
  */
 export interface PhaseRenderContext {
   ctx: CanvasRenderingContext2D;
-  canvasSize: number;
+  canvasWidth: number;
+  canvasHeight: number;
   tileSize: number;
   spriteSize: number;
   offsetX: number;

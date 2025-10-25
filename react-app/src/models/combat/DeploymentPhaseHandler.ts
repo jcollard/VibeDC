@@ -322,17 +322,17 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
    * Render deployment phase UI elements (header and dialog - rendered after units)
    */
   renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, canvasSize, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
+    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, headerFont, dialogFont } = context;
 
     // Render "Deploy Units" header
-    this.renderPhaseHeader(ctx, canvasSize, headerFont);
+    this.renderPhaseHeader(ctx, canvasWidth, headerFont);
 
     // Render waylaid message (8px below title)
-    this.renderWaylaidMessage(ctx, canvasSize, dialogFont);
+    this.renderWaylaidMessage(ctx, canvasWidth, dialogFont);
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;
-    const mapOffsetY = (canvasSize - mapHeight) / 2;
+    const mapOffsetY = (canvasHeight - mapHeight) / 2;
     const instructionY = mapOffsetY + mapHeight + 8;
 
     // Check if all units are deployed or all zones are occupied
@@ -343,7 +343,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
 
     // Render instruction message only if button is NOT visible
     if (!shouldShowButton) {
-      this.renderInstructionMessage(ctx, canvasSize, spriteSize, spriteImages, dialogFont, instructionY);
+      this.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, dialogFont, instructionY);
     }
 
     // Initialize and render Start Combat button below map (only if deployment is complete)
@@ -351,7 +351,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
       if (!this.deployButton) {
         this.deployButton = new CanvasButton({
           label: 'Start Combat',
-          x: canvasSize / 2 - 110, // Center button (220px wide)
+          x: canvasWidth / 2 - 110, // Center button (220px wide)
           y: instructionY, // Same position as instruction message (8px below map)
           width: 220,
           height: 50,
@@ -372,7 +372,7 @@ export class DeploymentPhaseHandler implements CombatPhaseHandler {
     }
 
     // Render character selection dialog
-    this.renderCharacterSelectionDialog(ctx, encounter, canvasSize, tileSize, spriteSize, offsetX, offsetY, dialogFont, spriteImages);
+    this.renderCharacterSelectionDialog(ctx, encounter, canvasWidth, tileSize, spriteSize, offsetX, offsetY, dialogFont, spriteImages);
   }
 
   /**

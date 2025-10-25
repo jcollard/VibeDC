@@ -79,7 +79,7 @@ export class TitleFadeInSequence implements CinematicSequence {
   }
 
   render(_state: CombatState, _encounter: CombatEncounter, context: CinematicRenderContext): void {
-    const { ctx, canvasSize } = context;
+    const { ctx, canvasWidth } = context;
 
     // Calculate fade progress with easing
     const progress = Math.min(this.elapsedTime / this.duration, 1.0);
@@ -87,7 +87,7 @@ export class TitleFadeInSequence implements CinematicSequence {
 
     // Create a temporary canvas for rendering the text
     const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = canvasSize;
+    tempCanvas.width = canvasWidth;
     tempCanvas.height = 100; // Enough height for the text and background
     const tempCtx = tempCanvas.getContext('2d');
     if (!tempCtx) return;
@@ -96,13 +96,13 @@ export class TitleFadeInSequence implements CinematicSequence {
 
     // Draw semi-transparent black background at y=0 of temp canvas
     tempCtx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-    tempCtx.fillRect(0, 0, canvasSize, 80);
+    tempCtx.fillRect(0, 0, canvasWidth, 80);
 
     // Render text to temp canvas at y=40 (which will align to y=60 when drawn at yPosition=20)
     renderTextWithShadow(
       tempCtx,
       this.title,
-      canvasSize / 2,
+      canvasWidth / 2,
       40,
       `bold ${this.fontSize}px "DungeonSlant", monospace`,
       '#ffffff',

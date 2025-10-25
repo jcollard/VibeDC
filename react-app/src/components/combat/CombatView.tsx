@@ -20,7 +20,8 @@ interface CombatViewProps {
 const SPRITE_SIZE = 12; // Size of each sprite in the sprite sheet (12x12 pixels)
 const SCALE = 4; // Scale factor for rendering
 const TILE_SIZE = SPRITE_SIZE * SCALE; // Size of each tile when rendered (48x48 pixels)
-const CANVAS_SIZE = 960; // Canvas size in pixels (960x960)
+const CANVAS_WIDTH = 1706; // Canvas width in pixels (16:9 aspect ratio)
+const CANVAS_HEIGHT = 960; // Canvas height in pixels
 
 /**
  * CombatView is the main view for displaying and interacting with combat encounters.
@@ -179,7 +180,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const waylaidMessageY = 88; // 8px below title background (which ends at y=80)
       // Deployment instruction: 8px below map bottom
       const mapHeight = combatState.map.height * TILE_SIZE;
-      const offsetY = (CANVAS_SIZE - mapHeight) / 2;
+      const offsetY = (CANVAS_HEIGHT - mapHeight) / 2;
       const deploymentInstructionY = offsetY + mapHeight + 8;
 
       // Run all intro animations in parallel
@@ -207,26 +208,26 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
     const bufferCanvas = bufferCanvasRef.current;
 
-    // Set canvas sizes to 960x960
-    bufferCanvas.width = CANVAS_SIZE;
-    bufferCanvas.height = CANVAS_SIZE;
-    displayCanvas.width = CANVAS_SIZE;
-    displayCanvas.height = CANVAS_SIZE;
+    // Set canvas sizes to 1440x960
+    bufferCanvas.width = CANVAS_WIDTH;
+    bufferCanvas.height = CANVAS_HEIGHT;
+    displayCanvas.width = CANVAS_WIDTH;
+    displayCanvas.height = CANVAS_HEIGHT;
 
     // Calculate map size in pixels
     const mapWidth = combatState.map.width * TILE_SIZE;
     const mapHeight = combatState.map.height * TILE_SIZE;
 
     // Calculate offset to center the map on the canvas
-    const offsetX = (CANVAS_SIZE - mapWidth) / 2;
-    const offsetY = (CANVAS_SIZE - mapHeight) / 2;
+    const offsetX = (CANVAS_WIDTH - mapWidth) / 2;
+    const offsetY = (CANVAS_HEIGHT - mapHeight) / 2;
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
 
     // Clear the buffer
     ctx.fillStyle = '#000000';
-    ctx.fillRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+    ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Disable image smoothing for pixel-perfect rendering
     ctx.imageSmoothingEnabled = false;
@@ -238,7 +239,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (cinematicPlaying) {
       cinematicManagerRef.current.render(combatState, encounter, {
         ctx,
-        canvasSize: CANVAS_SIZE,
+        canvasWidth: CANVAS_WIDTH,
+        canvasHeight: CANVAS_HEIGHT,
         tileSize: TILE_SIZE,
         spriteSize: SPRITE_SIZE,
         offsetX,
@@ -250,7 +252,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const displayCtx = displayCanvas.getContext('2d');
       if (displayCtx) {
         displayCtx.imageSmoothingEnabled = false;
-        displayCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+        displayCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
         displayCtx.drawImage(bufferCanvas, 0, 0);
       }
       return;
@@ -300,7 +302,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Render phase-specific overlays using the phase handler (before units so deployment zones appear below)
     phaseHandlerRef.current.render(combatState, encounter, {
       ctx,
-      canvasSize: CANVAS_SIZE,
+      canvasWidth: CANVAS_WIDTH,
+      canvasHeight: CANVAS_HEIGHT,
       tileSize: TILE_SIZE,
       spriteSize: SPRITE_SIZE,
       offsetX,
@@ -344,7 +347,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       phaseHandlerRef.current.renderUI(combatState, encounter, {
         ctx,
-        canvasSize: CANVAS_SIZE,
+        canvasWidth: CANVAS_WIDTH,
+        canvasHeight: CANVAS_HEIGHT,
         tileSize: TILE_SIZE,
         spriteSize: SPRITE_SIZE,
         offsetX,
@@ -359,7 +363,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const displayCtx = displayCanvas.getContext('2d');
     if (displayCtx) {
       displayCtx.imageSmoothingEnabled = false;
-      displayCtx.clearRect(0, 0, CANVAS_SIZE, CANVAS_SIZE);
+      displayCtx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       displayCtx.drawImage(bufferCanvas, 0, 0);
     }
   }, [spritesLoaded, fontsLoaded, combatState, windowSize, headerFont, dialogFont, encounter]);
@@ -408,8 +412,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = CANVAS_SIZE / rect.width;
-    const scaleY = CANVAS_SIZE / rect.height;
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
@@ -425,8 +429,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (!canvas) return;
 
     const rect = canvas.getBoundingClientRect();
-    const scaleX = CANVAS_SIZE / rect.width;
-    const scaleY = CANVAS_SIZE / rect.height;
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
@@ -445,16 +449,16 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const rect = canvas.getBoundingClientRect();
 
     // Calculate scale factor (canvas might be scaled to fit viewport)
-    const scaleX = CANVAS_SIZE / rect.width;
-    const scaleY = CANVAS_SIZE / rect.height;
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
 
     // Get click position relative to canvas
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
     // Calculate map offset (same as rendering)
-    const offsetX = (CANVAS_SIZE - (combatState.map.width * TILE_SIZE)) / 2;
-    const offsetY = (CANVAS_SIZE - (combatState.map.height * TILE_SIZE)) / 2;
+    const offsetX = (CANVAS_WIDTH - (combatState.map.width * TILE_SIZE)) / 2;
+    const offsetY = (CANVAS_HEIGHT - (combatState.map.height * TILE_SIZE)) / 2;
 
     // Pass click to phase handler (if deployment phase)
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
@@ -529,8 +533,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const rect = canvas.getBoundingClientRect();
 
     // Calculate scale factor (canvas might be scaled to fit viewport)
-    const scaleX = CANVAS_SIZE / rect.width;
-    const scaleY = CANVAS_SIZE / rect.height;
+    const scaleX = CANVAS_WIDTH / rect.width;
+    const scaleY = CANVAS_HEIGHT / rect.height;
 
     // Get mouse position relative to canvas
     const canvasX = (event.clientX - rect.left) * scaleX;
@@ -775,8 +779,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           style={{
             width: '100%',
             height: '100%',
-            maxWidth: `${CANVAS_SIZE}px`,
-            maxHeight: `${CANVAS_SIZE}px`,
             imageRendering: 'pixelated',
             objectFit: 'contain',
             cursor: combatState.phase === 'deployment' ? 'pointer' : 'default',

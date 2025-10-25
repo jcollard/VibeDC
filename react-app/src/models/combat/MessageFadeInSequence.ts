@@ -115,7 +115,7 @@ export class MessageFadeInSequence implements CinematicSequence {
   }
 
   render(_state: CombatState, _encounter: CombatEncounter, context: CinematicRenderContext): void {
-    const { ctx, canvasSize, spriteSize, spriteImages } = context;
+    const { ctx, canvasWidth, spriteSize, spriteImages } = context;
 
     const visibleChars = this.getVisibleCharacterCount();
     if (visibleChars === 0) return;
@@ -127,7 +127,7 @@ export class MessageFadeInSequence implements CinematicSequence {
 
     // Measure the full message to center it
     const fullWidth = this.measureMessageWidth(ctx, this.getTotalCharacterCount(), spriteImages, spriteSize);
-    let currentX = (canvasSize - fullWidth) / 2;
+    let currentX = (canvasWidth - fullWidth) / 2;
     const currentY = this.yPosition;
 
     // Render visible parts
