@@ -54,9 +54,9 @@ export class CanvasButton {
 
   constructor(config: CanvasButtonConfig) {
     // Calculate width and height from text if not provided
-    const fontScale = config.fontScale || 2;
+    const fontScale = config.fontScale || 1; // Default scale reduced from 2 to 1
     const padding = config.padding !== undefined ? config.padding : 1;
-    const borderSize = this.borderSize * 4; // 3 pixels * 4 scale = 12 pixels per side
+    const borderSize = this.borderSize * 1; // 3 pixels * 1 scale = 3 pixels per side (reduced from 4)
 
     let width = config.width;
     let height = config.height;
@@ -86,7 +86,7 @@ export class CanvasButton {
       spriteId: 'ui-simple-4',
       hoverSpriteId: 'ui-simple-5',
       activeSpriteId: 'ui-simple-6',
-      fontScale: 2,
+      fontScale: 1, // Default scale reduced from 2 to 1
       padding: 1,
       textColor: '#ffffff',
       enabled: true,
@@ -213,8 +213,8 @@ export class CanvasButton {
     const height = this.config.height || 0;
     const spriteSize = 12; // All sprites are 12x12
     const borderSizeInSprite = this.borderSize; // 3 pixels in the sprite
-    const borderScale = 4; // Scale factor for the border
-    const scaledBorderSize = borderSizeInSprite * borderScale; // 12 pixels on screen
+    const borderScale = 1; // Scale factor for the border (reduced from 4 to 1)
+    const scaledBorderSize = borderSizeInSprite * borderScale; // 3 pixels on screen (reduced from 12)
 
     // Calculate source coordinates in the sprite sheet
     const srcX = spriteDef.x * spriteSize;

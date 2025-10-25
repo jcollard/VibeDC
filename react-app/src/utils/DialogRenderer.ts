@@ -57,14 +57,14 @@ export abstract class DialogContent {
   /**
    * Calculate the required dialog size in pixels based on content bounds
    * @param bounds - The measured content bounds
-   * @param paddingPixels - Additional padding beyond the border inset (default: 6)
-   * @param scale - Scale factor for border sprites and insets (default: 4)
+   * @param paddingPixels - Additional padding beyond the border inset (default: 2, reduced from 6)
+   * @param scale - Scale factor for border sprites and insets (default: 1, reduced from 4)
    * @returns Object with width and height in pixels (total including borders and padding)
    */
   static calculateDialogSize(
     bounds: ContentBounds,
-    paddingPixels: number = 6,
-    scale: number = 4
+    paddingPixels: number = 2,
+    scale: number = 1
   ): { width: number; height: number } {
     const BORDER_INSET = 6 * scale;
     const contentWidth = bounds.maxX - bounds.minX;
@@ -118,7 +118,7 @@ export const DEFAULT_DIALOG_SPRITES: NineSliceSprites = {
  * @param spriteSize - Size of sprites in the sprite sheet (e.g., 12 for 12x12)
  * @param spriteImages - Map of sprite sheet URLs to loaded images
  * @param nineSlice - 9-slice sprite IDs (defaults to DEFAULT_DIALOG_SPRITES)
- * @param scale - Scale factor for border sprites and insets (default: 4)
+ * @param scale - Scale factor for border sprites and insets (default: 1, reduced from 4)
  */
 export function renderNineSliceDialog(
   ctx: CanvasRenderingContext2D,
@@ -129,7 +129,7 @@ export function renderNineSliceDialog(
   spriteSize: number,
   spriteImages: Map<string, HTMLImageElement>,
   nineSlice: NineSliceSprites = DEFAULT_DIALOG_SPRITES,
-  scale: number = 4
+  scale: number = 1
 ): void {
   // Calculate scaled sprite size
   const scaledSpriteSize = spriteSize * scale;
@@ -242,8 +242,8 @@ export function getNineSliceSpriteIds(nineSlice: NineSliceSprites = DEFAULT_DIAL
  * @param spriteSize - Size of sprites in the sprite sheet (12px for 12x12)
  * @param spriteImages - Map of sprite sheet URLs to loaded images
  * @param nineSlice - 9-slice sprite IDs (defaults to DEFAULT_DIALOG_SPRITES)
- * @param paddingPixels - Additional padding beyond the border inset (default: 6)
- * @param scale - Scale factor for border sprites and insets (default: 4)
+ * @param paddingPixels - Additional padding beyond the border inset (default: 2, reduced from 6)
+ * @param scale - Scale factor for border sprites and insets (default: 1, reduced from 4)
  * @returns The final dialog dimensions { width, height } in pixels
  */
 export function renderDialogWithContent(
@@ -254,8 +254,8 @@ export function renderDialogWithContent(
   spriteSize: number,
   spriteImages: Map<string, HTMLImageElement>,
   nineSlice: NineSliceSprites = DEFAULT_DIALOG_SPRITES,
-  paddingPixels: number = 6,
-  scale: number = 4
+  paddingPixels: number = 2,
+  scale: number = 1
 ): { width: number; height: number } {
   // Border inset - 6px from each edge of the 12px sprite is usable for content (scaled)
   const BORDER_INSET = 6 * scale;
