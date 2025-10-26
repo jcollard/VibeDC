@@ -179,7 +179,9 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   }
 
   private renderScrollButtons(context: LayoutRenderContext): void {
-    const { ctx, spriteImages, spriteSize, canvasHeight } = context;
+    const { ctx, spriteImages, spriteSize, canvasHeight, combatLogManager } = context;
+
+    if (!combatLogManager) return;
 
     // Calculate scroll button dimensions (12x12 each)
     const buttonSize = 12;
@@ -188,43 +190,51 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     // Position at x tile 19 (19 * 12 = 228px)
     const scrollButtonsX = 19 * tileSize;
 
-    // Up arrow: 3 tiles from bottom (canvasHeight - 3 * tileSize)
-    const scrollUpY = canvasHeight - 3 * tileSize;
-    SpriteRenderer.renderSpriteById(
-      ctx,
-      'minimap-7',
-      spriteImages,
-      spriteSize,
-      scrollButtonsX,
-      scrollUpY,
-      buttonSize,
-      buttonSize
-    );
-    this.scrollUpButtonBounds = {
-      x: scrollButtonsX,
-      y: scrollUpY,
-      width: buttonSize,
-      height: buttonSize
-    };
+    // Up arrow: 3 tiles from bottom (canvasHeight - 3 * tileSize) - only if can scroll up
+    if (combatLogManager.canScrollUp()) {
+      const scrollUpY = canvasHeight - 3 * tileSize;
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-7',
+        spriteImages,
+        spriteSize,
+        scrollButtonsX,
+        scrollUpY,
+        buttonSize,
+        buttonSize
+      );
+      this.scrollUpButtonBounds = {
+        x: scrollButtonsX,
+        y: scrollUpY,
+        width: buttonSize,
+        height: buttonSize
+      };
+    } else {
+      this.scrollUpButtonBounds = null;
+    }
 
-    // Down arrow: bottom-most tile (canvasHeight - 1 * tileSize)
-    const scrollDownY = canvasHeight - 1 * tileSize;
-    SpriteRenderer.renderSpriteById(
-      ctx,
-      'minimap-9',
-      spriteImages,
-      spriteSize,
-      scrollButtonsX,
-      scrollDownY,
-      buttonSize,
-      buttonSize
-    );
-    this.scrollDownButtonBounds = {
-      x: scrollButtonsX,
-      y: scrollDownY,
-      width: buttonSize,
-      height: buttonSize
-    };
+    // Down arrow: bottom-most tile (canvasHeight - 1 * tileSize) - only if can scroll down
+    if (combatLogManager.canScrollDown()) {
+      const scrollDownY = canvasHeight - 1 * tileSize;
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-9',
+        spriteImages,
+        spriteSize,
+        scrollButtonsX,
+        scrollDownY,
+        buttonSize,
+        buttonSize
+      );
+      this.scrollDownButtonBounds = {
+        x: scrollButtonsX,
+        y: scrollDownY,
+        width: buttonSize,
+        height: buttonSize
+      };
+    } else {
+      this.scrollDownButtonBounds = null;
+    }
   }
 
   private renderCombatLogPanel(

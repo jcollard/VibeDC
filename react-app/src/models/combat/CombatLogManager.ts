@@ -331,4 +331,20 @@ export class CombatLogManager {
   getMaxScrollOffset(): number {
     return Math.max(0, this.messages.length - this.config.bufferLines);
   }
+
+  /**
+   * Returns true if the log can scroll up (show older messages).
+   */
+  canScrollUp(): boolean {
+    const visibleLines = this.lastVisibleLines || this.config.bufferLines;
+    const maxScroll = Math.max(0, this.messages.length - visibleLines);
+    return this.scrollOffset < maxScroll;
+  }
+
+  /**
+   * Returns true if the log can scroll down (show newer messages).
+   */
+  canScrollDown(): boolean {
+    return this.scrollOffset > 0;
+  }
 }
