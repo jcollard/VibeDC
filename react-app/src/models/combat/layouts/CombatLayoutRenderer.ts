@@ -1,6 +1,7 @@
 import type { CombatUnit } from '../CombatUnit';
 import type { CombatLogManager } from '../CombatLogManager';
 import type { InfoPanelManager } from '../managers/InfoPanelManager';
+import type { TopPanelManager } from '../managers/TopPanelManager';
 
 /**
  * Rendering context passed to layout renderers
@@ -20,6 +21,7 @@ export interface LayoutRenderContext {
   turnOrder: CombatUnit[];
   currentUnitPanelManager?: InfoPanelManager;
   targetUnitPanelManager?: InfoPanelManager;
+  topPanelManager?: TopPanelManager;
 }
 
 /**

@@ -28,6 +28,8 @@ import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatLayout6LeftMapRenderer } from '../../models/combat/layouts/CombatLayout6LeftMapRenderer';
 import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRenderer';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
+import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
+import { TurnOrderRenderer } from '../../models/combat/managers/renderers/TurnOrderRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -182,6 +184,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track the last displayed unit for info panel persistence
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
 
+  // Track the target unit for the info panel
+  const [targetUnit, setTargetUnit] = useState<CombatUnit | null>(null);
+
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
 
@@ -227,6 +232,24 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     padding: 1,
     lineSpacing: 8,
   }), []);
+
+  // Top panel manager
+  const topPanelManager = useMemo(() => new TopPanelManager(), []);
+
+  // Set up TurnOrderRenderer with party members for testing
+  useEffect(() => {
+    const partyMembers = PartyMemberRegistry.getAll();
+    const partyUnits = partyMembers
+      .map(member => PartyMemberRegistry.createPartyMember(member.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    const turnOrderRenderer = new TurnOrderRenderer(partyUnits, (clickedUnit) => {
+      // When a unit is clicked in turn order, set it as the target unit
+      setTargetUnit(clickedUnit);
+    });
+
+    topPanelManager.setRenderer(turnOrderRenderer);
+  }, [topPanelManager]);
 
   // Update UIConfig when highlight color changes
   useEffect(() => {
@@ -552,13 +575,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Render layout UI
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
 
-    // FOR TESTING: Display first two party members in info panels
+    // FOR TESTING: Display first party member in current unit panel
     const partyMembers = PartyMemberRegistry.getAll();
     const testCurrentUnit = partyMembers.length > 0
       ? PartyMemberRegistry.createPartyMember(partyMembers[0].id) || null
-      : null;
-    const testTargetUnit = partyMembers.length > 1
-      ? PartyMemberRegistry.createPartyMember(partyMembers[1].id) || null
       : null;
 
     layoutRenderer.renderLayout({
@@ -570,11 +590,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       fontAtlasImage: layoutFontAtlas,
       spriteImages: spriteImagesRef.current,
       currentUnit: testCurrentUnit, // Using test data
-      targetUnit: testTargetUnit, // Using test data
+      targetUnit: targetUnit, // Set by clicking turn order
       combatLogManager,
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
       currentUnitPanelManager,
       targetUnitPanelManager,
+      topPanelManager,
     });
 
     // Render map scroll arrows (after layout, before debug grid)
@@ -760,6 +781,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (!coords) return;
 
     const { x: canvasX, y: canvasY } = coords;
+
+    // Check if clicking on top panel (turn order)
+    if (layoutRenderer.handleTopPanelClick(canvasX, canvasY, topPanelManager)) {
+      renderFrame(); // Force immediate re-render to show updated target
+      return; // Click was handled, don't process other handlers
+    }
 
     // Check if clicking on combat log scroll buttons
     if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {

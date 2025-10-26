@@ -119,6 +119,19 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   }
 
   /**
+   * Handle click events on the top panel (turn order).
+   * Returns true if the click was handled, false otherwise.
+   */
+  handleTopPanelClick(x: number, y: number, topPanelManager: any): boolean {
+    if (!topPanelManager) return false;
+
+    // Top panel is rows 0-1, columns 0-19 (x: 0, y: 0, width: 240px, height: 24px)
+    const region = { x: 0, y: 0, width: 240, height: 24 };
+
+    return topPanelManager.handleClick(x, y, region);
+  }
+
+  /**
    * Handle click events on the combat log scroll buttons.
    * Returns true if a button was clicked, false otherwise.
    */
@@ -330,46 +343,59 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     context: LayoutRenderContext,
     x: number,
     y: number,
-    _width: number,
-    _height: number
+    width: number,
+    height: number
   ): void {
-    const { ctx, turnOrder, fontId, fontAtlasImage } = context;
-    if (!fontAtlasImage) return;
+    const { ctx, topPanelManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
 
-    let currentY = y + this.PANEL_PADDING + 6;
+    // Use TopPanelManager if available
+    if (topPanelManager) {
+      topPanelManager.render(
+        ctx,
+        { x, y, width, height },
+        fontId,
+        fontAtlasImage,
+        spriteImages,
+        spriteSize
+      );
+    } else {
+      // Fallback to old rendering (for backwards compatibility)
+      const { turnOrder } = context;
+      if (!fontAtlasImage) return;
 
-    // Render title
-    FontAtlasRenderer.renderText(
-      ctx,
-      'TURN ORDER',
-      x + this.PANEL_PADDING + 6,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#9eff6b'
-    );
-    currentY += this.LINE_SPACING;
+      let currentY = y + this.PANEL_PADDING + 6;
 
-    // Render units horizontally
-    let currentX = x + this.PANEL_PADDING + 6;
-    const unitsToShow = turnOrder.slice(0, 10);
-    unitsToShow.forEach((unit, index) => {
-      const text = `${index + 1}.${unit.name.substring(0, 6)}`;
       FontAtlasRenderer.renderText(
         ctx,
-        text,
-        currentX,
+        'TURN ORDER',
+        x + this.PANEL_PADDING + 6,
         currentY,
         fontId,
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        '#9eff6b'
       );
-      currentX += FontAtlasRenderer.measureTextByFontId(text, fontId) + 6;
-    });
+      currentY += this.LINE_SPACING;
+
+      let currentX = x + this.PANEL_PADDING + 6;
+      const unitsToShow = turnOrder.slice(0, 10);
+      unitsToShow.forEach((unit, index) => {
+        const text = `${index + 1}.${unit.name.substring(0, 6)}`;
+        FontAtlasRenderer.renderText(
+          ctx,
+          text,
+          currentX,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentX += FontAtlasRenderer.measureTextByFontId(text, fontId) + 6;
+      });
+    }
   }
 
   private renderScrollButtons(context: LayoutRenderContext): void {
