@@ -259,4 +259,55 @@ export class InfoPanelManager {
       );
     }
   }
+
+  /**
+   * Handle click on party member in the party panel
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param region - Panel region
+   * @param units - Array of party units
+   * @returns Index of clicked unit, or null if no unit was clicked
+   */
+  handlePartyClick(
+    canvasX: number,
+    canvasY: number,
+    region: PanelRegion,
+    units: CombatUnit[]
+  ): number | null {
+    const spriteDisplaySize = 12; // 12x12px sprites
+    const nameSpacing = 8; // Space for name below sprite
+    const verticalSpacing = 6; // Additional vertical space between rows
+    const cellWidth = region.width / 2; // 2 columns
+    const cellHeight = (spriteDisplaySize + nameSpacing + verticalSpacing);
+
+    // Calculate starting Y (after title)
+    const startY = region.y + this.config.padding + this.config.lineSpacing;
+
+    // Calculate grid starting position (same as renderPartyContent)
+    const availableHeight = region.height - (startY - region.y);
+    const gridHeight = Math.min(2, Math.ceil(units.length / 2)) * cellHeight;
+    const currentY = startY + (availableHeight - gridHeight) / 2;
+
+    // Check each unit cell
+    for (let i = 0; i < units.length && i < 4; i++) {
+      const row = Math.floor(i / 2);
+      const col = i % 2;
+
+      // Calculate cell bounds
+      const cellX = region.x + col * cellWidth;
+      const cellY = currentY + row * cellHeight;
+
+      // Check if click is within this cell
+      if (
+        canvasX >= cellX &&
+        canvasX < cellX + cellWidth &&
+        canvasY >= cellY &&
+        canvasY < cellY + cellHeight
+      ) {
+        return i;
+      }
+    }
+
+    return null;
+  }
 }

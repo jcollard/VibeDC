@@ -241,6 +241,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Top panel manager
   const topPanelManager = useMemo(() => new TopPanelManager(), []);
 
+  // Get party units (used for deployment phase)
+  const partyUnits = useMemo(() => {
+    const partyMembers = PartyMemberRegistry.getAll();
+    return partyMembers
+      .map(member => PartyMemberRegistry.createPartyMember(member.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+  }, []);
+
   // Switch top panel renderer based on combat phase
   useEffect(() => {
     if (combatState.phase === 'deployment') {
@@ -249,11 +257,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       topPanelManager.setRenderer(deploymentRenderer);
     } else {
       // Show turn order during combat phase
-      const partyMembers = PartyMemberRegistry.getAll();
-      const partyUnits = partyMembers
-        .map(member => PartyMemberRegistry.createPartyMember(member.id))
-        .filter((unit): unit is CombatUnit => unit !== undefined);
-
       const turnOrderRenderer = new TurnOrderRenderer(partyUnits, (clickedUnit) => {
         // When a unit is clicked in turn order, set it as the target unit
         targetUnitRef.current = clickedUnit;
@@ -261,7 +264,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       topPanelManager.setRenderer(turnOrderRenderer);
     }
-  }, [topPanelManager, combatState.phase]);
+  }, [topPanelManager, combatState.phase, partyUnits]);
 
   // Update UIConfig when highlight color changes
   useEffect(() => {
@@ -592,12 +595,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
     const topPanelFontAtlas = fontAtlasImagesRef.current.get('15px-dungeonslant') || null;
 
-    // Get party members
-    const partyMembers = PartyMemberRegistry.getAll();
-    const partyUnits = partyMembers
-      .map(member => PartyMemberRegistry.createPartyMember(member.id))
-      .filter((unit): unit is CombatUnit => unit !== undefined);
-
     // FOR TESTING: Display first party member in current unit panel during combat
     const testCurrentUnit = combatState.phase !== 'deployment' && partyUnits.length > 0
       ? partyUnits[0]
@@ -808,9 +805,66 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+
+      // Check if a zone is selected and if clicking on party panel
+      const selectedZone = handler.getSelectedZoneIndex();
+      if (selectedZone !== null && partyUnits.length > 0) {
+        // Party panel region (top-right info panel)
+        const partyPanelRegion = {
+          x: 252,  // column 21 (21 * 12px)
+          y: 0,    // row 0
+          width: 132,  // 11 tiles
+          height: 108  // 9 tiles
+        };
+
+        // Check if clicking on a party member
+        const partyMemberIndex = currentUnitPanelManager.handlePartyClick(
+          canvasX,
+          canvasY,
+          partyPanelRegion,
+          partyUnits
+        );
+
+        if (partyMemberIndex !== null) {
+          // Deploy the selected party member
+          const selectedMember = PartyMemberRegistry.getAll()[partyMemberIndex];
+          const deploymentZone = encounter.playerDeploymentZones[selectedZone];
+
+          if (selectedMember && deploymentZone) {
+            try {
+              const unit = createUnitFromPartyMember(selectedMember);
+              const newManifest = new CombatUnitManifest();
+
+              // Copy existing units, excluding any unit at the deployment zone
+              combatState.unitManifest.getAllUnits().forEach(placement => {
+                // Skip the unit at the deployment position (it will be replaced)
+                if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
+                  newManifest.addUnit(placement.unit, placement.position);
+                }
+              });
+
+              // Add new unit at the deployment zone
+              newManifest.addUnit(unit, deploymentZone);
+
+              // Update state
+              setCombatState({
+                ...combatState,
+                unitManifest: newManifest
+              });
+
+              // Clear the selected zone after deploying
+              handler.clearSelectedZone();
+            } catch (error) {
+              console.error('Failed to create unit:', error);
+            }
+          }
+          return; // Party member was clicked, don't process other handlers
+        }
+      }
+
       handler.handleButtonMouseDown(canvasX, canvasY);
     }
-  }, [combatState.phase, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame]);
+  }, [combatState, encounter, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame, partyUnits, currentUnitPanelManager]);
 
   // Handle canvas mouse up for button click
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
