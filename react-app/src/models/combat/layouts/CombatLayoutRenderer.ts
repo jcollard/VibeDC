@@ -1,5 +1,6 @@
 import type { CombatUnit } from '../CombatUnit';
 import type { CombatLogManager } from '../CombatLogManager';
+import type { InfoPanelManager } from '../managers/InfoPanelManager';
 
 /**
  * Rendering context passed to layout renderers
@@ -17,6 +18,8 @@ export interface LayoutRenderContext {
   combatLogManager?: CombatLogManager; // Optional for backwards compatibility
   combatLog?: string[]; // Deprecated, kept for backwards compatibility
   turnOrder: CombatUnit[];
+  currentUnitPanelManager?: InfoPanelManager;
+  targetUnitPanelManager?: InfoPanelManager;
 }
 
 /**
@@ -43,5 +46,17 @@ export interface CombatLayoutRenderer {
     y: number;
     width: number;
     height: number;
+  };
+
+  /**
+   * Gets the clipping region for the map viewport in tile coordinates.
+   * This defines which tiles are visible within the map viewport.
+   * @returns Object with minCol, maxCol, minRow, maxRow (inclusive)
+   */
+  getMapClipRegion(): {
+    minCol: number;
+    maxCol: number;
+    minRow: number;
+    maxRow: number;
   };
 }

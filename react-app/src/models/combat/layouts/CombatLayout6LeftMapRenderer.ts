@@ -465,104 +465,119 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     context: LayoutRenderContext,
     x: number,
     y: number,
-    _width: number,
-    _height: number
+    width: number,
+    height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage } = context;
+    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager } = context;
     if (!fontAtlasImage) return;
 
-    let currentY = y + this.PANEL_PADDING + 6;
+    // Use InfoPanelManager if available, otherwise fall back to old rendering
+    if (currentUnitPanelManager) {
+      const content = currentUnit
+        ? { type: 'unit' as const, unit: currentUnit }
+        : { type: 'empty' as const };
 
-    // Render title
-    FontAtlasRenderer.renderText(
-      ctx,
-      'CURRENT UNIT',
-      x + this.PANEL_PADDING + 6,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffa500'
-    );
-    currentY += this.LINE_SPACING;
-
-    if (currentUnit) {
-      FontAtlasRenderer.renderText(
+      currentUnitPanelManager.render(
         ctx,
-        currentUnit.name,
-        x + this.PANEL_PADDING + 6,
-        currentY,
+        { x, y, width, height },
+        content,
         fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        currentUnit.unitClass.name,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        `HP: ${currentUnit.health}/${currentUnit.maxHealth}`,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        `MP: ${currentUnit.mana}/${currentUnit.maxMana}`,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        `Spd:${currentUnit.speed} Mov:${currentUnit.movement}`,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
+        fontAtlasImage
       );
     } else {
+      // Fallback to old rendering (for backwards compatibility)
+      let currentY = y + this.PANEL_PADDING + 6;
+
       FontAtlasRenderer.renderText(
         ctx,
-        '-',
+        'CURRENT UNIT',
         x + this.PANEL_PADDING + 6,
         currentY,
         fontId,
         fontAtlasImage,
         1,
         'left',
-        '#666666'
+        '#ffa500'
       );
+      currentY += this.LINE_SPACING;
+
+      if (currentUnit) {
+        FontAtlasRenderer.renderText(
+          ctx,
+          currentUnit.name,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          currentUnit.unitClass.name,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          `HP: ${currentUnit.health}/${currentUnit.maxHealth}`,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          `MP: ${currentUnit.mana}/${currentUnit.maxMana}`,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          `Spd:${currentUnit.speed} Mov:${currentUnit.movement}`,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+      } else {
+        FontAtlasRenderer.renderText(
+          ctx,
+          '-',
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#666666'
+        );
+      }
     }
   }
 
@@ -570,104 +585,119 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     context: LayoutRenderContext,
     x: number,
     y: number,
-    _width: number,
-    _height: number
+    width: number,
+    height: number
   ): void {
-    const { ctx, targetUnit, fontId, fontAtlasImage } = context;
+    const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager } = context;
     if (!fontAtlasImage) return;
 
-    let currentY = y + this.PANEL_PADDING + 6;
+    // Use InfoPanelManager if available, otherwise fall back to old rendering
+    if (targetUnitPanelManager) {
+      const content = targetUnit
+        ? { type: 'unit' as const, unit: targetUnit }
+        : { type: 'empty' as const };
 
-    // Render title
-    FontAtlasRenderer.renderText(
-      ctx,
-      'TARGET UNIT',
-      x + this.PANEL_PADDING + 6,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ff6b6b'
-    );
-    currentY += this.LINE_SPACING;
-
-    if (targetUnit) {
-      FontAtlasRenderer.renderText(
+      targetUnitPanelManager.render(
         ctx,
-        targetUnit.name,
-        x + this.PANEL_PADDING + 6,
-        currentY,
+        { x, y, width, height },
+        content,
         fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        targetUnit.unitClass.name,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        `HP: ${targetUnit.health}/${targetUnit.maxHealth}`,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        `MP: ${targetUnit.mana}/${targetUnit.maxMana}`,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        `Spd:${targetUnit.speed} Mov:${targetUnit.movement}`,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
+        fontAtlasImage
       );
     } else {
+      // Fallback to old rendering (for backwards compatibility)
+      let currentY = y + this.PANEL_PADDING + 6;
+
       FontAtlasRenderer.renderText(
         ctx,
-        '-',
+        'TARGET UNIT',
         x + this.PANEL_PADDING + 6,
         currentY,
         fontId,
         fontAtlasImage,
         1,
         'left',
-        '#666666'
+        '#ff6b6b'
       );
+      currentY += this.LINE_SPACING;
+
+      if (targetUnit) {
+        FontAtlasRenderer.renderText(
+          ctx,
+          targetUnit.name,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          targetUnit.unitClass.name,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          `HP: ${targetUnit.health}/${targetUnit.maxHealth}`,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          `MP: ${targetUnit.mana}/${targetUnit.maxMana}`,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+        currentY += this.LINE_SPACING;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          `Spd:${targetUnit.speed} Mov:${targetUnit.movement}`,
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+      } else {
+        FontAtlasRenderer.renderText(
+          ctx,
+          '-',
+          x + this.PANEL_PADDING + 6,
+          currentY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#666666'
+        );
+      }
     }
   }
 }

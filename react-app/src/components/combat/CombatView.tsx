@@ -27,6 +27,7 @@ import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatLayout6LeftMapRenderer } from '../../models/combat/layouts/CombatLayout6LeftMapRenderer';
 import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRenderer';
+import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -210,6 +211,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     bufferLines: 20,
     lineHeight: 8,
     defaultColor: '#ffffff',
+  }), []);
+
+  // Info panel managers
+  const currentUnitPanelManager = useMemo(() => new InfoPanelManager({
+    title: 'CURRENT UNIT',
+    titleColor: '#ffa500',
+    padding: 1,
+    lineSpacing: 8,
+  }), []);
+
+  const targetUnitPanelManager = useMemo(() => new InfoPanelManager({
+    title: 'TARGET UNIT',
+    titleColor: '#ff6b6b',
+    padding: 1,
+    lineSpacing: 8,
   }), []);
 
   // Update UIConfig when highlight color changes
@@ -536,6 +552,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Render layout UI
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
 
+    // FOR TESTING: Display first two party members in info panels
+    const partyMembers = PartyMemberRegistry.getAll();
+    const testCurrentUnit = partyMembers.length > 0
+      ? PartyMemberRegistry.createPartyMember(partyMembers[0].id) || null
+      : null;
+    const testTargetUnit = partyMembers.length > 1
+      ? PartyMemberRegistry.createPartyMember(partyMembers[1].id) || null
+      : null;
+
     layoutRenderer.renderLayout({
       ctx,
       canvasWidth: CANVAS_WIDTH,
@@ -544,10 +569,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       fontId: unitInfoAtlasFont,
       fontAtlasImage: layoutFontAtlas,
       spriteImages: spriteImagesRef.current,
-      currentUnit: lastDisplayedUnitRef.current,
-      targetUnit: null, // TODO: Add target tracking
+      currentUnit: testCurrentUnit, // Using test data
+      targetUnit: testTargetUnit, // Using test data
       combatLogManager,
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
+      currentUnitPanelManager,
+      targetUnitPanelManager,
     });
 
     // Render map scroll arrows (after layout, before debug grid)
