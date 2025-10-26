@@ -185,7 +185,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
 
   // Track the target unit for the info panel
-  const [targetUnit, setTargetUnit] = useState<CombatUnit | null>(null);
+  const targetUnitRef = useRef<CombatUnit | null>(null);
 
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
@@ -245,7 +245,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const turnOrderRenderer = new TurnOrderRenderer(partyUnits, (clickedUnit) => {
       // When a unit is clicked in turn order, set it as the target unit
-      setTargetUnit(clickedUnit);
+      targetUnitRef.current = clickedUnit;
     });
 
     topPanelManager.setRenderer(turnOrderRenderer);
@@ -590,7 +590,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       fontAtlasImage: layoutFontAtlas,
       spriteImages: spriteImagesRef.current,
       currentUnit: testCurrentUnit, // Using test data
-      targetUnit: targetUnit, // Set by clicking turn order
+      targetUnit: targetUnitRef.current, // Set by clicking turn order
       combatLogManager,
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
       currentUnitPanelManager,
@@ -722,7 +722,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
-    // Check if clicking on map scroll buttons first
+    // Check if clicking on top panel (turn order) first
+    if (layoutRenderer.handleTopPanelClick(canvasX, canvasY, topPanelManager)) {
+      renderFrame(); // Force immediate re-render to show updated target
+      return; // Click was handled, don't process other handlers
+    }
+
+    // Check if clicking on map scroll buttons
     const mapScrollDirection = layoutRenderer.handleMapScrollClick(canvasX, canvasY);
     if (mapScrollDirection === 'right') {
       scrollArrowPressedRef.current = 'right';
@@ -749,7 +755,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
       handler.handleButtonMouseDown(canvasX, canvasY);
     }
-  }, [combatState.phase, layoutRenderer, startContinuousScroll]);
+  }, [combatState.phase, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame]);
 
   // Handle canvas mouse up for button click
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -781,12 +787,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (!coords) return;
 
     const { x: canvasX, y: canvasY } = coords;
-
-    // Check if clicking on top panel (turn order)
-    if (layoutRenderer.handleTopPanelClick(canvasX, canvasY, topPanelManager)) {
-      renderFrame(); // Force immediate re-render to show updated target
-      return; // Click was handled, don't process other handlers
-    }
 
     // Check if clicking on combat log scroll buttons
     if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {
