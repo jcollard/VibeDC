@@ -223,7 +223,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Combat log manager
   const combatLogManager = useMemo(() => new CombatLogManager({
     maxMessages: 100,
-    bufferLines: 20,
+    bufferLines: 21,
     lineHeight: 8,
     defaultColor: '#ffffff',
   }), []);

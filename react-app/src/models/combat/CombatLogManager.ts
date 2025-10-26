@@ -12,6 +12,15 @@ interface TextSegment {
 }
 
 /**
+ * A stored message with pre-parsed segments for performance.
+ */
+interface StoredMessage {
+  rawText: string;
+  segments: TextSegment[];
+  plainTextLength: number;
+}
+
+/**
  * Configuration for the combat log rendering.
  */
 export interface CombatLogConfig {
@@ -33,15 +42,16 @@ export interface CombatLogConfig {
  * Example: "The [color=#ff0000]Red Dragon[/color] attacks!"
  */
 export class CombatLogManager {
-  private messages: string[] = [];
+  private messages: StoredMessage[] = [];
   private readonly config: CombatLogConfig;
-  private bufferCanvas: HTMLCanvasElement | null = null;
-  private bufferCtx: CanvasRenderingContext2D | null = null;
   private scrollOffset: number = 0; // Scroll position (0 = showing newest messages)
   private lastVisibleLines: number = 0; // Track how many lines are actually visible
-  private bufferDirty: boolean = true; // Flag to track if buffer needs redrawing
-  private lastFontId: string = '';
-  private lastBufferWidth: number = 0;
+
+  // Static message buffer (contains ALL messages rendered once)
+  private staticBuffer: HTMLCanvasElement | null = null;
+  private staticBufferCtx: CanvasRenderingContext2D | null = null;
+  private staticBufferDirty: boolean = true;
+  private lastStaticMessageCount: number = 0;
 
   // Animation state
   private animatingMessageIndex: number = -1; // Index of the message being animated
@@ -116,15 +126,23 @@ export class CombatLogManager {
           item.charsPerSecond = this.FAST_CHARS_PER_SECOND;
         }
         // Also speed up current animation
-        const currentLength = this.getPlainTextLength(this.messages[this.animatingMessageIndex]);
+        const currentLength = this.messages[this.animatingMessageIndex].plainTextLength;
         this.animationDuration = currentLength / this.FAST_CHARS_PER_SECOND;
       }
 
       return;
     }
 
-    // Add message immediately
-    this.messages.push(message);
+    // Pre-parse message segments for performance
+    const segments = this.parseTags(message);
+    const plainTextLength = this.getPlainTextLength(message);
+
+    // Add message immediately with pre-parsed data
+    this.messages.push({
+      rawText: message,
+      segments,
+      plainTextLength,
+    });
 
     // Trim old messages if we exceed the limit
     if (this.messages.length > this.config.maxMessages) {
@@ -135,7 +153,6 @@ export class CombatLogManager {
     this.scrollOffset = 0;
 
     // Calculate animation duration based on message length
-    const plainTextLength = this.getPlainTextLength(message);
     const speed = charsPerSecond ?? this.DEFAULT_CHARS_PER_SECOND;
     this.animationDuration = plainTextLength / speed;
 
@@ -144,8 +161,8 @@ export class CombatLogManager {
     this.animationProgress = 0;
     this.animationCharsShown = 0;
 
-    // Mark buffer as dirty
-    this.bufferDirty = true;
+    // Mark static buffer as dirty since we have a new message
+    this.staticBufferDirty = true;
   }
 
   /**
@@ -154,14 +171,14 @@ export class CombatLogManager {
   clear(): void {
     this.messages = [];
     this.scrollOffset = 0;
-    this.bufferDirty = true;
+    this.staticBufferDirty = true;
   }
 
   /**
    * Gets all messages in the log.
    */
   getMessages(): readonly string[] {
-    return this.messages;
+    return this.messages.map(m => m.rawText);
   }
 
   /**
@@ -172,13 +189,8 @@ export class CombatLogManager {
     // Max scroll is based on visible lines, not buffer lines
     const visibleLines = this.lastVisibleLines || this.config.bufferLines;
     const maxScroll = Math.max(0, this.messages.length - visibleLines);
-    const oldOffset = this.scrollOffset;
     this.scrollOffset = Math.min(this.scrollOffset + lines, maxScroll);
-
-    // Mark buffer as dirty if offset changed
-    if (oldOffset !== this.scrollOffset) {
-      this.bufferDirty = true;
-    }
+    // No need to mark buffer as dirty - scrolling just changes composition
   }
 
   /**
@@ -186,26 +198,16 @@ export class CombatLogManager {
    * @param lines Number of lines to scroll
    */
   scrollDown(lines: number = 1): void {
-    const oldOffset = this.scrollOffset;
     this.scrollOffset = Math.max(0, this.scrollOffset - lines);
-
-    // Mark buffer as dirty if offset changed
-    if (oldOffset !== this.scrollOffset) {
-      this.bufferDirty = true;
-    }
+    // No need to mark buffer as dirty - scrolling just changes composition
   }
 
   /**
    * Scrolls to the bottom of the log (newest messages).
    */
   scrollToBottom(): void {
-    const oldOffset = this.scrollOffset;
     this.scrollOffset = 0;
-
-    // Mark buffer as dirty if offset changed
-    if (oldOffset !== this.scrollOffset) {
-      this.bufferDirty = true;
-    }
+    // No need to mark buffer as dirty - scrolling just changes composition
   }
 
   /**
@@ -259,8 +261,9 @@ export class CombatLogManager {
   }
 
   /**
-   * Renders the combat log to an off-screen buffer canvas.
-   * The buffer is sized to fit exactly bufferLines lines.
+   * Renders all static (non-animating) messages to the static buffer.
+   * The static buffer contains ALL messages at their absolute Y positions.
+   * This buffer is only re-rendered when messages change, not during animation.
    *
    * @param fontId Font atlas ID to use for rendering
    * @param fontAtlasImage Font atlas image
@@ -268,107 +271,67 @@ export class CombatLogManager {
    * @param spriteImages Map of sprite images
    * @param spriteSize Size of each sprite
    */
-  private renderToBuffer(
+  private renderStaticMessages(
     fontId: string,
     fontAtlasImage: HTMLImageElement,
     bufferWidth: number,
     spriteImages: Map<string, HTMLImageElement>,
     spriteSize: number
   ): void {
-    const bufferHeight = this.config.bufferLines * this.config.lineHeight;
+    // Calculate total height needed for all messages
+    const totalMessages = this.messages.length;
+    const bufferHeight = totalMessages * this.config.lineHeight;
 
-    // Round dimensions to avoid floating-point comparison issues
+    // Round dimensions
     const roundedWidth = Math.round(bufferWidth);
     const roundedHeight = Math.round(bufferHeight);
 
-    // Create buffer canvas if it doesn't exist or size changed
-    const needsRecreate = !this.bufferCanvas ||
-        this.bufferCanvas.width !== roundedWidth ||
-        this.bufferCanvas.height !== roundedHeight;
+    // Create or recreate buffer if needed
+    const needsRecreate = !this.staticBuffer ||
+        this.staticBuffer.width !== roundedWidth ||
+        this.staticBuffer.height !== roundedHeight;
 
     if (needsRecreate) {
-      this.bufferCanvas = document.createElement('canvas');
-      this.bufferCanvas.width = roundedWidth;
-      this.bufferCanvas.height = roundedHeight;
-      this.bufferCtx = this.bufferCanvas.getContext('2d');
-      this.bufferDirty = true; // Force redraw after recreation
+      this.staticBuffer = document.createElement('canvas');
+      this.staticBuffer.width = roundedWidth;
+      this.staticBuffer.height = roundedHeight;
+      this.staticBufferCtx = this.staticBuffer.getContext('2d');
+      this.staticBufferDirty = true;
     }
 
-    if (!this.bufferCtx) return;
+    if (!this.staticBufferCtx) return;
 
-    // Check if we need to redraw the buffer
-    const fontChanged = this.lastFontId !== fontId;
-    const widthChanged = this.lastBufferWidth !== roundedWidth;
-
-    if (!this.bufferDirty && !fontChanged && !widthChanged) {
-      // Buffer is still valid, no need to redraw
-      return;
+    // Check if we need to redraw
+    if (!this.staticBufferDirty && this.lastStaticMessageCount === totalMessages) {
+      return; // Buffer is still valid
     }
-
-    // Update tracking variables
-    this.lastFontId = fontId;
-    this.lastBufferWidth = roundedWidth;
 
     // Ensure pixel-perfect rendering
-    this.bufferCtx.imageSmoothingEnabled = false;
+    this.staticBufferCtx.imageSmoothingEnabled = false;
 
     // Clear buffer
-    this.bufferCtx.fillStyle = '#000000';
-    this.bufferCtx.fillRect(0, 0, roundedWidth, roundedHeight);
+    this.staticBufferCtx.fillStyle = '#000000';
+    this.staticBufferCtx.fillRect(0, 0, roundedWidth, roundedHeight);
 
-    // Calculate which messages to render (considering scroll offset)
-    const startIdx = Math.max(0, this.messages.length - this.config.bufferLines - this.scrollOffset);
-    const endIdx = this.messages.length - this.scrollOffset;
-    const visibleMessages = this.messages.slice(startIdx, endIdx);
-
-    // Calculate starting Y position to align messages to bottom of buffer
-    // If we have fewer messages than bufferLines, start from the bottom
-    const totalMessagesHeight = visibleMessages.length * this.config.lineHeight;
-    let currentY = Math.max(0, roundedHeight - totalMessagesHeight);
-
-    // Render each message line
-    for (let i = 0; i < visibleMessages.length; i++) {
-      const messageIndex = startIdx + i;
-      const message = visibleMessages[i];
-      const segments = this.parseTags(message);
-
-      let currentX = 0;
-
-      // Check if this message is being animated
-      const isAnimating = messageIndex === this.animatingMessageIndex && this.animationProgress < 1;
-
-      // Calculate how many characters/elements to show based on animation progress
-      let charsToShow = message.length;
-      if (isAnimating) {
-        // Remove tags from message to get actual visible character count
-        // Count sprites as 1 character each
-        const plainText = message
-          .replace(/\[color=#[0-9a-fA-F]{6}\]/g, '')
-          .replace(/\[\/color\]/g, '')
-          .replace(/\[sprite:[\w-]+\]/g, 'S'); // Replace sprite tags with single char
-        const visibleChars = Math.floor(plainText.length * this.animationProgress);
-        // Ensure we never show fewer characters than before (prevents backwards animation)
-        charsToShow = Math.max(visibleChars, this.animationCharsShown);
-        this.animationCharsShown = charsToShow;
+    // Render ALL messages (except the currently animating one)
+    for (let i = 0; i < this.messages.length; i++) {
+      // Skip the animating message - it will be rendered separately
+      if (i === this.animatingMessageIndex && this.animationProgress < 1) {
+        continue;
       }
 
-      // Track how many characters we've rendered so far
-      let charsRendered = 0;
+      const storedMessage = this.messages[i];
+      const segments = storedMessage.segments;
+      const currentY = i * this.config.lineHeight;
+      let currentX = 0;
 
-      // Render each segment (text or sprite)
+      // Render each segment
       for (const segment of segments) {
         if (segment.type === 'sprite') {
-          // Render sprite segment
-          if (segment.spriteId && this.bufferCtx) {
-            // Skip sprite if animating and we haven't reached it yet
-            if (isAnimating && charsRendered >= charsToShow) {
-              break;
-            }
-
-            // Scale sprite to fit line height
+          if (segment.spriteId && this.staticBufferCtx) {
             const spriteDisplaySize = this.config.lineHeight;
             SpriteRenderer.renderSpriteById(
-              this.bufferCtx,
+              this.staticBufferCtx,
               segment.spriteId,
               spriteImages,
               spriteSize,
@@ -377,58 +340,129 @@ export class CombatLogManager {
               spriteDisplaySize,
               spriteDisplaySize
             );
-
-            // Advance X position by sprite size
             currentX += spriteDisplaySize;
-            charsRendered += 1; // Count sprite as 1 character for animation
           }
         } else {
-          // Render text segment
           const color = segment.color || this.config.defaultColor;
-
-          // Calculate how much of this segment to render
-          let textToRender = segment.text;
-          if (isAnimating) {
-            const charsAvailable = charsToShow - charsRendered;
-            if (charsAvailable <= 0) {
-              break; // Don't render this segment at all
-            }
-            if (charsAvailable < segment.text.length) {
-              textToRender = segment.text.substring(0, charsAvailable);
-            }
-          }
-
-          if (textToRender.length > 0) {
-            FontAtlasRenderer.renderText(
-              this.bufferCtx,
-              textToRender,
-              currentX,
-              currentY,
-              fontId,
-              fontAtlasImage,
-              1,
-              'left',
-              color
-            );
-
-            // Advance X position for next segment
-            currentX += FontAtlasRenderer.measureTextByFontId(textToRender, fontId);
-          }
-
-          charsRendered += textToRender.length;
+          FontAtlasRenderer.renderText(
+            this.staticBufferCtx,
+            segment.text,
+            currentX,
+            currentY,
+            fontId,
+            fontAtlasImage,
+            1,
+            'left',
+            color
+          );
+          currentX += FontAtlasRenderer.measureTextByFontId(segment.text, fontId);
         }
       }
-
-      currentY += this.config.lineHeight;
     }
 
-    // Clear the dirty flag after redrawing
-    this.bufferDirty = false;
+    // Clear dirty flag and update tracking
+    this.staticBufferDirty = false;
+    this.lastStaticMessageCount = totalMessages;
+  }
+
+  /**
+   * Renders the currently animating message to a temporary canvas.
+   * This canvas is composited with the static buffer during the main render.
+   *
+   * @param fontId Font atlas ID to use for rendering
+   * @param fontAtlasImage Font atlas image
+   * @param width Width of the canvas
+   * @param spriteImages Map of sprite images
+   * @param spriteSize Size of each sprite
+   * @returns Temporary canvas with the animated message, or null if not animating
+   */
+  private renderAnimatingMessage(
+    fontId: string,
+    fontAtlasImage: HTMLImageElement,
+    width: number,
+    spriteImages: Map<string, HTMLImageElement>,
+    spriteSize: number
+  ): HTMLCanvasElement | null {
+    if (this.animatingMessageIndex < 0 || this.animationProgress >= 1) {
+      return null;
+    }
+
+    const storedMessage = this.messages[this.animatingMessageIndex];
+    const segments = storedMessage.segments;
+
+    // Create temporary canvas for this one line
+    const tempCanvas = document.createElement('canvas');
+    tempCanvas.width = Math.round(width);
+    tempCanvas.height = this.config.lineHeight;
+    const tempCtx = tempCanvas.getContext('2d');
+
+    if (!tempCtx) return null;
+
+    tempCtx.imageSmoothingEnabled = false;
+
+    // Calculate how many characters to show
+    const visibleChars = Math.floor(storedMessage.plainTextLength * this.animationProgress);
+    const charsToShow = Math.max(visibleChars, this.animationCharsShown);
+    this.animationCharsShown = charsToShow;
+
+    let currentX = 0;
+    let charsRendered = 0;
+
+    // Render each segment
+    for (const segment of segments) {
+      if (segment.type === 'sprite') {
+        if (charsRendered >= charsToShow) break;
+
+        if (segment.spriteId) {
+          const spriteDisplaySize = this.config.lineHeight;
+          SpriteRenderer.renderSpriteById(
+            tempCtx,
+            segment.spriteId,
+            spriteImages,
+            spriteSize,
+            currentX,
+            0, // Y is always 0 in temp canvas
+            spriteDisplaySize,
+            spriteDisplaySize
+          );
+          currentX += spriteDisplaySize;
+          charsRendered += 1;
+        }
+      } else {
+        const charsAvailable = charsToShow - charsRendered;
+        if (charsAvailable <= 0) break;
+
+        let textToRender = segment.text;
+        if (charsAvailable < segment.text.length) {
+          textToRender = segment.text.substring(0, charsAvailable);
+        }
+
+        if (textToRender.length > 0) {
+          const color = segment.color || this.config.defaultColor;
+          FontAtlasRenderer.renderText(
+            tempCtx,
+            textToRender,
+            currentX,
+            0, // Y is always 0 in temp canvas
+            fontId,
+            fontAtlasImage,
+            1,
+            'left',
+            color
+          );
+          currentX += FontAtlasRenderer.measureTextByFontId(textToRender, fontId);
+        }
+
+        charsRendered += textToRender.length;
+      }
+    }
+
+    return tempCanvas;
   }
 
   /**
    * Renders the visible portion of the combat log to the main canvas.
-   * Uses the off-screen buffer and clips to the visible area.
+   * Uses the static buffer for completed messages and composites the animating message on top.
    *
    * @param ctx Main canvas rendering context
    * @param x X position on main canvas
@@ -454,27 +488,60 @@ export class CombatLogManager {
     // Track visible lines for scroll calculations
     this.lastVisibleLines = Math.floor(height / this.config.lineHeight);
 
-    // Render full history to buffer
-    this.renderToBuffer(fontId, fontAtlasImage, width, spriteImages, spriteSize);
+    // Render all static messages to static buffer (only if dirty)
+    this.renderStaticMessages(fontId, fontAtlasImage, width, spriteImages, spriteSize);
 
-    if (!this.bufferCanvas) return;
+    if (!this.staticBuffer) return;
 
-    // Calculate source rectangle (bottom portion of buffer for newest messages)
-    const bufferHeight = this.config.bufferLines * this.config.lineHeight;
-    const sourceHeight = Math.min(height, bufferHeight);
-
-    // Copy from bottom of buffer (newest messages)
-    const sourceY = Math.max(0, bufferHeight - sourceHeight);
-
-    // Copy visible portion from buffer to main canvas
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    ctx.drawImage(
-      this.bufferCanvas,
-      0, sourceY, width, sourceHeight,  // Source rectangle (from buffer)
-      x, y, width, sourceHeight         // Destination rectangle (on main canvas)
-    );
+    // Calculate which messages are visible based on scroll and viewport size
+    const maxVisibleLines = Math.min(this.config.bufferLines, Math.floor(height / this.config.lineHeight));
+    const startIdx = Math.max(0, this.messages.length - maxVisibleLines - this.scrollOffset);
+    const endIdx = this.messages.length - this.scrollOffset;
+    const visibleCount = Math.min(endIdx - startIdx, maxVisibleLines);
+
+    // Calculate starting Y position to align messages to bottom
+    const totalVisibleHeight = visibleCount * this.config.lineHeight;
+    const startY = Math.max(0, height - totalVisibleHeight);
+
+    // Copy visible portion of static buffer to main canvas, line by line
+    // Skip the animating message's line if it's in the visible range
+    for (let i = startIdx; i < endIdx && i < startIdx + maxVisibleLines; i++) {
+      const relativeIdx = i - startIdx;
+      const destY = y + startY + (relativeIdx * this.config.lineHeight);
+
+      // Skip rendering if this would be outside the viewport
+      if (destY + this.config.lineHeight > y + height) {
+        break;
+      }
+
+      // Skip animating message - it will be rendered separately
+      if (i === this.animatingMessageIndex && this.animationProgress < 1) {
+        continue;
+      }
+
+      // Copy this line from static buffer
+      const sourceY = i * this.config.lineHeight;
+      ctx.drawImage(
+        this.staticBuffer,
+        0, sourceY, width, this.config.lineHeight,  // Source rectangle
+        x, destY, width, this.config.lineHeight     // Destination rectangle
+      );
+    }
+
+    // If animating message is visible, render it on top
+    if (this.animatingMessageIndex >= startIdx &&
+        this.animatingMessageIndex < endIdx &&
+        this.animationProgress < 1) {
+      const animCanvas = this.renderAnimatingMessage(fontId, fontAtlasImage, width, spriteImages, spriteSize);
+      if (animCanvas) {
+        const relativeIdx = this.animatingMessageIndex - startIdx;
+        const destY = y + startY + (relativeIdx * this.config.lineHeight);
+        ctx.drawImage(animCanvas, 0, 0, width, this.config.lineHeight, x, destY, width, this.config.lineHeight);
+      }
+    }
 
     ctx.restore();
   }
@@ -522,6 +589,9 @@ export class CombatLogManager {
         this.animationProgress = 1;
         this.animatingMessageIndex = -1; // Animation complete
 
+        // Mark static buffer dirty - completed message becomes static
+        this.staticBufferDirty = true;
+
         // Process next message in queue if available
         if (this.messageQueue.length > 0) {
           const next = this.messageQueue.shift()!;
@@ -529,8 +599,7 @@ export class CombatLogManager {
         }
       }
 
-      // Mark buffer as dirty to trigger redraw
-      this.bufferDirty = true;
+      // No need to mark buffer dirty during animation - animating message renders separately
     }
   }
 

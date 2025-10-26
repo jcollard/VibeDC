@@ -13,7 +13,7 @@ import { UnitInfoContent, PartyMembersContent, EmptyContent } from '../managers/
 export class CombatLayoutManager implements CombatLayoutRenderer {
   private readonly RIGHT_COLUMN_WIDTH = 144; // 12 tiles
   private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles
-  private readonly COMBAT_LOG_HEIGHT = 36 + 4; // 3 tiles + 4 px for bleeding into the border
+  private readonly COMBAT_LOG_HEIGHT = 44 + 4; // 5 lines (5 * 8 = 40) + 2px padding + 4px border bleed + 2px extra
   private readonly PANEL_PADDING = 1; // 1px padding
   private readonly frameLayout: HorizontalVerticalLayout;
 
