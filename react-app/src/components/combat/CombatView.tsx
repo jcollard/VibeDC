@@ -26,6 +26,7 @@ import { CombatLogManager } from '../../models/combat/CombatLogManager';
 // import { renderDialogWithContent } from '../../utils/DialogRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatLayout6LeftMapRenderer } from '../../models/combat/layouts/CombatLayout6LeftMapRenderer';
+import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -197,6 +198,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Layout renderer (always use Layout 6)
   const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
 
+  // Map renderer for offset calculations
+  const mapRenderer = useMemo(
+    () => new CombatMapRenderer(TILE_SIZE, layoutRenderer, CANVAS_WIDTH, CANVAS_HEIGHT),
+    [layoutRenderer]
+  );
+
   // Combat log manager
   const combatLogManager = useMemo(() => new CombatLogManager({
     maxMessages: 100,
@@ -346,51 +353,24 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     displayCanvas.width = CANVAS_WIDTH;
     displayCanvas.height = CANVAS_HEIGHT;
 
-    // Calculate map size in pixels
-    const mapWidth = combatState.map.width * TILE_SIZE;
-    const mapHeight = combatState.map.height * TILE_SIZE;
-
-    // Use layout's viewport for map positioning
-    const viewport = layoutRenderer.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
-
-    // Get clipping region to check if map fits
-    const clipRegion = layoutRenderer.getMapClipRegion();
-    const clipWidthCalc = (clipRegion.maxCol - clipRegion.minCol + 1) * TILE_SIZE + 4; // +4 for right expansion
-    const clipHeightCalc = (clipRegion.maxRow - clipRegion.minRow + 1) * TILE_SIZE + 4 + 4; // +4 for top and bottom expansion
-
-    // Calculate if scrolling is needed
+    // Calculate map dimensions
     const mapWidthInTiles = combatState.map.width;
     const mapHeightInTiles = combatState.map.height;
-    const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
-    const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
-    // Reduce max horizontal scroll by 1 tile due to 6px (half-tile) left offset for wall border
-    const maxHorizontalScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
-    const canScrollRight = mapScrollX < maxHorizontalScroll;
-    const canScrollLeft = mapScrollX > 0;
-    // Reduce max vertical scroll by 2 tiles
-    const maxVerticalScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 2);
-    const canScrollDown = mapScrollY < maxVerticalScroll;
-    const canScrollUp = mapScrollY > 0;
 
-    // If map width fits within clipping area, center it horizontally
-    let offsetX = viewport.x;
-    if (mapWidth <= clipWidthCalc) {
-      offsetX = viewport.x + (clipWidthCalc - mapWidth) / 2;
-    } else {
-      // Apply scroll offset, with 6px left offset to account for wall border
-      offsetX = viewport.x - (mapScrollX * TILE_SIZE) - 6;
-    }
+    // Get scroll capabilities
+    const { canScrollRight, canScrollLeft, canScrollUp, canScrollDown } =
+      mapRenderer.getScrollCapabilities(mapWidthInTiles, mapHeightInTiles, mapScrollX, mapScrollY);
 
-    // If map height fits within clipping area, center it vertically
-    let offsetY = viewport.y;
-    if (mapHeight <= clipHeightCalc) {
-      // Center relative to the clipping region, not the viewport
-      const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
-      offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
-    } else {
-      // Apply scroll offset
-      offsetY = viewport.y - (mapScrollY * TILE_SIZE);
-    }
+    // Calculate map offsets using the map renderer
+    const { offsetX, offsetY } = mapRenderer.calculateMapOffset(
+      mapWidthInTiles,
+      mapHeightInTiles,
+      mapScrollX,
+      mapScrollY
+    );
+
+    // Get clipping region for canvas clipping rect
+    const clipRegion = layoutRenderer.getMapClipRegion();
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
@@ -596,7 +576,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, showDebugGrid, mapScrollX, mapScrollY]);
+  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, mapScrollX, mapScrollY]);
 
   // Animation loop
   useEffect(() => {
@@ -641,29 +621,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Function to perform a single scroll step in the given direction
   const performScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down') => {
+    const { maxScrollX, maxScrollY } = mapRenderer.calculateMaxScroll(
+      combatState.map.width,
+      combatState.map.height
+    );
+
     if (direction === 'right') {
-      setMapScrollX(prev => {
-        const mapWidthInTiles = combatState.map.width;
-        const clipRegion = layoutRenderer.getMapClipRegion();
-        const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
-        const maxScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
-        return Math.min(prev + 1, maxScroll);
-      });
+      setMapScrollX(prev => Math.min(prev + 1, maxScrollX));
     } else if (direction === 'left') {
       setMapScrollX(prev => Math.max(prev - 1, 0));
     } else if (direction === 'down') {
-      setMapScrollY(prev => {
-        const mapHeightInTiles = combatState.map.height;
-        const clipRegion = layoutRenderer.getMapClipRegion();
-        const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
-        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 2);
-        return Math.min(prev + 1, maxScroll);
-      });
+      setMapScrollY(prev => Math.min(prev + 1, maxScrollY));
     } else if (direction === 'up') {
       setMapScrollY(prev => Math.max(prev - 1, 0));
     }
     renderFrame();
-  }, [combatState.map, layoutRenderer, renderFrame]);
+  }, [combatState.map, mapRenderer, renderFrame]);
 
   // Start continuous scrolling
   const startContinuousScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down') => {
@@ -767,30 +740,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Button was clicked, don't process other click handlers
     }
 
-    // Calculate map offset (same as rendering logic)
-    const mapWidth = combatState.map.width * TILE_SIZE;
-    const mapHeight = combatState.map.height * TILE_SIZE;
-    const viewport = layoutRenderer.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
-    const clipRegion = layoutRenderer.getMapClipRegion();
-    const clipWidthCalc = (clipRegion.maxCol - clipRegion.minCol + 1) * TILE_SIZE + 4;
-    const clipHeightCalc = (clipRegion.maxRow - clipRegion.minRow + 1) * TILE_SIZE + 4 + 4;
-
-    let offsetX = viewport.x;
-    if (mapWidth <= clipWidthCalc) {
-      offsetX = viewport.x + (clipWidthCalc - mapWidth) / 2;
-    } else {
-      // Apply scroll offset, with 6px left offset to account for wall border
-      offsetX = viewport.x - (mapScrollX * TILE_SIZE) - 6;
-    }
-
-    let offsetY = viewport.y;
-    if (mapHeight <= clipHeightCalc) {
-      const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
-      offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
-    } else {
-      // Apply scroll offset
-      offsetY = viewport.y - (mapScrollY * TILE_SIZE);
-    }
+    // Calculate map offset using the map renderer
+    const { offsetX, offsetY } = mapRenderer.calculateMapOffset(
+      combatState.map.width,
+      combatState.map.height,
+      mapScrollX,
+      mapScrollY
+    );
 
     // Pass click to phase handler (if deployment phase)
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
@@ -841,7 +797,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // If no character clicked, check for deployment zone click
       handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, mapScrollX, mapScrollY, encounter);
     }
-  }, [combatState, encounter, setCombatState, inputHandler, layoutRenderer, combatLogManager, mapScrollX, mapScrollY]);
+  }, [combatState, encounter, setCombatState, inputHandler, mapRenderer, combatLogManager, mapScrollX, mapScrollY]);
 
   // Handle canvas mouse move for hover detection
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {

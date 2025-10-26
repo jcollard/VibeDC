@@ -81,16 +81,6 @@ export class UnitDeploymentManager {
     const tileX = Math.floor(mapPixelX / tileSize);
     const tileY = Math.floor(mapPixelY / tileSize);
 
-    // Debug logging
-    console.log('Click detection:', {
-      canvasX, canvasY,
-      offsetX, offsetY,
-      scrollX, scrollY,
-      mapPixelX, mapPixelY,
-      tileX, tileY,
-      zones: encounter.playerDeploymentZones
-    });
-
     // Check if click is on a deployment zone
     const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(
       zone => zone.x === tileX && zone.y === tileY
