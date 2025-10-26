@@ -637,31 +637,39 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Button was clicked, don't process other handlers
     }
 
-    // Check if clicking on bottom info panel - delegate to phase handler
-    if (phaseHandlerRef.current.handleInfoPanelClick) {
-      const panelRegion = layoutRenderer.getBottomInfoPanelRegion();
+    // Check if clicking on bottom info panel
+    const panelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
-      // Check if click is within the panel region
-      if (canvasX >= panelRegion.x &&
-          canvasX <= panelRegion.x + panelRegion.width &&
-          canvasY >= panelRegion.y &&
-          canvasY <= panelRegion.y + panelRegion.height) {
+    // Check if click is within the panel region
+    if (canvasX >= panelRegion.x &&
+        canvasX <= panelRegion.x + panelRegion.width &&
+        canvasY >= panelRegion.y &&
+        canvasY <= panelRegion.y + panelRegion.height) {
 
-        const relativeX = canvasX - panelRegion.x;
-        const relativeY = canvasY - panelRegion.y;
+      // First, try to handle click with the panel manager (for party member selection, etc.)
+      const clickedIndex = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
 
-        const result = phaseHandlerRef.current.handleInfoPanelClick(
-          relativeX,
-          relativeY,
-          combatState,
-          encounter
-        );
+      // If a party member was clicked (in deployment phase), deploy them
+      if (clickedIndex !== null && typeof clickedIndex === 'number' && combatState.phase === 'deployment') {
+        // Call the deployment handler directly with the clicked index
+        const deploymentHandler = phaseHandlerRef.current as any; // Cast to access deployment method
+        if (deploymentHandler.handlePartyMemberDeployment) {
+          const result = deploymentHandler.handlePartyMemberDeployment(
+            clickedIndex,
+            combatState,
+            encounter
+          );
 
-        if (result.handled) {
-          if (result.newState) {
+          if (result) {
+            // Add log message
+            if (result.logMessage) {
+              combatLogManager.addMessage(result.logMessage);
+            }
+
+            // Update state
             setCombatState(result.newState);
+            return; // Click was handled
           }
-          return; // Click was handled, don't process other handlers
         }
       }
     }
