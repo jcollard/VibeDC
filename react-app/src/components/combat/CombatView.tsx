@@ -348,6 +348,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Get clipping region to check if map fits
     const clipRegion = layoutRenderer.getMapClipRegion();
     const clipWidthCalc = (clipRegion.maxCol - clipRegion.minCol + 1) * TILE_SIZE + 4; // +4 for right expansion
+    const clipHeightCalc = (clipRegion.maxRow - clipRegion.minRow + 1) * TILE_SIZE + 4 + 4; // +4 for top and bottom expansion
 
     // If map width fits within clipping area, center it horizontally
     let offsetX = viewport.x;
@@ -355,8 +356,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       offsetX = viewport.x + (clipWidthCalc - mapWidth) / 2;
     }
 
-    // Always draw from top of viewport
-    const offsetY = viewport.y;
+    // If map height fits within clipping area, center it vertically
+    let offsetY = viewport.y;
+    if (mapHeight <= clipHeightCalc) {
+      // Center relative to the clipping region, not the viewport
+      const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
+      offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
+    }
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
