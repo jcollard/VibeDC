@@ -38,26 +38,28 @@ Each content implementation is responsible for:
 
 ## Implementation Tasks
 
-### Phase 1: Create Infrastructure
-- [ ] Create `react-app/src/models/combat/managers/panels/` directory
-- [ ] Define `PanelContent` interface in `PanelContent.ts`
-- [ ] Define shared types (PanelRegion, etc.) if needed
+### Phase 1: Create Infrastructure ✅
+- [x] Create `react-app/src/models/combat/managers/panels/` directory
+- [x] Define `PanelContent` interface in `PanelContent.ts`
+- [x] Define shared types (PanelRegion, etc.) if needed
 
-### Phase 2: Create Content Implementations
-- [ ] Create `UnitInfoContent.ts` - renders single unit information
-- [ ] Create `PartyMembersContent.ts` - renders party grid with interaction
-- [ ] Create `EmptyContent.ts` - renders empty state
+### Phase 2: Create Content Implementations ✅
+- [x] Create `UnitInfoContent.ts` - renders single unit information
+- [x] Create `PartyMembersContent.ts` - renders party grid with interaction
+- [x] Create `EmptyContent.ts` - renders empty state
 
-### Phase 3: Refactor InfoPanelManager
-- [ ] Update InfoPanelManager to accept PanelContent implementations
-- [ ] Implement coordinate transformation for events
-- [ ] Remove direct rendering logic (keep only delegation)
-- [ ] Update InfoPanelContent type to reference new content classes
+### Phase 3: Refactor InfoPanelManager ✅
+- [x] Update InfoPanelManager to accept PanelContent implementations
+- [x] Implement coordinate transformation for events
+- [x] Remove direct rendering logic (keep only delegation)
+- [x] Removed old InfoPanelContent union type in favor of PanelContent interface
 
-### Phase 4: Update Consumers
-- [ ] Find all files that use InfoPanelManager
-- [ ] Update to use new PanelContent implementations
-- [ ] Ensure proper content instantiation with required dependencies
+### Phase 4: Update Consumers ✅
+- [x] Find all files that use InfoPanelManager (CombatLayoutManager, CombatView)
+- [x] Update CombatLayoutManager to create and set PanelContent implementations
+- [x] Update CombatView to use new handleClick/handleHover API
+- [x] Ensure proper content instantiation with required dependencies
+- [x] Build completed successfully with no TypeScript errors
 
 ### Phase 5: Testing
 - [ ] Test unit info panel rendering
