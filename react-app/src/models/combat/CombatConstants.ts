@@ -63,6 +63,7 @@ export const CombatConstants = {
     WAYLAID_MESSAGE_LINE1: 'You have been waylaid by enemies and must defend',
     WAYLAID_MESSAGE_LINE2: 'yourself.',
     DEPLOYMENT_INSTRUCTION: 'Click [sprite:gradients-7] to deploy a unit.',
+    SELECT_PARTY_MEMBER: 'Select a [color=#ffa500]Party Member[/color] to deploy',
     START_COMBAT_BUTTON: 'Start Combat',
   },
 

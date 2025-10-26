@@ -951,13 +951,24 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
         const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
 
+        // Get the selected zone before the click
+        const previousSelection = handler.getSelectedZoneIndex();
+
         // Delegate to the deployment phase handler with tile coordinates
-        handler.handleTileClick(tileX, tileY, encounter);
+        const zoneWasClicked = handler.handleTileClick(tileX, tileY, encounter);
+
+        // If a zone was clicked and is now selected (not deselected), add combat log message
+        if (zoneWasClicked) {
+          const currentSelection = handler.getSelectedZoneIndex();
+          if (currentSelection !== null && currentSelection !== previousSelection) {
+            combatLogManager.addMessage(CombatConstants.TEXT.SELECT_PARTY_MEMBER);
+          }
+        }
       }
     });
 
     return unsubscribe;
-  }, [mapRenderer, combatState.phase, encounter]);
+  }, [mapRenderer, combatState.phase, encounter, combatLogManager]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
