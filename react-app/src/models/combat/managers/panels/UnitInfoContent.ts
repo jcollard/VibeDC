@@ -18,7 +18,7 @@ export interface UnitInfoConfig {
  */
 export class UnitInfoContent implements PanelContent {
   private readonly config: UnitInfoConfig;
-  private readonly unit: CombatUnit;
+  private unit: CombatUnit;
 
   constructor(config: UnitInfoConfig, unit: CombatUnit) {
     this.config = config;
@@ -117,6 +117,15 @@ export class UnitInfoContent implements PanelContent {
       'left',
       '#ffffff'
     );
+  }
+
+  /**
+   * Update the unit being displayed
+   * Call this instead of recreating the content when the unit changes
+   * @param unit - New combat unit to display
+   */
+  updateUnit(unit: CombatUnit): void {
+    this.unit = unit;
   }
 
   // No interaction handling needed for unit info

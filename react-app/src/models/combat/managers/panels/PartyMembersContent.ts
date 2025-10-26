@@ -26,10 +26,10 @@ const VERTICAL_SPACING = 6; // Additional vertical space between rows
  */
 export class PartyMembersContent implements PanelContent {
   private readonly config: PartyMembersConfig;
-  private readonly units: CombatUnit[];
+  private units: CombatUnit[];
   private readonly spriteImages: Map<string, HTMLImageElement>;
   private readonly spriteSize: number;
-  private readonly hoveredIndex: number | null;
+  private hoveredIndex: number | null;
   private lastRegion: PanelRegion | null = null;
 
   constructor(
@@ -159,6 +159,24 @@ export class PartyMembersContent implements PanelContent {
    */
   handleHover(relativeX: number, relativeY: number): number | null {
     return this.getPartyMemberAtPosition(relativeX, relativeY);
+  }
+
+  /**
+   * Update the hovered party member index
+   * Call this instead of recreating the content when hover state changes
+   * @param index - Index of the hovered party member, or null if none
+   */
+  updateHoveredIndex(index: number | null): void {
+    this.hoveredIndex = index;
+  }
+
+  /**
+   * Update the party units list
+   * Call this when the party composition changes
+   * @param units - New array of party units
+   */
+  updatePartyUnits(units: CombatUnit[]): void {
+    this.units = units;
   }
 
   /**

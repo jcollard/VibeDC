@@ -43,6 +43,9 @@ export class DeploymentPhaseHandler extends PhaseBase {
   // Party selection dialog
   private partyDialog: PartySelectionDialog;
 
+  // Cached panel content for hover detection (per GeneralGuidelines.md - don't recreate every frame)
+  private hoverDetectionContent: PartyMembersContent | null = null;
+
   /**
    * @param uiStateManager - Optional UI state manager for centralized state management
    */
@@ -479,22 +482,27 @@ export class DeploymentPhaseHandler extends PhaseBase {
       return { handled: false };
     }
 
-    // Create temporary party members content to handle hover detection
-    const content = new PartyMembersContent(
-      {
-        title: 'Party Members',
-        titleColor: '#ffa500',
-        padding: 1,
-        lineSpacing: 8,
-      },
-      partyUnits,
-      new Map(),
-      12,
-      null
-    );
+    // Create or update cached content for hover detection
+    if (!this.hoverDetectionContent) {
+      this.hoverDetectionContent = new PartyMembersContent(
+        {
+          title: 'Party Members',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        },
+        partyUnits,
+        new Map(),
+        12,
+        null
+      );
+    } else {
+      // Update party units in case they changed
+      this.hoverDetectionContent.updatePartyUnits(partyUnits);
+    }
 
     // Get the hovered party member index
-    const hoveredIndex = content.handleHover(relativeX, relativeY);
+    const hoveredIndex = this.hoverDetectionContent.handleHover(relativeX, relativeY);
 
     // Return result with custom data for CombatView to use
     return {

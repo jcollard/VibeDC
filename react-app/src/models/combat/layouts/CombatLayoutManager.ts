@@ -23,6 +23,11 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   private mapScrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private mapScrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
+  // Cached panel content instances (per GeneralGuidelines.md - don't recreate every frame)
+  private cachedBottomPanelContent: PartyMembersContent | UnitInfoContent | EmptyContent | null = null;
+  private cachedTopPanelContent: UnitInfoContent | EmptyContent | null = null;
+  private previousPhase: 'deployment' | 'battle' | null = null;
+
   constructor() {
     // Define the layout regions using tile-based dimensions
     // Canvas is 384x216 (32x18 tiles at 12px each)
@@ -436,43 +441,66 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex } = context;
     if (!currentUnitPanelManager) return;
 
-    // Create appropriate content based on phase
+    // Detect phase transition and clear cache
+    const currentPhase = isDeploymentPhase ? 'deployment' : 'battle';
+    if (this.previousPhase !== null && this.previousPhase !== currentPhase) {
+      this.cachedBottomPanelContent = null;
+    }
+    this.previousPhase = currentPhase;
+
+    // Create or update appropriate content based on phase
     if (isDeploymentPhase && partyUnits && partyUnits.length > 0) {
       // During deployment, show party members grid
-      const content = new PartyMembersContent(
-        {
-          title: 'Party Members',
-          titleColor: '#ffa500',
-          padding: 1,
-          lineSpacing: 8,
-        },
-        partyUnits,
-        spriteImages,
-        spriteSize,
-        hoveredPartyMemberIndex ?? null
-      );
-      currentUnitPanelManager.setContent(content);
+      if (this.cachedBottomPanelContent instanceof PartyMembersContent) {
+        // Update existing content
+        this.cachedBottomPanelContent.updateHoveredIndex(hoveredPartyMemberIndex ?? null);
+        this.cachedBottomPanelContent.updatePartyUnits(partyUnits);
+      } else {
+        // Create new content
+        this.cachedBottomPanelContent = new PartyMembersContent(
+          {
+            title: 'Party Members',
+            titleColor: '#ffa500',
+            padding: 1,
+            lineSpacing: 8,
+          },
+          partyUnits,
+          spriteImages,
+          spriteSize,
+          hoveredPartyMemberIndex ?? null
+        );
+      }
+      currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
     } else if (currentUnit) {
       // During combat, show current unit
-      const content = new UnitInfoContent(
-        {
+      if (this.cachedBottomPanelContent instanceof UnitInfoContent) {
+        // Update existing content
+        this.cachedBottomPanelContent.updateUnit(currentUnit);
+      } else {
+        // Create new content
+        this.cachedBottomPanelContent = new UnitInfoContent(
+          {
+            title: 'CURRENT UNIT',
+            titleColor: '#ffa500',
+            padding: 1,
+            lineSpacing: 8,
+          },
+          currentUnit
+        );
+      }
+      currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
+    } else {
+      // Empty state
+      if (!(this.cachedBottomPanelContent instanceof EmptyContent)) {
+        // Create new empty content (stateless, but cache it anyway)
+        this.cachedBottomPanelContent = new EmptyContent({
           title: 'CURRENT UNIT',
           titleColor: '#ffa500',
           padding: 1,
           lineSpacing: 8,
-        },
-        currentUnit
-      );
-      currentUnitPanelManager.setContent(content);
-    } else {
-      // Empty state
-      const content = new EmptyContent({
-        title: 'CURRENT UNIT',
-        titleColor: '#ffa500',
-        padding: 1,
-        lineSpacing: 8,
-      });
-      currentUnitPanelManager.setContent(content);
+        });
+      }
+      currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
     }
 
     currentUnitPanelManager.render(
@@ -497,26 +525,35 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager } = context;
     if (!targetUnitPanelManager) return;
 
-    // Create appropriate content
+    // Create or update appropriate content
     if (targetUnit) {
-      const content = new UnitInfoContent(
-        {
+      if (this.cachedTopPanelContent instanceof UnitInfoContent) {
+        // Update existing content
+        this.cachedTopPanelContent.updateUnit(targetUnit);
+      } else {
+        // Create new content
+        this.cachedTopPanelContent = new UnitInfoContent(
+          {
+            title: 'Unit Info',
+            titleColor: '#ff6b6b',
+            padding: 1,
+            lineSpacing: 8,
+          },
+          targetUnit
+        );
+      }
+      targetUnitPanelManager.setContent(this.cachedTopPanelContent);
+    } else {
+      if (!(this.cachedTopPanelContent instanceof EmptyContent)) {
+        // Create new empty content (stateless, but cache it anyway)
+        this.cachedTopPanelContent = new EmptyContent({
           title: 'Unit Info',
           titleColor: '#ff6b6b',
           padding: 1,
           lineSpacing: 8,
-        },
-        targetUnit
-      );
-      targetUnitPanelManager.setContent(content);
-    } else {
-      const content = new EmptyContent({
-        title: 'Unit Info',
-        titleColor: '#ff6b6b',
-        padding: 1,
-        lineSpacing: 8,
-      });
-      targetUnitPanelManager.setContent(content);
+        });
+      }
+      targetUnitPanelManager.setContent(this.cachedTopPanelContent);
     }
 
     targetUnitPanelManager.render(
