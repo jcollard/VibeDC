@@ -9,11 +9,6 @@ import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { CinematicManager } from '../../models/combat/CinematicSequence';
-// Animations disabled for prototyping
-// import { MapFadeInSequence } from '../../models/combat/MapFadeInSequence';
-// import { TitleFadeInSequence } from '../../models/combat/TitleFadeInSequence';
-// import { MessageFadeInSequence } from '../../models/combat/MessageFadeInSequence';
-// import { SequenceParallel } from '../../models/combat/SequenceParallel';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
@@ -21,9 +16,6 @@ import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
 import { CombatLogManager } from '../../models/combat/CombatLogManager';
-// Disabled for prototyping - unit info dialog
-// import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
-// import { renderDialogWithContent } from '../../utils/DialogRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatLayoutManager } from '../../models/combat/layouts/CombatLayoutManager';
 import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRenderer';
@@ -225,10 +217,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }), []);
 
   // Info panel managers
-  // During deployment, this shows party members; during combat, shows current unit
-  const currentUnitPanelManager = useMemo(() => new InfoPanelManager(), []);
-
-  const targetUnitPanelManager = useMemo(() => new InfoPanelManager(), []);
+  const bottomInfoPanelManager = useMemo(() => new InfoPanelManager(), []); // Bottom-right panel
+  const topInfoPanelManager = useMemo(() => new InfoPanelManager(), []); // Top-right panel
 
   // Top panel manager
   const topPanelManager = useMemo(() => new TopPanelManager(), []);
@@ -346,41 +336,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (spritesLoaded && !introCinematicPlayedRef.current) {
       // Skip animations - just mark as played
       introCinematicPlayedRef.current = true;
-
-      // Uncomment below to re-enable intro animations
-      /*
-      // Calculate message positions
-      const titleY = CombatConstants.UI.TITLE_Y_POSITION;
-      const waylaidMessageY = CombatConstants.UI.WAYLAID_MESSAGE_Y;
-      const mapHeight = combatState.map.height * TILE_SIZE;
-      const offsetY = (CANVAS_HEIGHT - mapHeight) / 2;
-      const deploymentInstructionY = offsetY + mapHeight + CombatConstants.UI.MESSAGE_SPACING;
-
-      const introSequence = new SequenceParallel([
-        new MapFadeInSequence(CombatConstants.ANIMATION.MAP_FADE_DURATION),
-        new TitleFadeInSequence(
-          CombatConstants.TEXT.DEPLOY_TITLE,
-          CombatConstants.ANIMATION.TITLE_FADE_DURATION,
-          1,
-          titleY
-        ),
-        new MessageFadeInSequence(
-          CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION,
-          CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          '7px-04b03',
-          1,
-          deploymentInstructionY
-        ),
-        new MessageFadeInSequence(
-          CombatConstants.TEXT.WAYLAID_MESSAGE,
-          CombatConstants.ANIMATION.MESSAGE_FADE_DURATION,
-          '7px-04b03',
-          1,
-          waylaidMessageY
-        )
-      ]);
-      cinematicManagerRef.current.play(introSequence, combatState, encounter);
-      */
+      // Intro animations will be re-implemented with new animation system
     }
   }, [spritesLoaded]);
 
@@ -484,114 +440,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     ctx.restore();
 
-    // DISABLED FOR PROTOTYPING - Skip default phase UI (titles, dialogs)
-    // Uncomment to re-enable deployment phase UI elements
-    /*
-    if (phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
-      phaseHandlerRef.current.renderUI(combatState, encounter, {
-        ctx,
-        canvasWidth: CANVAS_WIDTH,
-        canvasHeight: CANVAS_HEIGHT,
-        tileSize: TILE_SIZE,
-        spriteSize: SPRITE_SIZE,
-        offsetX,
-        offsetY,
-        spriteImages: spriteImagesRef.current,
-        titleAtlasFontId: titleAtlasFont,
-        messageAtlasFontId: messageAtlasFont,
-        dialogAtlasFontId: dialogAtlasFont,
-        fontAtlasImages: fontAtlasImagesRef.current,
-      });
-    }
-    */
-
-    // DISABLED FOR PROTOTYPING - Skip unit info dialog
-    // Uncomment to re-enable unit info dialog in deployment phase
-    /*
-    const phaseHandler = phaseHandlerRef.current;
-    if (phaseHandler instanceof DeploymentPhaseHandler) {
-      let unitToDisplay: CombatUnit | null = null;
-
-      // Priority 1: Check if hovering over a placed unit on the map
-      if (uiState.hoveredCell) {
-        const hoveredUnit = combatState.unitManifest.getUnitAtPosition(uiState.hoveredCell);
-        if (hoveredUnit) {
-          unitToDisplay = hoveredUnit;
-        }
-      }
-
-      // Priority 2: Check if hovering over a character in the selection dialog
-      if (!unitToDisplay) {
-        const hoveredCharacterIndex = phaseHandler.getHoveredCharacterIndex();
-        if (hoveredCharacterIndex !== null) {
-          const partyMembers = PartyMemberRegistry.getAll();
-          if (hoveredCharacterIndex >= 0 && hoveredCharacterIndex < partyMembers.length) {
-            const hoveredMember = partyMembers[hoveredCharacterIndex];
-            unitToDisplay = createUnitFromPartyMember(hoveredMember);
-          }
-        }
-      }
-
-      // Priority 3: Use the last displayed unit if no hover
-      if (!unitToDisplay && lastDisplayedUnitRef.current) {
-        unitToDisplay = lastDisplayedUnitRef.current;
-      }
-
-      // Update the last displayed unit
-      if (unitToDisplay) {
-        lastDisplayedUnitRef.current = unitToDisplay;
-      }
-
-      // Render the unit info dialog if we have a unit to display
-      if (unitToDisplay) {
-        // Get the unit info font atlas image from the selected font
-        const unitInfoFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
-
-        const unitInfoDialog = new CombatUnitInfoDialogContent(
-          unitToDisplay,
-          unitInfoAtlasFont,
-          unitInfoFontAtlas,
-          spriteImagesRef.current,
-          TILE_SIZE,
-          SPRITE_SIZE,
-          1 // Scale (reduced from 2 for new resolution)
-        );
-
-        // Calculate dialog size
-        const bounds = unitInfoDialog.measure(0);
-        const BORDER_INSET = 6 * 1; // Scale of 1 (reduced from 4)
-        const PADDING = 2; // Reduced from 6 for new resolution
-        const dialogWidth = (bounds.maxX - bounds.minX) + (PADDING * 2) + (BORDER_INSET * 2);
-        const dialogHeight = (bounds.maxY - bounds.minY) + (PADDING * 2) + (BORDER_INSET * 2);
-
-        // Position at right side with 4px margin, vertically centered (reduced from 16px)
-        const dialogX = CANVAS_WIDTH - dialogWidth - 4;
-        const dialogY = (CANVAS_HEIGHT - dialogHeight) / 2;
-
-        renderDialogWithContent(
-          ctx,
-          unitInfoDialog,
-          dialogX,
-          dialogY,
-          SPRITE_SIZE,
-          spriteImagesRef.current,
-          undefined, // Use default 9-slice sprites
-          PADDING,
-          1 // Scale (reduced from 4 for new resolution)
-        );
-      }
-    }
-    */
-
     // Render layout UI
     // Use 7px-04b03 for info panels/combat log, dungeon-slant for top panel
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
     const topPanelFontAtlas = fontAtlasImagesRef.current.get('15px-dungeonslant') || null;
-
-    // FOR TESTING: Display first party member in current unit panel during combat
-    const testCurrentUnit = combatState.phase !== 'deployment' && partyUnits.length > 0
-      ? partyUnits[0]
-      : null;
 
     layoutRenderer.renderLayout({
       ctx,
@@ -602,14 +454,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       fontAtlasImage: layoutFontAtlas,
       topPanelFontAtlasImage: topPanelFontAtlas,
       spriteImages: spriteImagesRef.current,
-      currentUnit: testCurrentUnit, // Used during combat phase
+      currentUnit: null, // Will be populated during combat phase
       targetUnit: targetUnitRef.current, // Set by clicking turn order
       partyUnits: partyUnits, // Used during deployment phase
       isDeploymentPhase: combatState.phase === 'deployment',
       hoveredPartyMemberIndex: hoveredPartyMemberRef.current, // For hover visual feedback
       combatLogManager,
-      currentUnitPanelManager,
-      targetUnitPanelManager,
+      currentUnitPanelManager: bottomInfoPanelManager,
+      targetUnitPanelManager: topInfoPanelManager,
       topPanelManager,
     });
 
@@ -871,24 +723,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const { x: canvasX, y: canvasY } = coords;
 
-    // Legacy character dialog handling - DISABLED (old UI system)
-    // The new system uses info panels which are handled in handleCanvasMouseDown
-    // This code is kept for reference but is not actively used
-    /*
-    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
-      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
-      const partyMembers = PartyMemberRegistry.getAll();
-      const characterIndex = handler.handleCharacterClick(canvasX, canvasY, partyMembers.length);
-      if (characterIndex !== null) {
-        const newState = handler.handlePartyMemberDeployment(characterIndex, combatState, encounter);
-        if (newState) {
-          setCombatState(newState);
-        }
-        return;
-      }
-    }
-    */
-
     // Try to handle as a map click (will notify registered handlers)
     const wasMapClick = mapRenderer.handleMapClick(
       canvasX,
@@ -922,7 +756,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // The panel manager will delegate to the panel content (party members, unit info, etc.)
     const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
-    const hoverResult = currentUnitPanelManager.handleHover(
+    const hoverResult = bottomInfoPanelManager.handleHover(
       canvasX,
       canvasY,
       partyPanelRegion
@@ -966,7 +800,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         encounter
       );
     }
-  }, [combatState, encounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, currentUnitPanelManager, layoutRenderer, renderFrame]);
+  }, [combatState, encounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, layoutRenderer, renderFrame]);
 
   // Register map click handler
   useEffect(() => {
