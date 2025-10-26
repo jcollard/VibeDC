@@ -158,8 +158,8 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     );
 
     // Right column - info panels at correct tile positions
-    // Top-right: Current unit (rows 0-8, columns 21-31)
-    this.renderCurrentUnitPanel(
+    // Top-right: Info panel (rows 0-8, columns 21-31)
+    this.renderTopInfoPanel(
       context,
       252, // x: column 21 (21 * 12px)
       0,   // y: row 0 (0 * 12px)
@@ -167,8 +167,8 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       108  // height: 9 tiles (9 * 12px)
     );
 
-    // Bottom-right: Target unit (rows 10-17, columns 21-31)
-    this.renderTargetUnitPanel(
+    // Bottom-right: Info panel (rows 10-17, columns 21-31)
+    this.renderBottomInfoPanel(
       context,
       252, // x: column 21 (21 * 12px)
       120, // y: row 10 (10 * 12px)
@@ -370,7 +370,11 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     );
   }
 
-  private renderCurrentUnitPanel(
+  /**
+   * Render the bottom info panel (right column, bottom position)
+   * Shows party members during deployment, or current unit during combat
+   */
+  private renderBottomInfoPanel(
     context: LayoutRenderContext,
     x: number,
     y: number,
@@ -427,7 +431,11 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     );
   }
 
-  private renderTargetUnitPanel(
+  /**
+   * Render the top info panel (right column, top position)
+   * Shows target unit or selected unit information
+   */
+  private renderTopInfoPanel(
     context: LayoutRenderContext,
     x: number,
     y: number,

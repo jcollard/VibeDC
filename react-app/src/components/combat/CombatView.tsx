@@ -803,12 +803,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Check if a zone is selected and if clicking on party panel
       const selectedZone = handler.getSelectedZoneIndex();
       if (selectedZone !== null && partyUnits.length > 0) {
-        // Party panel region (top-right info panel)
+        // Party panel region (bottom-right info panel)
         const partyPanelRegion = {
           x: 252,  // column 21 (21 * 12px)
-          y: 0,    // row 0
+          y: 120,  // row 10 (10 * 12px)
           width: 132,  // 11 tiles
-          height: 108  // 9 tiles
+          height: 96   // 8 tiles
         };
 
         // Check if clicking on a party member
@@ -977,9 +977,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       if (partyUnits.length > 0) {
         const partyPanelRegion = {
           x: 252,  // column 21 (21 * 12px)
-          y: 0,    // row 0
+          y: 120,  // row 10 (10 * 12px)
           width: 132,  // 11 tiles
-          height: 108  // 9 tiles
+          height: 96   // 8 tiles
         };
 
         const hoveredPartyIndex = currentUnitPanelManager.handleHover(
