@@ -514,7 +514,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render debug grid overlay (if enabled)
     if (showDebugGrid) {
-      renderer.renderDebugGrid(ctx);
+      const debugFontAtlas = fontAtlasImagesRef.current.get('7px-04b03') || null;
+      renderer.renderDebugGrid(ctx, '7px-04b03', debugFontAtlas);
     }
 
     // Copy buffer to display canvas

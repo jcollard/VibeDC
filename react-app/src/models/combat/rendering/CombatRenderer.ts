@@ -1,5 +1,6 @@
 import { SpriteRegistry } from '../../../utils/SpriteRegistry';
 import { SpriteRenderer } from '../../../utils/SpriteRenderer';
+import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 import type { CombatMap } from '../CombatMap';
 import type { CombatUnitManifest } from '../CombatUnitManifest';
 
@@ -161,8 +162,10 @@ export class CombatRenderer {
   /**
    * Render a debug grid overlay showing tile boundaries
    * @param ctx - Canvas rendering context
+   * @param fontId - Font atlas ID to use for numbers
+   * @param fontAtlasImage - Font atlas image
    */
-  renderDebugGrid(ctx: CanvasRenderingContext2D): void {
+  renderDebugGrid(ctx: CanvasRenderingContext2D, fontId?: string, fontAtlasImage?: HTMLImageElement | null): void {
     ctx.save();
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.lineWidth = 1;
@@ -181,6 +184,63 @@ export class CombatRenderer {
       ctx.moveTo(0, y);
       ctx.lineTo(this.canvasWidth, y);
       ctx.stroke();
+    }
+
+    // Add row and column numbers
+    if (fontId && fontAtlasImage) {
+      // Use atlas font for numbers
+      const numCols = Math.floor(this.canvasWidth / this.tileSize);
+      for (let col = 0; col < numCols; col++) {
+        const x = col * this.tileSize + 1;
+        FontAtlasRenderer.renderText(
+          ctx,
+          col.toString(),
+          x,
+          1,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffff00'
+        );
+      }
+
+      // Number rows (along left column)
+      const numRows = Math.floor(this.canvasHeight / this.tileSize);
+      for (let row = 0; row < numRows; row++) {
+        const y = row * this.tileSize + 1;
+        FontAtlasRenderer.renderText(
+          ctx,
+          row.toString(),
+          1,
+          y,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffff00'
+        );
+      }
+    } else {
+      // Fallback to canvas font if atlas font not available
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.8)';
+      ctx.font = '8px monospace';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+
+      // Number columns (along top row)
+      const numCols = Math.floor(this.canvasWidth / this.tileSize);
+      for (let col = 0; col < numCols; col++) {
+        const x = col * this.tileSize + 1;
+        ctx.fillText(col.toString(), x, 1);
+      }
+
+      // Number rows (along left column)
+      const numRows = Math.floor(this.canvasHeight / this.tileSize);
+      for (let row = 0; row < numRows; row++) {
+        const y = row * this.tileSize + 1;
+        ctx.fillText(row.toString(), 1, y);
+      }
     }
 
     ctx.restore();
