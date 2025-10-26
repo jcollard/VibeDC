@@ -367,8 +367,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const maxHorizontalScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
     const canScrollRight = mapScrollX < maxHorizontalScroll;
     const canScrollLeft = mapScrollX > 0;
-    // Reduce max vertical scroll by 1 tile due to 6px (half-tile) down offset for wall border
-    const maxVerticalScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 1);
+    // Reduce max vertical scroll by 2 tiles
+    const maxVerticalScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 2);
     const canScrollDown = mapScrollY < maxVerticalScroll;
     const canScrollUp = mapScrollY > 0;
 
@@ -388,8 +388,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
       offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
     } else {
-      // Apply scroll offset, with 6px down offset to account for wall border
-      offsetY = viewport.y - (mapScrollY * TILE_SIZE) + 6;
+      // Apply scroll offset
+      offsetY = viewport.y - (mapScrollY * TILE_SIZE);
     }
 
     const ctx = bufferCanvas.getContext('2d');
@@ -656,7 +656,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const mapHeightInTiles = combatState.map.height;
         const clipRegion = layoutRenderer.getMapClipRegion();
         const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
-        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 1);
+        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 2);
         return Math.min(prev + 1, maxScroll);
       });
     } else if (direction === 'up') {
@@ -788,8 +788,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
       offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
     } else {
-      // Apply scroll offset, with 6px down offset to account for wall border
-      offsetY = viewport.y - (mapScrollY * TILE_SIZE) + 6;
+      // Apply scroll offset
+      offsetY = viewport.y - (mapScrollY * TILE_SIZE);
     }
 
     // Pass click to phase handler (if deployment phase)
