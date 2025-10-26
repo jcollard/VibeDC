@@ -22,6 +22,7 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   private scrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollRightButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private scrollLeftButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor() {
     // Define the layout regions using tile-based dimensions
@@ -73,9 +74,9 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
 
   /**
    * Handle click events on the map scroll buttons.
-   * Returns 'right' if right arrow clicked, null otherwise.
+   * Returns 'right', 'left', or null.
    */
-  handleMapScrollClick(x: number, y: number): 'right' | null {
+  handleMapScrollClick(x: number, y: number): 'right' | 'left' | null {
     // Check scroll right button
     if (this.scrollRightButtonBounds &&
         x >= this.scrollRightButtonBounds.x &&
@@ -83,6 +84,15 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
         y >= this.scrollRightButtonBounds.y &&
         y <= this.scrollRightButtonBounds.y + this.scrollRightButtonBounds.height) {
       return 'right';
+    }
+
+    // Check scroll left button
+    if (this.scrollLeftButtonBounds &&
+        x >= this.scrollLeftButtonBounds.x &&
+        x <= this.scrollLeftButtonBounds.x + this.scrollLeftButtonBounds.width &&
+        y >= this.scrollLeftButtonBounds.y &&
+        y <= this.scrollLeftButtonBounds.y + this.scrollLeftButtonBounds.height) {
+      return 'left';
     }
 
     return null;
@@ -165,18 +175,18 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   }
 
   /**
-   * Render map scroll arrows (e.g., right arrow for horizontal scrolling).
+   * Render map scroll arrows (e.g., right/left arrows for horizontal scrolling).
    * Call this after rendering the layout.
    */
-  renderMapScrollArrows(context: LayoutRenderContext, canScrollRight: boolean): void {
+  renderMapScrollArrows(context: LayoutRenderContext, canScrollRight: boolean, canScrollLeft: boolean): void {
     const { ctx, spriteImages, spriteSize } = context;
+    const tileSize = 12;
+    const buttonSize = 12;
+    const arrowStartY = 7 * tileSize;
 
     // Right arrow at column 19, rows 7-9 (if can scroll right)
     if (canScrollRight) {
-      const tileSize = 12;
       const arrowX = 19 * tileSize;
-      const arrowStartY = 7 * tileSize;
-      const buttonSize = 12;
 
       // Render 3 arrow sprites vertically
       for (let i = 0; i < 3; i++) {
@@ -202,6 +212,36 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       };
     } else {
       this.scrollRightButtonBounds = null;
+    }
+
+    // Left arrow at column 0, rows 7-9 (if can scroll left)
+    if (canScrollLeft) {
+      const arrowX = 0 * tileSize;
+
+      // Render 3 arrow sprites vertically
+      for (let i = 0; i < 3; i++) {
+        const arrowY = arrowStartY + (i * tileSize);
+        SpriteRenderer.renderSpriteById(
+          ctx,
+          'minimap-8',
+          spriteImages,
+          spriteSize,
+          arrowX,
+          arrowY,
+          buttonSize,
+          buttonSize
+        );
+      }
+
+      // Store bounds for the entire clickable area (all 3 tiles)
+      this.scrollLeftButtonBounds = {
+        x: arrowX,
+        y: arrowStartY,
+        width: buttonSize,
+        height: buttonSize * 3
+      };
+    } else {
+      this.scrollLeftButtonBounds = null;
     }
   }
 

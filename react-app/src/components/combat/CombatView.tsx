@@ -357,6 +357,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const mapWidthInTiles = combatState.map.width;
     const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
     const canScrollRight = mapScrollX < (mapWidthInTiles - clipWidthInTiles);
+    const canScrollLeft = mapScrollX > 0;
 
     // If map width fits within clipping area, center it horizontally
     let offsetX = viewport.x;
@@ -566,7 +567,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       targetUnit: null,
       combatLogManager,
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
-    }, canScrollRight);
+    }, canScrollRight, canScrollLeft);
 
     // Render debug grid overlay (if enabled)
     if (showDebugGrid) {
@@ -677,6 +678,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const maxScroll = mapWidthInTiles - clipWidthInTiles;
         return Math.min(prev + 1, maxScroll);
       });
+      return; // Button was clicked, don't process other click handlers
+    }
+    if (mapScrollDirection === 'left') {
+      setMapScrollX(prev => Math.max(prev - 1, 0));
       return; // Button was clicked, don't process other click handlers
     }
 
