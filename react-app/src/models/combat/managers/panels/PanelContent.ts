@@ -46,4 +46,12 @@ export interface PanelContent {
    * @returns Implementation-specific result, or null if no hover state
    */
   handleHover?(relativeX: number, relativeY: number): unknown;
+
+  /**
+   * Handle mouse down event on the panel content
+   * @param relativeX - X coordinate relative to panel region (0 = left edge)
+   * @param relativeY - Y coordinate relative to panel region (0 = top edge)
+   * @returns true if the event was handled, false otherwise
+   */
+  handleMouseDown?(relativeX: number, relativeY: number): boolean;
 }

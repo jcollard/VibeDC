@@ -10,7 +10,6 @@ import type { CombatEncounter } from './CombatEncounter';
 import type { CombatUnit } from './CombatUnit';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { getNineSliceSpriteIds } from '../../utils/DialogRenderer';
-import { CanvasButton } from '../../components/ui/CanvasButton';
 import { CombatConstants } from './CombatConstants';
 import type { CombatUIStateManager } from './CombatUIState';
 import { DeploymentUI } from './deployment/DeploymentUI';
@@ -28,9 +27,6 @@ import { PartyMembersContent } from './managers/panels';
  * Extends PhaseBase for common phase infrastructure.
  */
 export class DeploymentPhaseHandler extends PhaseBase {
-  // Deploy button
-  private deployButton: CanvasButton | null = null;
-
   // UI renderer
   private ui: DeploymentUI;
 
@@ -189,35 +185,6 @@ export class DeploymentPhaseHandler extends PhaseBase {
     );
   }
 
-  /**
-   * Handle button mouse move for hover detection
-   */
-  handleButtonMouseMove(canvasX: number, canvasY: number): boolean {
-    if (this.deployButton) {
-      return this.deployButton.handleMouseMove(canvasX, canvasY);
-    }
-    return false;
-  }
-
-  /**
-   * Handle button mouse down
-   */
-  handleButtonMouseDown(canvasX: number, canvasY: number): boolean {
-    if (this.deployButton) {
-      return this.deployButton.handleMouseDown(canvasX, canvasY);
-    }
-    return false;
-  }
-
-  /**
-   * Handle button mouse up (triggers click if over button)
-   */
-  handleButtonMouseUp(canvasX: number, canvasY: number): boolean {
-    if (this.deployButton) {
-      return this.deployButton.handleMouseUp(canvasX, canvasY);
-    }
-    return false;
-  }
 
   /**
    * Get all sprites needed for the deployment phase
@@ -290,48 +257,10 @@ export class DeploymentPhaseHandler extends PhaseBase {
     const deployedUnitCount = state.unitManifest.getAllUnits().length;
     const shouldShowButton = deployedUnitCount >= partySize || deployedUnitCount >= deploymentZoneCount;
 
-    // Render instruction message only if button is NOT visible
+    // Render instruction message
+    // Note: The "Enter Combat" button is now handled by PartyMembersContent in the info panel
     if (!shouldShowButton) {
       this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, '', instructionY, messageAtlasFontId || '7px-04b03');
-    }
-
-    // Initialize and render Start Combat button below map (only if deployment is complete)
-    if (shouldShowButton) {
-      // Get button font atlas (use 10px-bitfantasy for buttons)
-      const buttonFontId = '10px-bitfantasy';
-      const buttonFontAtlas = fontAtlasImages?.get(buttonFontId) || null;
-
-      if (!this.deployButton) {
-        // Create button with auto-sizing (width/height calculated from text)
-        this.deployButton = new CanvasButton({
-          label: CombatConstants.TEXT.START_COMBAT_BUTTON,
-          x: 0, // Will be centered after we know the width
-          y: instructionY, // Same position as instruction message (MESSAGE_SPACING below map)
-          spriteId: 'ui-simple-4',
-          hoverSpriteId: 'ui-simple-5',
-          activeSpriteId: 'ui-simple-6',
-          fontId: buttonFontId,
-          fontAtlasImage: buttonFontAtlas,
-          fontScale: 1, // Scale factor (reduced from 2 for new resolution)
-          // padding: 1 is the default
-          onClick: () => {
-            // TODO: Implement start combat logic
-          },
-        });
-
-        // Center the button horizontally
-        const buttonWidth = this.deployButton['config'].width || 0;
-        this.deployButton.updateConfig({
-          x: canvasWidth / 2 - buttonWidth / 2
-        });
-      } else {
-        // Update font atlas in case it changed
-        this.deployButton.updateConfig({
-          fontId: buttonFontId,
-          fontAtlasImage: buttonFontAtlas
-        });
-      }
-      this.deployButton.render(ctx, spriteImages);
     }
 
     // Get the dialog font atlas image
@@ -397,35 +326,32 @@ export class DeploymentPhaseHandler extends PhaseBase {
   }
 
   /**
-   * Handle mouse down - forward to deployment button
+   * Handle mouse down - forward to party dialog
+   * Note: Button is now handled by PartyMembersContent in info panel
    */
   handleMouseDown(
-    context: MouseEventContext,
+    _context: MouseEventContext,
     _state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult {
-    const { canvasX, canvasY } = context;
-    const handled = this.handleButtonMouseDown(canvasX, canvasY);
-    return { handled };
+    return { handled: false };
   }
 
   /**
-   * Handle mouse up - forward to deployment button
+   * Handle mouse up - forward to party dialog
+   * Note: Button is now handled by PartyMembersContent in info panel
    */
   handleMouseUp(
-    context: MouseEventContext,
+    _context: MouseEventContext,
     _state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult {
-    const { canvasX, canvasY } = context;
-    const handled = this.handleButtonMouseUp(canvasX, canvasY);
-    return { handled };
+    return { handled: false };
   }
 
   /**
-   * Handle mouse move - update hover states for party dialog and button
-   * Note: This is the phase-agnostic version. The old handleMouseMove(canvasX, canvasY, characterCount)
-   * is still used internally by the party dialog.
+   * Handle mouse move - update hover states for party dialog
+   * Note: Button hover is now handled by PartyMembersContent in info panel
    */
   handleMouseMove(
     context: MouseEventContext,
@@ -435,7 +361,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
     const { canvasX, canvasY } = context;
     const partySize = PartyMemberRegistry.getAll().length;
 
-    // Update party dialog hover state (calls the parent class method)
+    // Update party dialog hover state
     const dialogHandled = this.partyDialog.handleMouseMove(
       canvasX,
       canvasY,
@@ -443,10 +369,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
       this.getSelectedZoneIndex()
     );
 
-    // Update button hover state
-    const buttonHandled = this.handleButtonMouseMove(canvasX, canvasY);
-
-    return { handled: dialogHandled || buttonHandled };
+    return { handled: dialogHandled };
   }
 
   /**

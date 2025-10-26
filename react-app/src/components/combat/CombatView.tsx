@@ -4,6 +4,7 @@ import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { DeploymentPhaseHandler } from '../../models/combat/DeploymentPhaseHandler';
+import { EnemyDeploymentPhaseHandler } from '../../models/combat/EnemyDeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -55,6 +56,16 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Initialize phase handler based on current phase (pass UI state manager)
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler(uiStateManager));
+
+  // Switch phase handler when phase changes
+  useEffect(() => {
+    if (combatState.phase === 'deployment') {
+      phaseHandlerRef.current = new DeploymentPhaseHandler(uiStateManager);
+    } else if (combatState.phase === 'enemy-deployment') {
+      phaseHandlerRef.current = new EnemyDeploymentPhaseHandler();
+    }
+    // Add other phase handlers as needed (battle, victory, defeat)
+  }, [combatState.phase, uiStateManager]);
 
   // Initialize cinematic manager
   const cinematicManagerRef = useRef<CinematicManager>(new CinematicManager());
@@ -424,6 +435,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       partyUnits: partyUnits, // Used during deployment phase
       isDeploymentPhase: combatState.phase === 'deployment',
       hoveredPartyMemberIndex: hoveredPartyMemberRef.current, // For hover visual feedback
+      deployedUnitCount: combatState.unitManifest.getAllUnits().length,
+      totalDeploymentZones: encounter.playerDeploymentZones.length,
+      onEnterCombat: () => {
+        combatLogManager.addMessage(CombatConstants.TEXT.UNITS_DEPLOYED);
+        setCombatState({ ...combatState, phase: 'enemy-deployment' });
+      },
       combatLogManager,
       currentUnitPanelManager: bottomInfoPanelManager,
       targetUnitPanelManager: topInfoPanelManager,
@@ -637,7 +654,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Button was clicked, don't process other handlers
     }
 
-    // Check if clicking on bottom info panel
+    // Check if clicking on bottom info panel (for Enter Combat button)
     const panelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
     // Check if click is within the panel region
@@ -646,29 +663,44 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         canvasY >= panelRegion.y &&
         canvasY <= panelRegion.y + panelRegion.height) {
 
+      // Handle button mouse down (if button exists)
+      const mouseDownHandled = bottomInfoPanelManager.handleMouseDown(canvasX, canvasY, panelRegion);
+      if (mouseDownHandled) {
+        renderFrame(); // Re-render to show button press state
+        return;
+      }
+
       // First, try to handle click with the panel manager (for party member selection, etc.)
-      const clickedIndex = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
+      const clickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
 
-      // If a party member was clicked (in deployment phase), deploy them
-      if (clickedIndex !== null && typeof clickedIndex === 'number' && combatState.phase === 'deployment') {
-        // Call the deployment handler directly with the clicked index
-        const deploymentHandler = phaseHandlerRef.current as any; // Cast to access deployment method
-        if (deploymentHandler.handlePartyMemberDeployment) {
-          const result = deploymentHandler.handlePartyMemberDeployment(
-            clickedIndex,
-            combatState,
-            encounter
-          );
+      // Check if button was clicked
+      if (clickResult && typeof clickResult === 'object' && 'type' in clickResult) {
+        if (clickResult.type === 'button') {
+          renderFrame(); // Re-render after button click
+          return; // Button click handled by onEnterCombat callback
+        }
 
-          if (result) {
-            // Add log message
-            if (result.logMessage) {
-              combatLogManager.addMessage(result.logMessage);
+        // If a party member was clicked (in deployment phase), deploy them
+        if (clickResult.type === 'party-member' && 'index' in clickResult && combatState.phase === 'deployment') {
+          // Call the deployment handler directly with the clicked index
+          const deploymentHandler = phaseHandlerRef.current as any; // Cast to access deployment method
+          if (deploymentHandler.handlePartyMemberDeployment) {
+            const result = deploymentHandler.handlePartyMemberDeployment(
+              (clickResult as any).index,
+              combatState,
+              encounter
+            );
+
+            if (result) {
+              // Add log message
+              if (result.logMessage) {
+                combatLogManager.addMessage(result.logMessage);
+              }
+
+              // Update state
+              setCombatState(result.newState);
+              return; // Click was handled
             }
-
-            // Update state
-            setCombatState(result.newState);
-            return; // Click was handled
           }
         }
       }

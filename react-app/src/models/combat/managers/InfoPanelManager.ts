@@ -76,4 +76,26 @@ export class InfoPanelManager {
 
     return this.content.handleHover(relativeX, relativeY);
   }
+
+  /**
+   * Handle mouse down on the panel content
+   * Transforms canvas coordinates to panel-relative coordinates and forwards to content
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param region - Panel region
+   * @returns true if the event was handled, false otherwise
+   */
+  handleMouseDown(
+    canvasX: number,
+    canvasY: number,
+    region: PanelRegion
+  ): boolean {
+    if (!this.content || !this.content.handleMouseDown) return false;
+
+    // Transform canvas coordinates to panel-relative coordinates
+    const relativeX = canvasX - region.x;
+    const relativeY = canvasY - region.y;
+
+    return this.content.handleMouseDown(relativeX, relativeY);
+  }
 }

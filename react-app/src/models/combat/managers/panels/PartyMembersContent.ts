@@ -2,6 +2,7 @@ import type { CombatUnit } from '../../CombatUnit';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
 import type { PanelContent, PanelRegion } from './PanelContent';
+import { PanelButton } from './PanelButton';
 
 /**
  * Configuration for party members panel appearance
@@ -11,6 +12,16 @@ export interface PartyMembersConfig {
   titleColor: string;
   padding: number;
   lineSpacing: number;
+}
+
+/**
+ * Deployment information for showing Enter Combat button
+ */
+export interface DeploymentInfo {
+  deployedUnitCount: number;
+  totalPartySize: number;
+  totalDeploymentZones: number;
+  onEnterCombat?: () => void;
 }
 
 /**
@@ -31,6 +42,11 @@ export class PartyMembersContent implements PanelContent {
   private readonly spriteSize: number;
   private hoveredIndex: number | null;
   private lastRegion: PanelRegion | null = null;
+
+  // Enter Combat button support
+  private enterCombatButton: PanelButton | null = null;
+  private showEnterCombatButton = false;
+  private deploymentInfo: DeploymentInfo | null = null;
 
   constructor(
     config: PartyMembersConfig,
@@ -75,6 +91,11 @@ export class PartyMembersContent implements PanelContent {
 
     // Render party members in 2x2 grid
     this.renderPartyGrid(ctx, region, currentY, fontId, fontAtlasImage);
+
+    // Render Enter Combat button if conditions are met
+    if (this.showEnterCombatButton) {
+      this.renderEnterCombatButton(ctx, region, fontId, fontAtlasImage);
+    }
   }
 
   /**
@@ -142,23 +163,56 @@ export class PartyMembersContent implements PanelContent {
   }
 
   /**
-   * Handle click on party member
+   * Handle click on party member or button
    * @param relativeX - X coordinate relative to panel region
    * @param relativeY - Y coordinate relative to panel region
-   * @returns Index of clicked unit, or null if no unit was clicked
+   * @returns Object indicating what was clicked: button or party member (with index), or null
    */
-  handleClick(relativeX: number, relativeY: number): number | null {
+  handleClick(relativeX: number, relativeY: number): { type: 'button' } | { type: 'party-member', index: number } | null {
+    // Check button click first (if button exists)
+    if (this.enterCombatButton && this.showEnterCombatButton) {
+      const buttonHandled = this.enterCombatButton.handleMouseUp(relativeX, relativeY);
+      if (buttonHandled) {
+        return { type: 'button' };
+      }
+    }
+
+    // Fall back to party member click detection
+    const memberIndex = this.getPartyMemberAtPosition(relativeX, relativeY);
+    if (memberIndex !== null) {
+      return { type: 'party-member', index: memberIndex };
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle hover on party member or button
+   * @param relativeX - X coordinate relative to panel region
+   * @param relativeY - Y coordinate relative to panel region
+   * @returns Index of hovered party member, or null
+   */
+  handleHover(relativeX: number, relativeY: number): number | null {
+    // Update button hover state (if button exists)
+    if (this.enterCombatButton && this.showEnterCombatButton) {
+      this.enterCombatButton.handleMouseMove(relativeX, relativeY);
+    }
+
+    // Return hovered party member index
     return this.getPartyMemberAtPosition(relativeX, relativeY);
   }
 
   /**
-   * Handle hover on party member
+   * Handle mouse down on button
    * @param relativeX - X coordinate relative to panel region
    * @param relativeY - Y coordinate relative to panel region
-   * @returns Index of hovered unit, or null if no unit is hovered
+   * @returns true if the button handled the event
    */
-  handleHover(relativeX: number, relativeY: number): number | null {
-    return this.getPartyMemberAtPosition(relativeX, relativeY);
+  handleMouseDown(relativeX: number, relativeY: number): boolean {
+    if (this.enterCombatButton && this.showEnterCombatButton) {
+      return this.enterCombatButton.handleMouseDown(relativeX, relativeY);
+    }
+    return false;
   }
 
   /**
@@ -177,6 +231,65 @@ export class PartyMembersContent implements PanelContent {
    */
   updatePartyUnits(units: CombatUnit[]): void {
     this.units = units;
+  }
+
+  /**
+   * Update deployment information and button visibility
+   * Call this when deployment state changes
+   * @param deploymentInfo - Deployment state information
+   */
+  updateDeploymentInfo(deploymentInfo: DeploymentInfo | null): void {
+    this.deploymentInfo = deploymentInfo;
+
+    // Update button visibility based on deployment conditions
+    if (deploymentInfo) {
+      const shouldShow = deploymentInfo.deployedUnitCount >= deploymentInfo.totalPartySize ||
+                         deploymentInfo.deployedUnitCount >= deploymentInfo.totalDeploymentZones;
+      this.showEnterCombatButton = shouldShow;
+    } else {
+      this.showEnterCombatButton = false;
+    }
+  }
+
+  /**
+   * Render the Enter Combat button at the bottom of the panel
+   */
+  private renderEnterCombatButton(
+    ctx: CanvasRenderingContext2D,
+    region: PanelRegion,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement | null
+  ): void {
+    if (!this.deploymentInfo || !fontAtlasImage) return;
+
+    // Create button on first render
+    if (!this.enterCombatButton) {
+      this.enterCombatButton = new PanelButton({
+        label: 'Enter Combat',
+        x: 0, // Will be positioned after we know the width
+        y: 0, // Will be positioned at bottom of panel
+        fontId,
+        fontAtlasImage,
+        fontScale: 1,
+        padding: 1,
+        onClick: () => {
+          if (this.deploymentInfo?.onEnterCombat) {
+            this.deploymentInfo.onEnterCombat();
+          }
+        },
+      });
+
+      // Position button centered horizontally and at bottom of panel
+      const buttonWidth = this.enterCombatButton.getWidth();
+      const buttonHeight = this.enterCombatButton.getHeight();
+      const buttonX = (region.width - buttonWidth) / 2;
+      const buttonY = region.height - buttonHeight - this.config.padding;
+
+      this.enterCombatButton.updateConfig({ x: buttonX, y: buttonY });
+    }
+
+    // Render button at panel-relative position
+    this.enterCombatButton.render(ctx, region.x, region.y, this.spriteImages);
   }
 
   /**

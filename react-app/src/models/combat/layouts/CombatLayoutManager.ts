@@ -438,7 +438,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex } = context;
+    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex, deployedUnitCount, totalDeploymentZones, onEnterCombat } = context;
     if (!currentUnitPanelManager) return;
 
     // Detect phase transition and clear cache
@@ -455,6 +455,15 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
         // Update existing content
         this.cachedBottomPanelContent.updateHoveredIndex(hoveredPartyMemberIndex ?? null);
         this.cachedBottomPanelContent.updatePartyUnits(partyUnits);
+        // Update deployment info for Enter Combat button
+        if (deployedUnitCount !== undefined && totalDeploymentZones !== undefined) {
+          this.cachedBottomPanelContent.updateDeploymentInfo({
+            deployedUnitCount,
+            totalPartySize: partyUnits.length,
+            totalDeploymentZones,
+            onEnterCombat,
+          });
+        }
       } else {
         // Create new content
         this.cachedBottomPanelContent = new PartyMembersContent(

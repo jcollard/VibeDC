@@ -20,6 +20,9 @@ export interface LayoutRenderContext {
   partyUnits?: CombatUnit[]; // Passed to InfoPanelManager during deployment
   isDeploymentPhase?: boolean; // Flag to determine which content to show
   hoveredPartyMemberIndex?: number | null; // Index of hovered party member (for visual feedback)
+  deployedUnitCount?: number; // Number of deployed units (for Enter Combat button)
+  totalDeploymentZones?: number; // Total deployment zones available
+  onEnterCombat?: () => void; // Callback when Enter Combat button is clicked
   combatLogManager?: CombatLogManager;
   currentUnitPanelManager?: InfoPanelManager;
   targetUnitPanelManager?: InfoPanelManager;

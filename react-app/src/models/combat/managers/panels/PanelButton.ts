@@ -1,16 +1,16 @@
-import { SpriteRegistry } from '../../utils/SpriteRegistry';
-import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
-import { FontRegistry } from '../../utils/FontRegistry';
+import { SpriteRegistry } from '../../../../utils/SpriteRegistry';
+import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../../../utils/FontRegistry';
 
 /**
- * Configuration for a canvas button's appearance and behavior
+ * Configuration for a panel button's appearance and behavior
  */
-export interface CanvasButtonConfig {
+export interface PanelButtonConfig {
   /** Text label to display on the button */
   label: string;
-  /** X position of the button (top-left corner) */
+  /** X position of the button (panel-relative, top-left corner) */
   x: number;
-  /** Y position of the button (top-left corner) */
+  /** Y position of the button (panel-relative, top-left corner) */
   y: number;
   /** Width of the button in pixels (optional - auto-calculated from text if not provided) */
   width?: number;
@@ -28,7 +28,7 @@ export interface CanvasButtonConfig {
   fontId: string;
   /** Font atlas image for rendering */
   fontAtlasImage: HTMLImageElement | null;
-  /** Scale factor for the font (default: 2) */
+  /** Scale factor for the font (default: 1) */
   fontScale?: number;
   /** Text color (default: white) */
   textColor?: string;
@@ -39,24 +39,28 @@ export interface CanvasButtonConfig {
 }
 
 /**
- * Canvas button component that renders a 9-sliced button from a single sprite
- * with support for hover and active states
+ * Panel button component that renders a 9-sliced button from a single sprite
+ * with support for hover and active states.
+ *
+ * Key difference from CanvasButton: Uses panel-relative coordinates instead of absolute canvas coordinates.
+ * This allows the button to be positioned relative to its parent panel, making it easier to reuse
+ * across different panel positions.
  *
  * The sprite should be structured as:
- * - Outer 3 pixels on each side: border that gets repeated (scaled 4x)
+ * - Outer 3 pixels on each side: border that gets repeated
  * - Inner pixels: solid fill color that tiles to fill the interior
  */
-export class CanvasButton {
-  private config: CanvasButtonConfig;
+export class PanelButton {
+  private config: PanelButtonConfig;
   private readonly borderSize = 3; // Size of border in pixels from the sprite
   private isHovered = false;
   private isActive = false;
 
-  constructor(config: CanvasButtonConfig) {
+  constructor(config: PanelButtonConfig) {
     // Calculate width and height from text if not provided
-    const fontScale = config.fontScale || 1; // Default scale reduced from 2 to 1
+    const fontScale = config.fontScale || 1;
     const padding = config.padding !== undefined ? config.padding : 1;
-    const borderSize = this.borderSize * 1; // 3 pixels * 1 scale = 3 pixels per side (reduced from 4)
+    const borderSize = this.borderSize * 1; // 3 pixels * 1 scale = 3 pixels per side
 
     let width = config.width;
     let height = config.height;
@@ -76,9 +80,9 @@ export class CanvasButton {
         }
       } else {
         // Fallback if font not loaded
-        console.warn('CanvasButton: Cannot auto-calculate size - font not loaded');
-        width = width || 200;
-        height = height || 60;
+        console.warn('PanelButton: Cannot auto-calculate size - font not loaded');
+        width = width || 50;
+        height = height || 12;
       }
     }
 
@@ -86,7 +90,7 @@ export class CanvasButton {
       spriteId: 'ui-simple-4',
       hoverSpriteId: 'ui-simple-5',
       activeSpriteId: 'ui-simple-6',
-      fontScale: 1, // Default scale reduced from 2 to 1
+      fontScale: 1,
       padding: 1,
       textColor: '#ffffff',
       enabled: true,
@@ -108,45 +112,46 @@ export class CanvasButton {
   }
 
   /**
+   * Get the button's width
+   */
+  getWidth(): number {
+    return this.config.width || 0;
+  }
+
+  /**
+   * Get the button's height
+   */
+  getHeight(): number {
+    return this.config.height || 0;
+  }
+
+  /**
    * Update button configuration
    */
-  updateConfig(config: Partial<CanvasButtonConfig>): void {
+  updateConfig(config: Partial<PanelButtonConfig>): void {
     this.config = { ...this.config, ...config };
   }
 
   /**
-   * Check if a point is within the button's bounds
+   * Check if a point (in panel-relative coordinates) is within the button's bounds
    */
-  contains(x: number, y: number): boolean {
+  contains(relativeX: number, relativeY: number): boolean {
     const width = this.config.width || 0;
     const height = this.config.height || 0;
     return (
-      x >= this.config.x &&
-      x <= this.config.x + width &&
-      y >= this.config.y &&
-      y <= this.config.y + height
+      relativeX >= this.config.x &&
+      relativeX <= this.config.x + width &&
+      relativeY >= this.config.y &&
+      relativeY <= this.config.y + height
     );
   }
 
   /**
-   * Set the hover state of the button
+   * Handle mouse down event (panel-relative coordinates)
+   * @returns true if the button handled the event
    */
-  setHovered(hovered: boolean): void {
-    this.isHovered = hovered;
-  }
-
-  /**
-   * Set the active/clicked state of the button
-   */
-  setActive(active: boolean): void {
-    this.isActive = active;
-  }
-
-  /**
-   * Handle mouse down event
-   */
-  handleMouseDown(x: number, y: number): boolean {
-    if (this.config.enabled && this.contains(x, y)) {
+  handleMouseDown(relativeX: number, relativeY: number): boolean {
+    if (this.config.enabled && this.contains(relativeX, relativeY)) {
       this.isActive = true;
       return true;
     }
@@ -154,13 +159,14 @@ export class CanvasButton {
   }
 
   /**
-   * Handle mouse up event
+   * Handle mouse up event (panel-relative coordinates)
+   * @returns true if the button handled the event and triggered onClick
    */
-  handleMouseUp(x: number, y: number): boolean {
+  handleMouseUp(relativeX: number, relativeY: number): boolean {
     if (this.config.enabled && this.isActive) {
       this.isActive = false;
       // Only trigger click if mouse is still over the button
-      if (this.contains(x, y)) {
+      if (this.contains(relativeX, relativeY)) {
         if (this.config.onClick) {
           this.config.onClick();
         }
@@ -171,19 +177,26 @@ export class CanvasButton {
   }
 
   /**
-   * Handle mouse move event (for hover detection)
+   * Handle mouse move event for hover detection (panel-relative coordinates)
+   * @returns true if the hover state changed
    */
-  handleMouseMove(x: number, y: number): boolean {
+  handleMouseMove(relativeX: number, relativeY: number): boolean {
     const wasHovered = this.isHovered;
-    this.isHovered = (this.config.enabled !== false) && this.contains(x, y);
+    this.isHovered = (this.config.enabled !== false) && this.contains(relativeX, relativeY);
     return wasHovered !== this.isHovered;
   }
 
   /**
    * Render the button to a canvas context
+   * @param ctx - Canvas rendering context
+   * @param panelX - Absolute X position of the panel on canvas
+   * @param panelY - Absolute Y position of the panel on canvas
+   * @param spriteImages - Map of loaded sprite images
    */
   render(
     ctx: CanvasRenderingContext2D,
+    panelX: number,
+    panelY: number,
     spriteImages: Map<string, HTMLImageElement>
   ): void {
     // Determine which sprite to use based on state
@@ -198,30 +211,32 @@ export class CanvasButton {
 
     const spriteDef = SpriteRegistry.getById(spriteId);
     if (!spriteDef) {
-      console.warn(`CanvasButton: Sprite "${spriteId}" not found`);
+      console.warn(`PanelButton: Sprite "${spriteId}" not found`);
       return;
     }
 
     const spriteImage = spriteImages.get(spriteDef.spriteSheet);
     if (!spriteImage) {
-      console.warn(`CanvasButton: Sprite sheet not loaded for "${spriteId}"`);
+      console.warn(`PanelButton: Sprite sheet not loaded for "${spriteId}"`);
       return;
     }
 
-    const { x, y } = this.config;
+    // Convert panel-relative position to absolute canvas position
+    const x = panelX + this.config.x;
+    const y = panelY + this.config.y;
     const width = this.config.width || 0;
     const height = this.config.height || 0;
     const spriteSize = 12; // All sprites are 12x12
     const borderSizeInSprite = this.borderSize; // 3 pixels in the sprite
-    const borderScale = 1; // Scale factor for the border (reduced from 4 to 1)
-    const scaledBorderSize = borderSizeInSprite * borderScale; // 3 pixels on screen (reduced from 12)
+    const borderScale = 1; // Scale factor for the border
+    const scaledBorderSize = borderSizeInSprite * borderScale; // 3 pixels on screen
 
     // Calculate source coordinates in the sprite sheet
     const srcX = spriteDef.x * spriteSize;
     const srcY = spriteDef.y * spriteSize;
 
     // Draw 9-slice:
-    // Corners (3x3 pixels from sprite, scaled to 12x12 on screen)
+    // Corners (3x3 pixels from sprite)
     // Top-left corner
     ctx.drawImage(
       spriteImage,
@@ -286,17 +301,17 @@ export class CanvasButton {
 
     // Draw label text using FontAtlasRenderer
     if (!this.config.fontAtlasImage) {
-      console.warn('CanvasButton: Font atlas image not loaded');
+      console.warn('PanelButton: Font atlas image not loaded');
       return;
     }
 
     const font = FontRegistry.getById(this.config.fontId);
     if (!font) {
-      console.warn(`CanvasButton: Font '${this.config.fontId}' not found in registry`);
+      console.warn(`PanelButton: Font '${this.config.fontId}' not found in registry`);
       return;
     }
 
-    const fontScale = this.config.fontScale || 2;
+    const fontScale = this.config.fontScale || 1;
     const textColor = this.config.enabled ? (this.config.textColor || '#ffffff') : '#888888';
 
     // Calculate text position (centered)
@@ -306,7 +321,7 @@ export class CanvasButton {
 
     ctx.save();
 
-    // Draw main text (no shadow)
+    // Draw main text
     FontAtlasRenderer.renderText(
       ctx,
       this.config.label,

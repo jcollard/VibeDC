@@ -4,7 +4,7 @@ import type { CombatUnitManifest } from './CombatUnitManifest';
 /**
  * Combat phase types
  */
-export type CombatPhase = 'deployment' | 'battle' | 'victory' | 'defeat';
+export type CombatPhase = 'deployment' | 'enemy-deployment' | 'battle' | 'victory' | 'defeat';
 
 /**
  * CombatState represents the current state of an active combat encounter.
