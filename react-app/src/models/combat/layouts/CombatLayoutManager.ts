@@ -376,7 +376,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize } = context;
+    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex } = context;
     if (!currentUnitPanelManager) return;
 
     let content;
@@ -386,7 +386,8 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
         type: 'party' as const,
         units: partyUnits,
         spriteImages: spriteImages,
-        spriteSize: spriteSize
+        spriteSize: spriteSize,
+        hoveredIndex: hoveredPartyMemberIndex
       };
     } else if (currentUnit) {
       // During combat, show current unit

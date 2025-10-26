@@ -19,6 +19,7 @@ export interface LayoutRenderContext {
   targetUnit: CombatUnit | null; // Passed to InfoPanelManager
   partyUnits?: CombatUnit[]; // Passed to InfoPanelManager during deployment
   isDeploymentPhase?: boolean; // Flag to determine which content to show
+  hoveredPartyMemberIndex?: number | null; // Index of hovered party member (for visual feedback)
   combatLogManager?: CombatLogManager;
   currentUnitPanelManager?: InfoPanelManager;
   targetUnitPanelManager?: InfoPanelManager;

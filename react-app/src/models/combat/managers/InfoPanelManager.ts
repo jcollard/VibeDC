@@ -8,7 +8,7 @@ import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 export type InfoPanelContent =
   | { type: 'unit'; unit: CombatUnit }
   | { type: 'empty' }
-  | { type: 'party'; units: CombatUnit[]; spriteImages: Map<string, HTMLImageElement>; spriteSize: number };
+  | { type: 'party'; units: CombatUnit[]; spriteImages: Map<string, HTMLImageElement>; spriteSize: number; hoveredIndex?: number | null };
   // Future content types can be added here:
   // | { type: 'terrain'; terrain: TerrainInfo }
   // | { type: 'item'; item: Item }
@@ -83,7 +83,7 @@ export class InfoPanelManager {
     } else if (content.type === 'empty') {
       this.renderEmptyContent(ctx, region, currentY, fontId, fontAtlasImage);
     } else if (content.type === 'party') {
-      this.renderPartyContent(ctx, region, content.units, currentY, fontId, fontAtlasImage, content.spriteImages, content.spriteSize);
+      this.renderPartyContent(ctx, region, content.units, currentY, fontId, fontAtlasImage, content.spriteImages, content.spriteSize, content.hoveredIndex);
     }
   }
 
@@ -204,7 +204,8 @@ export class InfoPanelManager {
     fontId: string,
     fontAtlasImage: HTMLImageElement,
     spriteImages: Map<string, HTMLImageElement>,
-    spriteSize: number
+    spriteSize: number,
+    hoveredIndex?: number | null
   ): void {
     const spriteDisplaySize = 12; // 12x12px sprites
     const nameSpacing = 8; // Space for name below sprite
@@ -222,6 +223,7 @@ export class InfoPanelManager {
       const unit = units[i];
       const row = Math.floor(i / 2);
       const col = i % 2;
+      const isHovered = hoveredIndex === i;
 
       // Calculate position for this cell
       const cellX = region.x + col * cellWidth;
@@ -244,8 +246,10 @@ export class InfoPanelManager {
       );
 
       // Render name centered below sprite
+      // Use dark yellow color (#ccaa00) when hovered, white otherwise
       const nameY = spriteY + spriteDisplaySize + 1;
       const nameX = cellX + cellWidth / 2;
+      const nameColor = isHovered ? '#ccaa00' : '#ffffff';
       FontAtlasRenderer.renderText(
         ctx,
         unit.name,
@@ -255,7 +259,7 @@ export class InfoPanelManager {
         fontAtlasImage,
         1,
         'center',
-        '#ffffff'
+        nameColor
       );
     }
   }
@@ -269,6 +273,41 @@ export class InfoPanelManager {
    * @returns Index of clicked unit, or null if no unit was clicked
    */
   handlePartyClick(
+    canvasX: number,
+    canvasY: number,
+    region: PanelRegion,
+    units: CombatUnit[]
+  ): number | null {
+    return this.getPartyMemberAtPosition(canvasX, canvasY, region, units);
+  }
+
+  /**
+   * Handle hover on party member in the party panel
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param region - Panel region
+   * @param units - Array of party units
+   * @returns Index of hovered unit, or null if no unit is hovered
+   */
+  handlePartyHover(
+    canvasX: number,
+    canvasY: number,
+    region: PanelRegion,
+    units: CombatUnit[]
+  ): number | null {
+    return this.getPartyMemberAtPosition(canvasX, canvasY, region, units);
+  }
+
+  /**
+   * Get the party member index at a specific position
+   * Helper method used by both click and hover detection
+   * @param canvasX - X coordinate on canvas (in pixels)
+   * @param canvasY - Y coordinate on canvas (in pixels)
+   * @param region - Panel region
+   * @param units - Array of party units
+   * @returns Index of unit at position, or null if none
+   */
+  private getPartyMemberAtPosition(
     canvasX: number,
     canvasY: number,
     region: PanelRegion,
@@ -297,7 +336,7 @@ export class InfoPanelManager {
       const cellX = region.x + col * cellWidth;
       const cellY = currentY + row * cellHeight;
 
-      // Check if click is within this cell
+      // Check if position is within this cell
       if (
         canvasX >= cellX &&
         canvasX < cellX + cellWidth &&

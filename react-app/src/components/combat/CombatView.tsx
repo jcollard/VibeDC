@@ -191,6 +191,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track the target unit for the info panel
   const targetUnitRef = useRef<CombatUnit | null>(null);
 
+  // Track the hovered party member index (for visual feedback)
+  const hoveredPartyMemberRef = useRef<number | null>(null);
+
   // Track highlight color for testing
   const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
 
@@ -232,7 +235,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }), [combatState.phase]);
 
   const targetUnitPanelManager = useMemo(() => new InfoPanelManager({
-    title: 'TARGET UNIT',
+    title: 'Unit Info',
     titleColor: '#ff6b6b',
     padding: 1,
     lineSpacing: 8,
@@ -613,6 +616,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       targetUnit: targetUnitRef.current, // Set by clicking turn order
       partyUnits: partyUnits, // Used during deployment phase
       isDeploymentPhase: combatState.phase === 'deployment',
+      hoveredPartyMemberIndex: hoveredPartyMemberRef.current, // For hover visual feedback
       combatLogManager,
       currentUnitPanelManager,
       targetUnitPanelManager,
@@ -980,6 +984,34 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       handler.handleMouseMove(canvasX, canvasY, partySize);
       handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
 
+      // Check if hovering over party member in party panel
+      if (partyUnits.length > 0) {
+        const partyPanelRegion = {
+          x: 252,  // column 21 (21 * 12px)
+          y: 0,    // row 0
+          width: 132,  // 11 tiles
+          height: 108  // 9 tiles
+        };
+
+        const hoveredPartyIndex = currentUnitPanelManager.handlePartyHover(
+          canvasX,
+          canvasY,
+          partyPanelRegion,
+          partyUnits
+        );
+
+        if (hoveredPartyIndex !== null) {
+          // Set the hovered party member as the target unit
+          targetUnitRef.current = partyUnits[hoveredPartyIndex];
+          hoveredPartyMemberRef.current = hoveredPartyIndex;
+          renderFrame(); // Trigger re-render to show updated target unit
+        } else {
+          // Clear hover highlight but keep the target unit visible
+          hoveredPartyMemberRef.current = null;
+          renderFrame();
+        }
+      }
+
       // Update hovered cell for map tile detection using CombatMapRenderer
       const tileCoords = mapRenderer.canvasToTileCoordinates(
         canvasX,
@@ -996,11 +1028,23 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         uiStateManager.setHoveredCell(null);
       }
     }
-  }, [combatState.phase, combatState.map, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY]);
+  }, [combatState.phase, combatState.map, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, currentUnitPanelManager, renderFrame]);
 
   // Register map click handler
   useEffect(() => {
     const unsubscribe = mapRenderer.onMapClick((tileX, tileY) => {
+      // Check if a unit is at the clicked position
+      const unitAtPosition = combatState.unitManifest.getAllUnits().find(
+        placement => placement.position.x === tileX && placement.position.y === tileY
+      );
+
+      if (unitAtPosition) {
+        // Unit was clicked - show it in the Unit Info panel
+        targetUnitRef.current = unitAtPosition.unit;
+        renderFrame();
+        // Continue to process deployment zone logic if in deployment phase
+      }
+
       // Handle deployment zone clicks in deployment phase
       if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
         const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
@@ -1022,7 +1066,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     });
 
     return unsubscribe;
-  }, [mapRenderer, combatState.phase, encounter, combatLogManager]);
+  }, [mapRenderer, combatState.phase, combatState.unitManifest, encounter, combatLogManager, renderFrame]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
