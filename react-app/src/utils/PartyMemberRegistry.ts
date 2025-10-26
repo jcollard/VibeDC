@@ -252,20 +252,13 @@ export class PartyMemberRegistry {
     }
 
     // Learn abilities
+    // Note: Party members may have learned abilities from classes they've previously been
+    // so we use addLearnedAbility() which bypasses class checks
     if (definition.learnedAbilityIds) {
       for (const abilityId of definition.learnedAbilityIds) {
         const ability = CombatAbility.getById(abilityId);
         if (ability) {
-          // Try to learn from primary class first
-          if (!unit.learnAbility(ability, unitClass)) {
-            // If that fails, try secondary class
-            if (definition.secondaryClassId) {
-              const secondaryClass = UnitClass.getById(definition.secondaryClassId);
-              if (secondaryClass) {
-                unit.learnAbility(ability, secondaryClass);
-              }
-            }
-          }
+          unit.addLearnedAbility(ability);
         } else {
           console.warn(`Ability '${abilityId}' not found for party member '${id}'`);
         }

@@ -373,6 +373,15 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   /**
+   * Add a learned ability directly without class checks
+   * Used for initializing party members who may have learned abilities from previous classes
+   * @param ability The ability to add
+   */
+  addLearnedAbility(ability: CombatAbility): void {
+    this._learnedAbilities.add(ability);
+  }
+
+  /**
    * Forget an ability and refund experience to the class
    * @param ability The ability to forget
    * @param fromClass The class this ability was learned from

@@ -40,12 +40,13 @@ partyMembers:
     baseCourage: 16
     baseAttunement: 6
     spriteId: "crystalwarriors-0"
+    secondaryClassId: "rogue"
     learnedAbilityIds: ["charge-001", "focused-001", "shove-001", "bash-001", "taunt-001", "throw-stone-001", "sneak-001", "cut-001"]
     reactionAbilityId: "parry-001"
     leftHandId: "iron-sword-001"
     rightHandId: "wooden-shield-001"
-    headId: "iron-helm-001"
-    bodyId: "iron-armor-001"
+    headId: "iron-helmet-001"
+    bodyId: "plate-armor-001"
     tags: ["warrior", "tank", "melee"]
     description: "A noble knight with strong defensive capabilities"
     totalExperience: 500
@@ -70,9 +71,9 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 20
     spriteId: "crystalwarriors-10"
-    leftHandId: "oak-staff-001"
-    headId: "wizard-hat-001"
-    bodyId: "mage-robe-001"
+    leftHandId: "magic-staff-001"
+    headId: "wizards-hat-001"
+    bodyId: "wizards-robe-001"
     accessoryId: "mana-amulet-001"
     tags: ["mage", "magic", "ranged"]
     description: "A powerful mage specializing in elemental magic"
