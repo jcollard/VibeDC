@@ -543,6 +543,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         phaseHandlerRef.current.update(combatState, encounter, deltaTime);
       }
 
+      // Update combat log animations
+      combatLogManager.update(deltaTime);
+
       // Render the frame
       renderFrame();
 
@@ -560,7 +563,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [spritesLoaded, renderFrame, combatState, encounter]);
+  }, [spritesLoaded, renderFrame, combatState, encounter, combatLogManager]);
 
   // Handle canvas mouse down for button active state
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {

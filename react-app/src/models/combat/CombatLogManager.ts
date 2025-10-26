@@ -40,6 +40,11 @@ export class CombatLogManager {
   private lastFontId: string = '';
   private lastBufferWidth: number = 0;
 
+  // Animation state
+  private animatingMessageIndex: number = -1; // Index of the message being animated
+  private animationProgress: number = 1; // 0.0 to 1.0, how much of the message to show
+  private readonly ANIMATION_DURATION: number = 0.5; // 0.5 seconds per message
+
   constructor(config: Partial<CombatLogConfig> = {}) {
     this.config = {
       maxMessages: config.maxMessages ?? 100,
@@ -63,6 +68,10 @@ export class CombatLogManager {
 
     // Auto-scroll to bottom when new message arrives
     this.scrollOffset = 0;
+
+    // Start animation for the new message
+    this.animatingMessageIndex = this.messages.length - 1;
+    this.animationProgress = 0;
 
     // Mark buffer as dirty
     this.bufferDirty = true;
@@ -237,29 +246,61 @@ export class CombatLogManager {
 
     // Render each message line
     for (let i = 0; i < visibleMessages.length; i++) {
+      const messageIndex = startIdx + i;
       const message = visibleMessages[i];
       const segments = this.parseColorTags(message);
 
       let currentX = 0;
 
+      // Check if this message is being animated
+      const isAnimating = messageIndex === this.animatingMessageIndex && this.animationProgress < 1;
+
+      // Calculate how many characters to show based on animation progress
+      let charsToShow = message.length;
+      if (isAnimating) {
+        // Remove color tags from message to get actual visible character count
+        const plainText = message.replace(/\[color=#[0-9a-fA-F]{6}\]/g, '').replace(/\[\/color\]/g, '');
+        const visibleChars = Math.floor(plainText.length * this.animationProgress);
+        charsToShow = visibleChars;
+      }
+
+      // Track how many characters we've rendered so far
+      let charsRendered = 0;
+
       // Render each segment with its color
       for (const segment of segments) {
         const color = segment.color || this.config.defaultColor;
 
-        FontAtlasRenderer.renderText(
-          this.bufferCtx,
-          segment.text,
-          currentX,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          color
-        );
+        // Calculate how much of this segment to render
+        let textToRender = segment.text;
+        if (isAnimating) {
+          const charsAvailable = charsToShow - charsRendered;
+          if (charsAvailable <= 0) {
+            break; // Don't render this segment at all
+          }
+          if (charsAvailable < segment.text.length) {
+            textToRender = segment.text.substring(0, charsAvailable);
+          }
+        }
 
-        // Advance X position for next segment
-        currentX += FontAtlasRenderer.measureTextByFontId(segment.text, fontId);
+        if (textToRender.length > 0) {
+          FontAtlasRenderer.renderText(
+            this.bufferCtx,
+            textToRender,
+            currentX,
+            currentY,
+            fontId,
+            fontAtlasImage,
+            1,
+            'left',
+            color
+          );
+
+          // Advance X position for next segment
+          currentX += FontAtlasRenderer.measureTextByFontId(textToRender, fontId);
+        }
+
+        charsRendered += segment.text.length;
       }
 
       currentY += this.config.lineHeight;
@@ -346,5 +387,24 @@ export class CombatLogManager {
    */
   canScrollDown(): boolean {
     return this.scrollOffset > 0;
+  }
+
+  /**
+   * Updates the animation state.
+   * @param deltaTime Time elapsed since last update in seconds
+   */
+  update(deltaTime: number): void {
+    // If we're animating a message, advance the animation
+    if (this.animatingMessageIndex >= 0 && this.animationProgress < 1) {
+      this.animationProgress += deltaTime / this.ANIMATION_DURATION;
+
+      if (this.animationProgress >= 1) {
+        this.animationProgress = 1;
+        this.animatingMessageIndex = -1; // Animation complete
+      }
+
+      // Mark buffer as dirty to trigger redraw
+      this.bufferDirty = true;
+    }
   }
 }
