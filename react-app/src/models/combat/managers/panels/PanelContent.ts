@@ -9,6 +9,30 @@ export interface PanelRegion {
 }
 
 /**
+ * Discriminated union for panel click results
+ * Each panel content type can define its own specific result types
+ */
+export type PanelClickResult =
+  | { type: 'button'; buttonId?: string }
+  | { type: 'party-member'; index: number }
+  | { type: 'unit-selected'; unitId: string }
+  | { type: 'action-selected'; actionId: string }
+  | { type: 'target-selected'; targetIndex: number }
+  | null;
+
+/**
+ * Type guard to check if a value is a valid PanelClickResult
+ */
+export function isPanelClickResult(value: unknown): value is PanelClickResult {
+  if (value === null) return true;
+  if (typeof value !== 'object') return false;
+  if (!('type' in value)) return false;
+
+  const result = value as { type: string };
+  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected'].includes(result.type);
+}
+
+/**
  * Interface for content that can be rendered in an info panel.
  * Implementations are responsible for:
  * - Rendering all content (including titles, if desired)
@@ -35,9 +59,9 @@ export interface PanelContent {
    * Handle click event on the panel content
    * @param relativeX - X coordinate relative to panel region (0 = left edge)
    * @param relativeY - Y coordinate relative to panel region (0 = top edge)
-   * @returns Implementation-specific result, or null if click was not handled
+   * @returns Discriminated union result indicating what was clicked, or null if not handled
    */
-  handleClick?(relativeX: number, relativeY: number): unknown;
+  handleClick?(relativeX: number, relativeY: number): PanelClickResult;
 
   /**
    * Handle hover event on the panel content

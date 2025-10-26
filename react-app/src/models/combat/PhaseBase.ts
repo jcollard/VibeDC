@@ -83,57 +83,18 @@ export abstract class PhaseBase implements CombatPhaseHandler {
     this.elapsedTime = 0;
   }
 
-  // Legacy optional methods - kept for backwards compatibility with old code
-  // New phases should use the phase-agnostic methods from CombatPhaseHandler instead
-
   /**
-   * @deprecated Use handleMapClick instead
+   * MIGRATION NOTE (2025-10-26):
+   * Legacy optional methods (handleClick, handleCharacterClick, etc.) have been removed.
+   * If you need phase-specific methods:
+   * 1. Define them on your specific phase handler class
+   * 2. Cast to your specific type when accessing from phaseHandlerRef
+   * 3. Use 'in' operator to check if method exists before casting
+   *
+   * Example:
+   *   if ('handleDeploymentAction' in phaseHandlerRef.current) {
+   *     const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+   *     handler.handleDeploymentAction(...);
+   *   }
    */
-  handleClick?(
-    canvasX: number,
-    canvasY: number,
-    tileSize: number,
-    offsetX: number,
-    offsetY: number,
-    encounter: CombatEncounter
-  ): boolean;
-
-  /**
-   * @deprecated Internal use only - use phase-agnostic handleMouseMove from CombatPhaseHandler
-   */
-  handleCharacterClick?(
-    canvasX: number,
-    canvasY: number,
-    characterCount: number
-  ): number | null;
-
-  /**
-   * @deprecated Internal use only
-   */
-  handleButtonMouseMove?(canvasX: number, canvasY: number): boolean;
-
-  /**
-   * @deprecated Internal use only
-   */
-  handleButtonMouseDown?(canvasX: number, canvasY: number): boolean;
-
-  /**
-   * @deprecated Internal use only
-   */
-  handleButtonMouseUp?(canvasX: number, canvasY: number): boolean;
-
-  /**
-   * @deprecated Internal use only
-   */
-  getSelectedZoneIndex?(): number | null;
-
-  /**
-   * @deprecated Internal use only
-   */
-  clearSelectedZone?(): void;
-
-  /**
-   * @deprecated Internal use only
-   */
-  getHoveredCharacterIndex?(): number | null;
 }

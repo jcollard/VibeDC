@@ -13,8 +13,9 @@ export interface PhaseSprites {
 
 /**
  * Result of a phase event handler
+ * Generic TData allows type-safe passing of phase-specific data
  */
-export interface PhaseEventResult {
+export interface PhaseEventResult<TData = unknown> {
   /** Whether the event was handled */
   handled: boolean;
   /** New combat state (if state changed) */
@@ -25,6 +26,8 @@ export interface PhaseEventResult {
   preventDefault?: boolean;
   /** Optional message to add to combat log */
   logMessage?: string;
+  /** Optional generic data field for phase-specific information */
+  data?: TData;
 }
 
 /**

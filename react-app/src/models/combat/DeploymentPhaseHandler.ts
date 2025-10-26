@@ -22,6 +22,24 @@ import { DeploymentHeaderRenderer } from './managers/renderers/DeploymentHeaderR
 import { PartyMembersContent } from './managers/panels';
 
 /**
+ * Data returned from deployment phase info panel interactions
+ */
+export interface DeploymentPanelData {
+  type: 'party-member-hover';
+  memberIndex: number;
+}
+
+/**
+ * Data returned from deployment actions
+ */
+export interface DeploymentActionData {
+  type: 'party-member-deployed';
+  memberIndex: number;
+  unit: CombatUnit;
+  position: { x: number; y: number };
+}
+
+/**
  * DeploymentPhaseHandler manages the deployment phase of combat where players
  * position their units on designated deployment zones before battle begins.
  * Extends PhaseBase for common phase infrastructure.
@@ -93,21 +111,18 @@ export class DeploymentPhaseHandler extends PhaseBase {
   }
 
   /**
-   * Handle deployment of a party member to the selected zone
-   * @param memberIndex - Index of the party member in the registry
-   * @param combatState - Current combat state
-   * @param encounter - Current encounter
-   * @returns Object with new combat state and log message if deployment succeeded, null otherwise
+   * Handle deployment action - returns event result with deployment data
+   * This is the new recommended method that returns PhaseEventResult
    */
-  handlePartyMemberDeployment(
+  handleDeploymentAction(
     memberIndex: number,
     combatState: CombatState,
     encounter: CombatEncounter
-  ): { newState: CombatState; logMessage: string } | null {
+  ): PhaseEventResult<DeploymentActionData> {
     // 1. Check if a zone is selected
     const selectedZoneIndex = this.getSelectedZoneIndex();
     if (selectedZoneIndex === null) {
-      return null;
+      return { handled: false };
     }
 
     // 2. Get the party member and deployment zone
@@ -116,7 +131,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
     const deploymentZone = encounter.playerDeploymentZones[selectedZoneIndex];
 
     if (!selectedMember || !deploymentZone) {
-      return null;
+      return { handled: false };
     }
 
     // 3. Create unit and update manifest
@@ -124,13 +139,13 @@ export class DeploymentPhaseHandler extends PhaseBase {
       const unit = PartyMemberRegistry.createPartyMember(selectedMember.id);
       if (!unit) {
         console.error(`Failed to create party member: ${selectedMember.id}`);
-        return null;
+        return { handled: false };
       }
+
       const newManifest = new CombatUnitManifest();
 
       // Copy existing units, excluding any unit at the deployment zone
       combatState.unitManifest.getAllUnits().forEach(placement => {
-        // Skip the unit at the deployment position (it will be replaced)
         if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
           newManifest.addUnit(placement.unit, placement.position);
         }
@@ -142,22 +157,46 @@ export class DeploymentPhaseHandler extends PhaseBase {
       // Clear the selected zone after deploying
       this.clearSelectedZone();
 
-      // Create log message with unit name and position (using green color #00ff00)
-      const logMessage = `[color=#00ff00]${unit.name}[/color] deployed to (${deploymentZone.x}, ${deploymentZone.y})`;
-
-      // Return updated combat state and log message
+      // Return event result with all data
       return {
+        handled: true,
         newState: {
           ...combatState,
           unitManifest: newManifest
         },
-        logMessage
+        logMessage: `[color=#00ff00]${unit.name}[/color] deployed to (${deploymentZone.x}, ${deploymentZone.y})`,
+        data: {
+          type: 'party-member-deployed',
+          memberIndex,
+          unit,
+          position: { x: deploymentZone.x, y: deploymentZone.y }
+        }
       };
     } catch (error) {
       console.error('Failed to deploy unit:', error);
-      return null;
+      return { handled: false };
     }
   }
+
+  /**
+   * @deprecated Use handleDeploymentAction instead
+   * This method will be removed in a future version
+   */
+  handlePartyMemberDeployment(
+    memberIndex: number,
+    combatState: CombatState,
+    encounter: CombatEncounter
+  ): { newState: CombatState; logMessage: string } | null {
+    const result = this.handleDeploymentAction(memberIndex, combatState, encounter);
+    if (!result.handled || !result.newState || !result.logMessage) {
+      return null;
+    }
+    return {
+      newState: result.newState,
+      logMessage: result.logMessage
+    };
+  }
+
 
 
   /**
@@ -241,10 +280,14 @@ export class DeploymentPhaseHandler extends PhaseBase {
     const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, titleAtlasFontId, messageAtlasFontId, dialogAtlasFontId, fontAtlasImages } = context;
 
     // Render "Deploy Units" header
-    this.ui.renderPhaseHeader(ctx, canvasWidth, '', titleAtlasFontId || '15px-dungeonslant');
+    const titleFontId = titleAtlasFontId || '15px-dungeonslant';
+    const titleAtlas = fontAtlasImages?.get(titleFontId) || null;
+    this.ui.renderPhaseHeader(ctx, canvasWidth, titleFontId, titleAtlas);
 
     // Render waylaid message (8px below title)
-    this.ui.renderWaylaidMessage(ctx, canvasWidth, '', messageAtlasFontId || '7px-04b03');
+    const messageFontId = messageAtlasFontId || '7px-04b03';
+    const messageAtlas = fontAtlasImages?.get(messageFontId) || null;
+    this.ui.renderWaylaidMessage(ctx, canvasWidth, messageFontId, messageAtlas);
 
     // Calculate positions for instruction message and button
     const mapHeight = state.map.height * tileSize;
@@ -260,7 +303,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
     // Render instruction message
     // Note: The "Enter Combat" button is now handled by PartyMembersContent in the info panel
     if (!shouldShowButton) {
-      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, '', instructionY, messageAtlasFontId || '7px-04b03');
+      this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, instructionY, messageFontId, messageAtlas);
     }
 
     // Get the dialog font atlas image
@@ -388,14 +431,14 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
   /**
    * Handle info panel hover - update hover state for party members
-   * Returns the hovered party member unit for display in target panel
+   * Returns type-safe data with hovered party member index
    */
   handleInfoPanelHover(
     relativeX: number,
     relativeY: number,
     _state: CombatState,
     _encounter: CombatEncounter
-  ): PhaseEventResult {
+  ): PhaseEventResult<DeploymentPanelData> {
     // Get party members to handle the hover
     const partyUnits = PartyMemberRegistry.getAll()
       .map(member => PartyMemberRegistry.createPartyMember(member.id))
@@ -427,26 +470,17 @@ export class DeploymentPhaseHandler extends PhaseBase {
     // Get the hovered party member index
     const hoveredIndex = this.hoverDetectionContent.handleHover(relativeX, relativeY);
 
-    // Return result with custom data for CombatView to use
-    return {
-      handled: hoveredIndex !== null,
-      // Store hovered info in a way CombatView can access
-      // We'll use preventDefault as a signal and encode data in a custom way
-      preventDefault: hoveredIndex !== null,
-      // Note: PhaseEventResult doesn't have a generic data field
-      // CombatView will need to call a getter method instead
-    };
-  }
+    if (hoveredIndex !== null) {
+      return {
+        handled: true,
+        data: {
+          type: 'party-member-hover',
+          memberIndex: hoveredIndex
+        }
+      };
+    }
 
-  /**
-   * Get the currently hovered party member unit (for target panel display)
-   * This should be called after handleInfoPanelHover
-   */
-  getHoveredPartyMember(): CombatUnit | null {
-    // This is a workaround since we can't easily pass the unit through PhaseEventResult
-    // In a better design, PhaseEventResult would have a generic data field
-    // For now, we'll store it in an instance variable
-    return null; // TODO: Store and return hovered unit
+    return { handled: false };
   }
 
   /**

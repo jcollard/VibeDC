@@ -1,7 +1,7 @@
 import type { CombatUnit } from '../../CombatUnit';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
-import type { PanelContent, PanelRegion } from './PanelContent';
+import type { PanelContent, PanelRegion, PanelClickResult } from './PanelContent';
 import { PanelButton } from './PanelButton';
 
 /**
@@ -166,9 +166,9 @@ export class PartyMembersContent implements PanelContent {
    * Handle click on party member or button
    * @param relativeX - X coordinate relative to panel region
    * @param relativeY - Y coordinate relative to panel region
-   * @returns Object indicating what was clicked: button or party member (with index), or null
+   * @returns Type-safe discriminated union result indicating what was clicked
    */
-  handleClick(relativeX: number, relativeY: number): { type: 'button' } | { type: 'party-member', index: number } | null {
+  handleClick(relativeX: number, relativeY: number): PanelClickResult {
     // Check button click first (if button exists)
     if (this.enterCombatButton && this.showEnterCombatButton) {
       const buttonHandled = this.enterCombatButton.handleMouseUp(relativeX, relativeY);

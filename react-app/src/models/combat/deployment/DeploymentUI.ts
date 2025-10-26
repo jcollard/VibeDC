@@ -6,93 +6,28 @@ import { FontRegistry } from '../../../utils/FontRegistry';
 /**
  * Renders UI elements for the deployment phase
  * Handles phase header, messages, and instructions
+ * Fonts are now passed in from external FontAtlasLoader
  */
 export class DeploymentUI {
-  private fontAtlasCache: Map<string, HTMLImageElement> = new Map();
-  private loadingPromises: Map<string, Promise<HTMLImageElement>> = new Map();
-
-  constructor() {
-    // Pre-load default fonts immediately and synchronously
-    this.preloadDefaultFonts();
-  }
-
-  /**
-   * Pre-load default fonts synchronously
-   */
-  private preloadDefaultFonts(): void {
-    const defaultFonts = ['15px-dungeonslant', '7px-04b03'];
-    for (const fontId of defaultFonts) {
-      const fontDef = FontRegistry.getById(fontId);
-      if (fontDef) {
-        const img = new Image();
-        img.src = fontDef.atlasPath;
-        img.onload = () => {
-          this.fontAtlasCache.set(fontId, img);
-        };
-        img.onerror = () => {
-          console.error(`Failed to preload font atlas '${fontId}' from ${fontDef.atlasPath}`);
-        };
-      }
-    }
-  }
-
-  /**
-   * Load a font atlas image by font ID
-   */
-  private async loadFontAtlas(fontId: string): Promise<HTMLImageElement> {
-    // Return cached image if available
-    if (this.fontAtlasCache.has(fontId)) {
-      return this.fontAtlasCache.get(fontId)!;
-    }
-
-    // Return existing loading promise if already loading
-    if (this.loadingPromises.has(fontId)) {
-      return this.loadingPromises.get(fontId)!;
-    }
-
-    // Get font definition from registry
-    const fontDef = FontRegistry.getById(fontId);
-    if (!fontDef) {
-      throw new Error(`Font '${fontId}' not found in FontRegistry`);
-    }
-
-    // Create loading promise
-    const loadingPromise = new Promise<HTMLImageElement>((resolve, reject) => {
-      const img = new Image();
-      img.src = fontDef.atlasPath;
-      img.onload = () => {
-        this.fontAtlasCache.set(fontId, img);
-        this.loadingPromises.delete(fontId);
-        resolve(img);
-      };
-      img.onerror = () => {
-        this.loadingPromises.delete(fontId);
-        reject(new Error(`Failed to load font atlas for '${fontId}' at ${fontDef.atlasPath}`));
-      };
-    });
-
-    this.loadingPromises.set(fontId, loadingPromise);
-    return loadingPromise;
-  }
-
   /**
    * Render the "Deploy Units" phase header with background
    */
-  renderPhaseHeader(ctx: CanvasRenderingContext2D, canvasWidth: number, _headerFont: string, fontId: string = '15px-dungeonslant'): void {
-    // Get font atlas (load if needed)
-    const atlas = this.fontAtlasCache.get(fontId);
-    if (!atlas) {
-      // Start loading if not already loaded
-      this.loadFontAtlas(fontId).catch(console.error);
+  renderPhaseHeader(
+    ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
+    fontId: string,
+    fontAtlas: HTMLImageElement | null
+  ): void {
+    if (!fontAtlas) {
+      console.warn(`Font atlas not loaded for '${fontId}'`);
       return;
     }
 
-    // Get font definition for char height
     const fontDef = FontRegistry.getById(fontId);
     if (!fontDef) return;
 
     const text = CombatConstants.TEXT.DEPLOY_TITLE;
-    const scale = 1; // Scale factor for the font (reduced from 3 for new resolution)
+    const scale = 1;
     const y = CombatConstants.UI.TITLE_Y_POSITION;
 
     // Draw semi-transparent background
@@ -110,7 +45,7 @@ export class DeploymentUI {
       canvasWidth / 2,
       textY,
       fontId,
-      atlas,
+      fontAtlas,
       scale,
       'center'
     );
@@ -119,17 +54,19 @@ export class DeploymentUI {
   /**
    * Render the waylaid message below the Deploy Units title
    */
-  renderWaylaidMessage(ctx: CanvasRenderingContext2D, canvasWidth: number, _font: string, fontId: string = '7px-04b03'): void {
-    // Get font atlas (load if needed)
-    const atlas = this.fontAtlasCache.get(fontId);
-    if (!atlas) {
-      // Start loading if not already loaded
-      this.loadFontAtlas(fontId).catch(console.error);
+  renderWaylaidMessage(
+    ctx: CanvasRenderingContext2D,
+    canvasWidth: number,
+    fontId: string,
+    fontAtlas: HTMLImageElement | null
+  ): void {
+    if (!fontAtlas) {
+      console.warn(`Font atlas not loaded for '${fontId}'`);
       return;
     }
 
     const text = CombatConstants.TEXT.WAYLAID_MESSAGE;
-    const scale = 1; // Scale factor for the font (reduced from 2 for new resolution)
+    const scale = 1;
     const y = CombatConstants.UI.WAYLAID_MESSAGE_Y;
 
     // Render centered message
@@ -139,7 +76,7 @@ export class DeploymentUI {
       canvasWidth / 2,
       y,
       fontId,
-      atlas,
+      fontAtlas,
       scale,
       'center'
     );
@@ -153,15 +90,12 @@ export class DeploymentUI {
     canvasWidth: number,
     spriteSize: number,
     spriteImages: Map<string, HTMLImageElement>,
-    _font: string,
     yPosition: number,
-    fontId: string = '7px-04b03'
+    fontId: string,
+    fontAtlas: HTMLImageElement | null
   ): void {
-    // Get font atlas (load if needed)
-    const atlas = this.fontAtlasCache.get(fontId);
-    if (!atlas) {
-      // Start loading if not already loaded
-      this.loadFontAtlas(fontId).catch(console.error);
+    if (!fontAtlas) {
+      console.warn(`Font atlas not loaded for '${fontId}'`);
       return;
     }
 
@@ -187,7 +121,7 @@ export class DeploymentUI {
       const coords = FontRegistry.getCharCoordinates(fontDef, char);
       if (coords) {
         ctx.drawImage(
-          atlas,
+          fontAtlas,
           coords.x,
           coords.y,
           coords.width,
@@ -232,7 +166,7 @@ export class DeploymentUI {
       const coords = FontRegistry.getCharCoordinates(fontDef, char);
       if (coords) {
         ctx.drawImage(
-          atlas,
+          fontAtlas,
           coords.x,
           coords.y,
           coords.width,

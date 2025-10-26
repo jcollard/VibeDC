@@ -1,4 +1,4 @@
-import type { PanelContent, PanelRegion } from './panels/PanelContent';
+import type { PanelContent, PanelRegion, PanelClickResult } from './panels/PanelContent';
 
 /**
  * Manages rendering of information panels that can display different types of content.
@@ -39,13 +39,13 @@ export class InfoPanelManager {
    * @param canvasX - X coordinate on canvas (in pixels)
    * @param canvasY - Y coordinate on canvas (in pixels)
    * @param region - Panel region
-   * @returns Result from content's handleClick method, or null if no content or no handler
+   * @returns Type-safe discriminated union result from content's handleClick, or null
    */
   handleClick(
     canvasX: number,
     canvasY: number,
     region: PanelRegion
-  ): unknown {
+  ): PanelClickResult {
     if (!this.content || !this.content.handleClick) return null;
 
     // Transform canvas coordinates to panel-relative coordinates

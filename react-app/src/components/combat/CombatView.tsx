@@ -3,7 +3,7 @@ import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
-import { DeploymentPhaseHandler } from '../../models/combat/DeploymentPhaseHandler';
+import { DeploymentPhaseHandler, type DeploymentPanelData } from '../../models/combat/DeploymentPhaseHandler';
 import { EnemyDeploymentPhaseHandler } from '../../models/combat/EnemyDeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { UISettings } from '../../config/UISettings';
@@ -14,6 +14,7 @@ import { ScreenFadeInSequence } from '../../models/combat/ScreenFadeInSequence';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
+import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
@@ -24,6 +25,7 @@ import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRender
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
 import { TurnOrderRenderer } from '../../models/combat/managers/renderers/TurnOrderRenderer';
+import type { PanelClickResult } from '../../models/combat/managers/panels/PanelContent';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -93,6 +95,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Sprite asset loader
   const spriteLoader = useMemo(() => new SpriteAssetLoader(), []);
 
+  // Font atlas loader
+  const fontLoader = useMemo(() => new FontAtlasLoader(), []);
+
   // Combat renderer for map and unit rendering
   const renderer = useMemo(
     () => new CombatRenderer(CANVAS_WIDTH, CANVAS_HEIGHT, TILE_SIZE, SPRITE_SIZE),
@@ -102,11 +107,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Store loaded sprite images
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
-  // Track if sprites are loaded
+  // Track if sprites and fonts are loaded
   const [spritesLoaded, setSpritesLoaded] = useState(false);
-
-  // Store loaded font atlas images (keyed by font ID)
-  const fontAtlasImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Track window resize to force re-render
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
@@ -278,36 +280,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Load font atlas images for all fonts in FontRegistry
+  // Load font atlas images using FontAtlasLoader
   useEffect(() => {
     const loadFontAtlases = async () => {
       const fontIds = FontRegistry.getAllIds();
-      const images = new Map<string, HTMLImageElement>();
-
-      for (const fontId of fontIds) {
-        const font = FontRegistry.getById(fontId);
-        if (!font) continue;
-
-        try {
-          const img = new Image();
-          img.src = font.atlasPath;
-          await new Promise<void>((resolve, reject) => {
-            img.onload = () => {
-              images.set(fontId, img);
-              resolve();
-            };
-            img.onerror = () => reject(new Error(`Failed to load font atlas: ${font.atlasPath}`));
-          });
-        } catch (error) {
-          console.error(`Failed to load font atlas for ${fontId}:`, error);
-        }
-      }
-
-      fontAtlasImagesRef.current = images;
+      await fontLoader.loadAll(fontIds);
     };
 
     loadFontAtlases().catch(console.error);
-  }, []);
+  }, [fontLoader]);
 
   // Load sprite images using SpriteAssetLoader
   useEffect(() => {
@@ -409,6 +390,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       offsetX,
       offsetY,
       spriteImages: spriteImagesRef.current,
+      fontAtlasImages: fontLoader.getAll(),
     });
 
     // Render deployed units from the manifest (after deployment zones so they appear on top)
@@ -418,8 +400,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render layout UI
     // Use 7px-04b03 for info panels/combat log, dungeon-slant for top panel
-    const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
-    const topPanelFontAtlas = fontAtlasImagesRef.current.get('15px-dungeonslant') || null;
+    const layoutFontAtlas = fontLoader.get(unitInfoAtlasFont) || null;
+    const topPanelFontAtlas = fontLoader.get('15px-dungeonslant') || null;
 
     layoutRenderer.renderLayout({
       ctx,
@@ -449,7 +431,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     });
 
     // Render map scroll arrows (after layout, before debug grid)
-    const unitInfoFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
+    const unitInfoFontAtlas = fontLoader.get(unitInfoAtlasFont) || null;
     layoutRenderer.renderMapScrollArrows({
       ctx,
       canvasWidth: CANVAS_WIDTH,
@@ -465,7 +447,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render debug grid overlay (if enabled)
     if (showDebugGrid) {
-      const debugFontAtlas = fontAtlasImagesRef.current.get('7px-04b03') || null;
+      const debugFontAtlas = fontLoader.get('7px-04b03') || null;
       renderer.renderDebugGrid(ctx, '7px-04b03', debugFontAtlas);
     }
 
@@ -672,51 +654,59 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
 
       // First, try to handle click with the panel manager (for party member selection, etc.)
-      const clickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
+      const clickResult: PanelClickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
 
-      // Check if button was clicked
-      if (clickResult && typeof clickResult === 'object' && 'type' in clickResult) {
-        if (clickResult.type === 'button') {
-          renderFrame(); // Re-render after button click
-          return; // Button click handled by onEnterCombat callback
-        }
+      // Type-safe handling with discriminated union
+      if (clickResult !== null) {
+        switch (clickResult.type) {
+          case 'button':
+            renderFrame(); // Re-render after button click
+            return; // Button click handled by onEnterCombat callback
 
-        // If a party member was clicked (in deployment phase), deploy them
-        if (clickResult.type === 'party-member' && 'index' in clickResult && combatState.phase === 'deployment') {
-          // Call the deployment handler directly with the clicked index
-          const deploymentHandler = phaseHandlerRef.current as any; // Cast to access deployment method
-          if (deploymentHandler.handlePartyMemberDeployment) {
-            const result = deploymentHandler.handlePartyMemberDeployment(
-              (clickResult as any).index,
-              combatState,
-              encounter
-            );
+          case 'party-member':
+            if (combatState.phase === 'deployment') {
+              // Type-safe cast after checking method exists
+              if ('handleDeploymentAction' in phaseHandlerRef.current) {
+                const deploymentHandler = phaseHandlerRef.current as DeploymentPhaseHandler;
+                const result = deploymentHandler.handleDeploymentAction(
+                  clickResult.index, // Type-safe access!
+                  combatState,
+                  encounter
+                );
 
-            if (result) {
-              // Add log message
-              if (result.logMessage) {
-                combatLogManager.addMessage(result.logMessage);
+                if (result.handled && result.newState) {
+                  // Add log message if provided
+                  if (result.logMessage) {
+                    combatLogManager.addMessage(result.logMessage);
+                  }
+
+                  // Check if button should become visible after this deployment
+                  const previousDeployedCount = combatState.unitManifest.getAllUnits().length;
+                  const newDeployedCount = result.newState.unitManifest.getAllUnits().length;
+                  const partySize = partyUnits.length;
+                  const totalZones = encounter.playerDeploymentZones.length;
+
+                  const wasButtonVisible = previousDeployedCount >= partySize || previousDeployedCount >= totalZones;
+                  const isButtonVisible = newDeployedCount >= partySize || newDeployedCount >= totalZones;
+
+                  // Add "Units deployed. Enter combat?" message when button becomes visible
+                  if (!wasButtonVisible && isButtonVisible) {
+                    combatLogManager.addMessage(CombatConstants.TEXT.UNITS_DEPLOYED);
+                  }
+
+                  // Update state
+                  setCombatState(result.newState);
+                  return; // Click was handled
+                }
               }
-
-              // Check if button should become visible after this deployment
-              const previousDeployedCount = combatState.unitManifest.getAllUnits().length;
-              const newDeployedCount = result.newState.unitManifest.getAllUnits().length;
-              const partySize = partyUnits.length;
-              const totalZones = encounter.playerDeploymentZones.length;
-
-              const wasButtonVisible = previousDeployedCount >= partySize || previousDeployedCount >= totalZones;
-              const isButtonVisible = newDeployedCount >= partySize || newDeployedCount >= totalZones;
-
-              // Add "Units deployed. Enter combat?" message when button becomes visible
-              if (!wasButtonVisible && isButtonVisible) {
-                combatLogManager.addMessage(CombatConstants.TEXT.UNITS_DEPLOYED);
-              }
-
-              // Update state
-              setCombatState(result.newState);
-              return; // Click was handled
             }
-          }
+            return;
+
+          case 'unit-selected':
+          case 'action-selected':
+          case 'target-selected':
+            // Future: Handle other click types
+            break;
         }
       }
     }
@@ -753,9 +743,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         canvasY <= panelRegion.y + panelRegion.height) {
 
       // Handle button click via handleClick (which calls handleMouseUp internally)
-      const clickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
+      const clickResult: PanelClickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
 
-      if (clickResult && typeof clickResult === 'object' && 'type' in clickResult && clickResult.type === 'button') {
+      if (clickResult !== null && clickResult.type === 'button') {
         renderFrame(); // Re-render after button click
         return; // Button click handled
       }
@@ -821,17 +811,36 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       partyPanelRegion
     );
 
-    // If hovering over a party member (deployment phase), update target unit
-    if (typeof hoverResult === 'number' && hoverResult !== null && partyUnits.length > 0) {
-      // Hovered a party member index
-      targetUnitRef.current = partyUnits[hoverResult];
-      hoveredPartyMemberRef.current = hoverResult;
-      // Don't call renderFrame() here - let the animation loop handle it
+    // During deployment phase, delegate to phase handler for type-safe hover handling
+    if (combatState.phase === 'deployment' && 'handleInfoPanelHover' in phaseHandlerRef.current) {
+      const deploymentHandler = phaseHandlerRef.current as DeploymentPhaseHandler;
+      const phaseHoverResult = deploymentHandler.handleInfoPanelHover(
+        canvasX - partyPanelRegion.x,
+        canvasY - partyPanelRegion.y,
+        combatState,
+        encounter
+      );
+
+      if (phaseHoverResult.handled && phaseHoverResult.data) {
+        const data = phaseHoverResult.data as DeploymentPanelData;
+        if (data.type === 'party-member-hover') {
+          targetUnitRef.current = partyUnits[data.memberIndex];
+          hoveredPartyMemberRef.current = data.memberIndex;
+        }
+      } else {
+        if (hoveredPartyMemberRef.current !== null) {
+          hoveredPartyMemberRef.current = null;
+        }
+      }
     } else {
-      // Clear hover highlight but keep the target unit visible
-      if (hoveredPartyMemberRef.current !== null) {
-        hoveredPartyMemberRef.current = null;
-        // Don't call renderFrame() here - let the animation loop handle it
+      // Fallback to generic hover handling for other phases
+      if (typeof hoverResult === 'number' && hoverResult !== null && partyUnits.length > 0) {
+        targetUnitRef.current = partyUnits[hoverResult];
+        hoveredPartyMemberRef.current = hoverResult;
+      } else {
+        if (hoveredPartyMemberRef.current !== null) {
+          hoveredPartyMemberRef.current = null;
+        }
       }
     }
 
