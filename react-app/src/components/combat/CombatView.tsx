@@ -767,9 +767,30 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Button was clicked, don't process other click handlers
     }
 
-    // Calculate map offset (same as rendering)
-    const offsetX = (CANVAS_WIDTH - (combatState.map.width * TILE_SIZE)) / 2;
-    const offsetY = (CANVAS_HEIGHT - (combatState.map.height * TILE_SIZE)) / 2;
+    // Calculate map offset (same as rendering logic)
+    const mapWidth = combatState.map.width * TILE_SIZE;
+    const mapHeight = combatState.map.height * TILE_SIZE;
+    const viewport = layoutRenderer.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
+    const clipRegion = layoutRenderer.getMapClipRegion();
+    const clipWidthCalc = (clipRegion.maxCol - clipRegion.minCol + 1) * TILE_SIZE + 4;
+    const clipHeightCalc = (clipRegion.maxRow - clipRegion.minRow + 1) * TILE_SIZE + 4 + 4;
+
+    let offsetX = viewport.x;
+    if (mapWidth <= clipWidthCalc) {
+      offsetX = viewport.x + (clipWidthCalc - mapWidth) / 2;
+    } else {
+      // Apply scroll offset, with 6px left offset to account for wall border
+      offsetX = viewport.x - (mapScrollX * TILE_SIZE) - 6;
+    }
+
+    let offsetY = viewport.y;
+    if (mapHeight <= clipHeightCalc) {
+      const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
+      offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
+    } else {
+      // Apply scroll offset, with 6px down offset to account for wall border
+      offsetY = viewport.y - (mapScrollY * TILE_SIZE) + 6;
+    }
 
     // Pass click to phase handler (if deployment phase)
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
@@ -818,9 +839,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
 
       // If no character clicked, check for deployment zone click
-      handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, encounter);
+      handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, mapScrollX, mapScrollY, encounter);
     }
-  }, [combatState, encounter, setCombatState, inputHandler, layoutRenderer, combatLogManager]);
+  }, [combatState, encounter, setCombatState, inputHandler, layoutRenderer, combatLogManager, mapScrollX, mapScrollY]);
 
   // Handle canvas mouse move for hover detection
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {

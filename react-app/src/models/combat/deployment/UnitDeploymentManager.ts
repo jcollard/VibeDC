@@ -53,8 +53,10 @@ export class UnitDeploymentManager {
    * @param canvasX - X coordinate on canvas (in pixels)
    * @param canvasY - Y coordinate on canvas (in pixels)
    * @param tileSize - Size of each tile in pixels
-   * @param offsetX - X offset of the map on canvas
-   * @param offsetY - Y offset of the map on canvas
+   * @param offsetX - X offset of the map on canvas (already includes scroll offset)
+   * @param offsetY - Y offset of the map on canvas (already includes scroll offset)
+   * @param scrollX - Map scroll offset in tiles (horizontal) - for reference only
+   * @param scrollY - Map scroll offset in tiles (vertical) - for reference only
    * @param encounter - Current encounter
    * @returns True if a zone was clicked
    */
@@ -64,11 +66,30 @@ export class UnitDeploymentManager {
     tileSize: number,
     offsetX: number,
     offsetY: number,
+    scrollX: number,
+    scrollY: number,
     encounter: CombatEncounter
   ): boolean {
-    // Convert canvas coordinates to tile coordinates
-    const tileX = Math.floor((canvasX - offsetX) / tileSize);
-    const tileY = Math.floor((canvasY - offsetY) / tileSize);
+    // Convert canvas coordinates to map pixel coordinates
+    // offsetX/offsetY already account for scroll, so we don't need to add scrollX/scrollY again
+    const mapPixelX = canvasX - offsetX;
+    const mapPixelY = canvasY - offsetY;
+
+    // Convert to tile coordinates
+    // Since offsetX/offsetY already shifted the map based on scroll,
+    // we just need to divide by tile size to get the tile position
+    const tileX = Math.floor(mapPixelX / tileSize);
+    const tileY = Math.floor(mapPixelY / tileSize);
+
+    // Debug logging
+    console.log('Click detection:', {
+      canvasX, canvasY,
+      offsetX, offsetY,
+      scrollX, scrollY,
+      mapPixelX, mapPixelY,
+      tileX, tileY,
+      zones: encounter.playerDeploymentZones
+    });
 
     // Check if click is on a deployment zone
     const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(

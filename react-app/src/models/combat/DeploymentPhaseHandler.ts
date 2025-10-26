@@ -188,9 +188,11 @@ export class DeploymentPhaseHandler extends PhaseBase {
     tileSize: number,
     offsetX: number,
     offsetY: number,
+    scrollX: number,
+    scrollY: number,
     encounter: CombatEncounter
   ): boolean {
-    return this.deploymentManager.handleClick(canvasX, canvasY, tileSize, offsetX, offsetY, encounter);
+    return this.deploymentManager.handleClick(canvasX, canvasY, tileSize, offsetX, offsetY, scrollX, scrollY, encounter);
   }
 
   /**
