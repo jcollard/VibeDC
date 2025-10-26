@@ -190,6 +190,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [mapScrollX, setMapScrollX] = useState<number>(0);
   const [mapScrollY, setMapScrollY] = useState<number>(0);
 
+  // Track which scroll arrow is currently pressed
+  const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | null>(null);
+
   // Layout renderer (always use Layout 6)
   const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
 
@@ -646,11 +649,52 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
+    // Check if clicking on map scroll buttons first
+    const mapScrollDirection = layoutRenderer.handleMapScrollClick(canvasX, canvasY);
+    if (mapScrollDirection === 'right') {
+      scrollArrowPressedRef.current = 'right';
+      setMapScrollX(prev => {
+        const mapWidthInTiles = combatState.map.width;
+        const clipRegion = layoutRenderer.getMapClipRegion();
+        const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
+        // Reduce max scroll by 1 tile due to 6px left offset for wall border
+        const maxScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
+        return Math.min(prev + 1, maxScroll);
+      });
+      renderFrame(); // Force immediate re-render
+      return; // Button was clicked, don't process other handlers
+    }
+    if (mapScrollDirection === 'left') {
+      scrollArrowPressedRef.current = 'left';
+      setMapScrollX(prev => Math.max(prev - 1, 0));
+      renderFrame(); // Force immediate re-render
+      return; // Button was clicked, don't process other handlers
+    }
+    if (mapScrollDirection === 'down') {
+      scrollArrowPressedRef.current = 'down';
+      setMapScrollY(prev => {
+        const mapHeightInTiles = combatState.map.height;
+        const clipRegion = layoutRenderer.getMapClipRegion();
+        const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
+        // Reduce max scroll by 1 tile due to 6px down offset for wall border
+        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 1);
+        return Math.min(prev + 1, maxScroll);
+      });
+      renderFrame(); // Force immediate re-render
+      return; // Button was clicked, don't process other handlers
+    }
+    if (mapScrollDirection === 'up') {
+      scrollArrowPressedRef.current = 'up';
+      setMapScrollY(prev => Math.max(prev - 1, 0));
+      renderFrame(); // Force immediate re-render
+      return; // Button was clicked, don't process other handlers
+    }
+
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
       handler.handleButtonMouseDown(canvasX, canvasY);
     }
-  }, [combatState.phase]);
+  }, [combatState.phase, combatState.map, layoutRenderer, renderFrame]);
 
   // Handle canvas mouse up for button click
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -662,6 +706,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const scaleY = CANVAS_HEIGHT / rect.height;
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
+
+    // Clear scroll arrow pressed state
+    scrollArrowPressedRef.current = null;
 
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
@@ -679,43 +726,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (!coords) return;
 
     const { x: canvasX, y: canvasY } = coords;
-
-    // Check if clicking on map scroll buttons first
-    const mapScrollDirection = layoutRenderer.handleMapScrollClick(canvasX, canvasY);
-    if (mapScrollDirection === 'right') {
-      setMapScrollX(prev => {
-        const mapWidthInTiles = combatState.map.width;
-        const clipRegion = layoutRenderer.getMapClipRegion();
-        const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
-        // Reduce max scroll by 1 tile due to 6px left offset for wall border
-        const maxScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
-        return Math.min(prev + 1, maxScroll);
-      });
-      renderFrame(); // Force immediate re-render
-      return; // Button was clicked, don't process other click handlers
-    }
-    if (mapScrollDirection === 'left') {
-      setMapScrollX(prev => Math.max(prev - 1, 0));
-      renderFrame(); // Force immediate re-render
-      return; // Button was clicked, don't process other click handlers
-    }
-    if (mapScrollDirection === 'down') {
-      setMapScrollY(prev => {
-        const mapHeightInTiles = combatState.map.height;
-        const clipRegion = layoutRenderer.getMapClipRegion();
-        const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
-        // Reduce max scroll by 1 tile due to 6px down offset for wall border
-        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 1);
-        return Math.min(prev + 1, maxScroll);
-      });
-      renderFrame(); // Force immediate re-render
-      return; // Button was clicked, don't process other click handlers
-    }
-    if (mapScrollDirection === 'up') {
-      setMapScrollY(prev => Math.max(prev - 1, 0));
-      renderFrame(); // Force immediate re-render
-      return; // Button was clicked, don't process other click handlers
-    }
 
     // Check if clicking on combat log scroll buttons
     if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {
