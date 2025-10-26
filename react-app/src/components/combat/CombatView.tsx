@@ -186,6 +186,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track debug grid overlay
   const [showDebugGrid, setShowDebugGrid] = useState<boolean>(false);
 
+  // Track map scroll offset (in tiles)
+  const [mapScrollX, setMapScrollX] = useState<number>(0);
+
   // Layout renderer (always use Layout 6)
   const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
 
@@ -350,10 +353,18 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const clipWidthCalc = (clipRegion.maxCol - clipRegion.minCol + 1) * TILE_SIZE + 4; // +4 for right expansion
     const clipHeightCalc = (clipRegion.maxRow - clipRegion.minRow + 1) * TILE_SIZE + 4 + 4; // +4 for top and bottom expansion
 
+    // Calculate if scrolling is needed
+    const mapWidthInTiles = combatState.map.width;
+    const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
+    const canScrollRight = mapScrollX < (mapWidthInTiles - clipWidthInTiles);
+
     // If map width fits within clipping area, center it horizontally
     let offsetX = viewport.x;
     if (mapWidth <= clipWidthCalc) {
       offsetX = viewport.x + (clipWidthCalc - mapWidth) / 2;
+    } else {
+      // Apply scroll offset
+      offsetX = viewport.x - (mapScrollX * TILE_SIZE);
     }
 
     // If map height fits within clipping area, center it vertically
@@ -542,6 +553,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
     });
 
+    // Render map scroll arrows (after layout, before debug grid)
+    layoutRenderer.renderMapScrollArrows({
+      ctx,
+      canvasWidth: CANVAS_WIDTH,
+      canvasHeight: CANVAS_HEIGHT,
+      spriteSize: SPRITE_SIZE,
+      fontId: unitInfoAtlasFont,
+      fontAtlasImage: layoutFontAtlas,
+      spriteImages: spriteImagesRef.current,
+      currentUnit: lastDisplayedUnitRef.current,
+      targetUnit: null,
+      combatLogManager,
+      turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
+    }, canScrollRight);
+
     // Render debug grid overlay (if enabled)
     if (showDebugGrid) {
       const debugFontAtlas = fontAtlasImagesRef.current.get('7px-04b03') || null;
@@ -641,7 +667,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const { x: canvasX, y: canvasY } = coords;
 
-    // Check if clicking on combat log scroll buttons first
+    // Check if clicking on map scroll buttons first
+    const mapScrollDirection = layoutRenderer.handleMapScrollClick(canvasX, canvasY);
+    if (mapScrollDirection === 'right') {
+      setMapScrollX(prev => {
+        const mapWidthInTiles = combatState.map.width;
+        const clipRegion = layoutRenderer.getMapClipRegion();
+        const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
+        const maxScroll = mapWidthInTiles - clipWidthInTiles;
+        return Math.min(prev + 1, maxScroll);
+      });
+      return; // Button was clicked, don't process other click handlers
+    }
+
+    // Check if clicking on combat log scroll buttons
     if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {
       renderFrame(); // Force immediate re-render to show scrolled content
       return; // Button was clicked, don't process other click handlers

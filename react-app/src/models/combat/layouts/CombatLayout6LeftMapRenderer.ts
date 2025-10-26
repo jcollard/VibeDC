@@ -21,6 +21,7 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   // Scroll button tracking
   private scrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private scrollRightButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor() {
     // Define the layout regions using tile-based dimensions
@@ -68,6 +69,23 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       minRow: 3,
       maxRow: 13,
     };
+  }
+
+  /**
+   * Handle click events on the map scroll buttons.
+   * Returns 'right' if right arrow clicked, null otherwise.
+   */
+  handleMapScrollClick(x: number, y: number): 'right' | null {
+    // Check scroll right button
+    if (this.scrollRightButtonBounds &&
+        x >= this.scrollRightButtonBounds.x &&
+        x <= this.scrollRightButtonBounds.x + this.scrollRightButtonBounds.width &&
+        y >= this.scrollRightButtonBounds.y &&
+        y <= this.scrollRightButtonBounds.y + this.scrollRightButtonBounds.height) {
+      return 'right';
+    }
+
+    return null;
   }
 
   /**
@@ -144,6 +162,47 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
 
     // Render scroll buttons on top of everything
     this.renderScrollButtons(context);
+  }
+
+  /**
+   * Render map scroll arrows (e.g., right arrow for horizontal scrolling).
+   * Call this after rendering the layout.
+   */
+  renderMapScrollArrows(context: LayoutRenderContext, canScrollRight: boolean): void {
+    const { ctx, spriteImages, spriteSize } = context;
+
+    // Right arrow at column 19, rows 7-9 (if can scroll right)
+    if (canScrollRight) {
+      const tileSize = 12;
+      const arrowX = 19 * tileSize;
+      const arrowStartY = 7 * tileSize;
+      const buttonSize = 12;
+
+      // Render 3 arrow sprites vertically
+      for (let i = 0; i < 3; i++) {
+        const arrowY = arrowStartY + (i * tileSize);
+        SpriteRenderer.renderSpriteById(
+          ctx,
+          'minimap-6',
+          spriteImages,
+          spriteSize,
+          arrowX,
+          arrowY,
+          buttonSize,
+          buttonSize
+        );
+      }
+
+      // Store bounds for the entire clickable area (all 3 tiles)
+      this.scrollRightButtonBounds = {
+        x: arrowX,
+        y: arrowStartY,
+        width: buttonSize,
+        height: buttonSize * 3
+      };
+    } else {
+      this.scrollRightButtonBounds = null;
+    }
   }
 
   private renderTurnOrderPanel(
