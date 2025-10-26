@@ -192,6 +192,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track which scroll arrow is currently pressed
   const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | null>(null);
+  const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Layout renderer (always use Layout 6)
   const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
@@ -638,6 +639,57 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
   }, [spritesLoaded, renderFrame, combatState, encounter, combatLogManager]);
 
+  // Function to perform a single scroll step in the given direction
+  const performScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down') => {
+    if (direction === 'right') {
+      setMapScrollX(prev => {
+        const mapWidthInTiles = combatState.map.width;
+        const clipRegion = layoutRenderer.getMapClipRegion();
+        const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
+        const maxScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
+        return Math.min(prev + 1, maxScroll);
+      });
+    } else if (direction === 'left') {
+      setMapScrollX(prev => Math.max(prev - 1, 0));
+    } else if (direction === 'down') {
+      setMapScrollY(prev => {
+        const mapHeightInTiles = combatState.map.height;
+        const clipRegion = layoutRenderer.getMapClipRegion();
+        const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
+        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 1);
+        return Math.min(prev + 1, maxScroll);
+      });
+    } else if (direction === 'up') {
+      setMapScrollY(prev => Math.max(prev - 1, 0));
+    }
+    renderFrame();
+  }, [combatState.map, layoutRenderer, renderFrame]);
+
+  // Start continuous scrolling
+  const startContinuousScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down') => {
+    // Clear any existing interval
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+    }
+
+    // Perform initial scroll immediately
+    performScroll(direction);
+
+    // Set up interval for continuous scrolling (200ms between scrolls)
+    scrollIntervalRef.current = setInterval(() => {
+      performScroll(direction);
+    }, 200);
+  }, [performScroll]);
+
+  // Stop continuous scrolling
+  const stopContinuousScroll = useCallback(() => {
+    if (scrollIntervalRef.current) {
+      clearInterval(scrollIntervalRef.current);
+      scrollIntervalRef.current = null;
+    }
+    scrollArrowPressedRef.current = null;
+  }, []);
+
   // Handle canvas mouse down for button active state
   const handleCanvasMouseDown = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
     const canvas = displayCanvasRef.current;
@@ -653,40 +705,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const mapScrollDirection = layoutRenderer.handleMapScrollClick(canvasX, canvasY);
     if (mapScrollDirection === 'right') {
       scrollArrowPressedRef.current = 'right';
-      setMapScrollX(prev => {
-        const mapWidthInTiles = combatState.map.width;
-        const clipRegion = layoutRenderer.getMapClipRegion();
-        const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
-        // Reduce max scroll by 1 tile due to 6px left offset for wall border
-        const maxScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
-        return Math.min(prev + 1, maxScroll);
-      });
-      renderFrame(); // Force immediate re-render
+      startContinuousScroll('right');
       return; // Button was clicked, don't process other handlers
     }
     if (mapScrollDirection === 'left') {
       scrollArrowPressedRef.current = 'left';
-      setMapScrollX(prev => Math.max(prev - 1, 0));
-      renderFrame(); // Force immediate re-render
+      startContinuousScroll('left');
       return; // Button was clicked, don't process other handlers
     }
     if (mapScrollDirection === 'down') {
       scrollArrowPressedRef.current = 'down';
-      setMapScrollY(prev => {
-        const mapHeightInTiles = combatState.map.height;
-        const clipRegion = layoutRenderer.getMapClipRegion();
-        const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
-        // Reduce max scroll by 1 tile due to 6px down offset for wall border
-        const maxScroll = Math.max(0, mapHeightInTiles - clipHeightInTiles - 1);
-        return Math.min(prev + 1, maxScroll);
-      });
-      renderFrame(); // Force immediate re-render
+      startContinuousScroll('down');
       return; // Button was clicked, don't process other handlers
     }
     if (mapScrollDirection === 'up') {
       scrollArrowPressedRef.current = 'up';
-      setMapScrollY(prev => Math.max(prev - 1, 0));
-      renderFrame(); // Force immediate re-render
+      startContinuousScroll('up');
       return; // Button was clicked, don't process other handlers
     }
 
@@ -694,7 +728,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
       handler.handleButtonMouseDown(canvasX, canvasY);
     }
-  }, [combatState.phase, combatState.map, layoutRenderer, renderFrame]);
+  }, [combatState.phase, layoutRenderer, startContinuousScroll]);
 
   // Handle canvas mouse up for button click
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -707,14 +741,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
-    // Clear scroll arrow pressed state
-    scrollArrowPressedRef.current = null;
+    // Stop continuous scrolling
+    stopContinuousScroll();
 
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
       handler.handleButtonMouseUp(canvasX, canvasY);
     }
-  }, [combatState.phase]);
+  }, [combatState.phase, stopContinuousScroll]);
 
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -829,6 +863,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
     }
   }, [combatState.phase, combatState.map, inputHandler, uiStateManager, renderer]);
+
+  // Cleanup scroll interval on unmount
+  useEffect(() => {
+    return () => {
+      if (scrollIntervalRef.current) {
+        clearInterval(scrollIntervalRef.current);
+      }
+    };
+  }, []);
 
   return (
     <div
