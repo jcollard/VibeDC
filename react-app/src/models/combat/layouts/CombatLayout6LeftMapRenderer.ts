@@ -57,6 +57,20 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   }
 
   /**
+   * Gets the clipping region for the map viewport in tile coordinates.
+   * This defines which tiles are visible within the map viewport.
+   * @returns Object with minCol, maxCol, minRow, maxRow (inclusive)
+   */
+  getMapClipRegion(): { minCol: number; maxCol: number; minRow: number; maxRow: number } {
+    return {
+      minCol: 0,
+      maxCol: 19,
+      minRow: 3,
+      maxRow: 13,
+    };
+  }
+
+  /**
    * Handle click events on the combat log scroll buttons.
    * Returns true if a button was clicked, false otherwise.
    */

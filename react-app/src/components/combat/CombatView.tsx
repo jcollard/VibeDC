@@ -338,15 +338,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     displayCanvas.width = CANVAS_WIDTH;
     displayCanvas.height = CANVAS_HEIGHT;
 
-    // Calculate map size in pixels
-    const mapWidth = combatState.map.width * TILE_SIZE;
-    const mapHeight = combatState.map.height * TILE_SIZE;
-
     // Use layout's viewport for map positioning
     const viewport = layoutRenderer.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
-    // Center map within the viewport
-    const offsetX = viewport.x + (viewport.width - mapWidth) / 2;
-    const offsetY = viewport.y + (viewport.height - mapHeight) / 2;
+    // Draw map from top-left of viewport (no centering)
+    const offsetX = viewport.x;
+    const offsetY = viewport.y;
 
     const ctx = bufferCanvas.getContext('2d');
     if (!ctx) return;
@@ -378,6 +374,19 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return;
     }
 
+    // Apply clipping region to map viewport (in absolute screen tile coordinates)
+    // Expand by 4px on top, right, and bottom
+    const clipRegion = layoutRenderer.getMapClipRegion();
+    const clipX = clipRegion.minCol * TILE_SIZE;
+    const clipY = clipRegion.minRow * TILE_SIZE - 4;
+    const clipWidth = (clipRegion.maxCol - clipRegion.minCol + 1) * TILE_SIZE + 4;
+    const clipHeight = (clipRegion.maxRow - clipRegion.minRow + 1) * TILE_SIZE + 4 + 4;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(clipX, clipY, clipWidth, clipHeight);
+    ctx.clip();
+
     // Render the combat map
     renderer.renderMap(ctx, combatState.map, spriteImagesRef.current, offsetX, offsetY);
 
@@ -395,6 +404,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render deployed units from the manifest (after deployment zones so they appear on top)
     renderer.renderUnits(ctx, combatState.unitManifest, spriteImagesRef.current, offsetX, offsetY);
+
+    ctx.restore();
 
     // DISABLED FOR PROTOTYPING - Skip default phase UI (titles, dialogs)
     // Uncomment to re-enable deployment phase UI elements
