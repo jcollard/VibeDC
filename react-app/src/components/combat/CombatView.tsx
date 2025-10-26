@@ -740,15 +740,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Button was clicked, don't process other click handlers
     }
 
-    // Calculate map offset using the map renderer
-    const { offsetX, offsetY } = mapRenderer.calculateMapOffset(
-      combatState.map.width,
-      combatState.map.height,
-      mapScrollX,
-      mapScrollY
-    );
-
-    // Pass click to phase handler (if deployment phase)
+    // Check for character dialog clicks in deployment phase
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
 
@@ -793,10 +785,24 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         }
         return;
       }
-
-      // If no character clicked, check for deployment zone click
-      handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, mapScrollX, mapScrollY, encounter);
     }
+
+    // Try to handle as a map click (will notify registered handlers)
+    const wasMapClick = mapRenderer.handleMapClick(
+      canvasX,
+      canvasY,
+      mapScrollX,
+      mapScrollY,
+      combatState.map.width,
+      combatState.map.height
+    );
+
+    if (wasMapClick) {
+      // Map was clicked, registered handlers were notified
+      return;
+    }
+
+    // Click was not handled by any registered handler
   }, [combatState, encounter, setCombatState, inputHandler, mapRenderer, combatLogManager, mapScrollX, mapScrollY]);
 
   // Handle canvas mouse move for hover detection
@@ -840,6 +846,50 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
     }
   }, [combatState.phase, combatState.map, inputHandler, uiStateManager, renderer]);
+
+  // Register map click handler
+  useEffect(() => {
+    const unsubscribe = mapRenderer.onMapClick((tileX, tileY) => {
+      // Handle deployment zone clicks in deployment phase
+      if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
+        const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+
+        // Check if this tile is a deployment zone and toggle selection
+        const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(
+          zone => zone.x === tileX && zone.y === tileY
+        );
+
+        if (clickedZoneIndex !== -1) {
+          // Let the deployment manager handle the zone toggle logic
+          const currentSelection = handler.getSelectedZoneIndex();
+
+          // Toggle: if already selected, clear; otherwise select
+          if (currentSelection === clickedZoneIndex) {
+            handler.clearSelectedZone();
+          } else {
+            // We need the deployment manager to select the zone
+            // For now we'll get the zone and use the manager's internal logic
+            // by finding it via handleClick's zone detection
+            // This is a bit indirect but works with the current API
+            const offsetCalc = mapRenderer.calculateMapOffset(
+              combatState.map.width,
+              combatState.map.height,
+              mapScrollX,
+              mapScrollY
+            );
+
+            // Call handleClick with the calculated canvas position for this tile
+            // This will make the deployment manager select the zone
+            const canvasX = tileX * TILE_SIZE + offsetCalc.offsetX + TILE_SIZE / 2;
+            const canvasY = tileY * TILE_SIZE + offsetCalc.offsetY + TILE_SIZE / 2;
+            handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetCalc.offsetX, offsetCalc.offsetY, mapScrollX, mapScrollY, encounter);
+          }
+        }
+      }
+    });
+
+    return unsubscribe;
+  }, [mapRenderer, combatState.phase, combatState.map, encounter, mapScrollX, mapScrollY]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {

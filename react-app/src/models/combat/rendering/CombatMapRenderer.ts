@@ -1,8 +1,14 @@
 import type { CombatLayoutRenderer } from '../layouts/CombatLayoutRenderer';
 
 /**
+ * Event handler for map tile clicks
+ */
+export type MapClickHandler = (tileX: number, tileY: number) => void;
+
+/**
  * Handles map rendering offset calculations with support for scrolling and clipping
  * Encapsulates the complex logic for positioning maps within layout viewports
+ * Also manages map click events and coordinate conversions
  */
 export class CombatMapRenderer {
   private readonly tileSize: number;
@@ -14,6 +20,9 @@ export class CombatMapRenderer {
   private readonly horizontalBorderOffset = -6; // px
   private readonly verticalBorderOffset = 0; // px
 
+  // Event handlers
+  private mapClickHandlers: MapClickHandler[] = [];
+
   constructor(
     tileSize: number,
     layoutRenderer: CombatLayoutRenderer,
@@ -24,6 +33,61 @@ export class CombatMapRenderer {
     this.layoutRenderer = layoutRenderer;
     this.canvasWidth = canvasWidth;
     this.canvasHeight = canvasHeight;
+  }
+
+  /**
+   * Register a handler to be called when the map is clicked
+   * @param handler - Function to call with tile coordinates
+   * @returns Unsubscribe function
+   */
+  onMapClick(handler: MapClickHandler): () => void {
+    this.mapClickHandlers.push(handler);
+
+    // Return unsubscribe function
+    return () => {
+      const index = this.mapClickHandlers.indexOf(handler);
+      if (index !== -1) {
+        this.mapClickHandlers.splice(index, 1);
+      }
+    };
+  }
+
+  /**
+   * Handle a canvas click event and notify all registered handlers if it's on the map
+   * @param canvasX - X coordinate on canvas
+   * @param canvasY - Y coordinate on canvas
+   * @param scrollX - Current horizontal scroll position
+   * @param scrollY - Current vertical scroll position
+   * @param mapWidthInTiles - Width of the map in tiles
+   * @param mapHeightInTiles - Height of the map in tiles
+   * @returns true if the click was on the map, false otherwise
+   */
+  handleMapClick(
+    canvasX: number,
+    canvasY: number,
+    scrollX: number,
+    scrollY: number,
+    mapWidthInTiles: number,
+    mapHeightInTiles: number
+  ): boolean {
+    const coords = this.canvasToTileCoordinates(
+      canvasX,
+      canvasY,
+      scrollX,
+      scrollY,
+      mapWidthInTiles,
+      mapHeightInTiles
+    );
+
+    if (coords) {
+      // Notify all registered handlers
+      this.mapClickHandlers.forEach(handler => {
+        handler(coords.tileX, coords.tileY);
+      });
+      return true;
+    }
+
+    return false;
   }
 
   /**
