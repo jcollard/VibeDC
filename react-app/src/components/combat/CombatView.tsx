@@ -227,19 +227,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Info panel managers
   // During deployment, this shows party members; during combat, shows current unit
-  const currentUnitPanelManager = useMemo(() => new InfoPanelManager({
-    title: combatState.phase === 'deployment' ? 'Party Members' : 'CURRENT UNIT',
-    titleColor: '#ffa500',
-    padding: 1,
-    lineSpacing: 8,
-  }), [combatState.phase]);
+  const currentUnitPanelManager = useMemo(() => new InfoPanelManager(), []);
 
-  const targetUnitPanelManager = useMemo(() => new InfoPanelManager({
-    title: 'Unit Info',
-    titleColor: '#ff6b6b',
-    padding: 1,
-    lineSpacing: 8,
-  }), []);
+  const targetUnitPanelManager = useMemo(() => new InfoPanelManager(), []);
 
   // Top panel manager
   const topPanelManager = useMemo(() => new TopPanelManager(), []);
@@ -822,12 +812,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         };
 
         // Check if clicking on a party member
-        const partyMemberIndex = currentUnitPanelManager.handlePartyClick(
+        const partyMemberIndex = currentUnitPanelManager.handleClick(
           canvasX,
           canvasY,
-          partyPanelRegion,
-          partyUnits
-        );
+          partyPanelRegion
+        ) as number | null;
 
         if (partyMemberIndex !== null) {
           // Deploy the selected party member
@@ -993,12 +982,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           height: 108  // 9 tiles
         };
 
-        const hoveredPartyIndex = currentUnitPanelManager.handlePartyHover(
+        const hoveredPartyIndex = currentUnitPanelManager.handleHover(
           canvasX,
           canvasY,
-          partyPanelRegion,
-          partyUnits
-        );
+          partyPanelRegion
+        ) as number | null;
 
         if (hoveredPartyIndex !== null) {
           // Set the hovered party member as the target unit

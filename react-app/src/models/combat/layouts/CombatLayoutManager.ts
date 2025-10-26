@@ -1,6 +1,7 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
 import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
 import { SpriteRenderer } from '../../../utils/SpriteRenderer';
+import { UnitInfoContent, PartyMembersContent, EmptyContent } from '../managers/panels';
 
 /**
  * Layout 6: Left Map with Top Turn Order
@@ -379,28 +380,48 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex } = context;
     if (!currentUnitPanelManager) return;
 
-    let content;
+    // Create appropriate content based on phase
     if (isDeploymentPhase && partyUnits && partyUnits.length > 0) {
       // During deployment, show party members grid
-      content = {
-        type: 'party' as const,
-        units: partyUnits,
-        spriteImages: spriteImages,
-        spriteSize: spriteSize,
-        hoveredIndex: hoveredPartyMemberIndex
-      };
+      const content = new PartyMembersContent(
+        {
+          title: 'Party Members',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        },
+        partyUnits,
+        spriteImages,
+        spriteSize,
+        hoveredPartyMemberIndex ?? null
+      );
+      currentUnitPanelManager.setContent(content);
     } else if (currentUnit) {
       // During combat, show current unit
-      content = { type: 'unit' as const, unit: currentUnit };
+      const content = new UnitInfoContent(
+        {
+          title: 'CURRENT UNIT',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        },
+        currentUnit
+      );
+      currentUnitPanelManager.setContent(content);
     } else {
       // Empty state
-      content = { type: 'empty' as const };
+      const content = new EmptyContent({
+        title: 'CURRENT UNIT',
+        titleColor: '#ffa500',
+        padding: 1,
+        lineSpacing: 8,
+      });
+      currentUnitPanelManager.setContent(content);
     }
 
     currentUnitPanelManager.render(
       ctx,
       { x, y, width, height },
-      content,
       fontId,
       fontAtlasImage
     );
@@ -416,14 +437,31 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager } = context;
     if (!targetUnitPanelManager) return;
 
-    const content = targetUnit
-      ? { type: 'unit' as const, unit: targetUnit }
-      : { type: 'empty' as const };
+    // Create appropriate content
+    if (targetUnit) {
+      const content = new UnitInfoContent(
+        {
+          title: 'Unit Info',
+          titleColor: '#ff6b6b',
+          padding: 1,
+          lineSpacing: 8,
+        },
+        targetUnit
+      );
+      targetUnitPanelManager.setContent(content);
+    } else {
+      const content = new EmptyContent({
+        title: 'Unit Info',
+        titleColor: '#ff6b6b',
+        padding: 1,
+        lineSpacing: 8,
+      });
+      targetUnitPanelManager.setContent(content);
+    }
 
     targetUnitPanelManager.render(
       ctx,
       { x, y, width, height },
-      content,
       fontId,
       fontAtlasImage
     );

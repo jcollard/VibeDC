@@ -1,47 +1,22 @@
-import type { CombatUnit } from '../CombatUnit';
-import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
-import { SpriteRenderer } from '../../../utils/SpriteRenderer';
-
-/**
- * Union type for different content types the info panel can display
- */
-export type InfoPanelContent =
-  | { type: 'unit'; unit: CombatUnit }
-  | { type: 'empty' }
-  | { type: 'party'; units: CombatUnit[]; spriteImages: Map<string, HTMLImageElement>; spriteSize: number; hoveredIndex?: number | null };
-  // Future content types can be added here:
-  // | { type: 'terrain'; terrain: TerrainInfo }
-  // | { type: 'item'; item: Item }
-
-/**
- * Configuration for the info panel appearance
- */
-export interface InfoPanelConfig {
-  title: string;
-  titleColor: string;
-  padding: number;
-  lineSpacing: number;
-}
-
-/**
- * Region definition for rendering
- */
-export interface PanelRegion {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-}
+import type { PanelContent, PanelRegion } from './panels/PanelContent';
 
 /**
  * Manages rendering of information panels that can display different types of content.
- * Used for current unit, target unit, and potentially other info displays.
+ * Acts as a coordinator that delegates rendering and input handling to PanelContent implementations.
+ *
+ * This manager is responsible for:
+ * - Delegating render calls to the current panel content
+ * - Transforming canvas coordinates to panel-relative coordinates
+ * - Forwarding interaction events (clicks, hovers) to panel content
  */
 export class InfoPanelManager {
-  private readonly config: InfoPanelConfig;
+  private content: PanelContent | null = null;
 
-  constructor(config: InfoPanelConfig) {
-    this.config = config;
+  /**
+   * Set the content to be displayed in the panel
+   */
+  setContent(content: PanelContent | null): void {
+    this.content = content;
   }
 
   /**
@@ -50,303 +25,55 @@ export class InfoPanelManager {
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
-    content: InfoPanelContent,
     fontId: string,
     fontAtlasImage: HTMLImageElement | null
   ): void {
-    if (!fontAtlasImage) return;
-
-    let currentY = region.y + this.config.padding;
-
-    // Render title (centered for party content, left-aligned otherwise)
-    const titleX = content.type === 'party'
-      ? region.x + region.width / 2
-      : region.x + this.config.padding;
-    const titleAlign = content.type === 'party' ? 'center' : 'left';
-
-    FontAtlasRenderer.renderText(
-      ctx,
-      this.config.title,
-      titleX,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      titleAlign,
-      this.config.titleColor
-    );
-    currentY += this.config.lineSpacing;
-
-    // Render content based on type
-    if (content.type === 'unit') {
-      this.renderUnitContent(ctx, region, content.unit, currentY, fontId, fontAtlasImage);
-    } else if (content.type === 'empty') {
-      this.renderEmptyContent(ctx, region, currentY, fontId, fontAtlasImage);
-    } else if (content.type === 'party') {
-      this.renderPartyContent(ctx, region, content.units, currentY, fontId, fontAtlasImage, content.spriteImages, content.spriteSize, content.hoveredIndex);
-    }
+    if (!this.content) return;
+    this.content.render(ctx, region, fontId, fontAtlasImage);
   }
 
-  /**
-   * Render unit information
-   */
-  private renderUnitContent(
-    ctx: CanvasRenderingContext2D,
-    region: PanelRegion,
-    unit: CombatUnit,
-    startY: number,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement
-  ): void {
-    let currentY = startY;
-
-    // Unit name
-    FontAtlasRenderer.renderText(
-      ctx,
-      unit.name,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // Unit class
-    FontAtlasRenderer.renderText(
-      ctx,
-      unit.unitClass.name,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // HP
-    FontAtlasRenderer.renderText(
-      ctx,
-      `HP: ${unit.health}/${unit.maxHealth}`,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // MP
-    FontAtlasRenderer.renderText(
-      ctx,
-      `MP: ${unit.mana}/${unit.maxMana}`,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // Speed and Movement
-    FontAtlasRenderer.renderText(
-      ctx,
-      `Spd:${unit.speed} Mov:${unit.movement}`,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-  }
 
   /**
-   * Render empty state (no content to display)
-   */
-  private renderEmptyContent(
-    ctx: CanvasRenderingContext2D,
-    region: PanelRegion,
-    startY: number,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement
-  ): void {
-    FontAtlasRenderer.renderText(
-      ctx,
-      '-',
-      region.x + this.config.padding,
-      startY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#666666'
-    );
-  }
-
-  /**
-   * Render party members in a 2x2 grid with sprites and names
-   */
-  private renderPartyContent(
-    ctx: CanvasRenderingContext2D,
-    region: PanelRegion,
-    units: CombatUnit[],
-    startY: number,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement,
-    spriteImages: Map<string, HTMLImageElement>,
-    spriteSize: number,
-    hoveredIndex?: number | null
-  ): void {
-    const spriteDisplaySize = 12; // 12x12px sprites
-    const nameSpacing = 8; // Space for name below sprite
-    const verticalSpacing = 6; // Additional vertical space between rows
-    const cellWidth = region.width / 2; // 2 columns
-    const cellHeight = (spriteDisplaySize + nameSpacing + verticalSpacing); // Height of sprite + name + spacing
-
-    // Calculate starting position to center the grid vertically in remaining space
-    const availableHeight = region.height - (startY - region.y);
-    const gridHeight = Math.min(2, Math.ceil(units.length / 2)) * cellHeight;
-    let currentY = startY + (availableHeight - gridHeight) / 2;
-
-    // Render units in 2x2 grid (up to 4 units)
-    for (let i = 0; i < units.length && i < 4; i++) {
-      const unit = units[i];
-      const row = Math.floor(i / 2);
-      const col = i % 2;
-      const isHovered = hoveredIndex === i;
-
-      // Calculate position for this cell
-      const cellX = region.x + col * cellWidth;
-      const cellY = currentY + row * cellHeight;
-
-      // Center sprite within cell
-      const spriteX = cellX + (cellWidth - spriteDisplaySize) / 2;
-      const spriteY = cellY;
-
-      // Render sprite
-      SpriteRenderer.renderSpriteById(
-        ctx,
-        unit.spriteId,
-        spriteImages,
-        spriteSize,
-        spriteX,
-        spriteY,
-        spriteDisplaySize,
-        spriteDisplaySize
-      );
-
-      // Render name centered below sprite
-      // Use dark yellow color (#ccaa00) when hovered, white otherwise
-      const nameY = spriteY + spriteDisplaySize + 1;
-      const nameX = cellX + cellWidth / 2;
-      const nameColor = isHovered ? '#ccaa00' : '#ffffff';
-      FontAtlasRenderer.renderText(
-        ctx,
-        unit.name,
-        nameX,
-        nameY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'center',
-        nameColor
-      );
-    }
-  }
-
-  /**
-   * Handle click on party member in the party panel
+   * Handle click on the panel content
+   * Transforms canvas coordinates to panel-relative coordinates and forwards to content
    * @param canvasX - X coordinate on canvas (in pixels)
    * @param canvasY - Y coordinate on canvas (in pixels)
    * @param region - Panel region
-   * @param units - Array of party units
-   * @returns Index of clicked unit, or null if no unit was clicked
+   * @returns Result from content's handleClick method, or null if no content or no handler
    */
-  handlePartyClick(
+  handleClick(
     canvasX: number,
     canvasY: number,
-    region: PanelRegion,
-    units: CombatUnit[]
-  ): number | null {
-    return this.getPartyMemberAtPosition(canvasX, canvasY, region, units);
+    region: PanelRegion
+  ): unknown {
+    if (!this.content || !this.content.handleClick) return null;
+
+    // Transform canvas coordinates to panel-relative coordinates
+    const relativeX = canvasX - region.x;
+    const relativeY = canvasY - region.y;
+
+    return this.content.handleClick(relativeX, relativeY);
   }
 
   /**
-   * Handle hover on party member in the party panel
+   * Handle hover on the panel content
+   * Transforms canvas coordinates to panel-relative coordinates and forwards to content
    * @param canvasX - X coordinate on canvas (in pixels)
    * @param canvasY - Y coordinate on canvas (in pixels)
    * @param region - Panel region
-   * @param units - Array of party units
-   * @returns Index of hovered unit, or null if no unit is hovered
+   * @returns Result from content's handleHover method, or null if no content or no handler
    */
-  handlePartyHover(
+  handleHover(
     canvasX: number,
     canvasY: number,
-    region: PanelRegion,
-    units: CombatUnit[]
-  ): number | null {
-    return this.getPartyMemberAtPosition(canvasX, canvasY, region, units);
-  }
+    region: PanelRegion
+  ): unknown {
+    if (!this.content || !this.content.handleHover) return null;
 
-  /**
-   * Get the party member index at a specific position
-   * Helper method used by both click and hover detection
-   * @param canvasX - X coordinate on canvas (in pixels)
-   * @param canvasY - Y coordinate on canvas (in pixels)
-   * @param region - Panel region
-   * @param units - Array of party units
-   * @returns Index of unit at position, or null if none
-   */
-  private getPartyMemberAtPosition(
-    canvasX: number,
-    canvasY: number,
-    region: PanelRegion,
-    units: CombatUnit[]
-  ): number | null {
-    const spriteDisplaySize = 12; // 12x12px sprites
-    const nameSpacing = 8; // Space for name below sprite
-    const verticalSpacing = 6; // Additional vertical space between rows
-    const cellWidth = region.width / 2; // 2 columns
-    const cellHeight = (spriteDisplaySize + nameSpacing + verticalSpacing);
+    // Transform canvas coordinates to panel-relative coordinates
+    const relativeX = canvasX - region.x;
+    const relativeY = canvasY - region.y;
 
-    // Calculate starting Y (after title)
-    const startY = region.y + this.config.padding + this.config.lineSpacing;
-
-    // Calculate grid starting position (same as renderPartyContent)
-    const availableHeight = region.height - (startY - region.y);
-    const gridHeight = Math.min(2, Math.ceil(units.length / 2)) * cellHeight;
-    const currentY = startY + (availableHeight - gridHeight) / 2;
-
-    // Check each unit cell
-    for (let i = 0; i < units.length && i < 4; i++) {
-      const row = Math.floor(i / 2);
-      const col = i % 2;
-
-      // Calculate cell bounds
-      const cellX = region.x + col * cellWidth;
-      const cellY = currentY + row * cellHeight;
-
-      // Check if position is within this cell
-      if (
-        canvasX >= cellX &&
-        canvasX < cellX + cellWidth &&
-        canvasY >= cellY &&
-        canvasY < cellY + cellHeight
-      ) {
-        return i;
-      }
-    }
-
-    return null;
+    return this.content.handleHover(relativeX, relativeY);
   }
 }
