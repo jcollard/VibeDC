@@ -11,10 +11,10 @@ import { SpriteRenderer } from '../../../utils/SpriteRenderer';
  * - Right column: Current unit (top) + Target unit (bottom) split horizontally
  */
 export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
-  private readonly RIGHT_COLUMN_WIDTH = 132; // 11 tiles
-  private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles (was 3)
-  private readonly COMBAT_LOG_HEIGHT = 48; // 4 tiles
-  private readonly PANEL_PADDING = 4;
+  private readonly RIGHT_COLUMN_WIDTH = 144; // 12 tiles
+  private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles
+  private readonly COMBAT_LOG_HEIGHT = 36; // 3 tiles
+  private readonly PANEL_PADDING = 1; // 1px padding
   private readonly LINE_SPACING = 8;
   private readonly frameLayout: HorizontalVerticalLayout;
 
@@ -26,20 +26,20 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     // Define the layout regions using tile-based dimensions
     // Canvas is 384x216 (32x18 tiles at 12px each)
     const regions: LayoutRegion[] = [
-      // Top-left: Turn order (21 tiles wide, 2 tiles tall)
-      { name: 'turnOrder', x: 0, y: 0, widthTiles: 21, heightTiles: 2 },
+      // Top-left: Turn order (20 tiles wide, 2 tiles tall)
+      { name: 'turnOrder', x: 0, y: 0, widthTiles: 20, heightTiles: 2 },
 
-      // Middle-left: Map area (21 tiles wide, 12 tiles tall)
-      { name: 'map', x: 0, y: 24, widthTiles: 21, heightTiles: 12 },
+      // Middle-left: Map area (20 tiles wide, 12 tiles tall)
+      { name: 'map', x: 0, y: 24, widthTiles: 20, heightTiles: 12 },
 
-      // Bottom-left: Combat log (21 tiles wide, 4 tiles tall)
-      { name: 'combatLog', x: 0, y: 168, widthTiles: 21, heightTiles: 4 },
+      // Spacer region (20 tiles wide, 4 tiles tall) - creates divider at y=168, extends to bottom
+      { name: 'spacer', x: 0, y: 168, widthTiles: 20, heightTiles: 4 },
 
-      // Top-right: Current unit (11 tiles wide, 9 tiles tall)
-      { name: 'currentUnit', x: 252, y: 0, widthTiles: 11, heightTiles: 9 },
+      // Top-right: Current unit (12 tiles wide, 9 tiles tall)
+      { name: 'currentUnit', x: 240, y: 0, widthTiles: 12, heightTiles: 9 },
 
-      // Bottom-right: Target unit (11 tiles wide, 9 tiles tall)
-      { name: 'targetUnit', x: 252, y: 108, widthTiles: 11, heightTiles: 9 },
+      // Bottom-right: Target unit (12 tiles wide, 9 tiles tall)
+      { name: 'targetUnit', x: 240, y: 108, widthTiles: 12, heightTiles: 9 },
     ];
 
     this.frameLayout = new HorizontalVerticalLayout({ regions });
@@ -185,29 +185,13 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     const { ctx, combatLogManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
     if (!fontAtlasImage || !combatLogManager) return;
 
-    let currentY = y + this.PANEL_PADDING + 6;
-
-    // Render title
-    FontAtlasRenderer.renderText(
-      ctx,
-      'COMBAT LOG',
-      x + this.PANEL_PADDING + 6,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#6b9eff'
-    );
-    currentY += this.LINE_SPACING;
-
     // Calculate scroll button dimensions (12x12 each)
     const buttonSize = 12;
     const buttonSpacing = 2;
-    const scrollButtonsX = x + width - this.PANEL_PADDING - buttonSize - 6;
+    const scrollButtonsX = x + width - this.PANEL_PADDING - buttonSize;
 
     // Render scroll up button (top)
-    const scrollUpY = currentY;
+    const scrollUpY = y + this.PANEL_PADDING;
     SpriteRenderer.renderSpriteById(
       ctx,
       'minimap-25',
@@ -244,11 +228,11 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       height: buttonSize
     };
 
-    // Calculate the visible area for the combat log (excluding title, padding, and scroll buttons)
-    const logX = x + this.PANEL_PADDING + 6;
-    const logY = currentY;
-    const logWidth = width - (this.PANEL_PADDING + 6) * 2 - buttonSize - buttonSpacing * 2;
-    const logHeight = height - (currentY - y) - this.PANEL_PADDING;
+    // Calculate the visible area for the combat log (1px padding on all sides, room for scroll buttons)
+    const logX = x + this.PANEL_PADDING;
+    const logY = y + this.PANEL_PADDING;
+    const logWidth = width - this.PANEL_PADDING * 2 - buttonSize - buttonSpacing;
+    const logHeight = height - this.PANEL_PADDING * 2;
 
     // Render combat log using the manager
     combatLogManager.render(
