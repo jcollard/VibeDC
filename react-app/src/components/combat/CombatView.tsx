@@ -609,6 +609,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Check if clicking on combat log scroll buttons first
     if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {
+      renderFrame(); // Force immediate re-render to show scrolled content
       return; // Button was clicked, don't process other click handlers
     }
 

@@ -36,6 +36,9 @@ export class CombatLogManager {
   private bufferCtx: CanvasRenderingContext2D | null = null;
   private scrollOffset: number = 0; // Scroll position (0 = showing newest messages)
   private lastVisibleLines: number = 0; // Track how many lines are actually visible
+  private bufferDirty: boolean = true; // Flag to track if buffer needs redrawing
+  private lastFontId: string = '';
+  private lastBufferWidth: number = 0;
 
   constructor(config: Partial<CombatLogConfig> = {}) {
     this.config = {
@@ -60,6 +63,9 @@ export class CombatLogManager {
 
     // Auto-scroll to bottom when new message arrives
     this.scrollOffset = 0;
+
+    // Mark buffer as dirty
+    this.bufferDirty = true;
   }
 
   /**
@@ -68,6 +74,7 @@ export class CombatLogManager {
   clear(): void {
     this.messages = [];
     this.scrollOffset = 0;
+    this.bufferDirty = true;
   }
 
   /**
@@ -85,7 +92,13 @@ export class CombatLogManager {
     // Max scroll is based on visible lines, not buffer lines
     const visibleLines = this.lastVisibleLines || this.config.bufferLines;
     const maxScroll = Math.max(0, this.messages.length - visibleLines);
+    const oldOffset = this.scrollOffset;
     this.scrollOffset = Math.min(this.scrollOffset + lines, maxScroll);
+
+    // Mark buffer as dirty if offset changed
+    if (oldOffset !== this.scrollOffset) {
+      this.bufferDirty = true;
+    }
   }
 
   /**
@@ -93,14 +106,26 @@ export class CombatLogManager {
    * @param lines Number of lines to scroll
    */
   scrollDown(lines: number = 1): void {
+    const oldOffset = this.scrollOffset;
     this.scrollOffset = Math.max(0, this.scrollOffset - lines);
+
+    // Mark buffer as dirty if offset changed
+    if (oldOffset !== this.scrollOffset) {
+      this.bufferDirty = true;
+    }
   }
 
   /**
    * Scrolls to the bottom of the log (newest messages).
    */
   scrollToBottom(): void {
+    const oldOffset = this.scrollOffset;
     this.scrollOffset = 0;
+
+    // Mark buffer as dirty if offset changed
+    if (oldOffset !== this.scrollOffset) {
+      this.bufferDirty = true;
+    }
   }
 
   /**
@@ -161,24 +186,44 @@ export class CombatLogManager {
   ): void {
     const bufferHeight = this.config.bufferLines * this.config.lineHeight;
 
+    // Round dimensions to avoid floating-point comparison issues
+    const roundedWidth = Math.round(bufferWidth);
+    const roundedHeight = Math.round(bufferHeight);
+
     // Create buffer canvas if it doesn't exist or size changed
-    if (!this.bufferCanvas ||
-        this.bufferCanvas.width !== bufferWidth ||
-        this.bufferCanvas.height !== bufferHeight) {
+    const needsRecreate = !this.bufferCanvas ||
+        this.bufferCanvas.width !== roundedWidth ||
+        this.bufferCanvas.height !== roundedHeight;
+
+    if (needsRecreate) {
       this.bufferCanvas = document.createElement('canvas');
-      this.bufferCanvas.width = bufferWidth;
-      this.bufferCanvas.height = bufferHeight;
+      this.bufferCanvas.width = roundedWidth;
+      this.bufferCanvas.height = roundedHeight;
       this.bufferCtx = this.bufferCanvas.getContext('2d');
+      this.bufferDirty = true; // Force redraw after recreation
     }
 
     if (!this.bufferCtx) return;
+
+    // Check if we need to redraw the buffer
+    const fontChanged = this.lastFontId !== fontId;
+    const widthChanged = this.lastBufferWidth !== roundedWidth;
+
+    if (!this.bufferDirty && !fontChanged && !widthChanged) {
+      // Buffer is still valid, no need to redraw
+      return;
+    }
+
+    // Update tracking variables
+    this.lastFontId = fontId;
+    this.lastBufferWidth = roundedWidth;
 
     // Ensure pixel-perfect rendering
     this.bufferCtx.imageSmoothingEnabled = false;
 
     // Clear buffer
     this.bufferCtx.fillStyle = '#000000';
-    this.bufferCtx.fillRect(0, 0, bufferWidth, bufferHeight);
+    this.bufferCtx.fillRect(0, 0, roundedWidth, roundedHeight);
 
     // Calculate which messages to render (considering scroll offset)
     const startIdx = Math.max(0, this.messages.length - this.config.bufferLines - this.scrollOffset);
@@ -188,7 +233,7 @@ export class CombatLogManager {
     // Calculate starting Y position to align messages to bottom of buffer
     // If we have fewer messages than bufferLines, start from the bottom
     const totalMessagesHeight = visibleMessages.length * this.config.lineHeight;
-    let currentY = Math.max(0, bufferHeight - totalMessagesHeight);
+    let currentY = Math.max(0, roundedHeight - totalMessagesHeight);
 
     // Render each message line
     for (let i = 0; i < visibleMessages.length; i++) {
@@ -219,6 +264,9 @@ export class CombatLogManager {
 
       currentY += this.config.lineHeight;
     }
+
+    // Clear the dirty flag after redrawing
+    this.bufferDirty = false;
   }
 
   /**
