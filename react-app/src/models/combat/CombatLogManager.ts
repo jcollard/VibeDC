@@ -46,6 +46,7 @@ export class CombatLogManager {
   // Animation state
   private animatingMessageIndex: number = -1; // Index of the message being animated
   private animationProgress: number = 1; // 0.0 to 1.0, how much of the message to show
+  private animationCharsShown: number = 0; // Track characters shown to prevent going backwards
   private readonly ANIMATION_DURATION: number = 0.5; // 0.5 seconds per message
 
   // Message queue for sequential animations
@@ -86,6 +87,7 @@ export class CombatLogManager {
     // Start animation for the new message
     this.animatingMessageIndex = this.messages.length - 1;
     this.animationProgress = 0;
+    this.animationCharsShown = 0;
 
     // Mark buffer as dirty
     this.bufferDirty = true;
@@ -290,7 +292,9 @@ export class CombatLogManager {
           .replace(/\[\/color\]/g, '')
           .replace(/\[sprite:[\w-]+\]/g, 'S'); // Replace sprite tags with single char
         const visibleChars = Math.floor(plainText.length * this.animationProgress);
-        charsToShow = visibleChars;
+        // Ensure we never show fewer characters than before (prevents backwards animation)
+        charsToShow = Math.max(visibleChars, this.animationCharsShown);
+        this.animationCharsShown = charsToShow;
       }
 
       // Track how many characters we've rendered so far
@@ -356,7 +360,7 @@ export class CombatLogManager {
             currentX += FontAtlasRenderer.measureTextByFontId(textToRender, fontId);
           }
 
-          charsRendered += segment.text.length;
+          charsRendered += textToRender.length;
         }
       }
 
