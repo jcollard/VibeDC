@@ -26,7 +26,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   // Cached panel content instances (per GeneralGuidelines.md - don't recreate every frame)
   private cachedBottomPanelContent: PartyMembersContent | UnitInfoContent | EmptyContent | null = null;
   private cachedTopPanelContent: UnitInfoContent | EmptyContent | null = null;
-  private previousPhase: 'deployment' | 'battle' | null = null;
+  private previousPhase: 'deployment' | 'enemy-deployment' | 'battle' | null = null;
 
   constructor() {
     // Define the layout regions using tile-based dimensions
@@ -438,18 +438,29 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex, deployedUnitCount, totalDeploymentZones, onEnterCombat } = context;
+    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, isEnemyDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex, deployedUnitCount, totalDeploymentZones, onEnterCombat } = context;
     if (!currentUnitPanelManager) return;
 
     // Detect phase transition and clear cache
-    const currentPhase = isDeploymentPhase ? 'deployment' : 'battle';
+    const currentPhase = isEnemyDeploymentPhase ? 'enemy-deployment' : (isDeploymentPhase ? 'deployment' : 'battle');
     if (this.previousPhase !== null && this.previousPhase !== currentPhase) {
       this.cachedBottomPanelContent = null;
     }
     this.previousPhase = currentPhase;
 
     // Create or update appropriate content based on phase
-    if (isDeploymentPhase && partyUnits && partyUnits.length > 0) {
+    if (isEnemyDeploymentPhase) {
+      // During enemy-deployment, show empty panel
+      if (!(this.cachedBottomPanelContent instanceof EmptyContent)) {
+        this.cachedBottomPanelContent = new EmptyContent({
+          title: '',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        });
+      }
+      currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
+    } else if (isDeploymentPhase && partyUnits && partyUnits.length > 0) {
       // During deployment, show party members grid
       if (this.cachedBottomPanelContent instanceof PartyMembersContent) {
         // Update existing content
@@ -531,11 +542,22 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager } = context;
+    const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager, isEnemyDeploymentPhase } = context;
     if (!targetUnitPanelManager) return;
 
     // Create or update appropriate content
-    if (targetUnit) {
+    if (isEnemyDeploymentPhase) {
+      // During enemy-deployment, show empty panel
+      if (!(this.cachedTopPanelContent instanceof EmptyContent)) {
+        this.cachedTopPanelContent = new EmptyContent({
+          title: '',
+          titleColor: '#ff6b6b',
+          padding: 1,
+          lineSpacing: 8,
+        });
+      }
+      targetUnitPanelManager.setContent(this.cachedTopPanelContent);
+    } else if (targetUnit) {
       if (this.cachedTopPanelContent instanceof UnitInfoContent) {
         // Update existing content
         this.cachedTopPanelContent.updateUnit(targetUnit);

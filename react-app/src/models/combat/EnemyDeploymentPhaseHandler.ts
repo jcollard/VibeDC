@@ -2,6 +2,8 @@ import { PhaseBase } from './PhaseBase';
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import type { PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
+import { CombatConstants } from './CombatConstants';
+import { DeploymentHeaderRenderer } from './managers/renderers/DeploymentHeaderRenderer';
 
 /**
  * EnemyDeploymentPhaseHandler manages the enemy deployment phase where
@@ -17,7 +19,7 @@ import type { PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
 export class EnemyDeploymentPhaseHandler extends PhaseBase {
   /**
    * Update the enemy deployment phase
-   * Currently a stub that immediately transitions to battle phase
+   * Currently does not transition - waits for future implementation
    */
   protected updatePhase(
     state: CombatState,
@@ -25,11 +27,8 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
     _deltaTime: number
   ): CombatState | null {
     // TODO: Implement enemy deployment animations and logic
-    // For now, immediately transition to battle phase
-    return {
-      ...state,
-      phase: 'battle',
-    };
+    // For now, stay in enemy-deployment phase (don't transition to battle)
+    return state; // Return state to stay in this phase
   }
 
   /**
@@ -42,16 +41,24 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
   }
 
   /**
-   * Render enemy deployment phase (minimal stub)
+   * Render enemy deployment phase - no overlays needed
    */
   render(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
-    // TODO: Implement enemy deployment visualization
+    // No phase-specific overlays to render
+    // Info panels are cleared by CombatLayoutManager based on isEnemyDeploymentPhase flag
   }
 
   /**
-   * Render UI for enemy deployment phase (minimal stub)
+   * Render UI for enemy deployment phase
    */
   renderUI(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
-    // TODO: Implement enemy deployment UI
+    // UI rendering is minimal - top panel is controlled via getTopPanelRenderer
+  }
+
+  /**
+   * Get top panel renderer - shows "Enemies Approach" header
+   */
+  getTopPanelRenderer(_state: CombatState, _encounter: CombatEncounter) {
+    return new DeploymentHeaderRenderer(CombatConstants.TEXT.ENEMIES_APPROACH);
   }
 }

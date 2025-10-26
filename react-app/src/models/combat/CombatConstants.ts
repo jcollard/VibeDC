@@ -65,7 +65,9 @@ export const CombatConstants = {
     DEPLOYMENT_INSTRUCTION: 'Click [sprite:gradients-7] to deploy a unit.',
     SELECT_PARTY_MEMBER: 'Select a [color=#ffa500]Party Member[/color] to deploy',
     START_COMBAT_BUTTON: 'Start Combat',
-    UNITS_DEPLOYED: 'Units deployed. Begin combat?',
+    UNITS_DEPLOYED: 'Units deployed. Enter combat?',
+    STARTING_ENEMY_DEPLOYMENT: 'Starting Enemy Deployment',
+    ENEMIES_APPROACH: 'Enemies Approach',
   },
 
   // Rendering

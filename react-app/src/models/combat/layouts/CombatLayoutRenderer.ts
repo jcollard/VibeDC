@@ -19,6 +19,7 @@ export interface LayoutRenderContext {
   targetUnit: CombatUnit | null; // Passed to InfoPanelManager
   partyUnits?: CombatUnit[]; // Passed to InfoPanelManager during deployment
   isDeploymentPhase?: boolean; // Flag to determine which content to show
+  isEnemyDeploymentPhase?: boolean; // Flag for enemy-deployment phase (hides info panels)
   hoveredPartyMemberIndex?: number | null; // Index of hovered party member (for visual feedback)
   deployedUnitCount?: number; // Number of deployed units (for Enter Combat button)
   totalDeploymentZones?: number; // Total deployment zones available

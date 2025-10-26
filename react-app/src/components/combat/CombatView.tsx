@@ -434,11 +434,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       targetUnit: targetUnitRef.current, // Set by clicking turn order
       partyUnits: partyUnits, // Used during deployment phase
       isDeploymentPhase: combatState.phase === 'deployment',
+      isEnemyDeploymentPhase: combatState.phase === 'enemy-deployment',
       hoveredPartyMemberIndex: hoveredPartyMemberRef.current, // For hover visual feedback
       deployedUnitCount: combatState.unitManifest.getAllUnits().length,
       totalDeploymentZones: encounter.playerDeploymentZones.length,
       onEnterCombat: () => {
-        combatLogManager.addMessage(CombatConstants.TEXT.UNITS_DEPLOYED);
+        combatLogManager.addMessage(CombatConstants.TEXT.STARTING_ENEMY_DEPLOYMENT);
         setCombatState({ ...combatState, phase: 'enemy-deployment' });
       },
       combatLogManager,
@@ -697,6 +698,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
                 combatLogManager.addMessage(result.logMessage);
               }
 
+              // Check if button should become visible after this deployment
+              const previousDeployedCount = combatState.unitManifest.getAllUnits().length;
+              const newDeployedCount = result.newState.unitManifest.getAllUnits().length;
+              const partySize = partyUnits.length;
+              const totalZones = encounter.playerDeploymentZones.length;
+
+              const wasButtonVisible = previousDeployedCount >= partySize || previousDeployedCount >= totalZones;
+              const isButtonVisible = newDeployedCount >= partySize || newDeployedCount >= totalZones;
+
+              // Add "Units deployed. Enter combat?" message when button becomes visible
+              if (!wasButtonVisible && isButtonVisible) {
+                combatLogManager.addMessage(CombatConstants.TEXT.UNITS_DEPLOYED);
+              }
+
               // Update state
               setCombatState(result.newState);
               return; // Click was handled
@@ -730,6 +745,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Stop continuous scrolling
     stopContinuousScroll();
 
+    // Check if clicking on bottom info panel (for button mouse up)
+    const panelRegion = layoutRenderer.getBottomInfoPanelRegion();
+    if (canvasX >= panelRegion.x &&
+        canvasX <= panelRegion.x + panelRegion.width &&
+        canvasY >= panelRegion.y &&
+        canvasY <= panelRegion.y + panelRegion.height) {
+
+      // Handle button click via handleClick (which calls handleMouseUp internally)
+      const clickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
+
+      if (clickResult && typeof clickResult === 'object' && 'type' in clickResult && clickResult.type === 'button') {
+        renderFrame(); // Re-render after button click
+        return; // Button click handled
+      }
+    }
+
     // Delegate mouse up to phase handler
     if (phaseHandlerRef.current.handleMouseUp) {
       phaseHandlerRef.current.handleMouseUp(
@@ -738,7 +769,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         encounter
       );
     }
-  }, [combatState, encounter, stopContinuousScroll]);
+  }, [combatState, encounter, stopContinuousScroll, layoutRenderer, renderFrame]);
 
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
