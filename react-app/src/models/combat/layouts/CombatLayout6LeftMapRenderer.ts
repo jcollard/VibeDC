@@ -166,25 +166,23 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       this.COMBAT_LOG_HEIGHT
     );
 
-    // Right column - split horizontally
-    const rightColumnHeight = canvasHeight / 2;
-
-    // Top-right: Current unit
+    // Right column - info panels at correct tile positions
+    // Top-right: Current unit (rows 0-8, columns 21-31)
     this.renderCurrentUnitPanel(
       context,
-      leftColumnWidth,
-      0,
-      this.RIGHT_COLUMN_WIDTH,
-      rightColumnHeight
+      252, // x: column 21 (21 * 12px)
+      0,   // y: row 0 (0 * 12px)
+      132, // width: 11 tiles (11 * 12px)
+      108  // height: 9 tiles (9 * 12px)
     );
 
-    // Bottom-right: Target unit
+    // Bottom-right: Target unit (rows 10-17, columns 21-31)
     this.renderTargetUnitPanel(
       context,
-      leftColumnWidth,
-      rightColumnHeight,
-      this.RIGHT_COLUMN_WIDTH,
-      rightColumnHeight
+      252, // x: column 21 (21 * 12px)
+      120, // y: row 10 (10 * 12px)
+      132, // width: 11 tiles (11 * 12px)
+      96   // height: 8 tiles (8 * 12px)
     );
 
     // Render the frame layout dividers on top of the 9-slice panels

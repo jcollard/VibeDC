@@ -54,13 +54,13 @@ export class InfoPanelManager {
   ): void {
     if (!fontAtlasImage) return;
 
-    let currentY = region.y + this.config.padding + 6;
+    let currentY = region.y + this.config.padding;
 
     // Render title
     FontAtlasRenderer.renderText(
       ctx,
       this.config.title,
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       currentY,
       fontId,
       fontAtlasImage,
@@ -95,7 +95,7 @@ export class InfoPanelManager {
     FontAtlasRenderer.renderText(
       ctx,
       unit.name,
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       currentY,
       fontId,
       fontAtlasImage,
@@ -109,7 +109,7 @@ export class InfoPanelManager {
     FontAtlasRenderer.renderText(
       ctx,
       unit.unitClass.name,
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       currentY,
       fontId,
       fontAtlasImage,
@@ -123,7 +123,7 @@ export class InfoPanelManager {
     FontAtlasRenderer.renderText(
       ctx,
       `HP: ${unit.health}/${unit.maxHealth}`,
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       currentY,
       fontId,
       fontAtlasImage,
@@ -137,7 +137,7 @@ export class InfoPanelManager {
     FontAtlasRenderer.renderText(
       ctx,
       `MP: ${unit.mana}/${unit.maxMana}`,
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       currentY,
       fontId,
       fontAtlasImage,
@@ -151,7 +151,7 @@ export class InfoPanelManager {
     FontAtlasRenderer.renderText(
       ctx,
       `Spd:${unit.speed} Mov:${unit.movement}`,
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       currentY,
       fontId,
       fontAtlasImage,
@@ -174,7 +174,7 @@ export class InfoPanelManager {
     FontAtlasRenderer.renderText(
       ctx,
       '-',
-      region.x + this.config.padding + 6,
+      region.x + this.config.padding,
       startY,
       fontId,
       fontAtlasImage,
