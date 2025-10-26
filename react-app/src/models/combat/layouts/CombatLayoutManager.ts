@@ -346,7 +346,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, combatLogManager, fontId, fontAtlasImage } = context;
+    const { ctx, combatLogManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
     if (!fontAtlasImage || !combatLogManager) return;
 
     // Calculate the visible area for the combat log (1px padding on all sides)
@@ -363,7 +363,9 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       logWidth,
       logHeight,
       fontId,
-      fontAtlasImage
+      fontAtlasImage,
+      spriteImages,
+      spriteSize
     );
   }
 

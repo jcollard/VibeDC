@@ -276,6 +276,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Add waylaid message as two separate lines at the start of deployment phase
     combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
     combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
+    // Add empty line
+    combatLogManager.addMessage('');
+    // Add deployment instruction with sprite
+    combatLogManager.addMessage(CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION);
   }, [combatLogManager]);
 
   // Listen for window resize

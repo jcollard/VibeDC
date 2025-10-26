@@ -2,10 +2,12 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRenderer } from '../../utils/SpriteRenderer';
 
 /**
- * A segment of text with optional color formatting.
+ * A segment of text or sprite with optional color formatting.
  */
 interface TextSegment {
-  text: string;
+  type: 'text' | 'sprite';
+  text: string; // For text segments
+  spriteId?: string; // For sprite segments
   color: string | null; // null means use default color
 }
 
@@ -150,43 +152,50 @@ export class CombatLogManager {
   }
 
   /**
-   * Parses color tags from a message string.
-   * Supports [color=#hexcode]text[/color] format (non-nested).
+   * Parses tags from a message string.
+   * Supports [color=#hexcode]text[/color] and [sprite:spriteId] formats.
    *
-   * @param message Message string with optional color tags
-   * @returns Array of text segments with color information
+   * @param message Message string with optional color and sprite tags
+   * @returns Array of text/sprite segments with color information
    */
-  private parseColorTags(message: string): TextSegment[] {
+  private parseTags(message: string): TextSegment[] {
     const segments: TextSegment[] = [];
-    const colorTagRegex = /\[color=(#[0-9a-fA-F]{6})\](.*?)\[\/color\]/g;
+    // Combined regex to match both color tags and sprite tags
+    const tagRegex = /\[color=(#[0-9a-fA-F]{6})\](.*?)\[\/color\]|\[sprite:([\w-]+)\]/g;
 
     let lastIndex = 0;
     let match: RegExpExecArray | null;
 
-    while ((match = colorTagRegex.exec(message)) !== null) {
-      // Add text before the color tag (if any)
+    while ((match = tagRegex.exec(message)) !== null) {
+      // Add text before the tag (if any)
       if (match.index > lastIndex) {
         const plainText = message.substring(lastIndex, match.index);
-        segments.push({ text: plainText, color: null });
+        segments.push({ type: 'text', text: plainText, color: null });
       }
 
-      // Add colored text
-      const color = match[1]; // The hex color
-      const text = match[2]; // The text inside the tags
-      segments.push({ text, color });
+      if (match[1] !== undefined) {
+        // Color tag matched
+        const color = match[1]; // The hex color
+        const text = match[2]; // The text inside the tags
+        segments.push({ type: 'text', text, color });
+      } else if (match[3] !== undefined) {
+        // Sprite tag matched
+        const spriteId = match[3];
+        segments.push({ type: 'sprite', text: '', spriteId, color: null });
+      }
 
-      lastIndex = colorTagRegex.lastIndex;
+      lastIndex = tagRegex.lastIndex;
     }
 
     // Add remaining text after the last tag (if any)
     if (lastIndex < message.length) {
       const plainText = message.substring(lastIndex);
-      segments.push({ text: plainText, color: null });
+      segments.push({ type: 'text', text: plainText, color: null });
     }
 
     // If no tags were found, return the entire message as a single segment
     if (segments.length === 0) {
-      segments.push({ text: message, color: null });
+      segments.push({ type: 'text', text: message, color: null });
     }
 
     return segments;
@@ -199,11 +208,15 @@ export class CombatLogManager {
    * @param fontId Font atlas ID to use for rendering
    * @param fontAtlasImage Font atlas image
    * @param bufferWidth Width of the buffer canvas
+   * @param spriteImages Map of sprite images
+   * @param spriteSize Size of each sprite
    */
   private renderToBuffer(
     fontId: string,
     fontAtlasImage: HTMLImageElement,
-    bufferWidth: number
+    bufferWidth: number,
+    spriteImages: Map<string, HTMLImageElement>,
+    spriteSize: number
   ): void {
     const bufferHeight = this.config.bufferLines * this.config.lineHeight;
 
@@ -260,18 +273,22 @@ export class CombatLogManager {
     for (let i = 0; i < visibleMessages.length; i++) {
       const messageIndex = startIdx + i;
       const message = visibleMessages[i];
-      const segments = this.parseColorTags(message);
+      const segments = this.parseTags(message);
 
       let currentX = 0;
 
       // Check if this message is being animated
       const isAnimating = messageIndex === this.animatingMessageIndex && this.animationProgress < 1;
 
-      // Calculate how many characters to show based on animation progress
+      // Calculate how many characters/elements to show based on animation progress
       let charsToShow = message.length;
       if (isAnimating) {
-        // Remove color tags from message to get actual visible character count
-        const plainText = message.replace(/\[color=#[0-9a-fA-F]{6}\]/g, '').replace(/\[\/color\]/g, '');
+        // Remove tags from message to get actual visible character count
+        // Count sprites as 1 character each
+        const plainText = message
+          .replace(/\[color=#[0-9a-fA-F]{6}\]/g, '')
+          .replace(/\[\/color\]/g, '')
+          .replace(/\[sprite:[\w-]+\]/g, 'S'); // Replace sprite tags with single char
         const visibleChars = Math.floor(plainText.length * this.animationProgress);
         charsToShow = visibleChars;
       }
@@ -279,40 +296,68 @@ export class CombatLogManager {
       // Track how many characters we've rendered so far
       let charsRendered = 0;
 
-      // Render each segment with its color
+      // Render each segment (text or sprite)
       for (const segment of segments) {
-        const color = segment.color || this.config.defaultColor;
+        if (segment.type === 'sprite') {
+          // Render sprite segment
+          if (segment.spriteId && this.bufferCtx) {
+            // Skip sprite if animating and we haven't reached it yet
+            if (isAnimating && charsRendered >= charsToShow) {
+              break;
+            }
 
-        // Calculate how much of this segment to render
-        let textToRender = segment.text;
-        if (isAnimating) {
-          const charsAvailable = charsToShow - charsRendered;
-          if (charsAvailable <= 0) {
-            break; // Don't render this segment at all
+            // Scale sprite to fit line height
+            const spriteDisplaySize = this.config.lineHeight;
+            SpriteRenderer.renderSpriteById(
+              this.bufferCtx,
+              segment.spriteId,
+              spriteImages,
+              spriteSize,
+              currentX,
+              currentY,
+              spriteDisplaySize,
+              spriteDisplaySize
+            );
+
+            // Advance X position by sprite size
+            currentX += spriteDisplaySize;
+            charsRendered += 1; // Count sprite as 1 character for animation
           }
-          if (charsAvailable < segment.text.length) {
-            textToRender = segment.text.substring(0, charsAvailable);
+        } else {
+          // Render text segment
+          const color = segment.color || this.config.defaultColor;
+
+          // Calculate how much of this segment to render
+          let textToRender = segment.text;
+          if (isAnimating) {
+            const charsAvailable = charsToShow - charsRendered;
+            if (charsAvailable <= 0) {
+              break; // Don't render this segment at all
+            }
+            if (charsAvailable < segment.text.length) {
+              textToRender = segment.text.substring(0, charsAvailable);
+            }
           }
+
+          if (textToRender.length > 0) {
+            FontAtlasRenderer.renderText(
+              this.bufferCtx,
+              textToRender,
+              currentX,
+              currentY,
+              fontId,
+              fontAtlasImage,
+              1,
+              'left',
+              color
+            );
+
+            // Advance X position for next segment
+            currentX += FontAtlasRenderer.measureTextByFontId(textToRender, fontId);
+          }
+
+          charsRendered += segment.text.length;
         }
-
-        if (textToRender.length > 0) {
-          FontAtlasRenderer.renderText(
-            this.bufferCtx,
-            textToRender,
-            currentX,
-            currentY,
-            fontId,
-            fontAtlasImage,
-            1,
-            'left',
-            color
-          );
-
-          // Advance X position for next segment
-          currentX += FontAtlasRenderer.measureTextByFontId(textToRender, fontId);
-        }
-
-        charsRendered += segment.text.length;
       }
 
       currentY += this.config.lineHeight;
@@ -333,6 +378,8 @@ export class CombatLogManager {
    * @param height Height of the visible area (the mask)
    * @param fontId Font atlas ID to use for rendering
    * @param fontAtlasImage Font atlas image
+   * @param spriteImages Map of sprite images
+   * @param spriteSize Size of each sprite
    */
   render(
     ctx: CanvasRenderingContext2D,
@@ -341,13 +388,15 @@ export class CombatLogManager {
     width: number,
     height: number,
     fontId: string,
-    fontAtlasImage: HTMLImageElement
+    fontAtlasImage: HTMLImageElement,
+    spriteImages: Map<string, HTMLImageElement> = new Map(),
+    spriteSize: number = 12
   ): void {
     // Track visible lines for scroll calculations
     this.lastVisibleLines = Math.floor(height / this.config.lineHeight);
 
     // Render full history to buffer
-    this.renderToBuffer(fontId, fontAtlasImage, width);
+    this.renderToBuffer(fontId, fontAtlasImage, width, spriteImages, spriteSize);
 
     if (!this.bufferCanvas) return;
 
