@@ -823,29 +823,23 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       handler.handleMouseMove(canvasX, canvasY, partySize);
       handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
 
-      // Update hovered cell for map tile detection
-      // Calculate map offset to account for centered map
-      const mapWidth = combatState.map.width * TILE_SIZE;
-      const mapHeight = combatState.map.height * TILE_SIZE;
-      const { offsetX, offsetY } = renderer.calculateMapOffset(mapWidth, mapHeight);
+      // Update hovered cell for map tile detection using CombatMapRenderer
+      const tileCoords = mapRenderer.canvasToTileCoordinates(
+        canvasX,
+        canvasY,
+        mapScrollX,
+        mapScrollY,
+        combatState.map.width,
+        combatState.map.height
+      );
 
-      // Convert canvas coordinates to map coordinates by subtracting offset
-      const mapX = canvasX - offsetX;
-      const mapY = canvasY - offsetY;
-
-      // Convert map coordinates to tile coordinates
-      const tileX = Math.floor(mapX / TILE_SIZE);
-      const tileY = Math.floor(mapY / TILE_SIZE);
-
-      // Check if the tile is within map bounds
-      if (tileX >= 0 && tileX < combatState.map.width &&
-          tileY >= 0 && tileY < combatState.map.height) {
-        uiStateManager.setHoveredCell({ x: tileX, y: tileY });
+      if (tileCoords) {
+        uiStateManager.setHoveredCell({ x: tileCoords.tileX, y: tileCoords.tileY });
       } else {
         uiStateManager.setHoveredCell(null);
       }
     }
-  }, [combatState.phase, combatState.map, inputHandler, uiStateManager, renderer]);
+  }, [combatState.phase, combatState.map, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY]);
 
   // Register map click handler
   useEffect(() => {
@@ -854,42 +848,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
         const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
 
-        // Check if this tile is a deployment zone and toggle selection
-        const clickedZoneIndex = encounter.playerDeploymentZones.findIndex(
-          zone => zone.x === tileX && zone.y === tileY
-        );
-
-        if (clickedZoneIndex !== -1) {
-          // Let the deployment manager handle the zone toggle logic
-          const currentSelection = handler.getSelectedZoneIndex();
-
-          // Toggle: if already selected, clear; otherwise select
-          if (currentSelection === clickedZoneIndex) {
-            handler.clearSelectedZone();
-          } else {
-            // We need the deployment manager to select the zone
-            // For now we'll get the zone and use the manager's internal logic
-            // by finding it via handleClick's zone detection
-            // This is a bit indirect but works with the current API
-            const offsetCalc = mapRenderer.calculateMapOffset(
-              combatState.map.width,
-              combatState.map.height,
-              mapScrollX,
-              mapScrollY
-            );
-
-            // Call handleClick with the calculated canvas position for this tile
-            // This will make the deployment manager select the zone
-            const canvasX = tileX * TILE_SIZE + offsetCalc.offsetX + TILE_SIZE / 2;
-            const canvasY = tileY * TILE_SIZE + offsetCalc.offsetY + TILE_SIZE / 2;
-            handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetCalc.offsetX, offsetCalc.offsetY, mapScrollX, mapScrollY, encounter);
-          }
-        }
+        // Delegate to the deployment phase handler with tile coordinates
+        handler.handleTileClick(tileX, tileY, encounter);
       }
     });
 
     return unsubscribe;
-  }, [mapRenderer, combatState.phase, combatState.map, encounter, mapScrollX, mapScrollY]);
+  }, [mapRenderer, combatState.phase, encounter]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {

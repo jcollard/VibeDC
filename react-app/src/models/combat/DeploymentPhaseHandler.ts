@@ -179,20 +179,15 @@ export class DeploymentPhaseHandler extends PhaseBase {
   }
 
   /**
-   * Handle click on the canvas to select deployment zones
+   * Handle click on a map tile to select deployment zones
    * Delegates to UnitDeploymentManager
    */
-  handleClick(
-    canvasX: number,
-    canvasY: number,
-    tileSize: number,
-    offsetX: number,
-    offsetY: number,
-    scrollX: number,
-    scrollY: number,
+  handleTileClick(
+    tileX: number,
+    tileY: number,
     encounter: CombatEncounter
   ): boolean {
-    return this.deploymentManager.handleClick(canvasX, canvasY, tileSize, offsetX, offsetY, scrollX, scrollY, encounter);
+    return this.deploymentManager.handleTileClick(tileX, tileY, encounter);
   }
 
   /**
