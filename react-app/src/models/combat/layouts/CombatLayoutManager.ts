@@ -376,12 +376,25 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager } = context;
+    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, partyUnits, spriteImages, spriteSize } = context;
     if (!currentUnitPanelManager) return;
 
-    const content = currentUnit
-      ? { type: 'unit' as const, unit: currentUnit }
-      : { type: 'empty' as const };
+    let content;
+    if (isDeploymentPhase && partyUnits && partyUnits.length > 0) {
+      // During deployment, show party members grid
+      content = {
+        type: 'party' as const,
+        units: partyUnits,
+        spriteImages: spriteImages,
+        spriteSize: spriteSize
+      };
+    } else if (currentUnit) {
+      // During combat, show current unit
+      content = { type: 'unit' as const, unit: currentUnit };
+    } else {
+      // Empty state
+      content = { type: 'empty' as const };
+    }
 
     currentUnitPanelManager.render(
       ctx,

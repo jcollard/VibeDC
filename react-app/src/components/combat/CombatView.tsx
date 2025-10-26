@@ -223,12 +223,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }), []);
 
   // Info panel managers
+  // During deployment, this shows party members; during combat, shows current unit
   const currentUnitPanelManager = useMemo(() => new InfoPanelManager({
-    title: 'CURRENT UNIT',
+    title: combatState.phase === 'deployment' ? 'Party Members' : 'CURRENT UNIT',
     titleColor: '#ffa500',
     padding: 1,
     lineSpacing: 8,
-  }), []);
+  }), [combatState.phase]);
 
   const targetUnitPanelManager = useMemo(() => new InfoPanelManager({
     title: 'TARGET UNIT',
@@ -591,10 +592,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
     const topPanelFontAtlas = fontAtlasImagesRef.current.get('15px-dungeonslant') || null;
 
-    // FOR TESTING: Display first party member in current unit panel
+    // Get party members
     const partyMembers = PartyMemberRegistry.getAll();
-    const testCurrentUnit = partyMembers.length > 0
-      ? PartyMemberRegistry.createPartyMember(partyMembers[0].id) || null
+    const partyUnits = partyMembers
+      .map(member => PartyMemberRegistry.createPartyMember(member.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    // FOR TESTING: Display first party member in current unit panel during combat
+    const testCurrentUnit = combatState.phase !== 'deployment' && partyUnits.length > 0
+      ? partyUnits[0]
       : null;
 
     layoutRenderer.renderLayout({
@@ -606,8 +612,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       fontAtlasImage: layoutFontAtlas,
       topPanelFontAtlasImage: topPanelFontAtlas,
       spriteImages: spriteImagesRef.current,
-      currentUnit: testCurrentUnit, // Using test data
+      currentUnit: testCurrentUnit, // Used during combat phase
       targetUnit: targetUnitRef.current, // Set by clicking turn order
+      partyUnits: partyUnits, // Used during deployment phase
+      isDeploymentPhase: combatState.phase === 'deployment',
       combatLogManager,
       currentUnitPanelManager,
       targetUnitPanelManager,

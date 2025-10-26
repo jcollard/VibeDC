@@ -15,8 +15,10 @@ export interface LayoutRenderContext {
   fontAtlasImage: HTMLImageElement | null; // Primary font atlas
   topPanelFontAtlasImage?: HTMLImageElement | null; // Font atlas for top panel (dungeon-slant)
   spriteImages: Map<string, HTMLImageElement>;
-  currentUnit: CombatUnit | null; // Passed to InfoPanelManager
+  currentUnit: CombatUnit | null; // Passed to InfoPanelManager during combat
   targetUnit: CombatUnit | null; // Passed to InfoPanelManager
+  partyUnits?: CombatUnit[]; // Passed to InfoPanelManager during deployment
+  isDeploymentPhase?: boolean; // Flag to determine which content to show
   combatLogManager?: CombatLogManager;
   currentUnitPanelManager?: InfoPanelManager;
   targetUnitPanelManager?: InfoPanelManager;
