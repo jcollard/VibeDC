@@ -78,6 +78,7 @@
   - Components with active/pressed state
   - Components with selection state
   - Any component that changes appearance based on user interaction
+  - Interactive panel content (for hover detection across multiple frames)
 
 - **When to recreate**:
   - Phase changes (deployment → battle)
@@ -141,6 +142,99 @@ const absoluteY = panelRegion.y + relativeY;
 - When selection changes
 - **Not needed**: When state change will trigger React re-render
 
+### Type-Safe Event Results with Discriminated Unions
+
+When designing event handlers that return different result types, use discriminated unions instead of runtime type checks:
+
+**✅ DO**: Use discriminated unions
+```typescript
+// Define all possible result types
+export type PanelClickResult =
+  | { type: 'button'; buttonId?: string }
+  | { type: 'party-member'; index: number }
+  | { type: 'unit-selected'; unitId: string }
+  | null;
+
+// Type-safe handling with switch
+const result = panelManager.handleClick(x, y);
+if (result !== null) {
+  switch (result.type) {
+    case 'button':
+      // TypeScript knows result.buttonId exists
+      break;
+    case 'party-member':
+      // TypeScript knows result.index exists
+      deployUnit(result.index);
+      break;
+  }
+}
+```
+
+**❌ DON'T**: Use runtime type checks
+```typescript
+// BAD: Fragile, no type safety
+const result = panelManager.handleClick(x, y);
+if (result && typeof result === 'object' && 'type' in result) {
+  if (result.type === 'party-member' && 'index' in result) {
+    deployUnit((result as any).index); // Type cast needed!
+  }
+}
+```
+
+**Benefits**:
+- Compile-time type checking prevents typos
+- Auto-complete for result properties
+- Exhaustiveness checking in switch statements
+- No `any` casts needed
+
+### Generic Data Field Pattern
+
+When event results need to carry phase-specific data, use a generic data field rather than type-specific fields:
+
+**✅ DO**: Use generic data field
+```typescript
+// Interface with generic data
+export interface PhaseEventResult<TData = unknown> {
+  handled: boolean;
+  newState?: CombatState;
+  logMessage?: string;
+  data?: TData; // Type-safe phase-specific data
+}
+
+// Phase-specific types
+export interface DeploymentPanelData {
+  type: 'party-member-hover';
+  memberIndex: number;
+}
+
+// Type-safe return
+handleInfoPanelHover(...): PhaseEventResult<DeploymentPanelData> {
+  return {
+    handled: true,
+    data: { type: 'party-member-hover', memberIndex: 2 }
+  };
+}
+```
+
+**❌ DON'T**: Add type-specific fields directly
+```typescript
+// BAD: Interface grows with each new use case
+export interface PhaseEventResult {
+  handled: boolean;
+  newState?: CombatState;
+  hoveredPartyMemberIndex?: number; // Deployment-specific
+  selectedAbilityId?: string; // Battle-specific
+  targetUnitId?: string; // Battle-specific
+  // ... grows endlessly
+}
+```
+
+**Benefits**:
+- Each phase defines its own data types
+- Interface remains clean and generic
+- Type safety when accessing phase-specific data
+- No mixing of unrelated fields
+
 ## Component Architecture
 
 ### PanelContent Interface
@@ -171,6 +265,30 @@ Add properties to `LayoutRenderContext` for data needed during rendering:
 - Keeps rendering code pure (no external dependencies)
 - Makes data flow explicit
 - Example: `deployedUnitCount`, `onEnterCombat` callback
+
+### Accessing Phase-Specific Methods
+
+When phase handlers define their own specialized methods, use type-safe checks instead of casting to `any`:
+
+**✅ DO**: Check method exists, then cast to specific type
+```typescript
+if ('handleDeploymentAction' in phaseHandlerRef.current) {
+  const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+  const result = handler.handleDeploymentAction(index, state, encounter);
+  // TypeScript knows all methods available on DeploymentPhaseHandler
+}
+```
+
+**❌ DON'T**: Cast to `any`
+```typescript
+// BAD: No type safety
+const handler = phaseHandlerRef.current as any;
+if (handler.handleDeploymentAction) {
+  handler.handleDeploymentAction(index, state, encounter);
+}
+```
+
+**Migration Note**: When removing deprecated optional methods from base classes, provide a migration comment showing the new pattern for accessing phase-specific methods.
 
 ## Common Patterns
 
@@ -297,6 +415,56 @@ handleMouseMove(x, y) {
 **Why**: Mouse move events can fire hundreds of times per second. Synchronous rendering blocks the animation loop, causing stutters and pauses in other animations.
 
 **Exception**: You may call `renderFrame()` for discrete events (clicks, button press) where immediate visual feedback is critical and the event frequency is low.
+
+## Resource Loading Patterns
+
+### Centralized Loader Services
+
+For resources used across multiple components (fonts, sprites, textures), create a centralized loader service:
+
+**✅ DO**: Single loader service with caching
+```typescript
+// services/FontAtlasLoader.ts
+export class FontAtlasLoader {
+  private cache: Map<string, HTMLImageElement> = new Map();
+  private loadingPromises: Map<string, Promise<HTMLImageElement>> = new Map();
+
+  async load(fontId: string): Promise<HTMLImageElement> {
+    if (this.cache.has(fontId)) return this.cache.get(fontId)!;
+    if (this.loadingPromises.has(fontId)) return this.loadingPromises.get(fontId)!;
+
+    // Load and cache...
+  }
+
+  get(fontId: string): HTMLImageElement | null {
+    return this.cache.get(fontId) || null;
+  }
+}
+
+// Usage in CombatView
+const fontLoader = useMemo(() => new FontAtlasLoader(), []);
+const fontAtlas = fontLoader.get('7px-04b03');
+```
+
+**❌ DON'T**: Duplicate loading logic in each component
+```typescript
+// BAD: Each component loads its own fonts
+class DeploymentUI {
+  private fontCache: Map<string, HTMLImageElement> = new Map();
+  private async loadFont(fontId: string) { /* duplicate logic */ }
+}
+
+function CombatView() {
+  const fontCache = useRef<Map<string, HTMLImageElement>>(new Map());
+  // More duplicate loading logic...
+}
+```
+
+**Benefits**:
+- Single source of truth for loaded resources
+- Promise deduplication (multiple requests = one network call)
+- Consistent caching behavior
+- Easier to debug and test
 
 ### Viewport-Aware Rendering
 
