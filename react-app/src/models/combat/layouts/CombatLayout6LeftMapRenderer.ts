@@ -23,6 +23,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   private scrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollRightButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollLeftButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private mapScrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private mapScrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor() {
     // Define the layout regions using tile-based dimensions
@@ -74,9 +76,9 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
 
   /**
    * Handle click events on the map scroll buttons.
-   * Returns 'right', 'left', or null.
+   * Returns 'right', 'left', 'up', 'down', or null.
    */
-  handleMapScrollClick(x: number, y: number): 'right' | 'left' | null {
+  handleMapScrollClick(x: number, y: number): 'right' | 'left' | 'up' | 'down' | null {
     // Check scroll right button
     if (this.scrollRightButtonBounds &&
         x >= this.scrollRightButtonBounds.x &&
@@ -93,6 +95,24 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
         y >= this.scrollLeftButtonBounds.y &&
         y <= this.scrollLeftButtonBounds.y + this.scrollLeftButtonBounds.height) {
       return 'left';
+    }
+
+    // Check scroll up button
+    if (this.mapScrollUpButtonBounds &&
+        x >= this.mapScrollUpButtonBounds.x &&
+        x <= this.mapScrollUpButtonBounds.x + this.mapScrollUpButtonBounds.width &&
+        y >= this.mapScrollUpButtonBounds.y &&
+        y <= this.mapScrollUpButtonBounds.y + this.mapScrollUpButtonBounds.height) {
+      return 'up';
+    }
+
+    // Check scroll down button
+    if (this.mapScrollDownButtonBounds &&
+        x >= this.mapScrollDownButtonBounds.x &&
+        x <= this.mapScrollDownButtonBounds.x + this.mapScrollDownButtonBounds.width &&
+        y >= this.mapScrollDownButtonBounds.y &&
+        y <= this.mapScrollDownButtonBounds.y + this.mapScrollDownButtonBounds.height) {
+      return 'down';
     }
 
     return null;
@@ -175,18 +195,18 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   }
 
   /**
-   * Render map scroll arrows (e.g., right/left arrows for horizontal scrolling).
+   * Render map scroll arrows for horizontal and vertical scrolling.
    * Call this after rendering the layout.
    */
-  renderMapScrollArrows(context: LayoutRenderContext, canScrollRight: boolean, canScrollLeft: boolean): void {
+  renderMapScrollArrows(context: LayoutRenderContext, canScrollRight: boolean, canScrollLeft: boolean, canScrollUp: boolean, canScrollDown: boolean): void {
     const { ctx, spriteImages, spriteSize } = context;
     const tileSize = 12;
     const buttonSize = 12;
-    const arrowStartY = 7 * tileSize;
 
     // Right arrow at column 19, rows 7-9 (if can scroll right)
     if (canScrollRight) {
       const arrowX = 19 * tileSize;
+      const arrowStartY = 7 * tileSize;
 
       // Render 3 arrow sprites vertically
       for (let i = 0; i < 3; i++) {
@@ -217,6 +237,7 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     // Left arrow at column 0, rows 7-9 (if can scroll left)
     if (canScrollLeft) {
       const arrowX = 0 * tileSize;
+      const arrowStartY = 7 * tileSize;
 
       // Render 3 arrow sprites vertically
       for (let i = 0; i < 3; i++) {
@@ -242,6 +263,68 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       };
     } else {
       this.scrollLeftButtonBounds = null;
+    }
+
+    // Up arrow at row 3, columns 8-10 (if can scroll up)
+    if (canScrollUp) {
+      const arrowY = 3 * tileSize;
+      const arrowStartX = 8 * tileSize;
+
+      // Render 3 arrow sprites horizontally
+      for (let i = 0; i < 3; i++) {
+        const arrowX = arrowStartX + (i * tileSize);
+        SpriteRenderer.renderSpriteById(
+          ctx,
+          'minimap-7',
+          spriteImages,
+          spriteSize,
+          arrowX,
+          arrowY,
+          buttonSize,
+          buttonSize
+        );
+      }
+
+      // Store bounds for the entire clickable area (all 3 tiles)
+      this.mapScrollUpButtonBounds = {
+        x: arrowStartX,
+        y: arrowY,
+        width: buttonSize * 3,
+        height: buttonSize
+      };
+    } else {
+      this.mapScrollUpButtonBounds = null;
+    }
+
+    // Down arrow at row 13, columns 8-10 (if can scroll down)
+    if (canScrollDown) {
+      const arrowY = 13 * tileSize;
+      const arrowStartX = 8 * tileSize;
+
+      // Render 3 arrow sprites horizontally
+      for (let i = 0; i < 3; i++) {
+        const arrowX = arrowStartX + (i * tileSize);
+        SpriteRenderer.renderSpriteById(
+          ctx,
+          'minimap-9',
+          spriteImages,
+          spriteSize,
+          arrowX,
+          arrowY,
+          buttonSize,
+          buttonSize
+        );
+      }
+
+      // Store bounds for the entire clickable area (all 3 tiles)
+      this.mapScrollDownButtonBounds = {
+        x: arrowStartX,
+        y: arrowY,
+        width: buttonSize * 3,
+        height: buttonSize
+      };
+    } else {
+      this.mapScrollDownButtonBounds = null;
     }
   }
 

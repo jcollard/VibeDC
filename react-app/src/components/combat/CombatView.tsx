@@ -188,6 +188,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track map scroll offset (in tiles)
   const [mapScrollX, setMapScrollX] = useState<number>(0);
+  const [mapScrollY, setMapScrollY] = useState<number>(0);
 
   // Layout renderer (always use Layout 6)
   const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
@@ -355,9 +356,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Calculate if scrolling is needed
     const mapWidthInTiles = combatState.map.width;
+    const mapHeightInTiles = combatState.map.height;
     const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
+    const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
     const canScrollRight = mapScrollX < (mapWidthInTiles - clipWidthInTiles);
     const canScrollLeft = mapScrollX > 0;
+    const canScrollDown = mapScrollY < (mapHeightInTiles - clipHeightInTiles);
+    const canScrollUp = mapScrollY > 0;
 
     // If map width fits within clipping area, center it horizontally
     let offsetX = viewport.x;
@@ -374,6 +379,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Center relative to the clipping region, not the viewport
       const clipTopY = clipRegion.minRow * TILE_SIZE - 4;
       offsetY = clipTopY + (clipHeightCalc - mapHeight) / 2;
+    } else {
+      // Apply scroll offset
+      offsetY = viewport.y - (mapScrollY * TILE_SIZE);
     }
 
     const ctx = bufferCanvas.getContext('2d');
@@ -567,7 +575,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       targetUnit: null,
       combatLogManager,
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
-    }, canScrollRight, canScrollLeft);
+    }, canScrollRight, canScrollLeft, canScrollUp, canScrollDown);
 
     // Render debug grid overlay (if enabled)
     if (showDebugGrid) {
@@ -682,6 +690,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
     if (mapScrollDirection === 'left') {
       setMapScrollX(prev => Math.max(prev - 1, 0));
+      return; // Button was clicked, don't process other click handlers
+    }
+    if (mapScrollDirection === 'down') {
+      setMapScrollY(prev => {
+        const mapHeightInTiles = combatState.map.height;
+        const clipRegion = layoutRenderer.getMapClipRegion();
+        const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
+        const maxScroll = mapHeightInTiles - clipHeightInTiles;
+        return Math.min(prev + 1, maxScroll);
+      });
+      return; // Button was clicked, don't process other click handlers
+    }
+    if (mapScrollDirection === 'up') {
+      setMapScrollY(prev => Math.max(prev - 1, 0));
       return; // Button was clicked, don't process other click handlers
     }
 
