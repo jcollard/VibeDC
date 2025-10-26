@@ -238,6 +238,94 @@ handleMouseUp(relativeX, relativeY): boolean {
 - **Use off-screen canvases** for complex rendering (combat log buffer)
 - **Limit re-renders**: Only call `renderFrame()` when visuals actually change
 
+### Animation Performance Pattern
+
+When animating content that includes static elements, separate static from dynamic:
+
+- **✅ DO**: Use a two-buffer approach
+  ```typescript
+  // GOOD: Static buffer + animated overlay
+  renderStaticMessages(); // Only when dirty
+  const animatedCanvas = renderAnimatingMessage(); // Every frame
+  ctx.drawImage(staticBuffer, ...); // Copy static
+  ctx.drawImage(animatedCanvas, ...); // Overlay animated
+  ```
+
+- **❌ DON'T**: Re-render everything on every frame
+  ```typescript
+  // BAD: Re-renders all messages every frame
+  for (const message of messages) {
+    renderMessage(message); // Expensive!
+  }
+  ```
+
+### Pre-Parse and Cache
+
+- Parse complex data (tags, segments) once when data arrives
+- Store parsed results alongside raw data
+- Never re-parse during animation loops
+
+**Example**:
+```typescript
+interface StoredMessage {
+  rawText: string;
+  segments: TextSegment[]; // Pre-parsed once
+  plainTextLength: number; // Pre-calculated once
+}
+```
+
+### Mouse Event Performance
+
+**❌ DON'T**: Call `renderFrame()` synchronously in high-frequency mouse event handlers
+```typescript
+// BAD: Blocks animation loop
+handleMouseMove(x, y) {
+  this.hoveredItem = this.detectHover(x, y);
+  renderFrame(); // Can fire 100+ times/second, blocks main thread!
+}
+```
+
+**✅ DO**: Update state only, let animation loop handle rendering
+```typescript
+// GOOD: Fast state update, rendering happens in animation loop
+handleMouseMove(x, y) {
+  this.hoveredItem = this.detectHover(x, y);
+  // Animation loop will render on next frame (~16ms)
+}
+```
+
+**Why**: Mouse move events can fire hundreds of times per second. Synchronous rendering blocks the animation loop, causing stutters and pauses in other animations.
+
+**Exception**: You may call `renderFrame()` for discrete events (clicks, button press) where immediate visual feedback is critical and the event frequency is low.
+
+### Viewport-Aware Rendering
+
+When rendering scrollable content with many items:
+
+- **Calculate visible range** based on viewport size, not total item count
+- **Limit rendering loops** to only what fits in the viewport
+- **Add safety checks** to prevent rendering outside viewport bounds
+
+```typescript
+// GOOD: Only render what's visible
+const maxVisibleLines = Math.min(bufferLines, Math.floor(height / lineHeight));
+const startIdx = Math.max(0, totalItems - maxVisibleLines - scrollOffset);
+const endIdx = totalItems - scrollOffset;
+
+for (let i = startIdx; i < endIdx && i < startIdx + maxVisibleLines; i++) {
+  const destY = y + ((i - startIdx) * lineHeight);
+
+  // Safety check
+  if (destY + lineHeight > y + height) {
+    break;
+  }
+
+  renderItem(i, destY);
+}
+```
+
+**Why**: Prevents rendering items that would be clipped or invisible, saving CPU cycles and avoiding layout bugs.
+
 ---
 
 ## Meta-Guidelines for AI Development
