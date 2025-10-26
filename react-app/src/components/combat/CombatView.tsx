@@ -826,12 +826,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Hovered a party member index
       targetUnitRef.current = partyUnits[hoverResult];
       hoveredPartyMemberRef.current = hoverResult;
-      renderFrame(); // Trigger re-render to show updated target unit
+      // Don't call renderFrame() here - let the animation loop handle it
     } else {
       // Clear hover highlight but keep the target unit visible
       if (hoveredPartyMemberRef.current !== null) {
         hoveredPartyMemberRef.current = null;
-        renderFrame();
+        // Don't call renderFrame() here - let the animation loop handle it
       }
     }
 
