@@ -1,5 +1,4 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
-import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
 import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 
@@ -15,12 +14,9 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles
   private readonly COMBAT_LOG_HEIGHT = 36; // 3 tiles
   private readonly PANEL_PADDING = 1; // 1px padding
-  private readonly LINE_SPACING = 8;
   private readonly frameLayout: HorizontalVerticalLayout;
 
-  // Scroll button tracking
-  private scrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
-  private scrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  // Map scroll button tracking
   private scrollRightButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollLeftButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private mapScrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
@@ -133,34 +129,15 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
 
   /**
    * Handle click events on the combat log scroll buttons.
-   * Returns true if a button was clicked, false otherwise.
+   * Returns 'up', 'down', or null.
    */
-  handleCombatLogClick(x: number, y: number, combatLogManager: any): boolean {
-    // Check scroll up button
-    if (this.scrollUpButtonBounds &&
-        x >= this.scrollUpButtonBounds.x &&
-        x <= this.scrollUpButtonBounds.x + this.scrollUpButtonBounds.width &&
-        y >= this.scrollUpButtonBounds.y &&
-        y <= this.scrollUpButtonBounds.y + this.scrollUpButtonBounds.height) {
-      combatLogManager.scrollUp(1);
-      return true;
-    }
-
-    // Check scroll down button
-    if (this.scrollDownButtonBounds &&
-        x >= this.scrollDownButtonBounds.x &&
-        x <= this.scrollDownButtonBounds.x + this.scrollDownButtonBounds.width &&
-        y >= this.scrollDownButtonBounds.y &&
-        y <= this.scrollDownButtonBounds.y + this.scrollDownButtonBounds.height) {
-      combatLogManager.scrollDown(1);
-      return true;
-    }
-
-    return false;
+  handleCombatLogClick(x: number, y: number, combatLogManager: any): 'up' | 'down' | null {
+    if (!combatLogManager) return null;
+    return combatLogManager.handleScrollButtonClick(x, y);
   }
 
   renderLayout(context: LayoutRenderContext): void {
-    const { ctx, canvasWidth, canvasHeight, fontAtlasImage, spriteImages, spriteSize } = context;
+    const { ctx, canvasWidth, canvasHeight, fontAtlasImage, spriteImages, spriteSize, combatLogManager } = context;
 
     if (!fontAtlasImage) return;
 
@@ -201,8 +178,10 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     // Render the frame layout dividers on top of the 9-slice panels
     this.frameLayout.render(ctx, spriteImages, spriteSize);
 
-    // Render scroll buttons on top of everything
-    this.renderScrollButtons(context);
+    // Render combat log scroll buttons on top of everything
+    if (combatLogManager) {
+      combatLogManager.renderScrollButtons(ctx, spriteImages, spriteSize, canvasHeight);
+    }
   }
 
   /**
@@ -347,114 +326,16 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     height: number
   ): void {
     const { ctx, topPanelManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
+    if (!topPanelManager) return;
 
-    // Use TopPanelManager if available
-    if (topPanelManager) {
-      topPanelManager.render(
-        ctx,
-        { x, y, width, height },
-        fontId,
-        fontAtlasImage,
-        spriteImages,
-        spriteSize
-      );
-    } else {
-      // Fallback to old rendering (for backwards compatibility)
-      const { turnOrder } = context;
-      if (!fontAtlasImage) return;
-
-      let currentY = y + this.PANEL_PADDING + 6;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        'TURN ORDER',
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#9eff6b'
-      );
-      currentY += this.LINE_SPACING;
-
-      let currentX = x + this.PANEL_PADDING + 6;
-      const unitsToShow = turnOrder.slice(0, 10);
-      unitsToShow.forEach((unit, index) => {
-        const text = `${index + 1}.${unit.name.substring(0, 6)}`;
-        FontAtlasRenderer.renderText(
-          ctx,
-          text,
-          currentX,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentX += FontAtlasRenderer.measureTextByFontId(text, fontId) + 6;
-      });
-    }
-  }
-
-  private renderScrollButtons(context: LayoutRenderContext): void {
-    const { ctx, spriteImages, spriteSize, canvasHeight, combatLogManager } = context;
-
-    if (!combatLogManager) return;
-
-    // Calculate scroll button dimensions (12x12 each)
-    const buttonSize = 12;
-    const tileSize = 12;
-
-    // Position at x tile 19 (19 * 12 = 228px)
-    const scrollButtonsX = 19 * tileSize;
-
-    // Up arrow: 3 tiles from bottom (canvasHeight - 3 * tileSize) - only if can scroll up
-    if (combatLogManager.canScrollUp()) {
-      const scrollUpY = canvasHeight - 3 * tileSize;
-      SpriteRenderer.renderSpriteById(
-        ctx,
-        'minimap-7',
-        spriteImages,
-        spriteSize,
-        scrollButtonsX,
-        scrollUpY,
-        buttonSize,
-        buttonSize
-      );
-      this.scrollUpButtonBounds = {
-        x: scrollButtonsX,
-        y: scrollUpY,
-        width: buttonSize,
-        height: buttonSize
-      };
-    } else {
-      this.scrollUpButtonBounds = null;
-    }
-
-    // Down arrow: bottom-most tile (canvasHeight - 1 * tileSize) - only if can scroll down
-    if (combatLogManager.canScrollDown()) {
-      const scrollDownY = canvasHeight - 1 * tileSize;
-      SpriteRenderer.renderSpriteById(
-        ctx,
-        'minimap-9',
-        spriteImages,
-        spriteSize,
-        scrollButtonsX,
-        scrollDownY,
-        buttonSize,
-        buttonSize
-      );
-      this.scrollDownButtonBounds = {
-        x: scrollButtonsX,
-        y: scrollDownY,
-        width: buttonSize,
-        height: buttonSize
-      };
-    } else {
-      this.scrollDownButtonBounds = null;
-    }
+    topPanelManager.render(
+      ctx,
+      { x, y, width, height },
+      fontId,
+      fontAtlasImage,
+      spriteImages,
+      spriteSize
+    );
   }
 
   private renderCombatLogPanel(
@@ -493,116 +374,19 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     height: number
   ): void {
     const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager } = context;
-    if (!fontAtlasImage) return;
+    if (!currentUnitPanelManager) return;
 
-    // Use InfoPanelManager if available, otherwise fall back to old rendering
-    if (currentUnitPanelManager) {
-      const content = currentUnit
-        ? { type: 'unit' as const, unit: currentUnit }
-        : { type: 'empty' as const };
+    const content = currentUnit
+      ? { type: 'unit' as const, unit: currentUnit }
+      : { type: 'empty' as const };
 
-      currentUnitPanelManager.render(
-        ctx,
-        { x, y, width, height },
-        content,
-        fontId,
-        fontAtlasImage
-      );
-    } else {
-      // Fallback to old rendering (for backwards compatibility)
-      let currentY = y + this.PANEL_PADDING + 6;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        'CURRENT UNIT',
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffa500'
-      );
-      currentY += this.LINE_SPACING;
-
-      if (currentUnit) {
-        FontAtlasRenderer.renderText(
-          ctx,
-          currentUnit.name,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          currentUnit.unitClass.name,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          `HP: ${currentUnit.health}/${currentUnit.maxHealth}`,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          `MP: ${currentUnit.mana}/${currentUnit.maxMana}`,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          `Spd:${currentUnit.speed} Mov:${currentUnit.movement}`,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-      } else {
-        FontAtlasRenderer.renderText(
-          ctx,
-          '-',
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#666666'
-        );
-      }
-    }
+    currentUnitPanelManager.render(
+      ctx,
+      { x, y, width, height },
+      content,
+      fontId,
+      fontAtlasImage
+    );
   }
 
   private renderTargetUnitPanel(
@@ -613,115 +397,18 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     height: number
   ): void {
     const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager } = context;
-    if (!fontAtlasImage) return;
+    if (!targetUnitPanelManager) return;
 
-    // Use InfoPanelManager if available, otherwise fall back to old rendering
-    if (targetUnitPanelManager) {
-      const content = targetUnit
-        ? { type: 'unit' as const, unit: targetUnit }
-        : { type: 'empty' as const };
+    const content = targetUnit
+      ? { type: 'unit' as const, unit: targetUnit }
+      : { type: 'empty' as const };
 
-      targetUnitPanelManager.render(
-        ctx,
-        { x, y, width, height },
-        content,
-        fontId,
-        fontAtlasImage
-      );
-    } else {
-      // Fallback to old rendering (for backwards compatibility)
-      let currentY = y + this.PANEL_PADDING + 6;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        'TARGET UNIT',
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ff6b6b'
-      );
-      currentY += this.LINE_SPACING;
-
-      if (targetUnit) {
-        FontAtlasRenderer.renderText(
-          ctx,
-          targetUnit.name,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          targetUnit.unitClass.name,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          `HP: ${targetUnit.health}/${targetUnit.maxHealth}`,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          `MP: ${targetUnit.mana}/${targetUnit.maxMana}`,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-        currentY += this.LINE_SPACING;
-
-        FontAtlasRenderer.renderText(
-          ctx,
-          `Spd:${targetUnit.speed} Mov:${targetUnit.movement}`,
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-      } else {
-        FontAtlasRenderer.renderText(
-          ctx,
-          '-',
-          x + this.PANEL_PADDING + 6,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#666666'
-        );
-      }
-    }
+    targetUnitPanelManager.render(
+      ctx,
+      { x, y, width, height },
+      content,
+      fontId,
+      fontAtlasImage
+    );
   }
 }

@@ -198,7 +198,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [mapScrollY, setMapScrollY] = useState<number>(0);
 
   // Track which scroll arrow is currently pressed
-  const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | null>(null);
+  const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | 'logUp' | 'logDown' | null>(null);
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Layout renderer (always use Layout 6)
@@ -592,7 +592,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       currentUnit: testCurrentUnit, // Using test data
       targetUnit: targetUnitRef.current, // Set by clicking turn order
       combatLogManager,
-      turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
       currentUnitPanelManager,
       targetUnitPanelManager,
       topPanelManager,
@@ -610,7 +609,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       currentUnit: lastDisplayedUnitRef.current,
       targetUnit: null,
       combatLogManager,
-      turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
     }, canScrollRight, canScrollLeft, canScrollUp, canScrollDown);
 
     // Render debug grid overlay (if enabled)
@@ -686,21 +684,39 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     renderFrame();
   }, [combatState.map, mapRenderer, renderFrame]);
 
+  // Perform combat log scroll
+  const performCombatLogScroll = useCallback((direction: 'logUp' | 'logDown') => {
+    if (direction === 'logUp') {
+      combatLogManager.scrollUp(1);
+    } else if (direction === 'logDown') {
+      combatLogManager.scrollDown(1);
+    }
+    renderFrame();
+  }, [combatLogManager, renderFrame]);
+
   // Start continuous scrolling
-  const startContinuousScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down') => {
+  const startContinuousScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down' | 'logUp' | 'logDown') => {
     // Clear any existing interval
     if (scrollIntervalRef.current) {
       clearInterval(scrollIntervalRef.current);
     }
 
     // Perform initial scroll immediately
-    performScroll(direction);
+    if (direction === 'logUp' || direction === 'logDown') {
+      performCombatLogScroll(direction);
+    } else {
+      performScroll(direction);
+    }
 
     // Set up interval for continuous scrolling (200ms between scrolls)
     scrollIntervalRef.current = setInterval(() => {
-      performScroll(direction);
+      if (direction === 'logUp' || direction === 'logDown') {
+        performCombatLogScroll(direction);
+      } else {
+        performScroll(direction);
+      }
     }, 200);
-  }, [performScroll]);
+  }, [performScroll, performCombatLogScroll]);
 
   // Stop continuous scrolling
   const stopContinuousScroll = useCallback(() => {
@@ -726,6 +742,19 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (layoutRenderer.handleTopPanelClick(canvasX, canvasY, topPanelManager)) {
       renderFrame(); // Force immediate re-render to show updated target
       return; // Click was handled, don't process other handlers
+    }
+
+    // Check if clicking on combat log scroll buttons
+    const combatLogScrollDirection = layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager);
+    if (combatLogScrollDirection === 'up') {
+      scrollArrowPressedRef.current = 'logUp';
+      startContinuousScroll('logUp');
+      return; // Button was clicked, don't process other handlers
+    }
+    if (combatLogScrollDirection === 'down') {
+      scrollArrowPressedRef.current = 'logDown';
+      startContinuousScroll('logDown');
+      return; // Button was clicked, don't process other handlers
     }
 
     // Check if clicking on map scroll buttons
@@ -787,12 +816,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (!coords) return;
 
     const { x: canvasX, y: canvasY } = coords;
-
-    // Check if clicking on combat log scroll buttons
-    if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {
-      renderFrame(); // Force immediate re-render to show scrolled content
-      return; // Button was clicked, don't process other click handlers
-    }
 
     // Check for character dialog clicks in deployment phase
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {

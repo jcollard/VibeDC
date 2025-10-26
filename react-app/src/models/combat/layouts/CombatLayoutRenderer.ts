@@ -14,11 +14,9 @@ export interface LayoutRenderContext {
   fontId: string;
   fontAtlasImage: HTMLImageElement | null;
   spriteImages: Map<string, HTMLImageElement>;
-  currentUnit: CombatUnit | null;
-  targetUnit: CombatUnit | null;
-  combatLogManager?: CombatLogManager; // Optional for backwards compatibility
-  combatLog?: string[]; // Deprecated, kept for backwards compatibility
-  turnOrder: CombatUnit[];
+  currentUnit: CombatUnit | null; // Passed to InfoPanelManager
+  targetUnit: CombatUnit | null; // Passed to InfoPanelManager
+  combatLogManager?: CombatLogManager;
   currentUnitPanelManager?: InfoPanelManager;
   targetUnitPanelManager?: InfoPanelManager;
   topPanelManager?: TopPanelManager;

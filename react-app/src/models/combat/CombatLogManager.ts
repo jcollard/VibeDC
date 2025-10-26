@@ -1,4 +1,5 @@
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { SpriteRenderer } from '../../utils/SpriteRenderer';
 
 /**
  * A segment of text with optional color formatting.
@@ -406,5 +407,103 @@ export class CombatLogManager {
       // Mark buffer as dirty to trigger redraw
       this.bufferDirty = true;
     }
+  }
+
+  // Scroll button tracking
+  private scrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private scrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+
+  /**
+   * Renders scroll buttons for the combat log.
+   * @param ctx Canvas rendering context
+   * @param spriteImages Map of sprite images
+   * @param spriteSize Size of sprites
+   * @param canvasHeight Full canvas height
+   */
+  renderScrollButtons(
+    ctx: CanvasRenderingContext2D,
+    spriteImages: Map<string, HTMLImageElement>,
+    spriteSize: number,
+    canvasHeight: number
+  ): void {
+    const buttonSize = 12;
+    const tileSize = 12;
+
+    // Position at x tile 19 (19 * 12 = 228px)
+    const scrollButtonsX = 19 * tileSize;
+
+    // Up arrow: 3 tiles from bottom - only if can scroll up
+    if (this.canScrollUp()) {
+      const scrollUpY = canvasHeight - 3 * tileSize;
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-7',
+        spriteImages,
+        spriteSize,
+        scrollButtonsX,
+        scrollUpY,
+        buttonSize,
+        buttonSize
+      );
+      this.scrollUpButtonBounds = {
+        x: scrollButtonsX,
+        y: scrollUpY,
+        width: buttonSize,
+        height: buttonSize
+      };
+    } else {
+      this.scrollUpButtonBounds = null;
+    }
+
+    // Down arrow: bottom-most tile - only if can scroll down
+    if (this.canScrollDown()) {
+      const scrollDownY = canvasHeight - 1 * tileSize;
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-9',
+        spriteImages,
+        spriteSize,
+        scrollButtonsX,
+        scrollDownY,
+        buttonSize,
+        buttonSize
+      );
+      this.scrollDownButtonBounds = {
+        x: scrollButtonsX,
+        y: scrollDownY,
+        width: buttonSize,
+        height: buttonSize
+      };
+    } else {
+      this.scrollDownButtonBounds = null;
+    }
+  }
+
+  /**
+   * Handles click events on scroll buttons.
+   * @param x Click x coordinate
+   * @param y Click y coordinate
+   * @returns 'up', 'down', or null if no button was clicked
+   */
+  handleScrollButtonClick(x: number, y: number): 'up' | 'down' | null {
+    // Check scroll up button
+    if (this.scrollUpButtonBounds &&
+        x >= this.scrollUpButtonBounds.x &&
+        x <= this.scrollUpButtonBounds.x + this.scrollUpButtonBounds.width &&
+        y >= this.scrollUpButtonBounds.y &&
+        y <= this.scrollUpButtonBounds.y + this.scrollUpButtonBounds.height) {
+      return 'up';
+    }
+
+    // Check scroll down button
+    if (this.scrollDownButtonBounds &&
+        x >= this.scrollDownButtonBounds.x &&
+        x <= this.scrollDownButtonBounds.x + this.scrollDownButtonBounds.width &&
+        y >= this.scrollDownButtonBounds.y &&
+        y <= this.scrollDownButtonBounds.y + this.scrollDownButtonBounds.height) {
+      return 'down';
+    }
+
+    return null;
   }
 }
