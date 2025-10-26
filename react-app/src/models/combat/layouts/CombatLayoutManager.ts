@@ -9,7 +9,7 @@ import { SpriteRenderer } from '../../../utils/SpriteRenderer';
  * - Bottom-left: Combat log panel
  * - Right column: Current unit (top) + Target unit (bottom) split horizontally
  */
-export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
+export class CombatLayoutManager implements CombatLayoutRenderer {
   private readonly RIGHT_COLUMN_WIDTH = 144; // 12 tiles
   private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles
   private readonly COMBAT_LOG_HEIGHT = 36; // 3 tiles

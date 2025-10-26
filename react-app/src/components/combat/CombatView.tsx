@@ -25,7 +25,7 @@ import { CombatLogManager } from '../../models/combat/CombatLogManager';
 // import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
 // import { renderDialogWithContent } from '../../utils/DialogRenderer';
 import { FontRegistry } from '../../utils/FontRegistry';
-import { CombatLayout6LeftMapRenderer } from '../../models/combat/layouts/CombatLayout6LeftMapRenderer';
+import { CombatLayoutManager } from '../../models/combat/layouts/CombatLayoutManager';
 import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRenderer';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
@@ -202,7 +202,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const scrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Layout renderer (always use Layout 6)
-  const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
+  const layoutRenderer = useMemo(() => new CombatLayoutManager(), []);
 
   // Map renderer for offset calculations
   const mapRenderer = useMemo(
