@@ -1,4 +1,5 @@
 import type { CombatUnit } from '../CombatUnit';
+import type { CombatLogManager } from '../CombatLogManager';
 
 /**
  * Rendering context passed to layout renderers
@@ -13,7 +14,8 @@ export interface LayoutRenderContext {
   spriteImages: Map<string, HTMLImageElement>;
   currentUnit: CombatUnit | null;
   targetUnit: CombatUnit | null;
-  combatLog: string[];
+  combatLogManager?: CombatLogManager; // Optional for backwards compatibility
+  combatLog?: string[]; // Deprecated, kept for backwards compatibility
   turnOrder: CombatUnit[];
 }
 

@@ -20,6 +20,7 @@ import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
+import { CombatLogManager } from '../../models/combat/CombatLogManager';
 // Disabled for prototyping - unit info dialog
 // import { CombatUnitInfoDialogContent } from './CombatUnitInfoDialogContent';
 // import { renderDialogWithContent } from '../../utils/DialogRenderer';
@@ -188,10 +189,26 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Layout renderer (always use Layout 6)
   const layoutRenderer = useMemo(() => new CombatLayout6LeftMapRenderer(), []);
 
+  // Combat log manager
+  const combatLogManager = useMemo(() => new CombatLogManager({
+    maxMessages: 100,
+    bufferLines: 20,
+    lineHeight: 8,
+    defaultColor: '#ffffff',
+  }), []);
+
   // Update UIConfig when highlight color changes
   useEffect(() => {
     UIConfig.setHighlightColor(highlightColor);
   }, [highlightColor]);
+
+  // Initialize combat log with test messages
+  useEffect(() => {
+    combatLogManager.addMessage('Battle begins!');
+    combatLogManager.addMessage('The [color=#ff6b6b]Red Dragon[/color] appears!');
+    combatLogManager.addMessage('[color=#9eff6b]Hero[/color] enters the fray!');
+    combatLogManager.addMessage('Turn 1 starts');
+  }, [combatLogManager]);
 
   // Listen for window resize
   useEffect(() => {
@@ -477,7 +494,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render layout UI
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
-    const combatLog = ['Turn 1: Battle begins', 'Goblin attacks!', 'Hero defends']; // TODO: Real combat log
 
     layoutRenderer.renderLayout({
       ctx,
@@ -489,7 +505,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       spriteImages: spriteImagesRef.current,
       currentUnit: lastDisplayedUnitRef.current,
       targetUnit: null, // TODO: Add target tracking
-      combatLog,
+      combatLogManager,
       turnOrder: combatState.unitManifest.getAllUnits().map(p => p.unit),
     });
 

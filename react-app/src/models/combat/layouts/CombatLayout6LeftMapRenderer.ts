@@ -100,8 +100,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     context: LayoutRenderContext,
     x: number,
     y: number,
-    width: number,
-    height: number
+    _width: number,
+    _height: number
   ): void {
     const { ctx, turnOrder, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
@@ -149,8 +149,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, combatLog, fontId, fontAtlasImage } = context;
-    if (!fontAtlasImage) return;
+    const { ctx, combatLogManager, fontId, fontAtlasImage } = context;
+    if (!fontAtlasImage || !combatLogManager) return;
 
     let currentY = y + this.PANEL_PADDING + 6;
 
@@ -168,30 +168,30 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     );
     currentY += this.LINE_SPACING;
 
-    // Show last 2 entries
-    const entriesToShow = combatLog.slice(-2);
-    for (const entry of entriesToShow) {
-      FontAtlasRenderer.renderText(
-        ctx,
-        entry,
-        x + this.PANEL_PADDING + 6,
-        currentY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        '#ffffff'
-      );
-      currentY += this.LINE_SPACING;
-    }
+    // Calculate the visible area for the combat log (excluding title and padding)
+    const logX = x + this.PANEL_PADDING + 6;
+    const logY = currentY;
+    const logWidth = width - (this.PANEL_PADDING + 6) * 2;
+    const logHeight = height - (currentY - y) - this.PANEL_PADDING;
+
+    // Render combat log using the manager
+    combatLogManager.render(
+      ctx,
+      logX,
+      logY,
+      logWidth,
+      logHeight,
+      fontId,
+      fontAtlasImage
+    );
   }
 
   private renderCurrentUnitPanel(
     context: LayoutRenderContext,
     x: number,
     y: number,
-    width: number,
-    height: number
+    _width: number,
+    _height: number
   ): void {
     const { ctx, currentUnit, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
@@ -295,8 +295,8 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     context: LayoutRenderContext,
     x: number,
     y: number,
-    width: number,
-    height: number
+    _width: number,
+    _height: number
   ): void {
     const { ctx, targetUnit, fontId, fontAtlasImage } = context;
     if (!fontAtlasImage) return;
