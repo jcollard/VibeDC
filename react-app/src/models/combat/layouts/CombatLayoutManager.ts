@@ -325,14 +325,15 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, topPanelManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
+    const { ctx, topPanelManager, topPanelFontAtlasImage, spriteImages, spriteSize } = context;
     if (!topPanelManager) return;
 
+    // Use dungeon-slant font for top panel
     topPanelManager.render(
       ctx,
       { x, y, width, height },
-      fontId,
-      fontAtlasImage,
+      '15px-dungeonslant',
+      topPanelFontAtlasImage || null,
       spriteImages,
       spriteSize
     );

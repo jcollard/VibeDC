@@ -30,6 +30,7 @@ import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRender
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
 import { TurnOrderRenderer } from '../../models/combat/managers/renderers/TurnOrderRenderer';
+import { DeploymentHeaderRenderer } from '../../models/combat/managers/renderers/DeploymentHeaderRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -236,20 +237,27 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Top panel manager
   const topPanelManager = useMemo(() => new TopPanelManager(), []);
 
-  // Set up TurnOrderRenderer with party members for testing
+  // Switch top panel renderer based on combat phase
   useEffect(() => {
-    const partyMembers = PartyMemberRegistry.getAll();
-    const partyUnits = partyMembers
-      .map(member => PartyMemberRegistry.createPartyMember(member.id))
-      .filter((unit): unit is CombatUnit => unit !== undefined);
+    if (combatState.phase === 'deployment') {
+      // Show deployment header during deployment phase
+      const deploymentRenderer = new DeploymentHeaderRenderer('Deploy Units');
+      topPanelManager.setRenderer(deploymentRenderer);
+    } else {
+      // Show turn order during combat phase
+      const partyMembers = PartyMemberRegistry.getAll();
+      const partyUnits = partyMembers
+        .map(member => PartyMemberRegistry.createPartyMember(member.id))
+        .filter((unit): unit is CombatUnit => unit !== undefined);
 
-    const turnOrderRenderer = new TurnOrderRenderer(partyUnits, (clickedUnit) => {
-      // When a unit is clicked in turn order, set it as the target unit
-      targetUnitRef.current = clickedUnit;
-    });
+      const turnOrderRenderer = new TurnOrderRenderer(partyUnits, (clickedUnit) => {
+        // When a unit is clicked in turn order, set it as the target unit
+        targetUnitRef.current = clickedUnit;
+      });
 
-    topPanelManager.setRenderer(turnOrderRenderer);
-  }, [topPanelManager]);
+      topPanelManager.setRenderer(turnOrderRenderer);
+    }
+  }, [topPanelManager, combatState.phase]);
 
   // Update UIConfig when highlight color changes
   useEffect(() => {
@@ -573,7 +581,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     */
 
     // Render layout UI
+    // Use 7px-04b03 for info panels/combat log, dungeon-slant for top panel
     const layoutFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
+    const topPanelFontAtlas = fontAtlasImagesRef.current.get('15px-dungeonslant') || null;
 
     // FOR TESTING: Display first party member in current unit panel
     const partyMembers = PartyMemberRegistry.getAll();
@@ -588,6 +598,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       spriteSize: SPRITE_SIZE,
       fontId: unitInfoAtlasFont,
       fontAtlasImage: layoutFontAtlas,
+      topPanelFontAtlasImage: topPanelFontAtlas,
       spriteImages: spriteImagesRef.current,
       currentUnit: testCurrentUnit, // Using test data
       targetUnit: targetUnitRef.current, // Set by clicking turn order
@@ -598,13 +609,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     });
 
     // Render map scroll arrows (after layout, before debug grid)
+    const unitInfoFontAtlas = fontAtlasImagesRef.current.get(unitInfoAtlasFont) || null;
     layoutRenderer.renderMapScrollArrows({
       ctx,
       canvasWidth: CANVAS_WIDTH,
       canvasHeight: CANVAS_HEIGHT,
       spriteSize: SPRITE_SIZE,
       fontId: unitInfoAtlasFont,
-      fontAtlasImage: layoutFontAtlas,
+      fontAtlasImage: unitInfoFontAtlas,
       spriteImages: spriteImagesRef.current,
       currentUnit: lastDisplayedUnitRef.current,
       targetUnit: null,

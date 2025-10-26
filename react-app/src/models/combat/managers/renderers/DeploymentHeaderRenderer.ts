@@ -1,5 +1,6 @@
 import type { TopPanelRenderer, PanelRegion } from '../TopPanelRenderer';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../../../utils/FontRegistry';
 
 /**
  * Renders a simple header for the deployment phase.
@@ -7,11 +8,9 @@ import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
  */
 export class DeploymentHeaderRenderer implements TopPanelRenderer {
   private message: string;
-  private color: string;
 
-  constructor(message: string = 'DEPLOYMENT PHASE', color: string = '#9eff6b') {
+  constructor(message: string = 'DEPLOYMENT PHASE') {
     this.message = message;
-    this.color = color;
   }
 
   /**
@@ -21,34 +20,38 @@ export class DeploymentHeaderRenderer implements TopPanelRenderer {
     this.message = message;
   }
 
-  /**
-   * Update the text color
-   */
-  setColor(color: string): void {
-    this.color = color;
-  }
-
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
-    fontId: string,
+    _fontId: string,
     fontAtlasImage: HTMLImageElement | null,
     _spriteImages: Map<string, HTMLImageElement>,
     _spriteSize: number
   ): void {
     if (!fontAtlasImage) return;
 
-    // Render the message at the start of the region
+    const fontId = '15px-dungeonslant';
+    const font = FontRegistry.getById(fontId);
+    if (!font) return;
+
+    const scale = 1;
+
+    // Calculate center X position
+    const centerX = region.x + region.width / 2;
+
+    // Calculate Y position to vertically center the text
+    const textY = region.y + region.height / 2 - (font.charHeight * scale) / 2;
+
+    // Render the message centered using dungeon-slant font (no color tint)
     FontAtlasRenderer.renderText(
       ctx,
       this.message,
-      region.x,
-      region.y,
+      centerX,
+      textY,
       fontId,
       fontAtlasImage,
-      1,
-      'left',
-      this.color
+      scale,
+      'center'
     );
   }
 

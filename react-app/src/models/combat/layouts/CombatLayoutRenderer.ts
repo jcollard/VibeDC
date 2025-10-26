@@ -11,8 +11,9 @@ export interface LayoutRenderContext {
   canvasWidth: number;
   canvasHeight: number;
   spriteSize: number;
-  fontId: string;
-  fontAtlasImage: HTMLImageElement | null;
+  fontId: string; // Primary font ID (for info panels, combat log)
+  fontAtlasImage: HTMLImageElement | null; // Primary font atlas
+  topPanelFontAtlasImage?: HTMLImageElement | null; // Font atlas for top panel (dungeon-slant)
   spriteImages: Map<string, HTMLImageElement>;
   currentUnit: CombatUnit | null; // Passed to InfoPanelManager
   targetUnit: CombatUnit | null; // Passed to InfoPanelManager
