@@ -127,6 +127,9 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
 
     // Render the frame layout dividers on top of the 9-slice panels
     this.frameLayout.render(ctx, spriteImages, spriteSize);
+
+    // Render scroll buttons on top of everything
+    this.renderScrollButtons(context);
   }
 
   private renderTurnOrderPanel(
@@ -175,26 +178,21 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     });
   }
 
-  private renderCombatLogPanel(
-    context: LayoutRenderContext,
-    x: number,
-    y: number,
-    width: number,
-    height: number
-  ): void {
-    const { ctx, combatLogManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
-    if (!fontAtlasImage || !combatLogManager) return;
+  private renderScrollButtons(context: LayoutRenderContext): void {
+    const { ctx, spriteImages, spriteSize, canvasHeight } = context;
 
     // Calculate scroll button dimensions (12x12 each)
     const buttonSize = 12;
-    const buttonSpacing = 2;
-    const scrollButtonsX = x + width - this.PANEL_PADDING - buttonSize;
+    const tileSize = 12;
 
-    // Render scroll up button (top)
-    const scrollUpY = y + this.PANEL_PADDING;
+    // Position at x tile 19 (19 * 12 = 228px)
+    const scrollButtonsX = 19 * tileSize;
+
+    // Up arrow: 3 tiles from bottom (canvasHeight - 3 * tileSize)
+    const scrollUpY = canvasHeight - 3 * tileSize;
     SpriteRenderer.renderSpriteById(
       ctx,
-      'minimap-25',
+      'minimap-7',
       spriteImages,
       spriteSize,
       scrollButtonsX,
@@ -209,11 +207,11 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       height: buttonSize
     };
 
-    // Render scroll down button (below up button)
-    const scrollDownY = scrollUpY + buttonSize + buttonSpacing;
+    // Down arrow: bottom-most tile (canvasHeight - 1 * tileSize)
+    const scrollDownY = canvasHeight - 1 * tileSize;
     SpriteRenderer.renderSpriteById(
       ctx,
-      'minimap-27',
+      'minimap-9',
       spriteImages,
       spriteSize,
       scrollButtonsX,
@@ -227,11 +225,22 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       width: buttonSize,
       height: buttonSize
     };
+  }
 
-    // Calculate the visible area for the combat log (1px padding on all sides, room for scroll buttons)
+  private renderCombatLogPanel(
+    context: LayoutRenderContext,
+    x: number,
+    y: number,
+    width: number,
+    height: number
+  ): void {
+    const { ctx, combatLogManager, fontId, fontAtlasImage } = context;
+    if (!fontAtlasImage || !combatLogManager) return;
+
+    // Calculate the visible area for the combat log (1px padding on all sides)
     const logX = x + this.PANEL_PADDING;
     const logY = y + this.PANEL_PADDING;
-    const logWidth = width - this.PANEL_PADDING * 2 - buttonSize - buttonSpacing;
+    const logWidth = width - this.PANEL_PADDING * 2;
     const logHeight = height - this.PANEL_PADDING * 2;
 
     // Render combat log using the manager
