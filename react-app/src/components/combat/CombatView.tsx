@@ -250,7 +250,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
 
       fontAtlasImagesRef.current = images;
-      console.log(`Loaded ${images.size} font atlases`);
     };
 
     loadFontAtlases().catch(console.error);
@@ -608,6 +607,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const { x: canvasX, y: canvasY } = coords;
 
+    // Check if clicking on combat log scroll buttons first
+    if (layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager)) {
+      return; // Button was clicked, don't process other click handlers
+    }
+
     // Calculate map offset (same as rendering)
     const offsetX = (CANVAS_WIDTH - (combatState.map.width * TILE_SIZE)) / 2;
     const offsetY = (CANVAS_HEIGHT - (combatState.map.height * TILE_SIZE)) / 2;
@@ -632,9 +636,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             const unit = createUnitFromPartyMember(selectedMember);
             const newManifest = new CombatUnitManifest();
 
-            // Check if zone is already occupied
-            const existingUnit = combatState.unitManifest.getUnitAtPosition(deploymentZone);
-
             // Copy existing units, excluding any unit at the deployment zone
             combatState.unitManifest.getAllUnits().forEach(placement => {
               // Skip the unit at the deployment position (it will be replaced)
@@ -654,12 +655,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
             // Clear the selected zone after deploying
             handler.clearSelectedZone();
-
-            if (existingUnit) {
-              console.log(`Replaced ${existingUnit.name} with ${unit.name} at position (${deploymentZone.x}, ${deploymentZone.y})`);
-            } else {
-              console.log(`Deployed ${unit.name} at position (${deploymentZone.x}, ${deploymentZone.y})`);
-            }
           } catch (error) {
             console.error('Failed to create unit:', error);
           }
@@ -668,13 +663,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
 
       // If no character clicked, check for deployment zone click
-      const clicked = handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, encounter);
-
-      if (clicked) {
-        console.log('Deployment zone selected:', handler.getSelectedZoneIndex());
-      }
+      handler.handleClick(canvasX, canvasY, TILE_SIZE, offsetX, offsetY, encounter);
     }
-  }, [combatState, encounter, setCombatState, inputHandler]);
+  }, [combatState, encounter, setCombatState, inputHandler, layoutRenderer, combatLogManager]);
 
   // Handle canvas mouse move for hover detection
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {

@@ -1,6 +1,7 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
+import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 
 /**
  * Layout 6: Left Map with Top Turn Order
@@ -16,6 +17,10 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
   private readonly PANEL_PADDING = 4;
   private readonly LINE_SPACING = 8;
   private readonly frameLayout: HorizontalVerticalLayout;
+
+  // Scroll button tracking
+  private scrollUpButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private scrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor() {
     // Define the layout regions using tile-based dimensions
@@ -49,6 +54,34 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
       width: leftColumnWidth,
       height: mapHeight,
     };
+  }
+
+  /**
+   * Handle click events on the combat log scroll buttons.
+   * Returns true if a button was clicked, false otherwise.
+   */
+  handleCombatLogClick(x: number, y: number, combatLogManager: any): boolean {
+    // Check scroll up button
+    if (this.scrollUpButtonBounds &&
+        x >= this.scrollUpButtonBounds.x &&
+        x <= this.scrollUpButtonBounds.x + this.scrollUpButtonBounds.width &&
+        y >= this.scrollUpButtonBounds.y &&
+        y <= this.scrollUpButtonBounds.y + this.scrollUpButtonBounds.height) {
+      combatLogManager.scrollUp(1);
+      return true;
+    }
+
+    // Check scroll down button
+    if (this.scrollDownButtonBounds &&
+        x >= this.scrollDownButtonBounds.x &&
+        x <= this.scrollDownButtonBounds.x + this.scrollDownButtonBounds.width &&
+        y >= this.scrollDownButtonBounds.y &&
+        y <= this.scrollDownButtonBounds.y + this.scrollDownButtonBounds.height) {
+      combatLogManager.scrollDown(1);
+      return true;
+    }
+
+    return false;
   }
 
   renderLayout(context: LayoutRenderContext): void {
@@ -149,7 +182,7 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, combatLogManager, fontId, fontAtlasImage } = context;
+    const { ctx, combatLogManager, fontId, fontAtlasImage, spriteImages, spriteSize } = context;
     if (!fontAtlasImage || !combatLogManager) return;
 
     let currentY = y + this.PANEL_PADDING + 6;
@@ -168,10 +201,53 @@ export class CombatLayout6LeftMapRenderer implements CombatLayoutRenderer {
     );
     currentY += this.LINE_SPACING;
 
-    // Calculate the visible area for the combat log (excluding title and padding)
+    // Calculate scroll button dimensions (12x12 each)
+    const buttonSize = 12;
+    const buttonSpacing = 2;
+    const scrollButtonsX = x + width - this.PANEL_PADDING - buttonSize - 6;
+
+    // Render scroll up button (top)
+    const scrollUpY = currentY;
+    SpriteRenderer.renderSpriteById(
+      ctx,
+      'minimap-25',
+      spriteImages,
+      spriteSize,
+      scrollButtonsX,
+      scrollUpY,
+      buttonSize,
+      buttonSize
+    );
+    this.scrollUpButtonBounds = {
+      x: scrollButtonsX,
+      y: scrollUpY,
+      width: buttonSize,
+      height: buttonSize
+    };
+
+    // Render scroll down button (below up button)
+    const scrollDownY = scrollUpY + buttonSize + buttonSpacing;
+    SpriteRenderer.renderSpriteById(
+      ctx,
+      'minimap-27',
+      spriteImages,
+      spriteSize,
+      scrollButtonsX,
+      scrollDownY,
+      buttonSize,
+      buttonSize
+    );
+    this.scrollDownButtonBounds = {
+      x: scrollButtonsX,
+      y: scrollDownY,
+      width: buttonSize,
+      height: buttonSize
+    };
+
+    // Calculate the visible area for the combat log (excluding title, padding, and scroll buttons)
     const logX = x + this.PANEL_PADDING + 6;
     const logY = currentY;
-    const logWidth = width - (this.PANEL_PADDING + 6) * 2;
+    const logWidth = width - (this.PANEL_PADDING + 6) * 2 - buttonSize - buttonSpacing * 2;
     const logHeight = height - (currentY - y) - this.PANEL_PADDING;
 
     // Render combat log using the manager

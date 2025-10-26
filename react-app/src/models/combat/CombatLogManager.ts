@@ -35,6 +35,7 @@ export class CombatLogManager {
   private bufferCanvas: HTMLCanvasElement | null = null;
   private bufferCtx: CanvasRenderingContext2D | null = null;
   private scrollOffset: number = 0; // Scroll position (0 = showing newest messages)
+  private lastVisibleLines: number = 0; // Track how many lines are actually visible
 
   constructor(config: Partial<CombatLogConfig> = {}) {
     this.config = {
@@ -81,7 +82,9 @@ export class CombatLogManager {
    * @param lines Number of lines to scroll
    */
   scrollUp(lines: number = 1): void {
-    const maxScroll = Math.max(0, this.messages.length - this.config.bufferLines);
+    // Max scroll is based on visible lines, not buffer lines
+    const visibleLines = this.lastVisibleLines || this.config.bufferLines;
+    const maxScroll = Math.max(0, this.messages.length - visibleLines);
     this.scrollOffset = Math.min(this.scrollOffset + lines, maxScroll);
   }
 
@@ -239,6 +242,9 @@ export class CombatLogManager {
     fontId: string,
     fontAtlasImage: HTMLImageElement
   ): void {
+    // Track visible lines for scroll calculations
+    this.lastVisibleLines = Math.floor(height / this.config.lineHeight);
+
     // Render full history to buffer
     this.renderToBuffer(fontId, fontAtlasImage, width);
 
@@ -250,14 +256,6 @@ export class CombatLogManager {
 
     // Copy from bottom of buffer (newest messages)
     const sourceY = Math.max(0, bufferHeight - sourceHeight);
-
-    // Debug logging
-    console.log('CombatLog render:', {
-      messages: this.messages.length,
-      x, y, width, height,
-      bufferHeight, sourceY, sourceHeight,
-      fontId
-    });
 
     // Copy visible portion from buffer to main canvas
     ctx.save();

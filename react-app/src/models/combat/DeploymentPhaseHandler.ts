@@ -377,7 +377,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
           fontScale: 1, // Scale factor (reduced from 2 for new resolution)
           // padding: 1 is the default
           onClick: () => {
-            console.log('Start Combat button clicked!');
+            // TODO: Implement start combat logic
           },
         });
 
