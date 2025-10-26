@@ -359,7 +359,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const mapHeightInTiles = combatState.map.height;
     const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
     const clipHeightInTiles = clipRegion.maxRow - clipRegion.minRow + 1;
-    const canScrollRight = mapScrollX < (mapWidthInTiles - clipWidthInTiles);
+    // Reduce max horizontal scroll by 1 tile due to 6px (half-tile) left offset for wall border
+    const maxHorizontalScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
+    const canScrollRight = mapScrollX < maxHorizontalScroll;
     const canScrollLeft = mapScrollX > 0;
     const canScrollDown = mapScrollY < (mapHeightInTiles - clipHeightInTiles);
     const canScrollUp = mapScrollY > 0;
@@ -369,8 +371,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (mapWidth <= clipWidthCalc) {
       offsetX = viewport.x + (clipWidthCalc - mapWidth) / 2;
     } else {
-      // Apply scroll offset
-      offsetX = viewport.x - (mapScrollX * TILE_SIZE);
+      // Apply scroll offset, with 6px left offset to account for wall border
+      offsetX = viewport.x - (mapScrollX * TILE_SIZE) - 6;
     }
 
     // If map height fits within clipping area, center it vertically
@@ -683,7 +685,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const mapWidthInTiles = combatState.map.width;
         const clipRegion = layoutRenderer.getMapClipRegion();
         const clipWidthInTiles = clipRegion.maxCol - clipRegion.minCol + 1;
-        const maxScroll = mapWidthInTiles - clipWidthInTiles;
+        // Reduce max scroll by 1 tile due to 6px left offset for wall border
+        const maxScroll = Math.max(0, mapWidthInTiles - clipWidthInTiles - 1);
         return Math.min(prev + 1, maxScroll);
       });
       renderFrame(); // Force immediate re-render
