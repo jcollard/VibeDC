@@ -1,4 +1,10 @@
-import type { PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
+import type {
+  PhaseSprites,
+  PhaseRenderContext,
+  PhaseEventResult,
+  MouseEventContext,
+  InfoPanelContext
+} from './CombatPhaseHandler';
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import type { CombatUnit } from './CombatUnit';
@@ -17,6 +23,8 @@ import { PhaseBase } from './PhaseBase';
 import { CombatAbility } from './CombatAbility';
 import { Equipment } from './Equipment';
 import { CombatUnitManifest } from './CombatUnitManifest';
+import { DeploymentHeaderRenderer } from './managers/renderers/DeploymentHeaderRenderer';
+import { PartyMembersContent } from './managers/panels';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -260,22 +268,6 @@ export class DeploymentPhaseHandler extends PhaseBase {
     }
   }
 
-  /**
-   * Handle mouse move to detect hover over character rows in the dialog
-   * Delegates to PartySelectionDialog
-   */
-  handleMouseMove(
-    canvasX: number,
-    canvasY: number,
-    characterCount: number
-  ): boolean {
-    return this.partyDialog.handleMouseMove(
-      canvasX,
-      canvasY,
-      characterCount,
-      this.getSelectedZoneIndex()
-    );
-  }
 
   /**
    * Get the currently hovered character index
@@ -464,6 +456,242 @@ export class DeploymentPhaseHandler extends PhaseBase {
       fontAtlasImage,
       spriteImages,
       this.getSelectedZoneIndex()
+    );
+  }
+
+  // --- PHASE-AGNOSTIC EVENT HANDLERS ---
+
+  /**
+   * Handle map tile clicks - select deployment zones or deploy units
+   */
+  handleMapClick(
+    context: MouseEventContext,
+    state: CombatState,
+    encounter: CombatEncounter
+  ): PhaseEventResult {
+    const { tileX, tileY } = context;
+    if (tileX === undefined || tileY === undefined) {
+      return { handled: false };
+    }
+
+    // Check if a unit is at this position
+    const unitAtPosition = state.unitManifest.getAllUnits().find(
+      placement => placement.position.x === tileX && placement.position.y === tileY
+    );
+
+    // Get the selected zone before the click
+    const previousSelection = this.getSelectedZoneIndex();
+
+    // Attempt to handle tile click (deployment zone selection)
+    const zoneWasClicked = this.handleTileClick(tileX, tileY, encounter);
+
+    // Determine if we should log a message
+    let logMessage: string | undefined;
+    if (zoneWasClicked) {
+      const currentSelection = this.getSelectedZoneIndex();
+      if (currentSelection !== null && currentSelection !== previousSelection) {
+        logMessage = CombatConstants.TEXT.SELECT_PARTY_MEMBER;
+      }
+    }
+
+    // Return result indicating the click was handled
+    return {
+      handled: zoneWasClicked || unitAtPosition !== undefined,
+      logMessage
+    };
+  }
+
+  /**
+   * Handle mouse down - forward to deployment button
+   */
+  handleMouseDown(
+    context: MouseEventContext,
+    _state: CombatState,
+    _encounter: CombatEncounter
+  ): PhaseEventResult {
+    const { canvasX, canvasY } = context;
+    const handled = this.handleButtonMouseDown(canvasX, canvasY);
+    return { handled };
+  }
+
+  /**
+   * Handle mouse up - forward to deployment button
+   */
+  handleMouseUp(
+    context: MouseEventContext,
+    _state: CombatState,
+    _encounter: CombatEncounter
+  ): PhaseEventResult {
+    const { canvasX, canvasY } = context;
+    const handled = this.handleButtonMouseUp(canvasX, canvasY);
+    return { handled };
+  }
+
+  /**
+   * Handle mouse move - update hover states for party dialog and button
+   * Note: This is the phase-agnostic version. The old handleMouseMove(canvasX, canvasY, characterCount)
+   * is still used internally by the party dialog.
+   */
+  handleMouseMove(
+    context: MouseEventContext,
+    _state: CombatState,
+    _encounter: CombatEncounter
+  ): PhaseEventResult {
+    const { canvasX, canvasY } = context;
+    const partySize = PartyMemberRegistry.getAll().length;
+
+    // Update party dialog hover state (calls the parent class method)
+    const dialogHandled = this.partyDialog.handleMouseMove(
+      canvasX,
+      canvasY,
+      partySize,
+      this.getSelectedZoneIndex()
+    );
+
+    // Update button hover state
+    const buttonHandled = this.handleButtonMouseMove(canvasX, canvasY);
+
+    return { handled: dialogHandled || buttonHandled };
+  }
+
+  /**
+   * Handle info panel click - deploy party member at selected zone
+   */
+  handleInfoPanelClick(
+    relativeX: number,
+    relativeY: number,
+    state: CombatState,
+    encounter: CombatEncounter
+  ): PhaseEventResult {
+    // Get party members to handle the click
+    const partyUnits = PartyMemberRegistry.getAll()
+      .map(member => PartyMemberRegistry.createPartyMember(member.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    if (partyUnits.length === 0) {
+      return { handled: false };
+    }
+
+    // Create temporary party members content to handle click detection
+    const content = new PartyMembersContent(
+      {
+        title: 'Party Members',
+        titleColor: '#ffa500',
+        padding: 1,
+        lineSpacing: 8,
+      },
+      partyUnits,
+      new Map(),
+      12,
+      null
+    );
+
+    // Get the clicked party member index
+    const partyMemberIndex = content.handleClick(relativeX, relativeY);
+
+    if (partyMemberIndex !== null) {
+      // Deploy the party member
+      const newState = this.handlePartyMemberDeployment(partyMemberIndex, state, encounter);
+      return {
+        handled: true,
+        newState: newState || undefined
+      };
+    }
+
+    return { handled: false };
+  }
+
+  /**
+   * Handle info panel hover - update hover state for party members
+   * Returns the hovered party member unit for display in target panel
+   */
+  handleInfoPanelHover(
+    relativeX: number,
+    relativeY: number,
+    _state: CombatState,
+    _encounter: CombatEncounter
+  ): PhaseEventResult {
+    // Get party members to handle the hover
+    const partyUnits = PartyMemberRegistry.getAll()
+      .map(member => PartyMemberRegistry.createPartyMember(member.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    if (partyUnits.length === 0) {
+      return { handled: false };
+    }
+
+    // Create temporary party members content to handle hover detection
+    const content = new PartyMembersContent(
+      {
+        title: 'Party Members',
+        titleColor: '#ffa500',
+        padding: 1,
+        lineSpacing: 8,
+      },
+      partyUnits,
+      new Map(),
+      12,
+      null
+    );
+
+    // Get the hovered party member index
+    const hoveredIndex = content.handleHover(relativeX, relativeY);
+
+    // Return result with custom data for CombatView to use
+    return {
+      handled: hoveredIndex !== null,
+      // Store hovered info in a way CombatView can access
+      // We'll use preventDefault as a signal and encode data in a custom way
+      preventDefault: hoveredIndex !== null,
+      // Note: PhaseEventResult doesn't have a generic data field
+      // CombatView will need to call a getter method instead
+    };
+  }
+
+  /**
+   * Get the currently hovered party member unit (for target panel display)
+   * This should be called after handleInfoPanelHover
+   */
+  getHoveredPartyMember(): CombatUnit | null {
+    // This is a workaround since we can't easily pass the unit through PhaseEventResult
+    // In a better design, PhaseEventResult would have a generic data field
+    // For now, we'll store it in an instance variable
+    return null; // TODO: Store and return hovered unit
+  }
+
+  /**
+   * Get top panel renderer - shows "Deploy Units" header
+   */
+  getTopPanelRenderer(_state: CombatState, _encounter: CombatEncounter) {
+    return new DeploymentHeaderRenderer('Deploy Units');
+  }
+
+  /**
+   * Get info panel content - shows party members for selection
+   */
+  getInfoPanelContent(
+    _context: InfoPanelContext,
+    _state: CombatState,
+    _encounter: CombatEncounter
+  ) {
+    const partyUnits = PartyMemberRegistry.getAll()
+      .map(member => PartyMemberRegistry.createPartyMember(member.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    if (partyUnits.length === 0) return null;
+
+    // Return party members content for bottom info panel
+    return new PartyMembersContent(
+      {
+        title: 'Party Members',
+        titleColor: '#ffa500',
+        padding: 1,
+        lineSpacing: 8,
+      },
+      partyUnits,
+      new Map(), // spriteImages - will be provided by renderer
+      12, // spriteSize
+      null // hoveredPartyMemberIndex - will be managed by CombatView
     );
   }
 }

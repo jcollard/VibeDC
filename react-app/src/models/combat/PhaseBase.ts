@@ -83,11 +83,11 @@ export abstract class PhaseBase implements CombatPhaseHandler {
     this.elapsedTime = 0;
   }
 
-  // Optional methods - phases can override if needed
+  // Legacy optional methods - kept for backwards compatibility with old code
+  // New phases should use the phase-agnostic methods from CombatPhaseHandler instead
 
   /**
-   * Handle click on the canvas
-   * Override to handle phase-specific click behavior
+   * @deprecated Use handleMapClick instead
    */
   handleClick?(
     canvasX: number,
@@ -99,18 +99,7 @@ export abstract class PhaseBase implements CombatPhaseHandler {
   ): boolean;
 
   /**
-   * Handle mouse move on the canvas
-   * Override to handle phase-specific hover behavior
-   */
-  handleMouseMove?(
-    canvasX: number,
-    canvasY: number,
-    characterCount: number
-  ): boolean;
-
-  /**
-   * Handle character click in selection dialog
-   * Override for phases that use character selection
+   * @deprecated Internal use only - use phase-agnostic handleMouseMove from CombatPhaseHandler
    */
   handleCharacterClick?(
     canvasX: number,
@@ -119,38 +108,32 @@ export abstract class PhaseBase implements CombatPhaseHandler {
   ): number | null;
 
   /**
-   * Handle button mouse move for hover detection
-   * Override for phases that use buttons
+   * @deprecated Internal use only
    */
   handleButtonMouseMove?(canvasX: number, canvasY: number): boolean;
 
   /**
-   * Handle button mouse down for active state
-   * Override for phases that use buttons
+   * @deprecated Internal use only
    */
   handleButtonMouseDown?(canvasX: number, canvasY: number): boolean;
 
   /**
-   * Handle button mouse up (triggers click if over button)
-   * Override for phases that use buttons
+   * @deprecated Internal use only
    */
   handleButtonMouseUp?(canvasX: number, canvasY: number): boolean;
 
   /**
-   * Get the currently selected zone index
-   * Override for phases that use zone selection
+   * @deprecated Internal use only
    */
   getSelectedZoneIndex?(): number | null;
 
   /**
-   * Clear the selected deployment zone
-   * Override for phases that use zone selection
+   * @deprecated Internal use only
    */
   clearSelectedZone?(): void;
 
   /**
-   * Get the currently hovered character index
-   * Override for phases that use character hover
+   * @deprecated Internal use only
    */
   getHoveredCharacterIndex?(): number | null;
 }

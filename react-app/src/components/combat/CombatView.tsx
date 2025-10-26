@@ -30,7 +30,6 @@ import { CombatMapRenderer } from '../../models/combat/rendering/CombatMapRender
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
 import { TurnOrderRenderer } from '../../models/combat/managers/renderers/TurnOrderRenderer';
-import { DeploymentHeaderRenderer } from '../../models/combat/managers/renderers/DeploymentHeaderRenderer';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -244,12 +243,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Switch top panel renderer based on combat phase
   useEffect(() => {
-    if (combatState.phase === 'deployment') {
-      // Show deployment header during deployment phase
-      const deploymentRenderer = new DeploymentHeaderRenderer('Deploy Units');
-      topPanelManager.setRenderer(deploymentRenderer);
+    // Get top panel renderer from phase handler
+    if (phaseHandlerRef.current.getTopPanelRenderer) {
+      const renderer = phaseHandlerRef.current.getTopPanelRenderer(combatState, encounter);
+      topPanelManager.setRenderer(renderer);
     } else {
-      // Show turn order during combat phase
+      // Fallback for phases that don't provide a renderer
+      // Show turn order during combat phase (default)
       const turnOrderRenderer = new TurnOrderRenderer(partyUnits, (clickedUnit) => {
         // When a unit is clicked in turn order, set it as the target unit
         targetUnitRef.current = clickedUnit;
@@ -257,7 +257,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       topPanelManager.setRenderer(turnOrderRenderer);
     }
-  }, [topPanelManager, combatState.phase, partyUnits]);
+  }, [topPanelManager, combatState, encounter, partyUnits]);
 
   // Update UIConfig when highlight color changes
   useEffect(() => {
@@ -797,34 +797,44 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Button was clicked, don't process other handlers
     }
 
-    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
-      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+    // Check if clicking on bottom info panel - delegate to phase handler
+    if (phaseHandlerRef.current.handleInfoPanelClick) {
+      const panelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
-      // Check if clicking on party panel
-      if (partyUnits.length > 0) {
-        // Party panel region (bottom-right info panel)
-        const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
+      // Check if click is within the panel region
+      if (canvasX >= panelRegion.x &&
+          canvasX <= panelRegion.x + panelRegion.width &&
+          canvasY >= panelRegion.y &&
+          canvasY <= panelRegion.y + panelRegion.height) {
 
-        // Check if clicking on a party member
-        const partyMemberIndex = currentUnitPanelManager.handleClick(
-          canvasX,
-          canvasY,
-          partyPanelRegion
-        ) as number | null;
+        const relativeX = canvasX - panelRegion.x;
+        const relativeY = canvasY - panelRegion.y;
 
-        if (partyMemberIndex !== null) {
-          // Deploy the party member through the handler
-          const newState = handler.handlePartyMemberDeployment(partyMemberIndex, combatState, encounter);
-          if (newState) {
-            setCombatState(newState);
+        const result = phaseHandlerRef.current.handleInfoPanelClick(
+          relativeX,
+          relativeY,
+          combatState,
+          encounter
+        );
+
+        if (result.handled) {
+          if (result.newState) {
+            setCombatState(result.newState);
           }
-          return; // Party member was clicked, don't process other handlers
+          return; // Click was handled, don't process other handlers
         }
       }
-
-      handler.handleButtonMouseDown(canvasX, canvasY);
     }
-  }, [combatState, encounter, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame, partyUnits, currentUnitPanelManager]);
+
+    // Delegate mouse down to phase handler
+    if (phaseHandlerRef.current.handleMouseDown) {
+      phaseHandlerRef.current.handleMouseDown(
+        { canvasX, canvasY },
+        combatState,
+        encounter
+      );
+    }
+  }, [combatState, encounter, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame]);
 
   // Handle canvas mouse up for button click
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -840,11 +850,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Stop continuous scrolling
     stopContinuousScroll();
 
-    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
-      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
-      handler.handleButtonMouseUp(canvasX, canvasY);
+    // Delegate mouse up to phase handler
+    if (phaseHandlerRef.current.handleMouseUp) {
+      phaseHandlerRef.current.handleMouseUp(
+        { canvasX, canvasY },
+        combatState,
+        encounter
+      );
     }
-  }, [combatState.phase, stopContinuousScroll]);
+  }, [combatState, encounter, stopContinuousScroll]);
 
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -857,15 +871,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const { x: canvasX, y: canvasY } = coords;
 
-    // Check for character dialog clicks in deployment phase
+    // Legacy character dialog handling - DISABLED (old UI system)
+    // The new system uses info panels which are handled in handleCanvasMouseDown
+    // This code is kept for reference but is not actively used
+    /*
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
-
-      // First check if clicking on a character in the dialog
       const partyMembers = PartyMemberRegistry.getAll();
       const characterIndex = handler.handleCharacterClick(canvasX, canvasY, partyMembers.length);
       if (characterIndex !== null) {
-        // Character was clicked - deploy through handler
         const newState = handler.handlePartyMemberDeployment(characterIndex, combatState, encounter);
         if (newState) {
           setCombatState(newState);
@@ -873,6 +887,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         return;
       }
     }
+    */
 
     // Try to handle as a map click (will notify registered handlers)
     const wasMapClick = mapRenderer.handleMapClick(
@@ -903,52 +918,55 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const { x: canvasX, y: canvasY } = coords;
 
-    // Pass mouse move to phase handler (if deployment phase)
-    if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
-      const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
-      const partySize = PartyMemberRegistry.getAll().length;
-      handler.handleMouseMove(canvasX, canvasY, partySize);
-      handler.handleButtonMouseMove(canvasX, canvasY); // Handle button hover
+    // Check if hovering over bottom info panel
+    // The panel manager will delegate to the panel content (party members, unit info, etc.)
+    const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
-      // Check if hovering over party member in party panel
-      if (partyUnits.length > 0) {
-        const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
+    const hoverResult = currentUnitPanelManager.handleHover(
+      canvasX,
+      canvasY,
+      partyPanelRegion
+    );
 
-        const hoveredPartyIndex = currentUnitPanelManager.handleHover(
-          canvasX,
-          canvasY,
-          partyPanelRegion
-        ) as number | null;
-
-        if (hoveredPartyIndex !== null) {
-          // Set the hovered party member as the target unit
-          targetUnitRef.current = partyUnits[hoveredPartyIndex];
-          hoveredPartyMemberRef.current = hoveredPartyIndex;
-          renderFrame(); // Trigger re-render to show updated target unit
-        } else {
-          // Clear hover highlight but keep the target unit visible
-          hoveredPartyMemberRef.current = null;
-          renderFrame();
-        }
-      }
-
-      // Update hovered cell for map tile detection using CombatMapRenderer
-      const tileCoords = mapRenderer.canvasToTileCoordinates(
-        canvasX,
-        canvasY,
-        mapScrollX,
-        mapScrollY,
-        combatState.map.width,
-        combatState.map.height
-      );
-
-      if (tileCoords) {
-        uiStateManager.setHoveredCell({ x: tileCoords.tileX, y: tileCoords.tileY });
-      } else {
-        uiStateManager.setHoveredCell(null);
+    // If hovering over a party member (deployment phase), update target unit
+    if (typeof hoverResult === 'number' && hoverResult !== null && partyUnits.length > 0) {
+      // Hovered a party member index
+      targetUnitRef.current = partyUnits[hoverResult];
+      hoveredPartyMemberRef.current = hoverResult;
+      renderFrame(); // Trigger re-render to show updated target unit
+    } else {
+      // Clear hover highlight but keep the target unit visible
+      if (hoveredPartyMemberRef.current !== null) {
+        hoveredPartyMemberRef.current = null;
+        renderFrame();
       }
     }
-  }, [combatState.phase, combatState.map, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, currentUnitPanelManager, renderFrame]);
+
+    // Update hovered cell for map tile detection using CombatMapRenderer
+    const tileCoords = mapRenderer.canvasToTileCoordinates(
+      canvasX,
+      canvasY,
+      mapScrollX,
+      mapScrollY,
+      combatState.map.width,
+      combatState.map.height
+    );
+
+    if (tileCoords) {
+      uiStateManager.setHoveredCell({ x: tileCoords.tileX, y: tileCoords.tileY });
+    } else {
+      uiStateManager.setHoveredCell(null);
+    }
+
+    // Delegate mouse move to phase handler
+    if (phaseHandlerRef.current.handleMouseMove) {
+      phaseHandlerRef.current.handleMouseMove(
+        { canvasX, canvasY, tileX: tileCoords?.tileX, tileY: tileCoords?.tileY },
+        combatState,
+        encounter
+      );
+    }
+  }, [combatState, encounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, currentUnitPanelManager, layoutRenderer, renderFrame]);
 
   // Register map click handler
   useEffect(() => {
@@ -962,31 +980,31 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         // Unit was clicked - show it in the Unit Info panel
         targetUnitRef.current = unitAtPosition.unit;
         renderFrame();
-        // Continue to process deployment zone logic if in deployment phase
+        // Continue to process phase-specific logic
       }
 
-      // Handle deployment zone clicks in deployment phase
-      if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
-        const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
+      // Delegate map click to phase handler
+      if (phaseHandlerRef.current.handleMapClick) {
+        const result = phaseHandlerRef.current.handleMapClick(
+          { canvasX: 0, canvasY: 0, tileX, tileY },
+          combatState,
+          encounter
+        );
 
-        // Get the selected zone before the click
-        const previousSelection = handler.getSelectedZoneIndex();
+        // Add log message if provided
+        if (result.logMessage) {
+          combatLogManager.addMessage(result.logMessage);
+        }
 
-        // Delegate to the deployment phase handler with tile coordinates
-        const zoneWasClicked = handler.handleTileClick(tileX, tileY, encounter);
-
-        // If a zone was clicked and is now selected (not deselected), add combat log message
-        if (zoneWasClicked) {
-          const currentSelection = handler.getSelectedZoneIndex();
-          if (currentSelection !== null && currentSelection !== previousSelection) {
-            combatLogManager.addMessage(CombatConstants.TEXT.SELECT_PARTY_MEMBER);
-          }
+        // Update state if provided
+        if (result.newState) {
+          setCombatState(result.newState);
         }
       }
     });
 
     return unsubscribe;
-  }, [mapRenderer, combatState.phase, combatState.unitManifest, encounter, combatLogManager, renderFrame]);
+  }, [mapRenderer, combatState, encounter, combatLogManager, renderFrame, setCombatState]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
