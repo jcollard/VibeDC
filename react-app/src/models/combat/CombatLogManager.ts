@@ -47,10 +47,13 @@ export class CombatLogManager {
   private animatingMessageIndex: number = -1; // Index of the message being animated
   private animationProgress: number = 1; // 0.0 to 1.0, how much of the message to show
   private animationCharsShown: number = 0; // Track characters shown to prevent going backwards
-  private readonly ANIMATION_DURATION: number = 0.5; // 0.5 seconds per message
+  private animationDuration: number = 0.5; // Duration for current message animation
+  private readonly DEFAULT_CHARS_PER_SECOND: number = 60; // Default animation speed
+  private readonly FAST_CHARS_PER_SECOND: number = 240; // Fast animation speed when queue is long
+  private readonly MAX_QUEUE_TIME: number = 3; // Max queue time in seconds before speeding up
 
   // Message queue for sequential animations
-  private messageQueue: string[] = [];
+  private messageQueue: { message: string; charsPerSecond?: number }[] = [];
 
   constructor(config: Partial<CombatLogConfig> = {}) {
     this.config = {
@@ -62,14 +65,61 @@ export class CombatLogManager {
   }
 
   /**
+   * Calculates the plain text length of a message (without color/sprite tags).
+   */
+  private getPlainTextLength(message: string): number {
+    const plainText = message
+      .replace(/\[color=#[0-9a-fA-F]{6}\]/g, '')
+      .replace(/\[\/color\]/g, '')
+      .replace(/\[sprite:[\w-]+\]/g, 'S'); // Replace sprite tags with single char
+    return plainText.length;
+  }
+
+  /**
+   * Calculates the total time remaining for all queued messages plus current animation.
+   */
+  private calculateTotalQueueTime(): number {
+    // Time remaining for current animation
+    let totalTime = 0;
+    if (this.animatingMessageIndex >= 0 && this.animationProgress < 1) {
+      totalTime += this.animationDuration * (1 - this.animationProgress);
+    }
+
+    // Time for all queued messages
+    for (const item of this.messageQueue) {
+      const length = this.getPlainTextLength(item.message);
+      const speed = item.charsPerSecond ?? this.DEFAULT_CHARS_PER_SECOND;
+      totalTime += length / speed;
+    }
+
+    return totalTime;
+  }
+
+  /**
    * Adds a new message to the combat log.
    * If an animation is currently in progress, the message is queued.
    * Automatically trims history if it exceeds maxMessages.
+   *
+   * @param message The message to add
+   * @param charsPerSecond Optional animation speed in characters per second (defaults to DEFAULT_CHARS_PER_SECOND)
    */
-  addMessage(message: string): void {
+  addMessage(message: string, charsPerSecond?: number): void {
     // If currently animating, queue the message for later
     if (this.animatingMessageIndex >= 0 && this.animationProgress < 1) {
-      this.messageQueue.push(message);
+      this.messageQueue.push({ message, charsPerSecond });
+
+      // Check if queue time exceeds threshold - if so, speed up all messages
+      const totalQueueTime = this.calculateTotalQueueTime();
+      if (totalQueueTime > this.MAX_QUEUE_TIME) {
+        // Speed up all queued messages to fast speed
+        for (const item of this.messageQueue) {
+          item.charsPerSecond = this.FAST_CHARS_PER_SECOND;
+        }
+        // Also speed up current animation
+        const currentLength = this.getPlainTextLength(this.messages[this.animatingMessageIndex]);
+        this.animationDuration = currentLength / this.FAST_CHARS_PER_SECOND;
+      }
+
       return;
     }
 
@@ -83,6 +133,11 @@ export class CombatLogManager {
 
     // Auto-scroll to bottom when new message arrives
     this.scrollOffset = 0;
+
+    // Calculate animation duration based on message length
+    const plainTextLength = this.getPlainTextLength(message);
+    const speed = charsPerSecond ?? this.DEFAULT_CHARS_PER_SECOND;
+    this.animationDuration = plainTextLength / speed;
 
     // Start animation for the new message
     this.animatingMessageIndex = this.messages.length - 1;
@@ -461,7 +516,7 @@ export class CombatLogManager {
   update(deltaTime: number): void {
     // If we're animating a message, advance the animation
     if (this.animatingMessageIndex >= 0 && this.animationProgress < 1) {
-      this.animationProgress += deltaTime / this.ANIMATION_DURATION;
+      this.animationProgress += deltaTime / this.animationDuration;
 
       if (this.animationProgress >= 1) {
         this.animationProgress = 1;
@@ -469,8 +524,8 @@ export class CombatLogManager {
 
         // Process next message in queue if available
         if (this.messageQueue.length > 0) {
-          const nextMessage = this.messageQueue.shift()!;
-          this.addMessage(nextMessage);
+          const next = this.messageQueue.shift()!;
+          this.addMessage(next.message, next.charsPerSecond);
         }
       }
 
