@@ -60,6 +60,8 @@ export const CombatConstants = {
   TEXT: {
     DEPLOY_TITLE: 'Deploy Units',
     WAYLAID_MESSAGE: 'You have been waylaid by enemies and must defend yourself.',
+    WAYLAID_MESSAGE_LINE1: 'You have been waylaid by enemies and must defend',
+    WAYLAID_MESSAGE_LINE2: 'yourself.',
     DEPLOYMENT_INSTRUCTION: 'Click [sprite:gradients-7] to deploy a unit.',
     START_COMBAT_BUTTON: 'Start Combat',
   },

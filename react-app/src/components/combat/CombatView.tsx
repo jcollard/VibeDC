@@ -70,6 +70,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track if the intro cinematic has already played
   const introCinematicPlayedRef = useRef<boolean>(false);
 
+  // Track if combat log has been initialized
+  const combatLogInitializedRef = useRef<boolean>(false);
+
   // Animation timing
   const lastFrameTimeRef = useRef<number>(performance.now());
   const animationFrameRef = useRef<number | null>(null);
@@ -264,16 +267,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     UIConfig.setHighlightColor(highlightColor);
   }, [highlightColor]);
 
-  // Initialize combat log with test messages
+  // Initialize combat log with waylaid message
   useEffect(() => {
-    combatLogManager.addMessage('Battle begins!');
-    combatLogManager.addMessage('The [color=#ff6b6b]Red Dragon[/color] appears!');
-    combatLogManager.addMessage('[color=#9eff6b]Hero[/color] enters the fray!');
-    combatLogManager.addMessage('Turn 1 starts');
-    combatLogManager.addMessage('[color=#ffa500]Warrior[/color] attacks!');
-    combatLogManager.addMessage('Deals [color=#ff0000]15 damage[/color]!');
-    combatLogManager.addMessage('[color=#6b9eff]Mage[/color] casts spell');
-    combatLogManager.addMessage('Critical hit!');
+    // Only add the message once
+    if (combatLogInitializedRef.current) return;
+    combatLogInitializedRef.current = true;
+
+    // Add waylaid message as two separate lines at the start of deployment phase
+    combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
+    combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
   }, [combatLogManager]);
 
   // Listen for window resize

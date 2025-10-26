@@ -46,6 +46,9 @@ export class CombatLogManager {
   private animationProgress: number = 1; // 0.0 to 1.0, how much of the message to show
   private readonly ANIMATION_DURATION: number = 0.5; // 0.5 seconds per message
 
+  // Message queue for sequential animations
+  private messageQueue: string[] = [];
+
   constructor(config: Partial<CombatLogConfig> = {}) {
     this.config = {
       maxMessages: config.maxMessages ?? 100,
@@ -57,9 +60,17 @@ export class CombatLogManager {
 
   /**
    * Adds a new message to the combat log.
+   * If an animation is currently in progress, the message is queued.
    * Automatically trims history if it exceeds maxMessages.
    */
   addMessage(message: string): void {
+    // If currently animating, queue the message for later
+    if (this.animatingMessageIndex >= 0 && this.animationProgress < 1) {
+      this.messageQueue.push(message);
+      return;
+    }
+
+    // Add message immediately
     this.messages.push(message);
 
     // Trim old messages if we exceed the limit
@@ -402,6 +413,12 @@ export class CombatLogManager {
       if (this.animationProgress >= 1) {
         this.animationProgress = 1;
         this.animatingMessageIndex = -1; // Animation complete
+
+        // Process next message in queue if available
+        if (this.messageQueue.length > 0) {
+          const nextMessage = this.messageQueue.shift()!;
+          this.addMessage(nextMessage);
+        }
       }
 
       // Mark buffer as dirty to trigger redraw
