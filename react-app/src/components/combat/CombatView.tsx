@@ -255,20 +255,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     UIConfig.setHighlightColor(highlightColor);
   }, [highlightColor]);
 
-  // Initialize combat log with waylaid message
-  useEffect(() => {
-    // Only add the message once
-    if (combatLogInitializedRef.current) return;
-    combatLogInitializedRef.current = true;
-
-    // Add waylaid message as two separate lines at the start of deployment phase
-    combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
-    combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
-    // Add empty line
-    combatLogManager.addMessage('');
-    // Add deployment instruction with sprite
-    combatLogManager.addMessage(CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION);
-  }, [combatLogManager]);
+  // Combat log is initialized in the animation loop after cinematic completes
 
   // Listen for window resize
   useEffect(() => {
@@ -498,6 +485,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Update cinematic manager (has priority over phase updates)
       const cinematicPlaying = cinematicManagerRef.current.update(deltaTime);
+
+      // Initialize combat log after cinematic completes
+      if (!cinematicPlaying && introCinematicPlayedRef.current && !combatLogInitializedRef.current) {
+        combatLogInitializedRef.current = true;
+        combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
+        combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
+        combatLogManager.addMessage('');
+        combatLogManager.addMessage(CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION);
+      }
 
       // Update phase handler (for animations) only if no cinematic is playing
       if (!cinematicPlaying && phaseHandlerRef.current.update) {
