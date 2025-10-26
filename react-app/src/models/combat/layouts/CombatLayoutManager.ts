@@ -72,6 +72,58 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   }
 
   /**
+   * Get the region for the top info panel (right column, top position)
+   * @returns Panel region with x, y, width, height in pixels
+   */
+  getTopInfoPanelRegion(): { x: number; y: number; width: number; height: number } {
+    return {
+      x: 252,   // column 21 (21 * 12px)
+      y: 0,     // row 0
+      width: 132,  // 11 tiles (11 * 12px)
+      height: 108  // 9 tiles (9 * 12px)
+    };
+  }
+
+  /**
+   * Get the region for the bottom info panel (right column, bottom position)
+   * @returns Panel region with x, y, width, height in pixels
+   */
+  getBottomInfoPanelRegion(): { x: number; y: number; width: number; height: number } {
+    return {
+      x: 252,   // column 21 (21 * 12px)
+      y: 120,   // row 10 (10 * 12px)
+      width: 132,  // 11 tiles (11 * 12px)
+      height: 96   // 8 tiles (8 * 12px)
+    };
+  }
+
+  /**
+   * Get the region for the turn order panel (top-left)
+   * @returns Panel region with x, y, width, height in pixels
+   */
+  getTurnOrderPanelRegion(): { x: number; y: number; width: number; height: number } {
+    return {
+      x: 0,     // column 0
+      y: 0,     // row 0
+      width: 240,  // 20 tiles (20 * 12px)
+      height: 24   // 2 tiles (2 * 12px)
+    };
+  }
+
+  /**
+   * Get the region for the combat log panel (bottom-left)
+   * @returns Panel region with x, y, width, height in pixels
+   */
+  getCombatLogPanelRegion(): { x: number; y: number; width: number; height: number } {
+    return {
+      x: 0,     // column 0
+      y: 168,   // row 14
+      width: 240,  // 20 tiles (20 * 12px)
+      height: 48   // 4 tiles (4 * 12px)
+    };
+  }
+
+  /**
    * Handle click events on the map scroll buttons.
    * Returns 'right', 'left', 'up', 'down', or null.
    */

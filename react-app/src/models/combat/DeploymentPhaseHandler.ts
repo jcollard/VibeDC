@@ -16,6 +16,7 @@ import { PartySelectionDialog } from './deployment/PartySelectionDialog';
 import { PhaseBase } from './PhaseBase';
 import { CombatAbility } from './CombatAbility';
 import { Equipment } from './Equipment';
+import { CombatUnitManifest } from './CombatUnitManifest';
 
 /**
  * Create a CombatUnit from a PartyMemberDefinition
@@ -204,6 +205,59 @@ export class DeploymentPhaseHandler extends PhaseBase {
    */
   clearSelectedZone(): void {
     this.deploymentManager.clearSelectedZone();
+  }
+
+  /**
+   * Handle deployment of a party member to the selected zone
+   * @param memberIndex - Index of the party member in the registry
+   * @param combatState - Current combat state
+   * @param encounter - Current encounter
+   * @returns New combat state if deployment succeeded, null otherwise
+   */
+  handlePartyMemberDeployment(
+    memberIndex: number,
+    combatState: CombatState,
+    encounter: CombatEncounter
+  ): CombatState | null {
+    // 1. Check if a zone is selected
+    const selectedZoneIndex = this.getSelectedZoneIndex();
+    if (selectedZoneIndex === null) return null;
+
+    // 2. Get the party member and deployment zone
+    const partyMembers = PartyMemberRegistry.getAll();
+    const selectedMember = partyMembers[memberIndex];
+    const deploymentZone = encounter.playerDeploymentZones[selectedZoneIndex];
+
+    if (!selectedMember || !deploymentZone) return null;
+
+    // 3. Create unit and update manifest
+    try {
+      const unit = createUnitFromPartyMember(selectedMember);
+      const newManifest = new CombatUnitManifest();
+
+      // Copy existing units, excluding any unit at the deployment zone
+      combatState.unitManifest.getAllUnits().forEach(placement => {
+        // Skip the unit at the deployment position (it will be replaced)
+        if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
+          newManifest.addUnit(placement.unit, placement.position);
+        }
+      });
+
+      // Add new unit at the deployment zone
+      newManifest.addUnit(unit, deploymentZone);
+
+      // Clear the selected zone after deploying
+      this.clearSelectedZone();
+
+      // Return updated combat state
+      return {
+        ...combatState,
+        unitManifest: newManifest
+      };
+    } catch (error) {
+      console.error('Failed to deploy unit:', error);
+      return null;
+    }
   }
 
   /**

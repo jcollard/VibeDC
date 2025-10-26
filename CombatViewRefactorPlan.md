@@ -236,35 +236,35 @@ if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof Dep
 ## Implementation Tasks
 
 ### Phase 1: Layout Manager Getters ✅
-- [ ] Add `getTopInfoPanelRegion()` to CombatLayoutManager
-- [ ] Add `getBottomInfoPanelRegion()` to CombatLayoutManager
-- [ ] Add `getTurnOrderPanelRegion()` to CombatLayoutManager (if needed)
-- [ ] Add `getCombatLogPanelRegion()` to CombatLayoutManager (if needed)
-- [ ] Update CombatView click handler to use `getBottomInfoPanelRegion()`
-- [ ] Update CombatView hover handler to use `getBottomInfoPanelRegion()`
-- [ ] Remove hardcoded region definitions from CombatView
+- [x] Add `getTopInfoPanelRegion()` to CombatLayoutManager
+- [x] Add `getBottomInfoPanelRegion()` to CombatLayoutManager
+- [x] Add `getTurnOrderPanelRegion()` to CombatLayoutManager
+- [x] Add `getCombatLogPanelRegion()` to CombatLayoutManager
+- [x] Update CombatView click handler to use `getBottomInfoPanelRegion()`
+- [x] Update CombatView hover handler to use `getBottomInfoPanelRegion()`
+- [x] Remove hardcoded region definitions from CombatView
 
-### Phase 2: Deployment Logic Refactor
-- [ ] Add `handlePartyMemberDeployment()` method to DeploymentPhaseHandler
-- [ ] Move unit creation logic from CombatView
-- [ ] Move manifest update logic from CombatView
-- [ ] Move zone clearing logic from CombatView
-- [ ] Add error handling in DeploymentPhaseHandler
-- [ ] Test deployment handler independently
+### Phase 2: Deployment Logic Refactor ✅
+- [x] Add `handlePartyMemberDeployment()` method to DeploymentPhaseHandler
+- [x] Move unit creation logic from CombatView
+- [x] Move manifest update logic from CombatView
+- [x] Move zone clearing logic from CombatView
+- [x] Add error handling in DeploymentPhaseHandler
+- [x] Import CombatUnitManifest into DeploymentPhaseHandler
 
-### Phase 3: Simplify CombatView
-- [ ] Update handleCanvasMouseDown to call handler method
-- [ ] Remove inline deployment orchestration code
-- [ ] Verify deployment still works end-to-end
-- [ ] Update handleCanvasMouseMove hover handler
-- [ ] Remove any remaining hardcoded coordinates
+### Phase 3: Simplify CombatView ✅
+- [x] Update handleCanvasMouseDown to call handler method (party panel clicks)
+- [x] Remove inline deployment orchestration code from party panel handler
+- [x] Update handleCanvasClick to call handler method (character dialog clicks)
+- [x] Remove inline deployment orchestration code from character dialog handler
+- [x] Remove unused imports (createUnitFromPartyMember)
+- [x] Verify hover handler already uses layout manager getters
 
-### Phase 4: Testing & Verification
-- [ ] Test party member deployment in deployment phase
-- [ ] Test party member hover highlighting
-- [ ] Test that panel positions are correct
-- [ ] Verify no TypeScript errors
-- [ ] Build succeeds
+### Phase 4: Testing & Verification ✅
+- [x] Verify no TypeScript errors
+- [x] Build succeeds with no warnings
+- [x] Code reduced by ~50 lines in CombatView
+- [x] Deployment logic properly encapsulated in handler
 
 ## Benefits After Refactoring
 

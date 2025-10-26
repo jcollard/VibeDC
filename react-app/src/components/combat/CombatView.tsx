@@ -3,7 +3,7 @@ import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
-import { DeploymentPhaseHandler, createUnitFromPartyMember } from '../../models/combat/DeploymentPhaseHandler';
+import { DeploymentPhaseHandler } from '../../models/combat/DeploymentPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -800,16 +800,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (combatState.phase === 'deployment' && phaseHandlerRef.current instanceof DeploymentPhaseHandler) {
       const handler = phaseHandlerRef.current as DeploymentPhaseHandler;
 
-      // Check if a zone is selected and if clicking on party panel
-      const selectedZone = handler.getSelectedZoneIndex();
-      if (selectedZone !== null && partyUnits.length > 0) {
+      // Check if clicking on party panel
+      if (partyUnits.length > 0) {
         // Party panel region (bottom-right info panel)
-        const partyPanelRegion = {
-          x: 252,  // column 21 (21 * 12px)
-          y: 120,  // row 10 (10 * 12px)
-          width: 132,  // 11 tiles
-          height: 96   // 8 tiles
-        };
+        const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
         // Check if clicking on a party member
         const partyMemberIndex = currentUnitPanelManager.handleClick(
@@ -819,37 +813,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         ) as number | null;
 
         if (partyMemberIndex !== null) {
-          // Deploy the selected party member
-          const selectedMember = PartyMemberRegistry.getAll()[partyMemberIndex];
-          const deploymentZone = encounter.playerDeploymentZones[selectedZone];
-
-          if (selectedMember && deploymentZone) {
-            try {
-              const unit = createUnitFromPartyMember(selectedMember);
-              const newManifest = new CombatUnitManifest();
-
-              // Copy existing units, excluding any unit at the deployment zone
-              combatState.unitManifest.getAllUnits().forEach(placement => {
-                // Skip the unit at the deployment position (it will be replaced)
-                if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
-                  newManifest.addUnit(placement.unit, placement.position);
-                }
-              });
-
-              // Add new unit at the deployment zone
-              newManifest.addUnit(unit, deploymentZone);
-
-              // Update state
-              setCombatState({
-                ...combatState,
-                unitManifest: newManifest
-              });
-
-              // Clear the selected zone after deploying
-              handler.clearSelectedZone();
-            } catch (error) {
-              console.error('Failed to create unit:', error);
-            }
+          // Deploy the party member through the handler
+          const newState = handler.handlePartyMemberDeployment(partyMemberIndex, combatState, encounter);
+          if (newState) {
+            setCombatState(newState);
           }
           return; // Party member was clicked, don't process other handlers
         }
@@ -898,40 +865,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const partyMembers = PartyMemberRegistry.getAll();
       const characterIndex = handler.handleCharacterClick(canvasX, canvasY, partyMembers.length);
       if (characterIndex !== null) {
-        // Character was clicked - create unit and place it
-        const selectedMember = partyMembers[characterIndex];
-        const selectedZoneIndex = handler.getSelectedZoneIndex();
-
-        if (selectedMember && selectedZoneIndex !== null) {
-          const deploymentZone = encounter.playerDeploymentZones[selectedZoneIndex];
-
-          // Create unit from party member and add to manifest (replacing existing if present)
-          try {
-            const unit = createUnitFromPartyMember(selectedMember);
-            const newManifest = new CombatUnitManifest();
-
-            // Copy existing units, excluding any unit at the deployment zone
-            combatState.unitManifest.getAllUnits().forEach(placement => {
-              // Skip the unit at the deployment position (it will be replaced)
-              if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
-                newManifest.addUnit(placement.unit, placement.position);
-              }
-            });
-
-            // Add new unit at the deployment zone
-            newManifest.addUnit(unit, deploymentZone);
-
-            // Update state
-            setCombatState({
-              ...combatState,
-              unitManifest: newManifest
-            });
-
-            // Clear the selected zone after deploying
-            handler.clearSelectedZone();
-          } catch (error) {
-            console.error('Failed to create unit:', error);
-          }
+        // Character was clicked - deploy through handler
+        const newState = handler.handlePartyMemberDeployment(characterIndex, combatState, encounter);
+        if (newState) {
+          setCombatState(newState);
         }
         return;
       }
@@ -975,12 +912,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Check if hovering over party member in party panel
       if (partyUnits.length > 0) {
-        const partyPanelRegion = {
-          x: 252,  // column 21 (21 * 12px)
-          y: 120,  // row 10 (10 * 12px)
-          width: 132,  // 11 tiles
-          height: 96   // 8 tiles
-        };
+        const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
 
         const hoveredPartyIndex = currentUnitPanelManager.handleHover(
           canvasX,
