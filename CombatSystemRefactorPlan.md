@@ -9,8 +9,23 @@
 
 This document provides a comprehensive, step-by-step refactoring plan to address the areas for improvement identified in the combat system review. Each refactor is designed to be **independent** and **incremental**, allowing implementation in any order based on priority and available time.
 
-**Total Estimated Effort**: 8-11 hours
-**Recommended Order**: Priority 1 → Priority 3 → Priority 4 → Priority 2 → Priority 5
+**Total Estimated Effort**: 5-7 hours
+
+---
+
+## Recommended Implementation Phases
+
+Implement in this order for optimal results:
+
+**Phase 1: Quick Wins** (1.5 hours)
+- Priority 3: Remove Deprecated Methods (30 min)
+- Priority 4: Type-Safe Click Results (1 hr)
+
+**Phase 2: Event System** (2-3 hours)
+- Priority 1: Unify Event Result Handling (2-3 hrs)
+
+**Phase 3: Infrastructure** (1-2 hours)
+- Priority 2: Centralize Font Loading (1-2 hrs)
 
 ---
 
@@ -22,7 +37,8 @@ This document provides a comprehensive, step-by-step refactoring plan to address
 | 2 | Centralize Font Loading | 1-2 hrs | Medium | None |
 | 3 | Remove Deprecated Methods | 0.5 hrs | Low | None |
 | 4 | Type-Safe Click Results | 1 hr | Medium | None |
-| 5 | Phase Transition Formalization | 2-3 hrs | High | None |
+
+**Total Estimated Effort**: 5-7 hours
 
 ---
 
@@ -1203,523 +1219,34 @@ if (clickResult !== null) {
 
 ---
 
-## Priority 5: Phase Transition Formalization
+## Deferred: Phase Transition Formalization
 
-**Goal**: Create centralized phase transition logic with clear completion signals
+**Status**: Deferred until after Battle Phase implementation
 
-**Current Problem**:
-- Manual transitions scattered across multiple files
-- Unclear how phases signal completion
-- `transitionTo` field defined but unused
+**Rationale**:
+- Only 2 phases currently implemented (deployment + enemy-deployment stub)
+- Hard to design good abstraction with insufficient data points
+- Current manual transitions work well and are simple
+- Battle phase will reveal actual patterns and requirements
+- YAGNI - No need to over-engineer before understanding the problem
 
-### Implementation Steps
+**Next Steps**:
+1. Implement Battle Phase first
+2. Review how transitions work in practice
+3. Identify common patterns across 3+ real phases
+4. Design transition manager based on actual needs
+5. Refactor with confidence knowing real requirements
 
-#### Step 5.1: Create PhaseTransitionManager
-**File**: `react-app/src/models/combat/PhaseTransitionManager.ts` (NEW FILE)
-
-**Full implementation**:
+**Current approach is sufficient**:
 ```typescript
-import type { CombatPhase, CombatState } from './CombatState';
-import type { CombatEncounter } from './CombatEncounter';
-
-/**
- * Context provided to phase transition logic
- */
-export interface PhaseTransitionContext {
-  currentState: CombatState;
-  encounter: CombatEncounter;
-}
-
-/**
- * Manages phase transitions in combat
- * Centralizes all logic for determining when and how phases transition
- */
-export class PhaseTransitionManager {
-  /**
-   * Determine the next phase based on current phase and game state
-   * Returns the next phase, or the current phase if no transition should occur
-   */
-  getNextPhase(context: PhaseTransitionContext): CombatPhase {
-    const { currentState, encounter } = context;
-
-    switch (currentState.phase) {
-      case 'deployment':
-        // Transition to enemy-deployment when all units deployed
-        // (This is triggered by "Enter Combat" button click)
-        return 'enemy-deployment';
-
-      case 'enemy-deployment':
-        // Transition to battle after enemy deployment animation completes
-        return 'battle';
-
-      case 'battle':
-        // Check victory condition
-        if (this.isVictoryConditionMet(currentState, encounter)) {
-          return 'victory';
-        }
-
-        // Check defeat condition
-        if (this.isDefeatConditionMet(currentState, encounter)) {
-          return 'defeat';
-        }
-
-        // Continue battle
-        return 'battle';
-
-      case 'victory':
-      case 'defeat':
-        // Terminal phases - no transition
-        return currentState.phase;
-
-      default:
-        console.warn(`Unknown phase: ${currentState.phase}`);
-        return currentState.phase;
-    }
-  }
-
-  /**
-   * Check if phase is ready to transition
-   * Returns true if the phase has completed and should move to next phase
-   */
-  canTransition(currentPhase: CombatPhase, completionSignal?: string): boolean {
-    switch (currentPhase) {
-      case 'deployment':
-        // Deployment transitions on explicit signal (button click)
-        return completionSignal === 'deployment-complete';
-
-      case 'enemy-deployment':
-        // Enemy deployment transitions on animation complete signal
-        return completionSignal === 'animation-complete';
-
-      case 'battle':
-        // Battle transitions on victory/defeat condition
-        // (checked in getNextPhase)
-        return false;
-
-      case 'victory':
-      case 'defeat':
-        // Terminal phases never transition
-        return false;
-
-      default:
-        return false;
-    }
-  }
-
-  /**
-   * Check if all enemies are defeated (victory condition)
-   */
-  private isVictoryConditionMet(state: CombatState, encounter: CombatEncounter): boolean {
-    // Get all units from manifest
-    const allUnits = state.unitManifest.getAllUnits();
-
-    // Find all enemy units (units that match enemy spawns)
-    const enemyUnits = allUnits.filter(placement => {
-      return encounter.enemySpawns.some(spawn =>
-        spawn.x === placement.position.x && spawn.y === placement.position.y
-      );
-    });
-
-    // Victory if all enemies defeated (or no enemies exist)
-    if (enemyUnits.length === 0) {
-      return true;
-    }
-
-    // Check if all enemy units are dead (HP <= 0)
-    const allEnemiesDead = enemyUnits.every(placement => {
-      const unit = placement.unit;
-      return 'currentHp' in unit && unit.currentHp <= 0;
-    });
-
-    return allEnemiesDead;
-  }
-
-  /**
-   * Check if all player units are defeated (defeat condition)
-   */
-  private isDefeatConditionMet(state: CombatState, encounter: CombatEncounter): boolean {
-    // Get all units from manifest
-    const allUnits = state.unitManifest.getAllUnits();
-
-    // Find all player units (units that match player deployment zones)
-    const playerUnits = allUnits.filter(placement => {
-      return encounter.playerDeploymentZones.some(zone =>
-        zone.x === placement.position.x && zone.y === placement.position.y
-      );
-    });
-
-    // Defeat if no player units exist
-    if (playerUnits.length === 0) {
-      return true;
-    }
-
-    // Check if all player units are dead (HP <= 0)
-    const allPlayersDead = playerUnits.every(placement => {
-      const unit = placement.unit;
-      return 'currentHp' in unit && unit.currentHp <= 0;
-    });
-
-    return allPlayersDead;
-  }
-
-  /**
-   * Get a user-friendly name for a phase
-   */
-  getPhaseName(phase: CombatPhase): string {
-    switch (phase) {
-      case 'deployment': return 'Deployment';
-      case 'enemy-deployment': return 'Enemy Deployment';
-      case 'battle': return 'Battle';
-      case 'victory': return 'Victory';
-      case 'defeat': return 'Defeat';
-      default: return 'Unknown';
-    }
-  }
-
-  /**
-   * Check if a phase is a terminal phase (no further transitions)
-   */
-  isTerminalPhase(phase: CombatPhase): boolean {
-    return phase === 'victory' || phase === 'defeat';
-  }
-}
-```
-
----
-
-#### Step 5.2: Update EnemyDeploymentPhaseHandler to Signal Completion
-**File**: `react-app/src/models/combat/EnemyDeploymentPhaseHandler.ts`
-
-**Add animation tracking and completion signal**:
-```typescript
-// BEFORE
-export class EnemyDeploymentPhaseHandler extends PhaseBase {
-  protected updatePhase(
-    state: CombatState,
-    _encounter: CombatEncounter,
-    _deltaTime: number
-  ): CombatState | null {
-    // TODO: Implement enemy deployment animations and logic
-    return state; // Return state to stay in this phase
-  }
-}
-
-// AFTER
-export class EnemyDeploymentPhaseHandler extends PhaseBase {
-  private animationDuration = 2.0; // 2 second deployment animation
-  private animationComplete = false;
-
-  protected updatePhase(
-    state: CombatState,
-    _encounter: CombatEncounter,
-    _deltaTime: number
-  ): CombatState | null {
-    // Check if animation duration has elapsed
-    if (this.getElapsedTime() >= this.animationDuration && !this.animationComplete) {
-      this.animationComplete = true;
-      // Signal transition via return null
-      return null;
-    }
-
-    // Continue animation
-    return state;
-  }
-
-  /**
-   * Reset animation state when phase starts
-   */
-  onPhaseEnter(): void {
-    this.resetElapsedTime();
-    this.animationComplete = false;
-  }
-}
-```
-
----
-
-#### Step 5.3: Add Phase Lifecycle Hooks to PhaseBase
-**File**: `react-app/src/models/combat/PhaseBase.ts`
-
-**Add lifecycle hooks**:
-```typescript
-export abstract class PhaseBase implements CombatPhaseHandler {
-  protected elapsedTime = 0;
-
-  /**
-   * Called when the phase starts
-   * Override to perform initialization
-   */
-  onPhaseEnter?(): void;
-
-  /**
-   * Called when the phase ends
-   * Override to perform cleanup
-   */
-  onPhaseExit?(): void;
-
-  // ... existing code ...
-}
-```
-
----
-
-#### Step 5.4: Update CombatView to Use PhaseTransitionManager
-**File**: `react-app/src/components/combat/CombatView.tsx`
-
-**Import the manager**:
-```typescript
-import { PhaseTransitionManager } from '../../models/combat/PhaseTransitionManager';
-```
-
-**Create instance**:
-```typescript
-// Create phase transition manager
-const transitionManager = useMemo(() => new PhaseTransitionManager(), []);
-```
-
-**Update phase switching logic** (around line 60-68):
-```typescript
-// BEFORE
-useEffect(() => {
-  if (combatState.phase === 'deployment') {
-    phaseHandlerRef.current = new DeploymentPhaseHandler(uiStateManager);
-  } else if (combatState.phase === 'enemy-deployment') {
-    phaseHandlerRef.current = new EnemyDeploymentPhaseHandler();
-  }
-  // Add other phase handlers as needed (battle, victory, defeat)
-}, [combatState.phase, uiStateManager]);
-
-// AFTER
-useEffect(() => {
-  // Exit previous phase
-  if (phaseHandlerRef.current.onPhaseExit) {
-    phaseHandlerRef.current.onPhaseExit();
-  }
-
-  // Create new phase handler
-  if (combatState.phase === 'deployment') {
-    phaseHandlerRef.current = new DeploymentPhaseHandler(uiStateManager);
-  } else if (combatState.phase === 'enemy-deployment') {
-    phaseHandlerRef.current = new EnemyDeploymentPhaseHandler();
-  }
-  // Add other phase handlers as needed (battle, victory, defeat)
-
-  // Enter new phase
-  if (phaseHandlerRef.current.onPhaseEnter) {
-    phaseHandlerRef.current.onPhaseEnter();
-  }
-}, [combatState.phase, uiStateManager]);
-```
-
-**Update animation loop to handle phase transitions** (around line 515-520):
-```typescript
-// BEFORE
-if (!cinematicPlaying && phaseHandlerRef.current.update) {
-  phaseHandlerRef.current.update(combatState, encounter, deltaTime);
-}
-
-// AFTER
-if (!cinematicPlaying && phaseHandlerRef.current.update) {
-  const updatedState = phaseHandlerRef.current.update(combatState, encounter, deltaTime);
-
-  // Check if phase wants to transition (returns null)
-  if (updatedState === null) {
-    // Phase is complete, transition to next phase
-    const nextPhase = transitionManager.getNextPhase({
-      currentState: combatState,
-      encounter
-    });
-
-    if (nextPhase !== combatState.phase) {
-      console.log(`Transitioning from ${combatState.phase} to ${nextPhase}`);
-      combatLogManager.addMessage(`[color=#ffaa00]${transitionManager.getPhaseName(nextPhase)}[/color]`);
-      setCombatState({ ...combatState, phase: nextPhase });
-    }
-  }
-}
-```
-
-**Update "Enter Combat" button callback** (around line 441-444):
-```typescript
-// BEFORE
 onEnterCombat: () => {
-  combatLogManager.addMessage(CombatConstants.TEXT.STARTING_ENEMY_DEPLOYMENT);
+  combatLogManager.addMessage(...);
   setCombatState({ ...combatState, phase: 'enemy-deployment' });
 }
-
-// AFTER
-onEnterCombat: () => {
-  // Use transition manager for consistent phase transitions
-  const nextPhase = transitionManager.getNextPhase({
-    currentState: combatState,
-    encounter
-  });
-
-  combatLogManager.addMessage(CombatConstants.TEXT.STARTING_ENEMY_DEPLOYMENT);
-  setCombatState({ ...combatState, phase: nextPhase });
-}
 ```
 
 ---
 
-#### Step 5.5: Add Phase Transition Tests
-**File**: `react-app/src/models/combat/PhaseTransitionManager.test.ts` (NEW FILE)
-
-**Create unit tests**:
-```typescript
-import { describe, it, expect } from 'vitest';
-import { PhaseTransitionManager } from './PhaseTransitionManager';
-import type { CombatState } from './CombatState';
-import type { CombatEncounter } from './CombatEncounter';
-import { CombatMap } from './CombatMap';
-import { CombatUnitManifest } from './CombatUnitManifest';
-
-describe('PhaseTransitionManager', () => {
-  const manager = new PhaseTransitionManager();
-
-  const createMockState = (phase: CombatState['phase']): CombatState => ({
-    turnNumber: 0,
-    map: new CombatMap(10, 10),
-    tilesetId: 'default',
-    phase,
-    unitManifest: new CombatUnitManifest(),
-  });
-
-  const createMockEncounter = (): CombatEncounter => ({
-    id: 'test-encounter',
-    name: 'Test Encounter',
-    map: new CombatMap(10, 10),
-    tilesetId: 'default',
-    playerDeploymentZones: [
-      { x: 0, y: 0 },
-      { x: 1, y: 0 },
-    ],
-    enemySpawns: [
-      { x: 9, y: 9, monsterId: 'goblin' },
-    ],
-  });
-
-  describe('getNextPhase', () => {
-    it('transitions from deployment to enemy-deployment', () => {
-      const state = createMockState('deployment');
-      const encounter = createMockEncounter();
-
-      const nextPhase = manager.getNextPhase({ currentState: state, encounter });
-      expect(nextPhase).toBe('enemy-deployment');
-    });
-
-    it('transitions from enemy-deployment to battle', () => {
-      const state = createMockState('enemy-deployment');
-      const encounter = createMockEncounter();
-
-      const nextPhase = manager.getNextPhase({ currentState: state, encounter });
-      expect(nextPhase).toBe('battle');
-    });
-
-    it('stays in battle phase when combat ongoing', () => {
-      const state = createMockState('battle');
-      const encounter = createMockEncounter();
-
-      const nextPhase = manager.getNextPhase({ currentState: state, encounter });
-      expect(nextPhase).toBe('battle');
-    });
-
-    it('stays in victory phase (terminal)', () => {
-      const state = createMockState('victory');
-      const encounter = createMockEncounter();
-
-      const nextPhase = manager.getNextPhase({ currentState: state, encounter });
-      expect(nextPhase).toBe('victory');
-    });
-
-    it('stays in defeat phase (terminal)', () => {
-      const state = createMockState('defeat');
-      const encounter = createMockEncounter();
-
-      const nextPhase = manager.getNextPhase({ currentState: state, encounter });
-      expect(nextPhase).toBe('defeat');
-    });
-  });
-
-  describe('canTransition', () => {
-    it('allows deployment transition with correct signal', () => {
-      expect(manager.canTransition('deployment', 'deployment-complete')).toBe(true);
-    });
-
-    it('blocks deployment transition without signal', () => {
-      expect(manager.canTransition('deployment', undefined)).toBe(false);
-    });
-
-    it('allows enemy-deployment transition with animation-complete signal', () => {
-      expect(manager.canTransition('enemy-deployment', 'animation-complete')).toBe(true);
-    });
-
-    it('blocks terminal phase transitions', () => {
-      expect(manager.canTransition('victory', 'any-signal')).toBe(false);
-      expect(manager.canTransition('defeat', 'any-signal')).toBe(false);
-    });
-  });
-
-  describe('isTerminalPhase', () => {
-    it('identifies victory as terminal', () => {
-      expect(manager.isTerminalPhase('victory')).toBe(true);
-    });
-
-    it('identifies defeat as terminal', () => {
-      expect(manager.isTerminalPhase('defeat')).toBe(true);
-    });
-
-    it('identifies non-terminal phases', () => {
-      expect(manager.isTerminalPhase('deployment')).toBe(false);
-      expect(manager.isTerminalPhase('enemy-deployment')).toBe(false);
-      expect(manager.isTerminalPhase('battle')).toBe(false);
-    });
-  });
-
-  describe('getPhaseName', () => {
-    it('returns friendly names for all phases', () => {
-      expect(manager.getPhaseName('deployment')).toBe('Deployment');
-      expect(manager.getPhaseName('enemy-deployment')).toBe('Enemy Deployment');
-      expect(manager.getPhaseName('battle')).toBe('Battle');
-      expect(manager.getPhaseName('victory')).toBe('Victory');
-      expect(manager.getPhaseName('defeat')).toBe('Defeat');
-    });
-  });
-});
-```
-
----
-
-### Testing Checklist for Priority 5
-
-- [ ] Unit tests pass for PhaseTransitionManager
-- [ ] Deployment phase transitions to enemy-deployment when button clicked
-- [ ] Enemy-deployment phase transitions to battle after 2 seconds
-- [ ] Combat log shows phase transition messages
-- [ ] onPhaseEnter/onPhaseExit hooks are called
-- [ ] Victory/defeat conditions work correctly (when implemented)
-- [ ] No manual phase transitions remaining in code
-
----
-
-## Implementation Order Recommendation
-
-### Phase 1: Quick Wins (1 hour)
-1. **Priority 3**: Remove deprecated methods (15-30 min)
-2. **Priority 4**: Type-safe click results (1 hr)
-
-**Why first**: These are low-risk, high-value improvements that clean up the codebase without changing behavior.
-
-### Phase 2: Event System Improvements (2-3 hours)
-3. **Priority 1**: Unify event result handling (2-3 hrs)
-
-**Why second**: Builds on type-safe foundations from Phase 1, significantly improves event handling architecture.
-
-### Phase 3: Infrastructure (3-5 hours)
-4. **Priority 2**: Centralize font loading (1-2 hrs)
-5. **Priority 5**: Phase transition formalization (2-3 hrs)
-
-**Why last**: These are larger refactors that touch more files, but benefit from the cleaner foundation established in Phases 1 & 2.
 
 ---
 
@@ -1746,6 +1273,11 @@ After completing all refactors, verify:
 - [ ] No performance regression in rendering
 - [ ] Animation frame rate unchanged
 
+### Architecture
+- [ ] All refactors follow existing patterns from GeneralGuidelines.md
+- [ ] No new dependencies introduced
+- [ ] Code is cleaner and more maintainable
+
 ---
 
 ## Rollback Plan
@@ -1759,22 +1291,36 @@ If issues arise during refactoring:
 
 **Branch strategy**:
 ```bash
-git checkout -b refactor/priority-3-remove-deprecated
-# Make changes, test, commit
+# Phase 1: Quick Wins
+git checkout -b refactor/phase-1-quick-wins
+# Priority 3: Remove deprecated methods
+# Priority 4: Type-safe click results
+# Test, commit
 git checkout main
-git merge refactor/priority-3-remove-deprecated
+git merge refactor/phase-1-quick-wins
 
-git checkout -b refactor/priority-4-type-safe-clicks
-# etc.
+# Phase 2: Event System
+git checkout -b refactor/phase-2-event-system
+# Priority 1: Unify event result handling
+# Test, commit
+git checkout main
+git merge refactor/phase-2-event-system
+
+# Phase 3: Infrastructure
+git checkout -b refactor/phase-3-infrastructure
+# Priority 2: Centralize font loading
+# Test, commit
+git checkout main
+git merge refactor/phase-3-infrastructure
 ```
 
 ---
 
 ## Future Considerations
 
-After completing these refactors, consider:
+After completing these refactors and implementing Battle Phase, consider:
 
-1. **Add more unit tests** for phase handlers
+1. **Phase Transition Formalization** - Revisit with 3+ phases implemented
 2. **Extract event handlers** from CombatView into custom hook
 3. **Document phase lifecycle** in architecture docs
 4. **Create phase handler template** for future phases
@@ -1784,12 +1330,18 @@ After completing these refactors, consider:
 
 ## Summary
 
-This refactor plan addresses all identified improvement areas with:
-- **Clear priorities** (1-5, independent)
+This refactor plan addresses the highest-value improvement areas with:
+- **Clear priorities** (1-4, independent)
+- **Organized into 3 implementation phases**
 - **Detailed step-by-step instructions**
 - **Type-safe patterns**
 - **Testing checklists**
-- **Estimated effort** (8-11 hours total)
+- **Estimated effort** (5-7 hours total)
 - **Rollback strategy**
 
-**Start with Priority 3 or 4** for quick wins, then tackle the larger architectural improvements in Priorities 1, 2, and 5.
+**Implementation Path**:
+1. **Phase 1** - Quick wins to clean up codebase (1.5 hrs)
+2. **Phase 2** - Event system improvements (2-3 hrs)
+3. **Phase 3** - Infrastructure consolidation (1-2 hrs)
+
+Phase transitions will be formalized later, after Battle Phase provides more context for the actual requirements.
