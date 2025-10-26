@@ -9,6 +9,7 @@ import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { CinematicManager } from '../../models/combat/CinematicSequence';
+import { ScreenFadeInSequence } from '../../models/combat/ScreenFadeInSequence';
 import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
@@ -331,14 +332,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }, [combatState.map, combatState.phase, encounter, spriteLoader]);
 
   // Start the intro cinematic sequence when encounter loads (only once)
-  // DISABLED FOR PROTOTYPING - Skip animations to work on Layout 6
   useEffect(() => {
     if (spritesLoaded && !introCinematicPlayedRef.current) {
-      // Skip animations - just mark as played
       introCinematicPlayedRef.current = true;
-      // Intro animations will be re-implemented with new animation system
+
+      // Create and play screen fade-in animation (2 seconds, ease-in-out)
+      const fadeInSequence = new ScreenFadeInSequence(2.0);
+      cinematicManagerRef.current.play(fadeInSequence, combatState, encounter);
     }
-  }, [spritesLoaded]);
+  }, [spritesLoaded, combatState, encounter]);
 
   // Render function - draws one frame to the canvas
   const renderFrame = useCallback(() => {
@@ -383,30 +385,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Clear and prepare the buffer canvas
     renderer.clearCanvas(ctx);
-
-    // Check if a cinematic is playing
-    const cinematicPlaying = cinematicManagerRef.current.isPlayingCinematic();
-
-    // If cinematic is playing, render it instead of normal gameplay
-    if (cinematicPlaying) {
-      cinematicManagerRef.current.render(combatState, encounter, {
-        ctx,
-        canvasWidth: CANVAS_WIDTH,
-        canvasHeight: CANVAS_HEIGHT,
-        tileSize: TILE_SIZE,
-        spriteSize: SPRITE_SIZE,
-        offsetX,
-        offsetY,
-        spriteImages: spriteImagesRef.current,
-      });
-
-      // Copy buffer to display canvas and return early
-      const displayCtx = displayCanvas.getContext('2d');
-      if (displayCtx) {
-        renderer.displayBuffer(displayCtx, bufferCanvas);
-      }
-      return;
-    }
 
     // Apply clipping region to map viewport (in absolute screen tile coordinates)
     // Expand by 4px on top, right, and bottom
@@ -484,6 +462,20 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (showDebugGrid) {
       const debugFontAtlas = fontAtlasImagesRef.current.get('7px-04b03') || null;
       renderer.renderDebugGrid(ctx, '7px-04b03', debugFontAtlas);
+    }
+
+    // Render cinematic overlay (e.g., screen fade-in) AFTER all other rendering
+    if (cinematicManagerRef.current.isPlayingCinematic()) {
+      cinematicManagerRef.current.render(combatState, encounter, {
+        ctx,
+        canvasWidth: CANVAS_WIDTH,
+        canvasHeight: CANVAS_HEIGHT,
+        tileSize: TILE_SIZE,
+        spriteSize: SPRITE_SIZE,
+        offsetX,
+        offsetY,
+        spriteImages: spriteImagesRef.current,
+      });
     }
 
     // Copy buffer to display canvas
