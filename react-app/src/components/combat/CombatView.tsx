@@ -588,7 +588,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, showDebugGrid]);
+  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, showDebugGrid, mapScrollX, mapScrollY]);
 
   // Animation loop
   useEffect(() => {
@@ -686,10 +686,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const maxScroll = mapWidthInTiles - clipWidthInTiles;
         return Math.min(prev + 1, maxScroll);
       });
+      renderFrame(); // Force immediate re-render
       return; // Button was clicked, don't process other click handlers
     }
     if (mapScrollDirection === 'left') {
       setMapScrollX(prev => Math.max(prev - 1, 0));
+      renderFrame(); // Force immediate re-render
       return; // Button was clicked, don't process other click handlers
     }
     if (mapScrollDirection === 'down') {
@@ -700,10 +702,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const maxScroll = mapHeightInTiles - clipHeightInTiles;
         return Math.min(prev + 1, maxScroll);
       });
+      renderFrame(); // Force immediate re-render
       return; // Button was clicked, don't process other click handlers
     }
     if (mapScrollDirection === 'up') {
       setMapScrollY(prev => Math.max(prev - 1, 0));
+      renderFrame(); // Force immediate re-render
       return; // Button was clicked, don't process other click handlers
     }
 
