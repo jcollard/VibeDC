@@ -208,6 +208,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     combatLogManager.addMessage('The [color=#ff6b6b]Red Dragon[/color] appears!');
     combatLogManager.addMessage('[color=#9eff6b]Hero[/color] enters the fray!');
     combatLogManager.addMessage('Turn 1 starts');
+    combatLogManager.addMessage('[color=#ffa500]Warrior[/color] attacks!');
+    combatLogManager.addMessage('Deals [color=#ff0000]15 damage[/color]!');
+    combatLogManager.addMessage('[color=#6b9eff]Mage[/color] casts spell');
+    combatLogManager.addMessage('Critical hit!');
   }, [combatLogManager]);
 
   // Listen for window resize

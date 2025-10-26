@@ -170,6 +170,9 @@ export class CombatLogManager {
 
     if (!this.bufferCtx) return;
 
+    // Ensure pixel-perfect rendering
+    this.bufferCtx.imageSmoothingEnabled = false;
+
     // Clear buffer
     this.bufferCtx.fillStyle = '#000000';
     this.bufferCtx.fillRect(0, 0, bufferWidth, bufferHeight);
@@ -179,8 +182,12 @@ export class CombatLogManager {
     const endIdx = this.messages.length - this.scrollOffset;
     const visibleMessages = this.messages.slice(startIdx, endIdx);
 
+    // Calculate starting Y position to align messages to bottom of buffer
+    // If we have fewer messages than bufferLines, start from the bottom
+    const totalMessagesHeight = visibleMessages.length * this.config.lineHeight;
+    let currentY = Math.max(0, bufferHeight - totalMessagesHeight);
+
     // Render each message line
-    let currentY = 0;
     for (let i = 0; i < visibleMessages.length; i++) {
       const message = visibleMessages[i];
       const segments = this.parseColorTags(message);
@@ -243,6 +250,14 @@ export class CombatLogManager {
 
     // Copy from bottom of buffer (newest messages)
     const sourceY = Math.max(0, bufferHeight - sourceHeight);
+
+    // Debug logging
+    console.log('CombatLog render:', {
+      messages: this.messages.length,
+      x, y, width, height,
+      bufferHeight, sourceY, sourceHeight,
+      fontId
+    });
 
     // Copy visible portion from buffer to main canvas
     ctx.save();
