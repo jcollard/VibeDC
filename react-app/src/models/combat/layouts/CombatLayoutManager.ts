@@ -12,7 +12,7 @@ import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 export class CombatLayoutManager implements CombatLayoutRenderer {
   private readonly RIGHT_COLUMN_WIDTH = 144; // 12 tiles
   private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles
-  private readonly COMBAT_LOG_HEIGHT = 36; // 3 tiles
+  private readonly COMBAT_LOG_HEIGHT = 36 + 4; // 3 tiles + 4 px for bleeding into the border
   private readonly PANEL_PADDING = 1; // 1px padding
   private readonly frameLayout: HorizontalVerticalLayout;
 
