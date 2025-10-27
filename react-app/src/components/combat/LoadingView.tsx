@@ -100,18 +100,23 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
 
   // Font atlas loader for "Loading..." text
   const fontLoader = useMemo(() => new FontAtlasLoader(), []);
+  const [fontLoaded, setFontLoaded] = useState(false);
 
   // Load font atlas on mount
   useEffect(() => {
-    fontLoader.load('15px-dungeonslant');
+    fontLoader.load('15px-dungeonslant').then(() => {
+      setFontLoaded(true);
+    });
   }, [fontLoader]);
 
   /**
    * Create loading screen buffer (cached, only created once)
+   * Only creates buffer after font is loaded to ensure proper rendering
    */
   const createLoadingScreenBuffer = useCallback(
     (width: number, height: number): void => {
       if (loadingScreenBufferRef.current) return; // Already created
+      if (!fontLoaded) return; // Wait for font to load
 
       const buffer = document.createElement('canvas');
       buffer.width = width;
@@ -126,24 +131,24 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
       ctx.fillStyle = '#000000';
       ctx.fillRect(0, 0, width, height);
 
-      // Render "Loading..." text using FontAtlasRenderer
+      // Render "Loading..." text using FontAtlasRenderer at 2x scale
       const fontAtlas = fontLoader.get('15px-dungeonslant');
       if (fontAtlas) {
         FontAtlasRenderer.renderText(
           ctx,
           'Loading...',
           width / 2,
-          height / 2 - 8,
+          height / 2 - 15, // Adjusted for 2x scale (15px font * 2 = 30px height)
           '15px-dungeonslant',
           fontAtlas,
-          1,
+          2, // 2x scale
           'center',
           '#ffffff'
         );
       } else {
-        // Fallback to canvas text
+        // Fallback to canvas text (should not reach here if fontLoaded is true)
         ctx.fillStyle = '#ffffff';
-        ctx.font = '24px monospace';
+        ctx.font = '30px monospace'; // Match 2x scaled size
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('Loading...', width / 2, height / 2);
@@ -151,8 +156,15 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
 
       loadingScreenBufferRef.current = buffer;
     },
-    [fontLoader]
+    [fontLoader, fontLoaded]
   );
+
+  // Trigger buffer creation when font loads (ensures buffer uses font atlas)
+  useEffect(() => {
+    if (fontLoaded && !loadingScreenBufferRef.current) {
+      createLoadingScreenBuffer(canvasWidth, canvasHeight);
+    }
+  }, [fontLoaded, canvasWidth, canvasHeight, createLoadingScreenBuffer]);
 
   /**
    * Linear easing (uniform transition speed)
