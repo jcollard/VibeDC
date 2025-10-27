@@ -100,10 +100,10 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
         state.unitManifest.addUnit(unit, position);
       }
 
-      // Transition to battle phase
+      // Transition to action-timer phase
       const newState = {
         ...state,
-        phase: 'battle' as const,
+        phase: 'action-timer' as const,
       };
       console.log('[EnemyDeploymentPhaseHandler] Returning new state with phase:', newState.phase);
       return newState;

@@ -197,7 +197,7 @@ describe('HumanoidUnit Serialization', () => {
 
       expect(json.wounds).toBe(0);
       expect(json.manaUsed).toBe(0);
-      expect(json.turnGauge).toBe(0);
+      expect(json.actionTimer).toBe(0);
     });
 
     it('should serialize equipped items correctly', () => {

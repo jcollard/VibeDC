@@ -5,7 +5,8 @@ import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler'
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { DeploymentPhaseHandler, type DeploymentPanelData } from '../../models/combat/DeploymentPhaseHandler';
 import { EnemyDeploymentPhaseHandler } from '../../models/combat/EnemyDeploymentPhaseHandler';
-import { BattlePhaseHandler } from '../../models/combat/BattlePhaseHandler';
+import { ActionTimerPhaseHandler } from '../../models/combat/ActionTimerPhaseHandler';
+import { UnitTurnPhaseHandler } from '../../models/combat/UnitTurnPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -84,8 +85,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current = new DeploymentPhaseHandler(uiStateManager);
     } else if (combatState.phase === 'enemy-deployment') {
       phaseHandlerRef.current = new EnemyDeploymentPhaseHandler();
-    } else if (combatState.phase === 'battle') {
-      phaseHandlerRef.current = new BattlePhaseHandler();
+    } else if (combatState.phase === 'action-timer') {
+      phaseHandlerRef.current = new ActionTimerPhaseHandler();
+    } else if (combatState.phase === 'unit-turn') {
+      phaseHandlerRef.current = new UnitTurnPhaseHandler();
     }
     // Add other phase handlers as needed (victory, defeat)
   }, [combatState.phase, uiStateManager]);

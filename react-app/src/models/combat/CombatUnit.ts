@@ -102,13 +102,13 @@ export interface CombatUnit {
   get speed(): number;
 
   /**
-   * Current turn gauge value (0-100)
+   * Current action timer value (0-100+)
    * Starts at 0 at combat start
-   * Increases by speed each step
-   * When reaches 100, unit takes their turn
-   * Resets after unit's turn
+   * Increases by speed * deltaTime * ACTION_TIMER_MULTIPLIER each frame
+   * When reaches 100+, unit is ready to take their turn
+   * Overflow behavior determined by UnitTurnPhase
    */
-  get turnGauge(): number;
+  get actionTimer(): number;
 
   /**
    * The maximum distance this unit can move on the battlefield

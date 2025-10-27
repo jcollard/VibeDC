@@ -26,7 +26,7 @@ export interface MonsterUnitJSON {
   baseAttunement: number;
   wounds: number;
   manaUsed: number;
-  turnGauge: number;
+  actionTimer: number;
   spriteId: string;
 }
 
@@ -58,7 +58,7 @@ export class MonsterUnit implements CombatUnit {
 
   private _wounds: number = 0;
   private _manaUsed: number = 0;
-  private _turnGauge: number = 0;
+  private _actionTimer: number = 0;
 
   private _spriteId: string;
 
@@ -168,8 +168,8 @@ export class MonsterUnit implements CombatUnit {
     return this.baseSpeed;
   }
 
-  get turnGauge(): number {
-    return this._turnGauge;
+  get actionTimer(): number {
+    return this._actionTimer;
   }
 
   get movement(): number {
@@ -307,7 +307,7 @@ export class MonsterUnit implements CombatUnit {
       baseAttunement: this.baseAttunement,
       wounds: this._wounds,
       manaUsed: this._manaUsed,
-      turnGauge: this._turnGauge,
+      actionTimer: this._actionTimer,
       spriteId: this._spriteId,
     };
   }
@@ -375,7 +375,7 @@ export class MonsterUnit implements CombatUnit {
     // Restore combat state
     monster._wounds = json.wounds;
     monster._manaUsed = json.manaUsed;
-    monster._turnGauge = json.turnGauge;
+    monster._actionTimer = json.actionTimer;
 
     return monster;
   }

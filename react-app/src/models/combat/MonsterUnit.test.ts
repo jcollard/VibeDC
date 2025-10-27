@@ -338,7 +338,7 @@ describe('MonsterUnit', () => {
         baseAttunement: 2,
         wounds: 0,
         manaUsed: 0,
-        turnGauge: 0,
+        actionTimer: 0,
         spriteId: 'unknown',
       };
 

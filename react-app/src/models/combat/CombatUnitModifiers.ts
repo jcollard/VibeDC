@@ -15,7 +15,7 @@ export class CombatUnitModifiers {
   public attunementModifier: number = 0;
   public woundsModifier: number = 0;
   public manaUsedModifier: number = 0;
-  public turnGaugeModifier: number = 0;
+  public actionTimerModifier: number = 0;
 
   // Multipliers (1.0 = no change, 1.5 = 150%, etc.)
   public healthMultiplier: number = 1.0;
@@ -30,7 +30,7 @@ export class CombatUnitModifiers {
   public attunementMultiplier: number = 1.0;
   public woundsMultiplier: number = 1.0;
   public manaUsedMultiplier: number = 1.0;
-  public turnGaugeMultiplier: number = 1.0;
+  public actionTimerMultiplier: number = 1.0;
 
   constructor(
     modifiers?: Partial<{
@@ -46,7 +46,7 @@ export class CombatUnitModifiers {
       attunement: number;
       wounds: number;
       manaUsed: number;
-      turnGauge: number;
+      actionTimer: number;
     }>,
     multipliers?: Partial<{
       health: number;
@@ -61,7 +61,7 @@ export class CombatUnitModifiers {
       attunement: number;
       wounds: number;
       manaUsed: number;
-      turnGauge: number;
+      actionTimer: number;
     }>
   ) {
     if (modifiers) {
@@ -77,7 +77,7 @@ export class CombatUnitModifiers {
       this.attunementModifier = modifiers.attunement ?? 0;
       this.woundsModifier = modifiers.wounds ?? 0;
       this.manaUsedModifier = modifiers.manaUsed ?? 0;
-      this.turnGaugeModifier = modifiers.turnGauge ?? 0;
+      this.actionTimerModifier = modifiers.actionTimer ?? 0;
     }
 
     if (multipliers) {
@@ -93,7 +93,7 @@ export class CombatUnitModifiers {
       this.attunementMultiplier = multipliers.attunement ?? 1.0;
       this.woundsMultiplier = multipliers.wounds ?? 1.0;
       this.manaUsedMultiplier = multipliers.manaUsed ?? 1.0;
-      this.turnGaugeMultiplier = multipliers.turnGauge ?? 1.0;
+      this.actionTimerMultiplier = multipliers.actionTimer ?? 1.0;
     }
   }
 
@@ -115,7 +115,7 @@ export class CombatUnitModifiers {
         attunement: this.attunementModifier,
         wounds: this.woundsModifier,
         manaUsed: this.manaUsedModifier,
-        turnGauge: this.turnGaugeModifier,
+        actionTimer: this.actionTimerModifier,
       },
       {
         health: this.healthMultiplier,
@@ -130,7 +130,7 @@ export class CombatUnitModifiers {
         attunement: this.attunementMultiplier,
         wounds: this.woundsMultiplier,
         manaUsed: this.manaUsedMultiplier,
-        turnGauge: this.turnGaugeMultiplier,
+        actionTimer: this.actionTimerMultiplier,
       }
     );
   }
@@ -155,8 +155,8 @@ export class CombatUnitModifiers {
     if (this.magicPowerMultiplier !== 1.0) mods.push(`Magic.Power x${this.magicPowerMultiplier}`);
     if (this.speedModifier !== 0) mods.push(`Speed ${this.speedModifier > 0 ? '+' : ''}${this.speedModifier}`);
     if (this.speedMultiplier !== 1.0) mods.push(`Speed x${this.speedMultiplier}`);
-    if (this.turnGaugeModifier !== 0) mods.push(`Turn ${this.turnGaugeModifier > 0 ? '+' : ''}${this.turnGaugeModifier}`);
-    if (this.turnGaugeMultiplier !== 1.0) mods.push(`Turn x${this.turnGaugeMultiplier}`);
+    if (this.actionTimerModifier !== 0) mods.push(`ActionTimer ${this.actionTimerModifier > 0 ? '+' : ''}${this.actionTimerModifier}`);
+    if (this.actionTimerMultiplier !== 1.0) mods.push(`ActionTimer x${this.actionTimerMultiplier}`);
     if (this.movementModifier !== 0) mods.push(`Movement ${this.movementModifier > 0 ? '+' : ''}${this.movementModifier}`);
     if (this.movementMultiplier !== 1.0) mods.push(`Movement x${this.movementMultiplier}`);
     if (this.physicalEvadeModifier !== 0) mods.push(`Phys.Evade ${this.physicalEvadeModifier > 0 ? '+' : ''}${this.physicalEvadeModifier}`);

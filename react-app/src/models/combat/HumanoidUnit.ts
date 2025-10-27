@@ -29,7 +29,7 @@ export interface HumanoidUnitJSON {
   baseAttunement: number;
   wounds: number;
   manaUsed: number;
-  turnGauge: number;
+  actionTimer: number;
   leftHandId: string | null;
   rightHandId: string | null;
   headId: string | null;
@@ -68,7 +68,7 @@ export class HumanoidUnit implements CombatUnit {
 
   private _wounds: number = 0;
   private _manaUsed: number = 0;
-  private _turnGauge: number = 0;
+  private _actionTimer: number = 0;
 
   // Equipment slots
   private _leftHand: Equipment | null = null;
@@ -185,8 +185,8 @@ export class HumanoidUnit implements CombatUnit {
     return this.baseSpeed;
   }
 
-  get turnGauge(): number {
-    return this._turnGauge;
+  get actionTimer(): number {
+    return this._actionTimer;
   }
 
   get movement(): number {
@@ -559,7 +559,7 @@ export class HumanoidUnit implements CombatUnit {
       baseAttunement: this.baseAttunement,
       wounds: this._wounds,
       manaUsed: this._manaUsed,
-      turnGauge: this._turnGauge,
+      actionTimer: this._actionTimer,
       leftHandId: this._leftHand?.id ?? null,
       rightHandId: this._rightHand?.id ?? null,
       headId: this._head?.id ?? null,
@@ -655,7 +655,7 @@ export class HumanoidUnit implements CombatUnit {
     // Restore combat state
     unit._wounds = json.wounds;
     unit._manaUsed = json.manaUsed;
-    unit._turnGauge = json.turnGauge;
+    unit._actionTimer = json.actionTimer;
 
     // Restore equipment
     if (json.leftHandId) {

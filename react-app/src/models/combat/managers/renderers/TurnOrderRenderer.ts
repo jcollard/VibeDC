@@ -1,6 +1,7 @@
 import type { TopPanelRenderer, PanelRegion } from '../TopPanelRenderer';
 import type { CombatUnit } from '../../CombatUnit';
 import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
+import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 
 /**
  * Renders the turn order as a horizontal list of unit sprites.
@@ -34,8 +35,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
-    _fontId: string,
-    _fontAtlasImage: HTMLImageElement | null,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement | null,
     spriteImages: Map<string, HTMLImageElement>,
     spriteSize: number
   ): void {
@@ -60,6 +61,26 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         this.spriteSize,
         this.spriteSize
       );
+
+      // Render action timer value below sprite
+      if (fontAtlasImage) {
+        const timerValue = Math.floor(unit.actionTimer); // Round down for display
+        const timerText = timerValue.toString();
+        const textX = currentX + this.spriteSize / 2; // Center under sprite
+        const textY = spriteY + this.spriteSize + 2; // 2px below sprite
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          timerText,
+          textX,
+          textY,
+          fontId,
+          fontAtlasImage,
+          1, // scale
+          'center', // alignment
+          '#ffffff' // color
+        );
+      }
 
       // Move to next position
       currentX += this.spriteSize + this.spriteSpacing;
