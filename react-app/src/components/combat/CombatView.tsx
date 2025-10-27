@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { CombatState } from '../../models/combat/CombatState';
-import type { CombatEncounter } from '../../models/combat/CombatEncounter';
+import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { DeploymentPhaseHandler, type DeploymentPanelData } from '../../models/combat/DeploymentPhaseHandler';
@@ -67,6 +67,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Initialize phase handler based on current phase (pass UI state manager)
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler(uiStateManager));
+
+  // Track loaded encounter (overrides prop when loading a save)
+  const loadedEncounterRef = useRef<CombatEncounter | null>(null);
+
+  // Get active encounter (loaded encounter takes precedence over prop)
+  const activeEncounter = loadedEncounterRef.current ?? encounter;
 
   // Switch phase handler when phase changes
   useEffect(() => {
@@ -269,7 +275,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   useEffect(() => {
     // Get top panel renderer from phase handler
     if (phaseHandlerRef.current.getTopPanelRenderer) {
-      const renderer = phaseHandlerRef.current.getTopPanelRenderer(combatState, encounter);
+      const renderer = phaseHandlerRef.current.getTopPanelRenderer(combatState, activeEncounter);
       topPanelManager.setRenderer(renderer);
     } else {
       // Fallback for phases that don't provide a renderer
@@ -281,7 +287,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       topPanelManager.setRenderer(turnOrderRenderer);
     }
-  }, [topPanelManager, combatState, encounter, partyUnits]);
+  }, [topPanelManager, combatState, activeEncounter, partyUnits]);
 
   // Update UIConfig when highlight color changes
   useEffect(() => {
@@ -315,7 +321,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const loadSprites = async () => {
       const result = await spriteLoader.loadSprites(
         combatState,
-        encounter,
+        activeEncounter,
         phaseHandlerRef.current
       );
 
@@ -328,7 +334,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
 
     loadSprites().catch(console.error);
-  }, [combatState.map, combatState.phase, encounter, spriteLoader]);
+  }, [combatState.map, combatState.phase, activeEncounter, spriteLoader]);
 
   // Start the intro cinematic sequence when encounter loads (only once)
   useEffect(() => {
@@ -337,7 +343,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Create and play screen fade-in animation (2 seconds, ease-in-out)
       const fadeInSequence = new ScreenFadeInSequence(2.0);
-      cinematicManagerRef.current.play(fadeInSequence, combatState, encounter);
+      cinematicManagerRef.current.play(fadeInSequence, combatState, activeEncounter);
     }
   }, [spritesLoaded, combatState, encounter]);
 
@@ -401,7 +407,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     renderer.renderMap(ctx, combatState.map, spriteImagesRef.current, offsetX, offsetY);
 
     // Render phase-specific overlays using the phase handler (before units so deployment zones appear below)
-    phaseHandlerRef.current.render(combatState, encounter, {
+    phaseHandlerRef.current.render(combatState, activeEncounter, {
       ctx,
       canvasWidth: CANVAS_WIDTH,
       canvasHeight: CANVAS_HEIGHT,
@@ -440,7 +446,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       isEnemyDeploymentPhase: combatState.phase === 'enemy-deployment',
       hoveredPartyMemberIndex: hoveredPartyMemberRef.current, // For hover visual feedback
       deployedUnitCount: combatState.unitManifest.getAllUnits().length,
-      totalDeploymentZones: encounter.playerDeploymentZones.length,
+      totalDeploymentZones: activeEncounter.playerDeploymentZones.length,
       onEnterCombat: () => {
         combatLogManager.addMessage(CombatConstants.TEXT.STARTING_ENEMY_DEPLOYMENT);
         setCombatState({ ...combatState, phase: 'enemy-deployment' });
@@ -474,7 +480,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render cinematic overlay (e.g., screen fade-in) AFTER all other rendering
     if (cinematicManagerRef.current.isPlayingCinematic()) {
-      cinematicManagerRef.current.render(combatState, encounter, {
+      cinematicManagerRef.current.render(combatState, activeEncounter, {
         ctx,
         canvasWidth: CANVAS_WIDTH,
         canvasHeight: CANVAS_HEIGHT,
@@ -491,7 +497,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, encounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, mapScrollX, mapScrollY]);
+  }, [spritesLoaded, combatState, windowSize, activeEncounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, mapScrollX, mapScrollY]);
 
   // Animation loop
   useEffect(() => {
@@ -518,7 +524,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Update phase handler (for animations) only if no cinematic is playing
       if (!cinematicPlaying && phaseHandlerRef.current.update) {
-        const updatedState = phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+        const updatedState = phaseHandlerRef.current.update(combatState, activeEncounter, deltaTime);
         // If phase handler returns new state (e.g., phase transition), apply it
         if (updatedState && updatedState !== combatState) {
           setCombatState(updatedState);
@@ -545,7 +551,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [spritesLoaded, renderFrame, combatState, encounter, combatLogManager]);
+  }, [spritesLoaded, renderFrame, combatState, activeEncounter, combatLogManager]);
 
   // Function to perform a single scroll step in the given direction
   const performScroll = useCallback((direction: 'right' | 'left' | 'up' | 'down') => {
@@ -696,7 +702,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
                 const result = deploymentHandler.handleDeploymentAction(
                   clickResult.index, // Type-safe access!
                   combatState,
-                  encounter
+                  activeEncounter
                 );
 
                 if (result.handled && result.newState) {
@@ -709,7 +715,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
                   const previousDeployedCount = combatState.unitManifest.getAllUnits().length;
                   const newDeployedCount = result.newState.unitManifest.getAllUnits().length;
                   const partySize = partyUnits.length;
-                  const totalZones = encounter.playerDeploymentZones.length;
+                  const totalZones = activeEncounter.playerDeploymentZones.length;
 
                   const wasButtonVisible = previousDeployedCount >= partySize || previousDeployedCount >= totalZones;
                   const isButtonVisible = newDeployedCount >= partySize || newDeployedCount >= totalZones;
@@ -741,10 +747,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current.handleMouseDown(
         { canvasX, canvasY },
         combatState,
-        encounter
+        activeEncounter
       );
     }
-  }, [combatState, encounter, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame]);
+  }, [combatState, activeEncounter, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame]);
 
   // Handle canvas mouse up for button click
   const handleCanvasMouseUp = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -781,10 +787,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current.handleMouseUp(
         { canvasX, canvasY },
         combatState,
-        encounter
+        activeEncounter
       );
     }
-  }, [combatState, encounter, stopContinuousScroll, layoutRenderer, renderFrame]);
+  }, [combatState, activeEncounter, stopContinuousScroll, layoutRenderer, renderFrame]);
 
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -813,7 +819,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
 
     // Click was not handled by any registered handler
-  }, [combatState, encounter, setCombatState, inputHandler, mapRenderer, combatLogManager, mapScrollX, mapScrollY]);
+  }, [combatState, activeEncounter, setCombatState, inputHandler, mapRenderer, combatLogManager, mapScrollX, mapScrollY]);
 
   // Handle canvas mouse move for hover detection
   const handleCanvasMouseMove = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -844,7 +850,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         canvasY - partyPanelRegion.y,
         partyPanelRegion,
         combatState,
-        encounter
+        activeEncounter
       );
 
       if (phaseHoverResult.handled && phaseHoverResult.data) {
@@ -891,10 +897,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current.handleMouseMove(
         { canvasX, canvasY, tileX: tileCoords?.tileX, tileY: tileCoords?.tileY },
         combatState,
-        encounter
+        activeEncounter
       );
     }
-  }, [combatState, encounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, layoutRenderer, renderFrame]);
+  }, [combatState, activeEncounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, layoutRenderer, renderFrame]);
 
   // Register map click handler
   useEffect(() => {
@@ -916,7 +922,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const result = phaseHandlerRef.current.handleMapClick(
           { canvasX: 0, canvasY: 0, tileX, tileY },
           combatState,
-          encounter
+          activeEncounter
         );
 
         // Add log message if provided
@@ -932,7 +938,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     });
 
     return unsubscribe;
-  }, [mapRenderer, combatState, encounter, combatLogManager, renderFrame, setCombatState]);
+  }, [mapRenderer, combatState, activeEncounter, combatLogManager, renderFrame, setCombatState]);
 
   // Cleanup scroll interval on unmount
   useEffect(() => {
@@ -980,6 +986,25 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
 
       if (result) {
+        // Check if save has encounter ID
+        if (result.encounterId) {
+          const loadedEncounter = CombatEncounter.getById(result.encounterId);
+
+          if (!loadedEncounter) {
+            return {
+              success: false,
+              error: `Encounter '${result.encounterId}' not found in registry. This indicates a data integrity issue.`
+            };
+          }
+
+          // Store loaded encounter to override prop
+          loadedEncounterRef.current = loadedEncounter;
+        } else {
+          // Old save format without encounterId - log warning
+          console.warn('[CombatView] Loading save file without encounterId. This is an old save format. Using encounter from props.');
+          loadedEncounterRef.current = null; // Use prop encounter
+        }
+
         // Reconstruct CombatLogManager from JSON
         const newCombatLog = new CombatLogManager({
           maxMessages: 100,
@@ -1063,17 +1088,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Save/Load handlers
   const handleExportToFile = useCallback(() => {
     try {
-      exportCombatToFile(combatState, combatLogManager);
+      exportCombatToFile(combatState, combatLogManager, activeEncounter.id);
       setSaveErrorMessage(null);
     } catch (error) {
       setSaveErrorMessage('Failed to export combat state');
       console.error(error);
     }
-  }, [combatState, combatLogManager]);
+  }, [combatState, combatLogManager, activeEncounter.id]);
 
   const handleSaveToLocalStorage = useCallback(() => {
     try {
-      const success = saveCombatToLocalStorage(combatState, combatLogManager);
+      const success = saveCombatToLocalStorage(combatState, combatLogManager, activeEncounter.id);
       if (success) {
         setSaveErrorMessage(null);
       } else {
@@ -1083,7 +1108,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       setSaveErrorMessage('Failed to save to localStorage');
       console.error(error);
     }
-  }, [combatState, combatLogManager]);
+  }, [combatState, combatLogManager, activeEncounter.id]);
 
   const handleImportFromFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];

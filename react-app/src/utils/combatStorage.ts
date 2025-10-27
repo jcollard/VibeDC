@@ -29,11 +29,12 @@ export function saveCombatToLocalStorage(
 
 /**
  * Load combat state and log from browser localStorage
- * @returns Combat state and log manager, or null if no save exists or loading fails
+ * @returns Combat state, log manager, and optional encounter ID, or null if no save exists or loading fails
  */
 export function loadCombatFromLocalStorage(): {
   combatState: CombatState;
   combatLog: CombatLogManager;
+  encounterId?: string;
 } | null {
   try {
     const json = localStorage.getItem(STORAGE_KEY);
@@ -42,7 +43,15 @@ export function loadCombatFromLocalStorage(): {
     }
 
     const saveData = JSON.parse(json) as CombatSaveData;
-    return deserializeCombat(saveData);
+    const result = deserializeCombat(saveData);
+    if (!result) {
+      return null;
+    }
+
+    return {
+      ...result,
+      encounterId: saveData.encounterId
+    };
   } catch (error) {
     console.error('Failed to load from localStorage:', error);
     return null;
@@ -89,11 +98,11 @@ export function exportCombatToFile(
 /**
  * Import combat state and log from a JSON file
  * @param file The file to import
- * @returns Promise that resolves to combat state and log, or null if import fails
+ * @returns Promise that resolves to combat state, log, and optional encounter ID, or null if import fails
  */
 export function importCombatFromFile(
   file: File
-): Promise<{ combatState: CombatState; combatLog: CombatLogManager } | null> {
+): Promise<{ combatState: CombatState; combatLog: CombatLogManager; encounterId?: string } | null> {
   return new Promise((resolve) => {
     const reader = new FileReader();
 
@@ -102,7 +111,15 @@ export function importCombatFromFile(
         const json = event.target?.result as string;
         const saveData = JSON.parse(json) as CombatSaveData;
         const result = deserializeCombat(saveData);
-        resolve(result);
+        if (!result) {
+          resolve(null);
+          return;
+        }
+
+        resolve({
+          ...result,
+          encounterId: saveData.encounterId
+        });
       } catch (error) {
         console.error('Failed to parse combat save file:', error);
         resolve(null);
