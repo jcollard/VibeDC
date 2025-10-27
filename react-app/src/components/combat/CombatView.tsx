@@ -33,6 +33,10 @@ import {
   importCombatFromFile,
   saveCombatToLocalStorage,
   loadCombatFromLocalStorage,
+  saveCombatToSlot,
+  loadCombatFromSlot,
+  getAllSlotMetadata,
+  type SaveSlotMetadata,
 } from '../../utils/combatStorage';
 import { LoadingView, type LoadResult } from './LoadingView';
 
@@ -228,6 +232,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Save/load state
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+
+  // Quick save slot state
+  const [slotMetadata, setSlotMetadata] = useState<(SaveSlotMetadata | null)[]>(() => getAllSlotMetadata());
+  const slotToLoadRef = useRef<number | null>(null);
 
   // Loading state (for LoadingView component)
   const [isLoading, setIsLoading] = useState(false);
@@ -977,10 +985,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     try {
       let result;
 
-      // Check if we're loading from file or localStorage
+      // Check if we're loading from file, slot, or localStorage
       if (fileToImportRef.current) {
         result = await importCombatFromFile(fileToImportRef.current);
         fileToImportRef.current = null; // Clear the file after loading
+      } else if (slotToLoadRef.current !== null) {
+        result = loadCombatFromSlot(slotToLoadRef.current);
+        slotToLoadRef.current = null; // Clear the slot after loading
       } else {
         result = loadCombatFromLocalStorage();
       }
@@ -1137,6 +1148,56 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Trigger loading transition
     setIsLoading(true);
   }, [captureCanvasSnapshot]);
+
+  // Format slot metadata for display
+  const formatSlotMetadata = useCallback((metadata: SaveSlotMetadata | null): string => {
+    if (!metadata) {
+      return 'Empty';
+    }
+
+    const date = new Date(metadata.timestamp);
+    const timeStr = date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const phaseStr = metadata.phase.charAt(0).toUpperCase() + metadata.phase.slice(1).replace('-', ' ');
+    return `Turn ${metadata.turnNumber} (${phaseStr}) - ${timeStr}`;
+  }, []);
+
+  // Quick save slot handlers
+  const handleSaveToSlot = useCallback((slotIndex: number) => {
+    try {
+      const success = saveCombatToSlot(slotIndex, combatState, combatLogManager, activeEncounter.id);
+      if (success) {
+        // Refresh slot metadata
+        setSlotMetadata(getAllSlotMetadata());
+        setSaveErrorMessage(null);
+      } else {
+        setSaveErrorMessage(`Failed to save to slot ${slotIndex + 1}`);
+      }
+    } catch (error) {
+      setSaveErrorMessage(`Failed to save to slot ${slotIndex + 1}`);
+      console.error(error);
+    }
+  }, [combatState, combatLogManager, activeEncounter.id]);
+
+  const handleLoadFromSlot = useCallback((slotIndex: number) => {
+    // Check if slot has data
+    const metadata = slotMetadata[slotIndex];
+    if (!metadata) {
+      setSaveErrorMessage(`Slot ${slotIndex + 1} is empty`);
+      return;
+    }
+
+    // Capture current canvas state before loading
+    canvasSnapshotRef.current = captureCanvasSnapshot();
+
+    // Clear any pending file import
+    fileToImportRef.current = null;
+
+    // Set slot to load
+    slotToLoadRef.current = slotIndex;
+
+    // Trigger loading transition
+    setIsLoading(true);
+  }, [slotMetadata, captureCanvasSnapshot]);
 
   return (
     <div
@@ -1420,7 +1481,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             </div>
 
             {/* LocalStorage Save/Load */}
-            <div>
+            <div style={{ marginBottom: '16px' }}>
               <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px' }}>LocalStorage:</label>
               <button
                 onClick={handleSaveToLocalStorage}
@@ -1453,6 +1514,74 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               >
                 Load
               </button>
+            </div>
+
+            {/* Quick Save Slots */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '8px', fontSize: '12px', fontWeight: 'bold' }}>Quick Save Slots:</label>
+              {[0, 1, 2, 3].map((slotIndex) => {
+                const metadata = slotMetadata[slotIndex];
+                const slotLabel = formatSlotMetadata(metadata);
+                const isEmpty = metadata === null;
+
+                return (
+                  <div
+                    key={slotIndex}
+                    style={{
+                      marginBottom: '8px',
+                      padding: '8px',
+                      background: '#1a1a1a',
+                      border: '1px solid #555',
+                      borderRadius: '4px',
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ fontSize: '11px', fontWeight: 'bold', marginBottom: '4px', color: '#aaa' }}>
+                          Slot {slotIndex + 1}
+                        </div>
+                        <div style={{ fontSize: '10px', color: isEmpty ? '#666' : '#ccc' }}>
+                          {slotLabel}
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', gap: '6px' }}>
+                        <button
+                          onClick={() => handleSaveToSlot(slotIndex)}
+                          style={{
+                            padding: '4px 10px',
+                            cursor: 'pointer',
+                            backgroundColor: '#4CAF50',
+                            color: 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          Save
+                        </button>
+                        <button
+                          onClick={() => handleLoadFromSlot(slotIndex)}
+                          disabled={isEmpty}
+                          style={{
+                            padding: '4px 10px',
+                            cursor: isEmpty ? 'not-allowed' : 'pointer',
+                            backgroundColor: isEmpty ? '#444' : '#2196F3',
+                            color: isEmpty ? '#888' : 'white',
+                            border: 'none',
+                            borderRadius: '3px',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                            opacity: isEmpty ? 0.5 : 1,
+                          }}
+                        >
+                          Load
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

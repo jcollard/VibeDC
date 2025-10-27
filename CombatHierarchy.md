@@ -20,6 +20,7 @@ This document provides a token-efficient reference for AI agents to quickly unde
 - **Modify combat log** → `CombatLogManager`
 - **Add cinematic sequence** → Implement `CinematicSequence`, use `CinematicManager`
 - **Modify map scrolling** → `CombatMapRenderer` (offset calculations), `CombatLayoutManager` (arrow rendering)
+- **Add save/load features** → `combatStorage.ts` (storage), `CombatSaveData.ts` (serialization), integrate with `CombatView` and `LoadingView`
 
 ---
 
@@ -476,17 +477,31 @@ react-app/src/
 - `clearCombatFromLocalStorage()` - Clear saved data
 - `exportCombatToFile()` - Download JSON file with timestamped filename
 - `importCombatFromFile()` - Upload and parse JSON file
+- `saveCombatToSlot(slotIndex, ...)` - Save to quick save slot (0-3)
+- `loadCombatFromSlot(slotIndex)` - Load from quick save slot
+- `getSlotMetadata(slotIndex)` - Get metadata without full load
+- `getAllSlotMetadata()` - Get all slot metadata at once
+- `clearSlot(slotIndex)` - Clear specific slot
+- `SaveSlotMetadata` - Interface for slot metadata
+
+**Quick Save Slots:**
+- 4 independent slots (0-3) for fast save/load operations
+- Storage keys: `vibedc-combat-slot-0` through `vibedc-combat-slot-3`
+- Metadata keys: `vibedc-combat-slot-0-metadata` (for quick display)
+- Each slot stores: slotIndex, timestamp, turnNumber, phase, encounterId
+- Metadata allows display of slot status without deserializing full save
 
 **File Format:** JSON with 2-space indentation, timestamped filename: `vibedc-combat-save-YYYY-MM-DDTHH-MM-SS.json`
 
 **Error Handling:**
 - Validates JSON structure before applying
+- Validates slot indices (0-3)
 - Returns null/false on failure
 - Logs errors to console
 - Preserves current state on failed load
 
 **Dependencies:** CombatSaveData module
-**Used By:** CombatView Developer Settings panel (Export/Import buttons)
+**Used By:** CombatView Developer Settings panel (Export/Import/Quick Save buttons)
 
 ---
 
@@ -505,6 +520,7 @@ react-app/src/
 - Renderer orchestration
 - Sprite/font loading
 - Save/load operations with LoadingView integration
+- **Quick save/load UI** in Developer Settings panel (4 slots)
 
 **Encounter Loading Pattern:**
 - Props: `encounter: CombatEncounter` (initial encounter from route)
@@ -513,7 +529,17 @@ react-app/src/
 - All rendering and logic uses `activeEncounter` instead of prop
 - Enables loading saves from different encounters than currently displayed
 
-**Dependencies:** Nearly all combat model files, LoadingView, CombatEncounter registry
+**Quick Save/Load UI:**
+- Location: Developer Settings panel (top-left, DEV mode only)
+- 4 save slots with metadata display
+- Each slot shows: "Slot N", status ("Empty" or "Turn X (Phase) - HH:MM")
+- Save button (green) - always enabled, saves current combat state
+- Load button (blue) - disabled for empty slots, loads with LoadingView transition
+- Auto-refreshes metadata after each save
+- Uses `slotToLoadRef` to coordinate with `handleLoadReady()` callback
+- Displays in error message if load fails
+
+**Dependencies:** Nearly all combat model files, LoadingView, CombatEncounter registry, combatStorage utilities
 **Used By:** CombatViewRoute
 
 ### `components/combat/LoadingView.tsx`
