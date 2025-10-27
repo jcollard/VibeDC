@@ -50,10 +50,10 @@ react-app/src/
 
 #### `CombatState.ts`
 **Purpose:** Central state container for active combat
-**Exports:** `CombatState`, `CombatPhase`
+**Exports:** `CombatState`, `CombatPhase`, `CombatStateJSON`, `serializeCombatState()`, `deserializeCombatState()`
 **Key Fields:** turnNumber, map, phase, unitManifest, tilesetId
 **Dependencies:** CombatMap, CombatUnitManifest
-**Used By:** All phase handlers, CombatView, renderers
+**Used By:** All phase handlers, CombatView, renderers, serialization
 
 #### `CombatEncounter.ts`
 **Purpose:** Defines combat scenario (map, enemies, conditions, deployment zones)
@@ -77,11 +77,13 @@ react-app/src/
 **Used By:** All unit-related components, rendering, combat logic
 
 #### `CombatUnitManifest.ts`
-**Purpose:** Tracks all units and positions on the battlefield
-**Exports:** `CombatUnitManifest`
-**Key Methods:** addUnit(), removeUnit(), getAllUnits(), getUnitAt()
-**Dependencies:** CombatUnit, Position
-**Used By:** CombatState, phase handlers, renderers
+**Purpose:** Tracks all units and positions on the battlefield with unique IDs
+**Exports:** `CombatUnitManifest`, `UnitPlacement`, `UnitPlacementJSON`, `CombatUnitManifestJSON`
+**Key Methods:** addUnit(), removeUnit(), getAllUnits(), getUnitAt(), toJSON(), fromJSON()
+**Key Pattern:** WeakMap for object-to-ID mapping (allows duplicate unit names, enables GC)
+**ID Format:** "UnitName-X" where X is auto-incrementing number
+**Dependencies:** CombatUnit, Position, HumanoidUnit, MonsterUnit
+**Used By:** CombatState, phase handlers, renderers, serialization
 
 #### `CombatConstants.ts`
 **Purpose:** Centralized configuration (canvas size, colors, text, animations)
@@ -128,6 +130,27 @@ react-app/src/
 **Dependencies:** EnemySpriteSequence, StaggeredSequenceManager, EnemyRegistry
 **Used By:** CombatView during enemy-deployment phase
 **Transitions To:** battle phase
+
+#### `BattlePhaseHandler.ts`
+**Purpose:** Turn-based combat phase (STUB IMPLEMENTATION)
+**Exports:** `BattlePhaseHandler`, `BattleInfoPanelContent`
+**Key Methods:** getTopPanelRenderer(), getInfoPanelContent(), handleMapClick(), handleMouseMove(), updatePhase()
+**Current Functionality:**
+- Displays battlefield (map + units)
+- Shows turn order by Speed (highest first) in top panel
+- Placeholder info panel with "Battle Phase" text
+- Mouse event logging
+- Victory/defeat condition checking (stubbed)
+**Future Functionality:**
+- Turn management system
+- Action menu (Attack, Ability, Move, Wait, etc.)
+- Movement/attack range display
+- Action targeting and execution
+- Status effects
+- AI enemy turns
+**Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter
+**Used By:** CombatView during battle phase
+**Transitions To:** victory phase, defeat phase (when implemented)
 
 ---
 
@@ -248,10 +271,10 @@ react-app/src/
 
 #### `CombatLogManager.ts`
 **Purpose:** Combat log with colored text, sprites, animation, scrolling
-**Exports:** `CombatLogManager`, `CombatLogConfig`
-**Key Methods:** addMessage(), render(), update(), scrollUp/Down(), handleScrollButtonClick()
+**Exports:** `CombatLogManager`, `CombatLogConfig`, `CombatLogJSON`
+**Key Methods:** addMessage(), render(), update(), scrollUp/Down(), handleScrollButtonClick(), toJSON(), fromJSON()
 **Dependencies:** FontAtlasRenderer, SpriteRenderer
-**Used By:** CombatView, phase handlers for logging events
+**Used By:** CombatView, phase handlers for logging events, serialization
 
 ---
 
@@ -411,6 +434,60 @@ react-app/src/
 
 ---
 
+### 9. Serialization System
+
+#### `CombatSaveData.ts`
+**Purpose:** Top-level serialization module for save/load functionality
+**Exports:** `CombatSaveData`, `serializeCombat()`, `deserializeCombat()`
+**Key Structure:**
+```typescript
+{
+  version: string;           // Save format version (e.g., "1.0.0")
+  timestamp: number;          // Unix timestamp when saved
+  combatState: CombatStateJSON;
+  combatLog: CombatLogJSON;
+  encounterId?: string;       // Optional reference to encounter
+}
+```
+**Serialization Flow:**
+1. CombatState → serializeCombatState() → CombatStateJSON
+2. CombatUnitManifest → toJSON() → CombatUnitManifestJSON
+3. HumanoidUnit/MonsterUnit → toJSON() → HumanoidUnitJSON/MonsterUnitJSON
+4. CombatLogManager → toJSON() → CombatLogJSON (messages only, no animation state)
+5. All combined into CombatSaveData with version and timestamp
+
+**Deserialization Flow:**
+1. Parse JSON → CombatSaveData
+2. Validate structure
+3. deserializeCombat() → reconstruct CombatState and CombatLogManager
+4. CombatUnitManifest.fromJSON() → reconstruct unit instances with WeakMap IDs
+5. Return { combatState, combatLog } or null on failure
+
+**Dependencies:** CombatState, CombatLogManager, serialization helpers
+**Used By:** combatStorage.ts
+
+#### `utils/combatStorage.ts`
+**Purpose:** Storage utilities for browser localStorage and file download/upload
+**Exports:**
+- `saveCombatToLocalStorage()` - Save to browser localStorage
+- `loadCombatFromLocalStorage()` - Load from browser localStorage
+- `clearCombatFromLocalStorage()` - Clear saved data
+- `exportCombatToFile()` - Download JSON file with timestamped filename
+- `importCombatFromFile()` - Upload and parse JSON file
+
+**File Format:** JSON with 2-space indentation, timestamped filename: `vibedc-combat-save-YYYY-MM-DDTHH-MM-SS.json`
+
+**Error Handling:**
+- Validates JSON structure before applying
+- Returns null/false on failure
+- Logs errors to console
+- Preserves current state on failed load
+
+**Dependencies:** CombatSaveData module
+**Used By:** CombatView Developer Settings panel (Export/Import buttons)
+
+---
+
 ## Component Layer
 
 ### `components/combat/CombatView.tsx`
@@ -474,6 +551,15 @@ react-app/src/
 5. **New phase handler** → initialized, getRequiredSprites() called
 6. **CinematicManager** → may play transition sequence
 7. **Render loop** → continues with new phase
+
+**CRITICAL:** Phase handlers may also trigger transitions via `update()` return value:
+1. **Animation loop** → calls phaseHandlerRef.current.update(combatState, encounter, deltaTime)
+2. **Phase handler** → returns new CombatState with different phase (or null if no change)
+3. **CombatView** → captures return value: `const updatedState = phaseHandlerRef.current.update(...)`
+4. **CombatView** → if updatedState !== null and !== combatState, calls setCombatState(updatedState)
+5. **State change** → triggers useEffect, creates new phase handler for the new phase
+
+**Common Bug:** Forgetting to capture and apply the update() return value prevents phase transitions. See GeneralGuidelines.md "Common Pitfalls" section.
 
 ---
 
@@ -556,17 +642,18 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 50+ Core Files
+## File Count: 52+ Core Files
 
 **Components:** 2 files
 **Core State:** 7 files
-**Phase Handlers:** 4 files
+**Phase Handlers:** 5 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, BattlePhaseHandler, PhaseBase, CombatPhaseHandler)
 **Rendering:** 2 files
 **Layout & UI:** 13 files
 **Deployment:** 4 files
 **Cinematics:** 8 files
 **Unit System:** 7 files
 **Utilities:** 1 file
+**Serialization:** 2 files (CombatSaveData, combatStorage)
 
 ---
 
