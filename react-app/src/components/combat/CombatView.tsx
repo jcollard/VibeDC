@@ -512,7 +512,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         combatLogInitializedRef.current = true;
         combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
         combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
-        combatLogManager.addMessage('');
+        combatLogManager.addMessage('', 3);
         combatLogManager.addMessage(CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION);
       }
 
