@@ -133,6 +133,142 @@ ctx.drawImage(animatedBuffer, x, y);
   - Unit selection changes
   - Animation updates
 
+### Phase Handler Return Value Pattern
+
+When implementing phase handlers that can trigger state changes (phase transitions, unit spawning, etc.), **always capture and apply the return value** from `update()`:
+
+**✅ DO**: Capture and apply returned state
+```typescript
+// In animation loop
+const updatedState = phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+if (updatedState && updatedState !== combatState) {
+  setCombatState(updatedState);  // Apply the change
+}
+```
+
+**❌ DON'T**: Ignore the return value
+```typescript
+// BAD: Phase transitions will silently fail!
+phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+// State changes are lost - no error thrown!
+```
+
+**Why**: Phase handlers return new state objects for phase transitions and other state changes. The `updatePhase()` method in `PhaseBase` delegates to phase-specific logic and returns the result. If you ignore this return value, state updates will be silently discarded without any error messages.
+
+**Pattern in Phase Handlers**:
+```typescript
+protected updatePhase(
+  state: CombatState,
+  encounter: CombatEncounter,
+  deltaTime: number
+): CombatState | null {
+  // Check for phase transition
+  if (shouldTransition) {
+    // Always create new state object (immutability)
+    return {
+      ...state,
+      phase: 'new-phase' as const
+    };
+  }
+
+  // No state change - return original state
+  return state;
+}
+```
+
+**Real-world bug**: This pattern was discovered when enemy deployment phase wasn't transitioning to battle phase. The phase handler correctly returned new state with `phase: 'battle'`, but CombatView was ignoring the return value. The animations completed, but the phase never changed - a silent failure with no error messages.
+
+### Immutable State Updates
+
+When returning new state from phase handlers or event handlers, **always create a new object**:
+
+**✅ DO**: Create new state object with spread operator
+```typescript
+return {
+  ...state,
+  phase: 'battle' as const,
+  turnNumber: state.turnNumber + 1
+};
+```
+
+**❌ DON'T**: Mutate existing state
+```typescript
+// BAD: Mutates state, breaks React change detection
+state.phase = 'battle';
+return state;
+```
+
+**Why**: React uses reference equality to detect changes. If you mutate the existing object, `updatedState === combatState` will be `true`, and React won't re-render or trigger `useEffect` hooks. Always return a new object when state changes.
+
+### WeakMap for Object-to-ID Mapping
+
+When you need bidirectional lookup between objects and IDs, use `Map` for primary storage and `WeakMap` for reverse lookup:
+
+**✅ DO**: Use WeakMap for object-to-ID mapping
+```typescript
+class UnitManager {
+  private units: Map<string, Unit>;  // ID -> Unit (primary storage)
+  private unitToId: WeakMap<Unit, string> = new WeakMap();  // Unit -> ID
+  private nextUnitId: number = 0;
+
+  addUnit(unit: Unit): string {
+    // Check if already has ID
+    const existingId = this.unitToId.get(unit);
+    if (existingId) return existingId;
+
+    // Generate new unique ID
+    const id = `${unit.name}-${this.nextUnitId++}`;
+    this.units.set(id, unit);
+    this.unitToId.set(unit, id);
+    return id;
+  }
+
+  getIdForUnit(unit: Unit): string | undefined {
+    return this.unitToId.get(unit);  // O(1) lookup
+  }
+
+  removeUnit(unit: Unit): void {
+    const id = this.unitToId.get(unit);
+    if (id) {
+      this.units.delete(id);
+      this.unitToId.delete(unit);  // Clean up WeakMap entry
+    }
+  }
+}
+```
+
+**❌ DON'T**: Use Map for object-to-ID (prevents garbage collection)
+```typescript
+// BAD: Prevents units from being garbage collected
+private unitToId: Map<Unit, string> = new Map();
+// Even after removing unit from primary storage, Map keeps reference
+```
+
+**❌ DON'T**: Use object properties as map keys (not unique)
+```typescript
+// BAD: Multiple units with same name overwrite each other!
+private units: Map<string, Unit>;  // Map of unit name to unit
+
+addUnit(unit: Unit): void {
+  this.units.set(unit.name, unit);  // "Goblin" overwrites previous "Goblin"!
+}
+```
+
+**Benefits**:
+- WeakMap allows garbage collection when units are removed from primary storage
+- O(1) lookup performance for both directions (ID→Unit and Unit→ID)
+- Type-safe without string manipulation
+- No memory leaks from orphaned references
+- Auto-incrementing counter ensures uniqueness even for units with same name
+
+**When to use**:
+- Object instances need stable IDs throughout their lifetime
+- Bidirectional lookup is needed (both ID→Object and Object→ID)
+- Objects should be garbage-collectable when removed from primary storage
+- Multiple objects may share the same name/properties
+
+**Real-world bug**: CombatUnitManifest originally used `unit.name` as the map key. When combat had 4 Goblins, they all overwrote each other in the map, leaving only 1 Goblin. Fixed by using auto-incrementing IDs with WeakMap for reverse lookup.
+
 ## Event Handling
 
 ### Mouse Event Flow
@@ -702,6 +838,168 @@ for (let i = startIdx; i < endIdx && i < startIdx + maxVisibleLines; i++) {
 - **Identify deviations** and determine if they were justified or problematic
 - **Propose guideline updates** based on lessons learned
 - **Document new patterns** that emerged during implementation
+
+## Common Pitfalls
+
+This section documents subtle bugs and anti-patterns discovered during development. Learn from these real-world mistakes to avoid them in your own code.
+
+### Ignoring Phase Handler Return Values
+
+**Symptom**: Phase transitions don't work, state changes are lost, but no errors are thrown.
+
+**Cause**: Phase handler `update()` method returns new state, but calling code ignores it.
+
+**Example of the Bug**:
+```typescript
+// In animation loop - looks innocent but broken!
+if (!cinematicPlaying && phaseHandlerRef.current.update) {
+  phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+  // ❌ Return value ignored - state changes are lost!
+}
+```
+
+**What Happens**:
+1. EnemyDeploymentPhaseHandler completes animations
+2. Returns new state: `{ ...state, phase: 'battle' }`
+3. Return value is discarded
+4. CombatView continues using old state with `phase: 'enemy-deployment'`
+5. No error message - just broken behavior
+
+**The Fix**:
+```typescript
+if (!cinematicPlaying && phaseHandlerRef.current.update) {
+  const updatedState = phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+  if (updatedState && updatedState !== combatState) {
+    setCombatState(updatedState);  // ✅ Apply the state change
+  }
+}
+```
+
+**Why This is Subtle**:
+- No TypeScript error (return value is optional to use)
+- No runtime error (function executes successfully)
+- Animations still play correctly
+- Only the state transition fails
+- Debugging is difficult without logging
+
+**Prevention**:
+- Always check method return types
+- Capture return values from state update methods
+- Add console logging during phase transitions
+- Test phase transitions thoroughly
+
+### Using Object Properties as Unique Keys
+
+**Symptom**: Multiple objects with the same name/property overwrite each other in a Map or similar collection.
+
+**Cause**: Using non-unique object properties (like `name`) as map keys when multiple objects share the same value.
+
+**Example of the Bug**:
+```typescript
+class CombatUnitManifest {
+  private units: Map<string, UnitPlacement>;  // Map of unit name to placement
+
+  addUnit(unit: CombatUnit, position: Position): void {
+    this.units.set(unit.name, { unit, position });
+    // ❌ Multiple "Goblin" units overwrite each other!
+  }
+}
+```
+
+**What Happens**:
+1. Add "Goblin" unit at position (5, 3) → `Map { "Goblin" => { unit1, (5,3) } }`
+2. Add another "Goblin" at position (7, 8) → `Map { "Goblin" => { unit2, (7,8) } }`
+3. First Goblin is lost! Only second one remains
+4. Battle starts with 1 Goblin instead of 2
+5. No error message - just missing units
+
+**The Fix**:
+```typescript
+class CombatUnitManifest {
+  private units: Map<string, UnitPlacement>;  // Map of unique ID to placement
+  private unitToId: WeakMap<CombatUnit, string> = new WeakMap();
+  private nextUnitId: number = 0;
+
+  private generateUnitId(unit: CombatUnit): string {
+    const existingId = this.unitToId.get(unit);
+    if (existingId) return existingId;
+
+    const id = `${unit.name}-${this.nextUnitId++}`;  // "Goblin-0", "Goblin-1", etc.
+    this.unitToId.set(unit, id);
+    return id;
+  }
+
+  addUnit(unit: CombatUnit, position: Position): void {
+    const id = this.generateUnitId(unit);
+    this.units.set(id, { unit, position });  // ✅ Each unit has unique ID
+  }
+}
+```
+
+**Why This is Subtle**:
+- Works fine during development with 1 of each enemy type
+- Only breaks when multiple units share the same name
+- Map operations succeed (no error)
+- The "last write wins" behavior is silent
+- Hard to catch without testing multiple same-named units
+
+**Prevention**:
+- Use auto-incrementing IDs for runtime objects
+- Use UUIDs or database IDs for persistent objects
+- Never use non-unique properties as map keys
+- Test with multiple objects sharing the same name/properties
+
+### Mutating State Objects Instead of Creating New Ones
+
+**Symptom**: State updates don't trigger re-renders, React doesn't detect changes.
+
+**Cause**: Mutating existing state object instead of creating a new one breaks React's change detection.
+
+**Example of the Bug**:
+```typescript
+protected updatePhase(state: CombatState, ...): CombatState | null {
+  if (shouldTransition) {
+    state.phase = 'battle';  // ❌ Mutates existing object
+    return state;            // ❌ Same reference, React won't detect change
+  }
+  return state;
+}
+```
+
+**What Happens**:
+1. Phase handler mutates `state.phase = 'battle'`
+2. Returns same state object reference
+3. CombatView checks: `updatedState !== combatState` → `false` (same reference!)
+4. No `setCombatState()` call
+5. React doesn't re-render
+6. useEffect hooks don't fire
+7. Phase remains unchanged visually
+
+**The Fix**:
+```typescript
+protected updatePhase(state: CombatState, ...): CombatState | null {
+  if (shouldTransition) {
+    return {
+      ...state,              // ✅ Create new object
+      phase: 'battle' as const
+    };
+  }
+  return state;
+}
+```
+
+**Why This is Subtle**:
+- Mutation "works" in plain JavaScript
+- No TypeScript error (state is not readonly by default)
+- No runtime error
+- State object has correct values, but React doesn't detect the change
+- Only breaks React's change detection mechanism
+
+**Prevention**:
+- Always use spread operator `{ ...state, field: newValue }`
+- Never mutate state objects directly
+- Use TypeScript `readonly` modifiers on state properties
+- Enable ESLint rule `no-param-reassign` for state objects
 
 ### Updating These Guidelines
 - Keep guidelines concise and actionable
