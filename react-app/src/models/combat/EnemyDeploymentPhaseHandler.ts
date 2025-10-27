@@ -39,8 +39,17 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
       state.unitManifest.addUnit(unit, position);
     }
 
-    // 2. Create sprite sequences for each enemy
-    const spriteSequences = enemyUnits.map(({ unit, position }) =>
+    // 2. Sort enemies by position: top to bottom, left to right
+    // Primary sort: y-coordinate (row), Secondary sort: x-coordinate (column)
+    const sortedEnemyUnits = [...enemyUnits].sort((a, b) => {
+      if (a.position.y !== b.position.y) {
+        return a.position.y - b.position.y; // Sort by row (top to bottom)
+      }
+      return a.position.x - b.position.x; // Sort by column (left to right)
+    });
+
+    // 3. Create sprite sequences for each enemy in sorted order
+    const spriteSequences = sortedEnemyUnits.map(({ unit, position }) =>
       new EnemySpriteSequence(
         unit,
         position,
@@ -48,20 +57,20 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
       )
     );
 
-    // 3. Create staggered manager with configured delay
+    // 4. Create staggered manager with configured delay
     this.animationSequence = new StaggeredSequenceManager(
       spriteSequences,
       CombatConstants.ENEMY_DEPLOYMENT.STAGGER_DELAY
     );
 
-    // 4. Add combat log message(s)
+    // 5. Add combat log message(s)
     const message = this.buildEnemyApproachMessage(encounter);
     const lines = this.splitMessageForCombatLog(message, CombatConstants.COMBAT_LOG.MAX_MESSAGE_WIDTH);
 
     // Store lines to add them during the first render call
     this.pendingLogMessages = lines;
 
-    // 5. Start animation sequence
+    // 6. Start animation sequence
     this.animationSequence.start(state, encounter);
   }
 
