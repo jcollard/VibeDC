@@ -973,11 +973,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Check if we're loading from file or localStorage
       if (fileToImportRef.current) {
-        console.log('[CombatView] Loading from file');
         result = await importCombatFromFile(fileToImportRef.current);
         fileToImportRef.current = null; // Clear the file after loading
       } else {
-        console.log('[CombatView] Loading from localStorage');
         result = loadCombatFromLocalStorage();
       }
 
@@ -1059,7 +1057,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   );
 
   const handleAnimationComplete = useCallback(() => {
-    console.log('[CombatView] Animation complete, setting isLoading to false');
     setIsLoading(false);
   }, []);
 
@@ -1092,8 +1089,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    console.log('[CombatView] File selected, starting import with loading animation');
-
     // Capture current canvas state before loading
     canvasSnapshotRef.current = captureCanvasSnapshot();
 
@@ -1108,7 +1103,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }, [captureCanvasSnapshot]);
 
   const handleLoadFromLocalStorage = useCallback(() => {
-    console.log('[CombatView] handleLoadFromLocalStorage called');
     // Capture current canvas state before loading
     canvasSnapshotRef.current = captureCanvasSnapshot();
 
@@ -1116,7 +1110,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     fileToImportRef.current = null;
 
     // Trigger loading transition
-    console.log('[CombatView] Setting isLoading to true');
     setIsLoading(true);
   }, [captureCanvasSnapshot]);
 

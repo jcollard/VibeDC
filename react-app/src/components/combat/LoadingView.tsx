@@ -57,6 +57,12 @@ const LoadingState = {
 
 type LoadingState = (typeof LoadingState)[keyof typeof LoadingState];
 
+// Animation timing constants
+const FADE_DURATION = 300; // milliseconds per transition (fade-in/fade-out)
+const LOADING_MIN_DURATION = 100; // minimum loading screen display time
+const DITHER_BLOCK_SIZE = 4; // 4x4 pixel blocks for Bayer dithering
+const DITHER_RADIAL_INFLUENCE = 0.2; // center-to-edge gradient strength (0.0-1.0)
+
 /**
  * LoadingView provides smooth dithered transitions when loading new state.
  *
@@ -149,10 +155,10 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
   );
 
   /**
-   * Linear easing (no easing - DEBUG)
+   * Linear easing (uniform transition speed)
    */
   const linearEasing = useCallback((t: number): number => {
-    return t; // No easing, just return progress as-is
+    return t; // Direct 1:1 mapping for uniform progression
   }, []);
 
   /**
@@ -184,17 +190,16 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
     ): void => {
       const width = ctx.canvas.width;
       const height = ctx.canvas.height;
-      const pixelSize = 4; // 4x4 dither blocks
 
-      // Apply linear easing (no easing - DEBUG)
+      // Apply linear easing
       const easedProgress = linearEasing(progress);
 
       // First, draw FROM buffer as base
       ctx.drawImage(fromBuffer, 0, 0);
 
       // Then, progressively draw TO buffer using dither pattern
-      for (let y = 0; y < height; y += pixelSize) {
-        for (let x = 0; x < width; x += pixelSize) {
+      for (let y = 0; y < height; y += DITHER_BLOCK_SIZE) {
+        for (let x = 0; x < width; x += DITHER_BLOCK_SIZE) {
           // Calculate position-based alpha (radial gradient from center)
           const centerX = width / 2;
           const centerY = height / 2;
@@ -203,12 +208,12 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
           const distFactor = 1 - dist / maxDist; // 1.0 at center, 0.0 at edges
 
           // Combine global progress with distance factor
-          const localProgress = easedProgress + distFactor * 0.2 - 0.1;
+          const localProgress = easedProgress + distFactor * DITHER_RADIAL_INFLUENCE - 0.1;
           const clampedProgress = Math.max(0, Math.min(1, localProgress));
 
           // Get Bayer threshold for this position
-          const bayerX = Math.floor((x / pixelSize) % 4);
-          const bayerY = Math.floor((y / pixelSize) % 4);
+          const bayerX = Math.floor((x / DITHER_BLOCK_SIZE) % 4);
+          const bayerY = Math.floor((y / DITHER_BLOCK_SIZE) % 4);
           const threshold = bayer4x4[bayerY][bayerX] / 15.0;
 
           // Should we draw the TO buffer at this position?
@@ -217,12 +222,12 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
               toBuffer,
               x,
               y,
-              pixelSize,
-              pixelSize, // source
+              DITHER_BLOCK_SIZE,
+              DITHER_BLOCK_SIZE, // source
               x,
               y,
-              pixelSize,
-              pixelSize // destination
+              DITHER_BLOCK_SIZE,
+              DITHER_BLOCK_SIZE // destination
             );
           }
         }
@@ -241,7 +246,6 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
     (ctx: CanvasRenderingContext2D, sourceBuffer: HTMLCanvasElement, progress: number): void => {
       const width = ctx.canvas.width;
       const height = ctx.canvas.height;
-      const pixelSize = 4;
 
       // Apply easing
       const easedProgress = linearEasing(progress);
@@ -250,19 +254,19 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
       ctx.clearRect(0, 0, width, height);
 
       // Then selectively draw source pixels (fewer and fewer as progress increases)
-      for (let y = 0; y < height; y += pixelSize) {
-        for (let x = 0; x < width; x += pixelSize) {
+      for (let y = 0; y < height; y += DITHER_BLOCK_SIZE) {
+        for (let x = 0; x < width; x += DITHER_BLOCK_SIZE) {
           const centerX = width / 2;
           const centerY = height / 2;
           const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
           const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
           const distFactor = 1 - dist / maxDist;
 
-          const localProgress = easedProgress + distFactor * 0.2 - 0.1;
+          const localProgress = easedProgress + distFactor * DITHER_RADIAL_INFLUENCE - 0.1;
           const clampedProgress = Math.max(0, Math.min(1, localProgress));
 
-          const bayerX = Math.floor((x / pixelSize) % 4);
-          const bayerY = Math.floor((y / pixelSize) % 4);
+          const bayerX = Math.floor((x / DITHER_BLOCK_SIZE) % 4);
+          const bayerY = Math.floor((y / DITHER_BLOCK_SIZE) % 4);
           const threshold = bayer4x4[bayerY][bayerX] / 15.0;
 
           // Inverted: draw source if progress LESS than threshold
@@ -271,12 +275,12 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
               sourceBuffer,
               x,
               y,
-              pixelSize,
-              pixelSize,
+              DITHER_BLOCK_SIZE,
+              DITHER_BLOCK_SIZE,
               x,
               y,
-              pixelSize,
-              pixelSize
+              DITHER_BLOCK_SIZE,
+              DITHER_BLOCK_SIZE
             );
           }
         }
@@ -289,9 +293,7 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
    * Trigger fade-to-loading when isLoading becomes true
    */
   useEffect(() => {
-    console.log('[LoadingView] isLoading changed:', isLoading, 'currentState:', currentState);
     if (isLoading && currentState === LoadingState.IDLE) {
-      console.log('[LoadingView] Starting FADE_TO_LOADING');
       setCurrentState(LoadingState.FADE_TO_LOADING);
       setElapsedTime(0);
     }
@@ -335,9 +337,6 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
    * Handle state transitions based on elapsed time
    */
   useEffect(() => {
-    const FADE_DURATION = 300; // milliseconds
-    const LOADING_MIN_DURATION = 100; // milliseconds
-
     switch (currentState) {
       case LoadingState.FADE_TO_LOADING:
         if (elapsedTime >= FADE_DURATION) {
@@ -380,19 +379,16 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
       case LoadingState.FADE_TO_GAME:
         if (elapsedTime >= FADE_DURATION) {
           // Fade complete, return to idle
-          console.log('[LoadingView] FADE_TO_GAME complete, transitioning to COMPLETE');
           setCurrentState(LoadingState.COMPLETE);
           setElapsedTime(0);
 
           // Notify parent that animation is complete
           if (onAnimationComplete) {
-            console.log('[LoadingView] Calling onAnimationComplete');
             onAnimationComplete();
           }
 
           // Reset to IDLE on next frame
           setTimeout(() => {
-            console.log('[LoadingView] Transitioning from COMPLETE to IDLE');
             setCurrentState(LoadingState.IDLE);
             setLoadResult(null);
           }, 0);
@@ -418,8 +414,6 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
 
     const loadingBuffer = loadingScreenBufferRef.current;
     if (!loadingBuffer) return;
-
-    const FADE_DURATION = 300; // Must match transition duration
 
     switch (currentState) {
       case LoadingState.IDLE:
