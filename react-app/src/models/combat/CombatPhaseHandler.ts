@@ -64,6 +64,7 @@ export interface PhaseRenderContext {
   messageAtlasFontId?: string;
   dialogAtlasFontId?: string;
   fontAtlasImages?: Map<string, HTMLImageElement>;
+  combatLog?: import('./CombatLogManager').CombatLogManager;
 }
 
 /**

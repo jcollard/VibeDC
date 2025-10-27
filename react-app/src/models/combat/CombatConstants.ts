@@ -56,6 +56,19 @@ export const CombatConstants = {
     },
   },
 
+  // Enemy Deployment
+  ENEMY_DEPLOYMENT: {
+    ANIMATION_DURATION: 1.0, // seconds per enemy
+    STAGGER_DELAY: 0.5, // seconds between enemy animation starts
+    ENEMY_NAME_COLOR: '#ff0000', // red for enemy names
+  },
+
+  // Combat Log
+  COMBAT_LOG: {
+    MAX_MESSAGE_WIDTH: 200, // Maximum width in pixels for a single message line
+    FONT_ID: '7px-04b03', // Font used for combat log messages
+  },
+
   // Text Content
   TEXT: {
     DEPLOY_TITLE: 'Deploy Units',

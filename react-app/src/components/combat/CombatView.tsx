@@ -391,6 +391,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       offsetY,
       spriteImages: spriteImagesRef.current,
       fontAtlasImages: fontLoader.getAll(),
+      combatLog: combatLogManager,
     });
 
     // Render deployed units from the manifest (after deployment zones so they appear on top)
