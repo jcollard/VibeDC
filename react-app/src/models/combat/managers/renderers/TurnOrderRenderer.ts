@@ -41,9 +41,36 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     spriteSize: number,
     smallFontAtlasImage?: HTMLImageElement | null
   ): void {
-    // Render units horizontally, starting from the left edge of the region
-    let currentX = region.x;
-    const spriteY = region.y;
+    // Render "Action Timers" title at the top in yellow/orange using small font
+    if (smallFontAtlasImage) {
+      const titleX = region.x + region.width / 2;
+      const titleY = region.y; // No padding from top
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        'Action Timers',
+        titleX,
+        titleY,
+        '7px-04b03',
+        smallFontAtlasImage,
+        1,
+        'center',
+        '#FFA500' // Orange color
+      );
+    }
+
+    // Calculate total width needed for all units
+    const totalUnits = Math.min(this.units.length, Math.floor(region.width / (this.spriteSize + this.spriteSpacing)));
+    const totalWidth = totalUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
+
+    // Calculate starting X to center the units
+    const startX = region.x + (region.width - totalWidth) / 2;
+
+    // Position sprites at the bottom of the panel
+    // Leave room for sprite (12px) + timer text (7px), shifted down 3px total (2px + 1px for sprite)
+    const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
+
+    let currentX = startX;
 
     for (const unit of this.units) {
       // Check if we've exceeded the region width
@@ -68,7 +95,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         const timerValue = Math.floor(unit.actionTimer); // Round down for display
         const timerText = timerValue.toString();
         const textX = currentX + this.spriteSize / 2; // Center under sprite
-        const textY = spriteY + this.spriteSize + 1; // 1px below sprite
+        // Text Y position adjusted to stay in same place (sprite moved down 1px, so subtract 1px from offset)
+        const textY = spriteY + this.spriteSize;
 
         // Use 7px-04b03 font for small, readable numbers
         FontAtlasRenderer.renderText(
@@ -98,8 +126,18 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       return false;
     }
 
+    // Calculate total width needed for all units (same as in render)
+    const totalUnits = Math.min(this.units.length, Math.floor(region.width / (this.spriteSize + this.spriteSpacing)));
+    const totalWidth = totalUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
+
+    // Calculate starting X to center the units (same as in render)
+    const startX = region.x + (region.width - totalWidth) / 2;
+
+    // Position sprites at the bottom of the panel (same as in render)
+    const spriteY = region.y + region.height - this.spriteSize - 7 + 2;
+
     // Determine which unit was clicked
-    let currentX = region.x;
+    let currentX = startX;
 
     for (const unit of this.units) {
       // Check if we've exceeded the region width
@@ -109,7 +147,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
 
       // Check if click is within this unit's sprite bounds
       if (x >= currentX && x < currentX + this.spriteSize &&
-          y >= region.y && y < region.y + this.spriteSize) {
+          y >= spriteY && y < spriteY + this.spriteSize) {
         this.onUnitClick(unit);
         return true;
       }
