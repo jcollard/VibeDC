@@ -462,7 +462,8 @@ react-app/src/
 2. Validate structure
 3. deserializeCombat() → reconstruct CombatState and CombatLogManager
 4. CombatUnitManifest.fromJSON() → reconstruct unit instances with WeakMap IDs
-5. Return { combatState, combatLog } or null on failure
+5. Storage functions (importCombatFromFile/loadCombatFromLocalStorage) return { combatState, combatLog, encounterId? }
+6. CombatView uses encounterId to reload encounter from CombatEncounter registry via getById()
 
 **Dependencies:** CombatState, CombatLogManager, serialization helpers
 **Used By:** combatStorage.ts
@@ -498,12 +499,21 @@ react-app/src/
 - Canvas management (display + buffer)
 - Animation loop (60 FPS)
 - State management (useState, useRef, useMemo)
+- **Encounter override mechanism** (loaded encounter via loadedEncounterRef)
 - Phase handler switching
 - Input handling (mouse events, coordinate conversion)
 - Renderer orchestration
 - Sprite/font loading
 - Save/load operations with LoadingView integration
-**Dependencies:** Nearly all combat model files, LoadingView
+
+**Encounter Loading Pattern:**
+- Props: `encounter: CombatEncounter` (initial encounter from route)
+- Ref: `loadedEncounterRef` (overrides prop when loading save)
+- Helper: `activeEncounter = loadedEncounterRef.current ?? encounter`
+- All rendering and logic uses `activeEncounter` instead of prop
+- Enables loading saves from different encounters than currently displayed
+
+**Dependencies:** Nearly all combat model files, LoadingView, CombatEncounter registry
 **Used By:** CombatViewRoute
 
 ### `components/combat/LoadingView.tsx`
@@ -613,6 +623,10 @@ IDLE → (isLoading=true) → FADE_TO_LOADING
 10. **LoadingView** → calls `onLoadReady()` async function
 11. **CombatView** → checks `fileToImportRef` to determine load source
 12. **CombatView** → calls `importCombatFromFile(file)` or `loadCombatFromLocalStorage()`
+12a. **CombatView** → if `result.encounterId` exists, calls `CombatEncounter.getById(encounterId)` to load encounter from registry
+12b. **CombatView** → stores loaded encounter in `loadedEncounterRef.current` (overrides prop for all combat logic)
+12c. **CombatView** → if encounter not found in registry, returns error `LoadResult` and aborts load
+12d. **CombatView** → if `result.encounterId` missing (old save format), logs warning and uses original prop `encounter`
 13. **CombatView** → reconstructs `CombatLogManager` from JSON, adds messages with Infinity speed (instant)
 14. **CombatView** → returns `LoadResult` with `{ success, combatState?, combatLog?, error? }`
 15. **LoadingView** → waits minimum 100ms in LOADING state, then calls `onComplete(result)`
