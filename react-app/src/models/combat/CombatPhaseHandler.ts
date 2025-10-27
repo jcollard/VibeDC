@@ -173,6 +173,7 @@ export interface CombatPhaseHandler {
   handleInfoPanelHover?(
     relativeX: number,
     relativeY: number,
+    panelRegion: { x: number; y: number; width: number; height: number },
     state: CombatState,
     encounter: CombatEncounter
   ): PhaseEventResult;

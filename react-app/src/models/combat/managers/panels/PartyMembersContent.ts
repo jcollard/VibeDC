@@ -225,6 +225,15 @@ export class PartyMembersContent implements PanelContent {
   }
 
   /**
+   * Update the cached region for hover detection
+   * Call this before handleHover() if the panel hasn't been rendered yet
+   * @param region - Panel region
+   */
+  updateRegion(region: PanelRegion): void {
+    this.lastRegion = region;
+  }
+
+  /**
    * Update the party units list
    * Call this when the party composition changes
    * @param units - New array of party units

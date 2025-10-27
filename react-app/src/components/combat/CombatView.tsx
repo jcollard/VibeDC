@@ -26,6 +26,7 @@ import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager'
 import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
 import { TurnOrderRenderer } from '../../models/combat/managers/renderers/TurnOrderRenderer';
 import type { PanelClickResult } from '../../models/combat/managers/panels/PanelContent';
+import '../../utils/CombatDebugger'; // Initialize debug utilities
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -818,6 +819,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       const phaseHoverResult = deploymentHandler.handleInfoPanelHover(
         canvasX - partyPanelRegion.x,
         canvasY - partyPanelRegion.y,
+        partyPanelRegion,
         combatState,
         encounter
       );

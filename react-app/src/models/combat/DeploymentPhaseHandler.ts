@@ -436,9 +436,15 @@ export class DeploymentPhaseHandler extends PhaseBase {
   handleInfoPanelHover(
     relativeX: number,
     relativeY: number,
+    panelRegion: { x: number; y: number; width: number; height: number },
     _state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult<DeploymentPanelData> {
+    // Debug logging (enabled via window.CombatDebugger.enableHoverLogging())
+    if (typeof window !== 'undefined' && (window as any).CombatDebugger?.isHoverLoggingEnabled()) {
+      console.log(`[DeploymentPhaseHandler] handleInfoPanelHover at (${relativeX}, ${relativeY})`);
+    }
+
     // Ensure cached content exists (same instance used for rendering)
     if (!this.cachedPartyMembersContent) {
       // Create on first hover (will also be created by getInfoPanelContent)
@@ -462,14 +468,30 @@ export class DeploymentPhaseHandler extends PhaseBase {
         12,
         null
       );
+
+      if (typeof window !== 'undefined' && (window as any).CombatDebugger?.isHoverLoggingEnabled()) {
+        console.log('[DeploymentPhaseHandler] Created cachedPartyMembersContent');
+      }
     }
+
+    // CRITICAL FIX: Update the region before hover detection
+    // This ensures hover geometry calculations have the correct bounds
+    this.cachedPartyMembersContent.updateRegion(panelRegion);
 
     // Get the hovered party member index
     const hoveredIndex = this.cachedPartyMembersContent.handleHover(relativeX, relativeY);
 
+    if (typeof window !== 'undefined' && (window as any).CombatDebugger?.isHoverLoggingEnabled()) {
+      console.log(`[DeploymentPhaseHandler] handleHover returned: ${hoveredIndex}`);
+    }
+
     // CRITICAL: Update hover state on the cached instance immediately
     // This ensures the instance that will be rendered has the correct hover state
     this.cachedPartyMembersContent.updateHoveredIndex(hoveredIndex);
+
+    if (typeof window !== 'undefined' && (window as any).CombatDebugger?.isHoverLoggingEnabled()) {
+      console.log(`[DeploymentPhaseHandler] Updated hover index to: ${hoveredIndex}`);
+    }
 
     if (hoveredIndex !== null) {
       return {
