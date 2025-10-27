@@ -436,6 +436,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     ctx.restore();
 
+    // Update top panel renderer for action-timer and unit-turn phases
+    // (needs to update every frame to re-sort units by current action timer values)
+    if (combatState.phase === 'action-timer' || combatState.phase === 'unit-turn') {
+      if (phaseHandlerRef.current.getTopPanelRenderer) {
+        const renderer = phaseHandlerRef.current.getTopPanelRenderer(combatState, activeEncounter);
+        topPanelManager.setRenderer(renderer);
+      }
+    }
+
     // Render layout UI
     // Use 7px-04b03 for info panels/combat log and small text in top panel
     // Use 15px-dungeonslant for main top panel text
