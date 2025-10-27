@@ -6,7 +6,7 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
     145 src/components/Cell.tsx
     174 src/components/combat/CharacterSelectionDialogContent.ts
     374 src/components/combat/CombatUnitInfoDialogContent.ts
-   1168 src/components/combat/CombatView.tsx
+   1171 src/components/combat/CombatView.tsx
      56 src/components/combat/CombatViewRoute.tsx
     280 src/components/DebugPanel.tsx
     495 src/components/developer/AbilityBrowser.tsx
@@ -41,14 +41,14 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
      10 src/main.tsx
     119 src/models/combat/CinematicSequence.ts
      94 src/models/combat/CombatAbility.ts
-     79 src/models/combat/CombatConstants.ts
+     92 src/models/combat/CombatConstants.ts
     123 src/models/combat/CombatEffect.ts
     386 src/models/combat/CombatEncounter.test.ts
     237 src/models/combat/CombatEncounter.ts
     703 src/models/combat/CombatLogManager.ts
     212 src/models/combat/CombatMap.test.ts
     238 src/models/combat/CombatMap.ts
-    202 src/models/combat/CombatPhaseHandler.ts
+    204 src/models/combat/CombatPhaseHandler.ts
     279 src/models/combat/CombatPredicate.test.ts
     336 src/models/combat/CombatPredicate.ts
      46 src/models/combat/CombatState.ts
@@ -60,8 +60,9 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
     136 src/models/combat/deployment/DeploymentZoneRenderer.ts
     245 src/models/combat/deployment/PartySelectionDialog.ts
     120 src/models/combat/deployment/UnitDeploymentManager.ts
-    521 src/models/combat/DeploymentPhaseHandler.ts
-     64 src/models/combat/EnemyDeploymentPhaseHandler.ts
+    553 src/models/combat/DeploymentPhaseHandler.ts
+    295 src/models/combat/EnemyDeploymentPhaseHandler.ts
+    194 src/models/combat/EnemySpriteSequence.ts
     321 src/models/combat/Equipment.test.ts
     128 src/models/combat/Equipment.ts
     506 src/models/combat/HumanoidUnit.test.ts
@@ -74,7 +75,7 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
      12 src/models/combat/managers/panels/index.ts
     339 src/models/combat/managers/panels/PanelButton.ts
      81 src/models/combat/managers/panels/PanelContent.ts
-    340 src/models/combat/managers/panels/PartyMembersContent.ts
+    349 src/models/combat/managers/panels/PartyMembersContent.ts
     132 src/models/combat/managers/panels/UnitInfoContent.ts
      62 src/models/combat/managers/renderers/DeploymentHeaderRenderer.ts
     100 src/models/combat/managers/renderers/TurnOrderRenderer.ts
@@ -90,6 +91,7 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
     153 src/models/combat/ScreenFadeInSequence.ts
      93 src/models/combat/SequenceChain.ts
      71 src/models/combat/SequenceParallel.ts
+    130 src/models/combat/StaggeredSequenceManager.ts
     178 src/models/combat/TitleFadeInSequence.ts
     281 src/models/combat/UnitClass.test.ts
     143 src/models/combat/UnitClass.ts
@@ -104,6 +106,7 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
      22 src/types.ts
      20 src/utils/CameraAnimation.ts
     120 src/utils/CombatAbilityRegistry.ts
+    224 src/utils/CombatDebugger.ts
     286 src/utils/DialogRenderer.ts
     302 src/utils/EnemyRegistry.ts
     195 src/utils/EquipmentRegistry.ts
@@ -121,4 +124,4 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
     228 src/utils/UnitClassRegistry.ts
     141 src/utils/viewportCalculator.ts
      12 src/vite-env.d.ts
-  35992 total
+  36830 total
