@@ -129,19 +129,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.messageWritten = true;
     }
 
-    // STUB: Immediately return to action-timer phase
-    // TODO: Implement turn mechanics here
+    // STUB: Stay in this phase - don't transition back
+    // TODO: Implement turn mechanics here (action menu, etc.)
+    // TODO: Transition back to action-timer when the turn is complete
 
-    // For now, just transition back after one frame
-    if (this.messageWritten) {
-      console.log('[UnitTurnPhaseHandler] Returning to action-timer phase (stub)');
-
-      return {
-        ...state,
-        phase: 'action-timer'
-      };
-    }
-
+    // No state change - stay in unit-turn phase
     return state;
   }
 

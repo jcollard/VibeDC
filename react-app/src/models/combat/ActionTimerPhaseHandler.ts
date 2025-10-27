@@ -181,8 +181,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       };
     }
 
-    // No unit ready, return state with updated manifest
-    // Note: We always return state even if manifest didn't change to avoid triggering re-renders
+    // No unit ready, return state (units are mutated in place, so no state change needed)
     return state;
   }
 
@@ -209,6 +208,11 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
       // Direct mutation of private field
       (placement.unit as any)._actionTimer += increment;
+
+      // Debug logging when timer gets close to 100
+      if (placement.unit.actionTimer >= 90 && placement.unit.actionTimer < 100) {
+        console.log(`[ActionTimerPhaseHandler] ${placement.unit.name} timer: ${placement.unit.actionTimer.toFixed(2)}`);
+      }
     }
 
     return manifest;
