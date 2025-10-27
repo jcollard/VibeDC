@@ -978,6 +978,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         for (const message of messages) {
           combatLogManager.addMessage(message, Infinity); // Add instantly
         }
+        combatLogManager.scrollToBottom(); // Ensure all messages are visible
 
         // Clear error message (triggers re-render to show success)
         setSaveErrorMessage(null);
@@ -1010,6 +1011,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         for (const message of messages) {
           combatLogManager.addMessage(message, Infinity); // Add instantly
         }
+        combatLogManager.scrollToBottom(); // Ensure all messages are visible
 
         setSaveErrorMessage(null);
       } else {

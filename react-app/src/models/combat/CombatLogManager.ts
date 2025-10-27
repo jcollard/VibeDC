@@ -165,8 +165,15 @@ export class CombatLogManager {
 
     // Start animation for the new message
     this.animatingMessageIndex = this.messages.length - 1;
-    this.animationProgress = 0;
-    this.animationCharsShown = 0;
+
+    // If animation duration is 0 (instant/infinite speed), complete immediately
+    if (this.animationDuration === 0 || !isFinite(this.animationDuration)) {
+      this.animationProgress = 1;
+      this.animationCharsShown = plainTextLength;
+    } else {
+      this.animationProgress = 0;
+      this.animationCharsShown = 0;
+    }
 
     // Mark static buffer as dirty since we have a new message
     this.staticBufferDirty = true;
@@ -179,6 +186,12 @@ export class CombatLogManager {
     this.messages = [];
     this.scrollOffset = 0;
     this.staticBufferDirty = true;
+    // Reset animation state
+    this.animatingMessageIndex = -1;
+    this.animationProgress = 1;
+    this.animationCharsShown = 0;
+    // Clear message queue
+    this.messageQueue = [];
   }
 
   /**

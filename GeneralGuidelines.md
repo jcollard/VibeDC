@@ -818,6 +818,132 @@ for (let i = startIdx; i < endIdx && i < startIdx + maxVisibleLines; i++) {
 
 ---
 
+## Animation State Management Pattern
+
+When implementing components with animation queues and state machines, proper handling of animation state is critical to prevent bugs like messages getting stuck in queues or animations never completing.
+
+### Handle Instant/Infinite Speed as Immediate Completion
+
+**✅ DO**: Mark instant animations as complete immediately
+```typescript
+addMessage(message: string, charsPerSecond?: number): void {
+  // ... add message to storage ...
+
+  // Calculate animation duration
+  const speed = charsPerSecond ?? this.DEFAULT_CHARS_PER_SECOND;
+  this.animationDuration = plainTextLength / speed;
+
+  // Start animation for the new message
+  this.animatingMessageIndex = this.messages.length - 1;
+
+  // If animation duration is 0 (instant/infinite speed), complete immediately
+  if (this.animationDuration === 0 || !isFinite(this.animationDuration)) {
+    this.animationProgress = 1;  // ✅ Complete immediately
+    this.animationCharsShown = plainTextLength;
+  } else {
+    this.animationProgress = 0;  // Start animation normally
+    this.animationCharsShown = 0;
+  }
+}
+```
+
+**❌ DON'T**: Treat infinite speed as zero-duration animation
+```typescript
+// BAD: Zero duration still starts animation with progress = 0
+addMessage(message: string, charsPerSecond?: number): void {
+  const speed = charsPerSecond ?? 60;
+  this.animationDuration = plainTextLength / Infinity;  // = 0
+
+  this.animatingMessageIndex = this.messages.length - 1;
+  this.animationProgress = 0;  // ❌ Looks like animation in progress!
+  this.animationCharsShown = 0;
+
+  // Next message checks: if (this.animationProgress < 1)
+  // Result: Gets queued even though previous message was "instant"
+}
+```
+
+**Why**: Animation queue checks typically use `animationProgress < 1` to determine if an animation is in progress. If instant messages start with `progress = 0`, they appear to be animating, causing all subsequent messages to be queued even though the animation should have completed instantly.
+
+**Real-world bug**: CombatLogManager was adding messages with `Infinity` chars/sec during save/load, but only the first message displayed because all others were queued behind the "animating" first message.
+
+### Reset All Animation State in Clear Methods
+
+**✅ DO**: Reset all animation state, not just data
+```typescript
+clear(): void {
+  // Clear data
+  this.messages = [];
+  this.scrollOffset = 0;
+
+  // Reset animation state
+  this.animatingMessageIndex = -1;
+  this.animationProgress = 1;  // Mark as complete
+  this.animationCharsShown = 0;
+
+  // Clear message queue
+  this.messageQueue = [];  // ✅ Don't forget the queue!
+
+  // Mark buffers dirty
+  this.staticBufferDirty = true;
+}
+```
+
+**❌ DON'T**: Leave animation state inconsistent
+```typescript
+// BAD: Clears data but leaves animation state
+clear(): void {
+  this.messages = [];
+  this.scrollOffset = 0;
+  this.staticBufferDirty = true;
+
+  // ❌ Forgot to reset:
+  // - this.animatingMessageIndex (still points to old message)
+  // - this.animationProgress (might be < 1)
+  // - this.messageQueue (still has queued messages)
+
+  // Result: Next addMessage() sees animation in progress, gets queued!
+}
+```
+
+**Why**: If `clear()` doesn't reset animation state, the next `addMessage()` call might see an animation "in progress" and queue the message instead of adding it immediately. This creates a permanently stuck queue where no messages ever display.
+
+### Check Completion Before Queuing
+
+**✅ DO**: Use proper completion checks
+```typescript
+addMessage(message: string): void {
+  // Check if animation is truly in progress
+  if (this.animatingMessageIndex >= 0 && this.animationProgress < 1) {
+    this.messageQueue.push({ message });  // Queue for later
+    return;
+  }
+
+  // No animation in progress, add immediately
+  this.messages.push(message);
+  this.animatingMessageIndex = this.messages.length - 1;
+  this.animationProgress = 0;
+}
+```
+
+**Common Pitfall**: Using only `animatingMessageIndex >= 0` without checking `animationProgress < 1` means completed animations still block new messages.
+
+### Summary
+
+When implementing animation systems:
+1. **Instant animations** (duration = 0 or Infinity) → set `progress = 1` immediately
+2. **Clear/reset methods** → reset animation state AND queues
+3. **Queue checks** → verify animation is incomplete (`progress < 1`), not just started (`index >= 0`)
+4. **State consistency** → all animation variables should be reset together
+
+These patterns prevent bugs where:
+- Messages get stuck in queues
+- Animations never complete
+- Clear operations leave inconsistent state
+- Instant operations behave like slow animations
+
+---
+
 ## Meta-Guidelines for AI Development
 
 ### At the Start of Each Development Session
