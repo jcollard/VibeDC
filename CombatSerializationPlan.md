@@ -371,22 +371,27 @@ const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
 
 #### 3.2 Add Handler Functions
 
+**Following GeneralGuidelines.md (State Management & Performance):**
+- Store combatLogManager in ref (doesn't need re-renders per guideline lines 121-124)
+- Don't call renderFrame() in handlers - let animation loop handle it (guideline lines 582-604)
+- Use React state for combatState (triggers re-renders per guideline lines 116-120)
+
 ```typescript
 // Export to file
 const handleExportToFile = useCallback(() => {
   try {
-    exportCombatToFile(combatState, combatLogManager);
+    exportCombatToFile(combatState, combatLogManagerRef.current);
     setSaveErrorMessage(null);
   } catch (error) {
     setSaveErrorMessage('Failed to export combat state');
     console.error(error);
   }
-}, [combatState, combatLogManager]);
+}, [combatState]);
 
 // Export to localStorage
 const handleSaveToLocalStorage = useCallback(() => {
   try {
-    const success = saveCombatToLocalStorage(combatState, combatLogManager);
+    const success = saveCombatToLocalStorage(combatState, combatLogManagerRef.current);
     if (success) {
       setSaveErrorMessage(null);
     } else {
@@ -396,7 +401,7 @@ const handleSaveToLocalStorage = useCallback(() => {
     setSaveErrorMessage('Failed to save to localStorage');
     console.error(error);
   }
-}, [combatState, combatLogManager]);
+}, [combatState]);
 
 // Import from file
 const handleImportFromFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -406,23 +411,27 @@ const handleImportFromFile = useCallback(async (event: React.ChangeEvent<HTMLInp
   try {
     const result = await importCombatFromFile(file);
     if (result) {
-      // Update state
+      // Update React state (triggers re-render)
       setCombatState(result.combatState);
-      // Recreate combat log manager with loaded messages
-      const newLogManager = result.combatLog;
-      // Update ref
-      combatLogManagerRef.current = newLogManager;
 
+      // Update ref (no re-render needed for log manager per guidelines)
+      combatLogManagerRef.current = result.combatLog;
+
+      // Clear error message (triggers re-render to show success)
       setSaveErrorMessage(null);
+
+      // Animation loop will pick up changes automatically - no manual renderFrame() call
     } else {
+      // Validation failed - keep current state (per requirement)
       setSaveErrorMessage('Invalid save file or corrupted data');
     }
   } catch (error) {
+    // Error during import - keep current state (per requirement)
     setSaveErrorMessage('Failed to import combat state');
     console.error(error);
   }
 
-  // Reset file input
+  // Reset file input to allow re-importing the same file
   event.target.value = '';
 }, []);
 
@@ -431,8 +440,12 @@ const handleLoadFromLocalStorage = useCallback(() => {
   try {
     const result = loadCombatFromLocalStorage();
     if (result) {
+      // Update React state (triggers re-render)
       setCombatState(result.combatState);
+
+      // Update ref (no re-render needed)
       combatLogManagerRef.current = result.combatLog;
+
       setSaveErrorMessage(null);
     } else {
       setSaveErrorMessage('No saved combat found in localStorage');
@@ -443,6 +456,13 @@ const handleLoadFromLocalStorage = useCallback(() => {
   }
 }, []);
 ```
+
+**Key Compliance Points:**
+1. ✅ Store combatLogManager in ref (guideline: state that doesn't need re-renders)
+2. ✅ Store combatState in React state (guideline: state that triggers re-renders)
+3. ✅ Don't call renderFrame() - animation loop handles it (guideline: performance)
+4. ✅ Keep current state on failure (requirement)
+5. ✅ Show error messages via state update (triggers re-render)
 
 #### 3.3 Update Developer Settings Panel JSX
 
@@ -604,13 +624,57 @@ Add new controls to the Developer Settings panel (around line 1140):
    - Invalid position coordinates (negative, out of bounds)
    - Invalid phase value
 
+## GeneralGuidelines.md Compliance Summary
+
+### Guidelines Applied
+
+1. **State Management (lines 116-128):**
+   - ✅ Use React state (`useState`) for combatState - triggers re-renders
+   - ✅ Use `useRef` for combatLogManager - doesn't need re-renders
+   - ✅ Use `useCallback` for handler functions to prevent unnecessary re-creation
+
+2. **Performance - Mouse Events (lines 582-604):**
+   - ✅ Don't call `renderFrame()` in handlers
+   - ✅ Let animation loop pick up state changes automatically
+   - ✅ Only update state in handlers - rendering happens in animation loop
+
+3. **Type Safety:**
+   - ✅ Use proper TypeScript interfaces throughout
+   - ✅ Use discriminated unions for unit types ('humanoid' | 'monster')
+   - ✅ Proper error handling with null checks
+
+4. **Resource Loading (lines 605-654):**
+   - ✅ Handle async operations properly
+   - ✅ Validate imported data before applying
+   - ✅ Clear error messages on success
+
+5. **Console Logging (lines 416-420):**
+   - ✅ Use console.error for errors with descriptive context
+   - ✅ Include relevant data in error logs for debugging
+
+### Guideline-Compliant Patterns Used
+
+```typescript
+// ✅ React state for state that triggers re-renders
+const [combatState, setCombatState] = useState<CombatState>(initialState);
+
+// ✅ useRef for state that doesn't need re-renders
+const combatLogManagerRef = useRef<CombatLogManager>(new CombatLogManager());
+
+// ✅ Don't call renderFrame() - animation loop handles it
+const handleImport = () => {
+  setCombatState(newState); // State update triggers re-render
+  // No renderFrame() call needed - animation loop will pick it up
+};
+```
+
 ## Potential Issues and Solutions
 
 ### Issue 1: CombatState is an Interface, Not a Class
 
 **Problem:** We can't add methods to an interface.
 
-**Solution:** Create standalone functions `serializeCombatState()` and `deserializeCombatState()` in the same file.
+**Solution:** Create standalone functions `serializeCombatState()` and `deserializeCombatState()` in the same file (follows TypeScript best practices).
 
 ### Issue 2: Unit Polymorphism (HumanoidUnit vs MonsterUnit)
 
