@@ -29,6 +29,7 @@ This document provides a token-efficient reference for AI agents to quickly unde
 react-app/src/
 ├── components/combat/
 │   ├── CombatView.tsx                      # Main combat view component
+│   ├── LoadingView.tsx                     # Generic loading transition overlay
 │   └── CombatViewRoute.tsx                 # Routing wrapper
 │
 └── models/combat/
@@ -501,8 +502,46 @@ react-app/src/
 - Input handling (mouse events, coordinate conversion)
 - Renderer orchestration
 - Sprite/font loading
-**Dependencies:** Nearly all combat model files
+- Save/load operations with LoadingView integration
+**Dependencies:** Nearly all combat model files, LoadingView
 **Used By:** CombatViewRoute
+
+### `components/combat/LoadingView.tsx`
+**Purpose:** Generic loading transition overlay with dithered fade effects
+**Exports:** `LoadingView` React component, `LoadingViewProps`, `LoadResult`
+**Key Responsibilities:**
+- State machine (IDLE → FADE_TO_LOADING → LOADING → FADE_TO_GAME → COMPLETE)
+- Canvas snapshot dithering (Bayer 4x4 matrix)
+- Async operation coordination via callback chain
+- Dismount/remount coordination with parent component
+- Error rollback to previous canvas snapshot
+**State Machine:**
+```
+IDLE → (isLoading=true) → FADE_TO_LOADING
+  ↓
+  [Dither from snapshot to loading screen]
+  ↓
+  onFadeInComplete() → LOADING
+  ↓
+  [Call onLoadReady(), await result]
+  ↓
+  onComplete(result) → FADE_TO_GAME
+  ↓
+  [Dither to transparent (success) or back to snapshot (error)]
+  ↓
+  onAnimationComplete() → COMPLETE → IDLE
+```
+**Dithering Pattern:**
+- Uses Bayer 4x4 matrix for ordered dithering
+- 4x4 pixel blocks (384x216 = ~5,184 blocks)
+- Radial gradient for center-outward effect
+- Linear easing (no acceleration curves)
+**Timing Constants:**
+- FADE_DURATION: 300ms (each transition)
+- LOADING_MIN_DURATION: 100ms (minimum wait)
+- Total fast load: ~700ms
+**Dependencies:** FontAtlasLoader, FontAtlasRenderer
+**Used By:** CombatView for save/load operations
 
 ### `components/combat/CombatViewRoute.tsx`
 **Purpose:** Routing wrapper for CombatView
@@ -560,6 +599,36 @@ react-app/src/
 5. **State change** → triggers useEffect, creates new phase handler for the new phase
 
 **Common Bug:** Forgetting to capture and apply the update() return value prevents phase transitions. See GeneralGuidelines.md "Common Pitfalls" section.
+
+### Loading Transition Flow
+1. **User action** → triggers load (Import button or Load from LocalStorage button)
+2. **CombatView** → `captureCanvasSnapshot()` saves current display canvas
+3. **CombatView** → stores file in `fileToImportRef` (if file import) or clears it (if localStorage)
+4. **CombatView** → sets `isLoading = true`
+5. **LoadingView** → detects `isLoading` change, transitions to FADE_TO_LOADING state
+6. **LoadingView** → dithers from snapshot canvas to "Loading..." screen (300ms)
+7. **LoadingView** → calls `onFadeInComplete()` when fade completes
+8. **CombatView** → sets `showCombatView = false` (dismounts canvas, safe because loading screen is fully visible)
+9. **LoadingView** → transitions to LOADING state
+10. **LoadingView** → calls `onLoadReady()` async function
+11. **CombatView** → checks `fileToImportRef` to determine load source
+12. **CombatView** → calls `importCombatFromFile(file)` or `loadCombatFromLocalStorage()`
+13. **CombatView** → reconstructs `CombatLogManager` from JSON, adds messages with Infinity speed (instant)
+14. **CombatView** → returns `LoadResult` with `{ success, combatState?, combatLog?, error? }`
+15. **LoadingView** → waits minimum 100ms in LOADING state, then calls `onComplete(result)`
+16. **CombatView** → if success: applies new `combatState`, copies messages to `combatLogManager`, sets `showCombatView = true`
+17. **CombatView** → if error: logs error message, keeps old state, sets `showCombatView = true` (rollback)
+18. **LoadingView** → transitions to FADE_TO_GAME state
+19. **LoadingView** → if success: dithers to transparent (reveals new canvas beneath)
+20. **LoadingView** → if error: dithers back to snapshot canvas (restores old visual state)
+21. **LoadingView** → fade completes (300ms), transitions to COMPLETE state
+22. **LoadingView** → calls `onAnimationComplete()`
+23. **CombatView** → sets `isLoading = false` (completes cycle)
+24. **LoadingView** → after short delay, transitions to IDLE state (ready for next load)
+
+**Key Pattern:** Callback chain prevents race conditions. CombatView only resets `isLoading` after LoadingView animation fully completes via `onAnimationComplete()` callback. Using `setTimeout` would cause double animation bug.
+
+**Error Rollback:** If load fails, LoadingView dithers back to canvas snapshot, CombatView keeps old state, user sees smooth transition back to previous state without jarring jump.
 
 ---
 
@@ -642,9 +711,9 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 52+ Core Files
+## File Count: 53+ Core Files
 
-**Components:** 2 files
+**Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 5 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, BattlePhaseHandler, PhaseBase, CombatPhaseHandler)
 **Rendering:** 2 files

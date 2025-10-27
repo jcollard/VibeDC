@@ -200,6 +200,64 @@ return state;
 
 **Why**: React uses reference equality to detect changes. If you mutate the existing object, `updatedState === combatState` will be `true`, and React won't re-render or trigger `useEffect` hooks. Always return a new object when state changes.
 
+### Async Operations with Animations
+
+When implementing components that perform async operations (file loading, network requests) with animation transitions, use a callback lifecycle chain to prevent race conditions:
+
+**✅ DO**: Use sequential callbacks for state transitions
+```typescript
+interface LoadingViewProps {
+  isLoading: boolean;
+  onFadeInComplete: () => void;          // Animation fully covers screen
+  onLoadReady: () => Promise<LoadResult>; // Perform async operation
+  onComplete: (result: LoadResult) => void; // Apply loaded state
+  onAnimationComplete?: () => void;      // Animation fully complete, reset flags
+}
+
+// In parent component
+const handleAnimationComplete = useCallback(() => {
+  setIsLoading(false); // Only reset after animation completes
+}, []);
+
+// In animation component
+useEffect(() => {
+  if (currentState === 'FADE_TO_GAME' && elapsedTime >= FADE_DURATION) {
+    setCurrentState('COMPLETE');
+
+    // Call parent's cleanup callback
+    if (onAnimationComplete) {
+      onAnimationComplete();
+    }
+  }
+}, [currentState, elapsedTime, onAnimationComplete]);
+```
+
+**❌ DON'T**: Use setTimeout for state cleanup
+```typescript
+// BAD: Race condition - setTimeout may fire during animation
+const handleLoadComplete = (result: LoadResult) => {
+  applyState(result);
+  setTimeout(() => {
+    setIsLoading(false); // May race with animation state machine!
+  }, 2000);
+};
+```
+
+**Why**: setTimeout-based state reset creates race conditions where the parent resets `isLoading` while the animation component is still transitioning. This can cause:
+- Double animations (component sees isLoading change back to true)
+- Visual glitches (state resets mid-transition)
+- Inconsistent UI state
+
+**Real-world bug**: LoadingView was playing animation twice because setTimeout in CombatView was resetting `isLoading=false` while LoadingView was still in FADE_TO_GAME state. The state reset triggered a re-render that somehow restarted the animation.
+
+**Callback Sequence Pattern**:
+1. `onFadeInComplete()` → safe to dismount/modify underlying view
+2. `onLoadReady()` → perform async operation (file load, network request)
+3. `onComplete(result)` → apply loaded state or rollback on error
+4. `onAnimationComplete()` → reset loading flags, cleanup
+
+This pattern ensures strict sequencing: parent only resets state after child animation completes.
+
 ### WeakMap for Object-to-ID Mapping
 
 When you need bidirectional lookup between objects and IDs, use `Map` for primary storage and `WeakMap` for reverse lookup:
@@ -400,6 +458,78 @@ export interface PhaseEventResult {
 - No mixing of unrelated fields
 
 ## Component Architecture
+
+### Full-Screen Transition Components
+
+When implementing overlay components for async operations (loading screens, transitions, dialogs) that need to dismount/remount underlying views:
+
+**✅ DO**: Use absolute positioning with flexbox centering, callback chain for lifecycle
+```typescript
+// Overlay component (LoadingView)
+<canvas
+  ref={canvasRef}
+  width={canvasWidth}
+  height={canvasHeight}
+  style={{
+    position: 'absolute',
+    // Don't set top/left - participate in parent's flexbox centering
+    ...displayStyle, // Inherit scaling from parent
+    zIndex: 1000,
+    pointerEvents: isAnimating ? 'auto' : 'none',
+    imageRendering: 'pixelated',
+    objectFit: 'contain',
+  }}
+/>
+
+// Parent component structure
+<div style={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+  {/* Overlay - always rendered, controls own visibility */}
+  <TransitionOverlay
+    isActive={isLoading}
+    canvasSnapshot={snapshotRef.current}
+    displayStyle={canvasDisplayStyle}
+    onFadeInComplete={() => setShowContent(false)}
+    onComplete={(result) => applyResult(result)}
+    onAnimationComplete={() => setIsLoading(false)}
+  />
+
+  {/* Content - conditionally rendered */}
+  {showContent && (
+    <canvas ref={contentCanvasRef} style={canvasDisplayStyle} />
+  )}
+</div>
+```
+
+**❌ DON'T**: Use fixed positioning or manage overlay visibility from parent
+```typescript
+// BAD: Fixed positioning doesn't respect parent scaling/centering
+<canvas
+  style={{
+    position: 'fixed',
+    top: 0,
+    left: 0, // Ignores parent centering!
+    zIndex: 1000
+  }}
+/>
+
+// BAD: Parent manages overlay visibility
+{isLoading && <LoadingView />} // Dismounts component, loses animation state!
+```
+
+**Key Principles**:
+1. **Positioning**: Use `position: absolute` without top/left to participate in parent's flexbox layout
+2. **Always Rendered**: Overlay component manages own visibility via opacity/pointer-events, not parent conditional rendering
+3. **Display Style Inheritance**: Pass parent's `displayStyle` (scaling, size) to overlay for exact alignment
+4. **Conditional Content**: Parent conditionally renders underlying content via `{showContent && <Content />}`
+5. **Callback Lifecycle**: Use sequential callbacks for state transitions (see "Async Operations with Animations")
+
+**Benefits**:
+- Overlay perfectly covers content regardless of scaling/centering
+- Eliminates React state timing issues during dismount/remount
+- Reusable pattern for any full-screen transition
+- Clean separation: overlay manages animation, parent manages content lifecycle
+
+**Real-world example**: LoadingView implements this pattern to provide loading transitions for CombatView save/load operations. It dithers from a canvas snapshot to "Loading..." text, dismounts CombatView during the async load, then dithers back to the new state (or rolls back to snapshot on error).
 
 ### PanelContent Interface
 Implement `PanelContent` for any content displayed in info panels:
@@ -678,6 +808,56 @@ render() {
 
 **Exception**: For one-time or infrequent rendering (< 1 fps), creating a canvas locally is acceptable if it simplifies cleanup and the performance impact is negligible.
 
+### Canvas Snapshot Pattern
+
+When implementing transitions or operations that need to preserve current canvas state (for rollback or morphing effects):
+
+**✅ DO**: Create snapshot canvas before state change
+```typescript
+const captureCanvasSnapshot = useCallback((): HTMLCanvasElement | null => {
+  const displayCanvas = displayCanvasRef.current;
+  if (!displayCanvas) return null;
+
+  const snapshot = document.createElement('canvas');
+  snapshot.width = CANVAS_WIDTH;
+  snapshot.height = CANVAS_HEIGHT;
+
+  const ctx = snapshot.getContext('2d');
+  if (!ctx) return null;
+
+  ctx.imageSmoothingEnabled = false;
+  ctx.drawImage(displayCanvas, 0, 0);
+
+  return snapshot;
+}, []);
+
+// Before async operation
+const snapshotRef = useRef<HTMLCanvasElement | null>(null);
+snapshotRef.current = captureCanvasSnapshot();
+performAsyncOperation();
+```
+
+**❌ DON'T**: Try to restore from React state or props
+```typescript
+// BAD: Can't capture visual state, only data state
+const [oldState, setOldState] = useState(currentState);
+// If render fails, can't roll back to exact visual appearance
+```
+
+**Use Cases**:
+- **Error rollback**: Restore previous canvas if load operation fails
+- **Transition effects**: Dither/morph between old and new states
+- **Undo operations**: Preview changes before committing
+- **Loading screens**: Show static snapshot while dismounting/remounting components
+
+**Benefits**:
+- Preserves exact visual state including animations mid-frame
+- Enables smooth transitions between different states
+- Allows error recovery without jarring jumps
+- Independent of data state (captures rendered output)
+
+**Pattern in LoadingView**: Captures canvas snapshot before dismounting CombatView, uses snapshot for dithered fade-in effect, can restore snapshot on load failure.
+
 ### Animation Performance Pattern
 
 When animating content that includes static elements, separate static from dynamic:
@@ -941,6 +1121,61 @@ These patterns prevent bugs where:
 - Animations never complete
 - Clear operations leave inconsistent state
 - Instant operations behave like slow animations
+
+---
+
+## TypeScript Patterns
+
+### Using Const Objects Instead of Enums
+
+When TypeScript's `erasableSyntaxOnly` mode is enabled, enums are not allowed. Use const objects with type assertions instead:
+
+**✅ DO**: Use const object with type assertion
+```typescript
+// Define the object with const assertion
+const LoadingState = {
+  IDLE: 'idle',
+  FADE_TO_LOADING: 'fade-to-loading',
+  LOADING: 'loading',
+  FADE_TO_GAME: 'fade-to-game',
+  COMPLETE: 'complete',
+} as const;
+
+// Extract the type from the object
+type LoadingState = (typeof LoadingState)[keyof typeof LoadingState];
+
+// Usage (same as enum)
+let currentState: LoadingState = LoadingState.IDLE;
+
+if (currentState === LoadingState.FADE_TO_LOADING) {
+  // Type-safe access
+}
+```
+
+**❌ DON'T**: Use enum with erasableSyntaxOnly
+```typescript
+// BAD: Causes TS1294 error with erasableSyntaxOnly
+enum LoadingState {
+  IDLE = 'idle',
+  FADE_TO_LOADING = 'fade-to-loading',
+  // ...
+}
+```
+
+**Benefits of Const Object Pattern**:
+- Works with `erasableSyntaxOnly` mode (required by some build tools)
+- Maintains full type safety (autocomplete, exhaustiveness checks)
+- Same developer experience as enums
+- Runtime value is just a plain object (no enum codegen)
+- String literal types enable discriminated unions
+
+**When to Use**:
+- Project uses `erasableSyntaxOnly` in tsconfig.json
+- Build tool doesn't support enum syntax
+- Want to avoid enum codegen overhead
+- Need string literal types for discriminated unions
+
+**Real-world usage**: LoadingView uses this pattern for its state machine to avoid TS1294 errors while maintaining type safety for state transitions.
 
 ---
 
