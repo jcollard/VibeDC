@@ -144,9 +144,14 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
       const newManifest = new CombatUnitManifest();
 
-      // Copy existing units, excluding any unit at the deployment zone
+      // Copy existing units, excluding:
+      // 1. Any unit at the deployment zone (to replace it)
+      // 2. Any unit with the same name as the one being deployed (to prevent duplicates)
       combatState.unitManifest.getAllUnits().forEach(placement => {
-        if (placement.position.x !== deploymentZone.x || placement.position.y !== deploymentZone.y) {
+        const isAtDeploymentZone = placement.position.x === deploymentZone.x && placement.position.y === deploymentZone.y;
+        const isDuplicateUnit = placement.unit.name === unit.name;
+
+        if (!isAtDeploymentZone && !isDuplicateUnit) {
           newManifest.addUnit(placement.unit, placement.position);
         }
       });
