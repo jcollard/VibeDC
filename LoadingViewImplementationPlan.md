@@ -512,11 +512,11 @@ return (
       position: 'absolute',
       top: 0,
       left: 0,
-      width: '100%',
-      height: '100%',
+      ...displayStyle, // Apply same scaling as main canvas (respects integer scaling)
       zIndex: 1000,
       pointerEvents: currentState === LoadingState.IDLE ? 'none' : 'auto',
       imageRendering: 'pixelated',
+      objectFit: 'contain', // Match main canvas objectFit
     }}
   />
 );
@@ -660,6 +660,7 @@ return (
       canvasSnapshot={canvasSnapshotRef.current}
       canvasWidth={CANVAS_WIDTH}
       canvasHeight={CANVAS_HEIGHT}
+      displayStyle={canvasDisplayStyle} // Pass scaling style for integer scaling support
       onFadeInComplete={handleFadeInComplete}
       onLoadReady={handleLoadReady}
       onComplete={handleLoadComplete}

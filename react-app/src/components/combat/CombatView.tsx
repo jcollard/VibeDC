@@ -227,6 +227,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showCombatView, setShowCombatView] = useState(true);
   const canvasSnapshotRef = useRef<HTMLCanvasElement | null>(null);
+  const fileToImportRef = useRef<File | null>(null);
 
   // Track which scroll arrow is currently pressed
   const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | 'logUp' | 'logDown' | null>(null);
@@ -968,8 +969,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   const handleLoadReady = useCallback(async (): Promise<LoadResult> => {
     try {
-      // Perform actual load operation
-      const result = loadCombatFromLocalStorage();
+      let result;
+
+      // Check if we're loading from file or localStorage
+      if (fileToImportRef.current) {
+        console.log('[CombatView] Loading from file');
+        result = await importCombatFromFile(fileToImportRef.current);
+        fileToImportRef.current = null; // Clear the file after loading
+      } else {
+        console.log('[CombatView] Loading from localStorage');
+        result = loadCombatFromLocalStorage();
+      }
 
       if (result) {
         // Reconstruct CombatLogManager from JSON
@@ -997,7 +1007,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       } else {
         return {
           success: false,
-          error: 'No saved combat found in localStorage',
+          error: fileToImportRef.current
+            ? 'Invalid save file or corrupted data'
+            : 'No saved combat found in localStorage',
         };
       }
     } catch (error) {
@@ -1080,43 +1092,28 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    try {
-      const result = await importCombatFromFile(file);
-      if (result) {
-        // Update React state (triggers re-render)
-        setCombatState(result.combatState);
+    console.log('[CombatView] File selected, starting import with loading animation');
 
-        // Copy messages to current combatLogManager
-        // Note: We can't replace the useMemo instance, so we copy the messages
-        combatLogManager.clear();
-        const messages = result.combatLog.getMessages();
-        for (const message of messages) {
-          combatLogManager.addMessage(message, Infinity); // Add instantly
-        }
-        combatLogManager.scrollToBottom(); // Ensure all messages are visible
+    // Capture current canvas state before loading
+    canvasSnapshotRef.current = captureCanvasSnapshot();
 
-        // Clear error message (triggers re-render to show success)
-        setSaveErrorMessage(null);
+    // Store the file for later use in handleLoadReady
+    fileToImportRef.current = file;
 
-        // Animation loop will pick up changes automatically - no manual renderFrame() call
-      } else {
-        // Validation failed - keep current state (per requirement)
-        setSaveErrorMessage('Invalid save file or corrupted data');
-      }
-    } catch (error) {
-      // Error during import - keep current state (per requirement)
-      setSaveErrorMessage('Failed to import combat state');
-      console.error(error);
-    }
+    // Trigger loading transition
+    setIsLoading(true);
 
     // Reset file input to allow re-importing the same file
     event.target.value = '';
-  }, [combatLogManager]);
+  }, [captureCanvasSnapshot]);
 
   const handleLoadFromLocalStorage = useCallback(() => {
     console.log('[CombatView] handleLoadFromLocalStorage called');
     // Capture current canvas state before loading
     canvasSnapshotRef.current = captureCanvasSnapshot();
+
+    // Clear any pending file import
+    fileToImportRef.current = null;
 
     // Trigger loading transition
     console.log('[CombatView] Setting isLoading to true');

@@ -335,8 +335,8 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
    * Handle state transitions based on elapsed time
    */
   useEffect(() => {
-    const FADE_DURATION = 2000; // milliseconds (DEBUG: slowed to 2 seconds)
-    const LOADING_MIN_DURATION = 2000; // milliseconds (DEBUG: wait 2 seconds on loading screen)
+    const FADE_DURATION = 300; // milliseconds
+    const LOADING_MIN_DURATION = 100; // milliseconds
 
     switch (currentState) {
       case LoadingState.FADE_TO_LOADING:
@@ -419,7 +419,7 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
     const loadingBuffer = loadingScreenBufferRef.current;
     if (!loadingBuffer) return;
 
-    const FADE_DURATION = 2000; // DEBUG: Must match transition duration
+    const FADE_DURATION = 300; // Must match transition duration
 
     switch (currentState) {
       case LoadingState.IDLE:
@@ -478,8 +478,7 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
       height={canvasHeight}
       style={{
         position: 'absolute',
-        top: 0,
-        left: 0,
+        // Don't set top/left - let it be centered by parent flexbox like the game canvas
         ...displayStyle, // Apply same scaling as main canvas
         zIndex: 1000,
         pointerEvents: currentState === LoadingState.IDLE ? 'none' : 'auto',
