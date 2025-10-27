@@ -35,6 +35,13 @@ export interface CombatLogConfig {
 }
 
 /**
+ * JSON representation of CombatLogManager for serialization
+ */
+export interface CombatLogJSON {
+  messages: string[];
+}
+
+/**
  * Manages combat log messages with support for colored text tags.
  * Uses an off-screen canvas buffer to render message history with scrolling.
  *
@@ -699,5 +706,36 @@ export class CombatLogManager {
     }
 
     return null;
+  }
+
+  /**
+   * Convert this CombatLogManager to a JSON-serializable object
+   * Only stores the message text, not animation state or scroll position
+   */
+  toJSON(): CombatLogJSON {
+    return {
+      messages: this.messages.map(m => m.rawText)
+    };
+  }
+
+  /**
+   * Create a CombatLogManager from a JSON object
+   * Messages are added instantly without animation
+   * @param json The JSON representation
+   * @param config Optional configuration (uses defaults if not provided)
+   * @returns A new CombatLogManager instance
+   */
+  static fromJSON(json: CombatLogJSON, config?: Partial<CombatLogConfig>): CombatLogManager {
+    const logManager = new CombatLogManager(config);
+
+    // Add all messages instantly (no animation)
+    for (const message of json.messages) {
+      logManager.addMessage(message, Infinity); // Infinity chars/sec = instant
+    }
+
+    // Scroll to bottom to show newest messages
+    logManager.scrollToBottom();
+
+    return logManager;
   }
 }

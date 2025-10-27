@@ -5,6 +5,7 @@ import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler'
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { DeploymentPhaseHandler, type DeploymentPanelData } from '../../models/combat/DeploymentPhaseHandler';
 import { EnemyDeploymentPhaseHandler } from '../../models/combat/EnemyDeploymentPhaseHandler';
+import { BattlePhaseHandler } from '../../models/combat/BattlePhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -27,6 +28,12 @@ import { TopPanelManager } from '../../models/combat/managers/TopPanelManager';
 import { TurnOrderRenderer } from '../../models/combat/managers/renderers/TurnOrderRenderer';
 import type { PanelClickResult } from '../../models/combat/managers/panels/PanelContent';
 import '../../utils/CombatDebugger'; // Initialize debug utilities
+import {
+  exportCombatToFile,
+  importCombatFromFile,
+  saveCombatToLocalStorage,
+  loadCombatFromLocalStorage,
+} from '../../utils/combatStorage';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -66,8 +73,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current = new DeploymentPhaseHandler(uiStateManager);
     } else if (combatState.phase === 'enemy-deployment') {
       phaseHandlerRef.current = new EnemyDeploymentPhaseHandler();
+    } else if (combatState.phase === 'battle') {
+      phaseHandlerRef.current = new BattlePhaseHandler();
     }
-    // Add other phase handlers as needed (battle, victory, defeat)
+    // Add other phase handlers as needed (victory, defeat)
   }, [combatState.phase, uiStateManager]);
 
   // Initialize cinematic manager
@@ -209,6 +218,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track map scroll offset (in tiles)
   const [mapScrollX, setMapScrollX] = useState<number>(0);
   const [mapScrollY, setMapScrollY] = useState<number>(0);
+
+  // Save/load state
+  const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
 
   // Track which scroll arrow is currently pressed
   const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | 'logUp' | 'logDown' | null>(null);
@@ -499,7 +511,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
       // Update phase handler (for animations) only if no cinematic is playing
       if (!cinematicPlaying && phaseHandlerRef.current.update) {
-        phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+        const updatedState = phaseHandlerRef.current.update(combatState, encounter, deltaTime);
+        // If phase handler returns new state (e.g., phase transition), apply it
+        if (updatedState && updatedState !== combatState) {
+          setCombatState(updatedState);
+        }
       }
 
       // Update combat log animations
@@ -920,6 +936,91 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
   }, []);
 
+  // Save/Load handlers
+  const handleExportToFile = useCallback(() => {
+    try {
+      exportCombatToFile(combatState, combatLogManager);
+      setSaveErrorMessage(null);
+    } catch (error) {
+      setSaveErrorMessage('Failed to export combat state');
+      console.error(error);
+    }
+  }, [combatState, combatLogManager]);
+
+  const handleSaveToLocalStorage = useCallback(() => {
+    try {
+      const success = saveCombatToLocalStorage(combatState, combatLogManager);
+      if (success) {
+        setSaveErrorMessage(null);
+      } else {
+        setSaveErrorMessage('Failed to save to localStorage');
+      }
+    } catch (error) {
+      setSaveErrorMessage('Failed to save to localStorage');
+      console.error(error);
+    }
+  }, [combatState, combatLogManager]);
+
+  const handleImportFromFile = useCallback(async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const result = await importCombatFromFile(file);
+      if (result) {
+        // Update React state (triggers re-render)
+        setCombatState(result.combatState);
+
+        // Copy messages to current combatLogManager
+        // Note: We can't replace the useMemo instance, so we copy the messages
+        combatLogManager.clear();
+        const messages = result.combatLog.getMessages();
+        for (const message of messages) {
+          combatLogManager.addMessage(message, Infinity); // Add instantly
+        }
+
+        // Clear error message (triggers re-render to show success)
+        setSaveErrorMessage(null);
+
+        // Animation loop will pick up changes automatically - no manual renderFrame() call
+      } else {
+        // Validation failed - keep current state (per requirement)
+        setSaveErrorMessage('Invalid save file or corrupted data');
+      }
+    } catch (error) {
+      // Error during import - keep current state (per requirement)
+      setSaveErrorMessage('Failed to import combat state');
+      console.error(error);
+    }
+
+    // Reset file input to allow re-importing the same file
+    event.target.value = '';
+  }, [combatLogManager]);
+
+  const handleLoadFromLocalStorage = useCallback(() => {
+    try {
+      const result = loadCombatFromLocalStorage();
+      if (result) {
+        // Update React state (triggers re-render)
+        setCombatState(result.combatState);
+
+        // Copy messages to current combatLogManager
+        combatLogManager.clear();
+        const messages = result.combatLog.getMessages();
+        for (const message of messages) {
+          combatLogManager.addMessage(message, Infinity); // Add instantly
+        }
+
+        setSaveErrorMessage(null);
+      } else {
+        setSaveErrorMessage('No saved combat found in localStorage');
+      }
+    } catch (error) {
+      setSaveErrorMessage('Failed to load from localStorage');
+      console.error(error);
+    }
+  }, [combatLogManager]);
+
   return (
     <div
       style={{
@@ -1137,6 +1238,106 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               cursor: 'pointer',
             }}
           />
+
+          {/* Combat Save/Load Section */}
+          <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #666' }}>
+            <h3 style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold' }}>Combat Save/Load</h3>
+
+            {/* Error message display */}
+            {saveErrorMessage && (
+              <div style={{
+                color: '#ff4444',
+                backgroundColor: 'rgba(255, 68, 68, 0.1)',
+                padding: '8px',
+                marginBottom: '10px',
+                borderRadius: '4px',
+                fontSize: '11px',
+                border: '1px solid #ff4444',
+              }}>
+                {saveErrorMessage}
+              </div>
+            )}
+
+            {/* File Export/Import */}
+            <div style={{ marginBottom: '12px' }}>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px' }}>File:</label>
+              <button
+                onClick={handleExportToFile}
+                style={{
+                  padding: '6px 12px',
+                  marginRight: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                }}
+              >
+                Export
+              </button>
+              <label
+                htmlFor="import-file-input"
+                style={{
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  backgroundColor: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  display: 'inline-block',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                }}
+              >
+                Import
+              </label>
+              <input
+                id="import-file-input"
+                type="file"
+                accept=".json"
+                onChange={handleImportFromFile}
+                style={{ display: 'none' }}
+              />
+            </div>
+
+            {/* LocalStorage Save/Load */}
+            <div>
+              <label style={{ display: 'block', marginBottom: '6px', fontSize: '12px' }}>LocalStorage:</label>
+              <button
+                onClick={handleSaveToLocalStorage}
+                style={{
+                  padding: '6px 12px',
+                  marginRight: '8px',
+                  cursor: 'pointer',
+                  backgroundColor: '#4CAF50',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                }}
+              >
+                Save
+              </button>
+              <button
+                onClick={handleLoadFromLocalStorage}
+                style={{
+                  padding: '6px 12px',
+                  cursor: 'pointer',
+                  backgroundColor: '#2196F3',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '4px',
+                  fontSize: '11px',
+                  fontFamily: 'monospace',
+                }}
+              >
+                Load
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

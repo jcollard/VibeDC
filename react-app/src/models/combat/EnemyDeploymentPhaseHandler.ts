@@ -83,13 +83,17 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
     // Initialize on first update
     this.initialize(state, encounter);
 
-    if (!this.animationSequence) return state;
+    if (!this.animationSequence) {
+      console.log('[EnemyDeploymentPhaseHandler] No animation sequence');
+      return state;
+    }
 
     // Update animation
     const complete = this.animationSequence.update(deltaTime);
 
     if (complete && !this.animationComplete) {
       this.animationComplete = true;
+      console.log('[EnemyDeploymentPhaseHandler] Animation complete! Transitioning to battle phase...');
 
       // Add all enemies to manifest now that animations are complete
       for (const { unit, position } of this.enemyUnits) {
@@ -97,10 +101,12 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
       }
 
       // Transition to battle phase
-      return {
+      const newState = {
         ...state,
-        phase: 'battle',
+        phase: 'battle' as const,
       };
+      console.log('[EnemyDeploymentPhaseHandler] Returning new state with phase:', newState.phase);
+      return newState;
     }
 
     return state;
