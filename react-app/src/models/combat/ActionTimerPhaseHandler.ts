@@ -103,6 +103,13 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   // Flag to track if we've already calculated the turn
   private turnCalculated: boolean = false;
 
+  // Animation state
+  private animationStartTime: number = 0;
+  private animationDuration: number = 1.0; // 1 second animation
+  private startTimers: Map<string, number> = new Map(); // unit name -> starting AT value
+  private targetTimers: Map<string, number> = new Map(); // unit name -> target AT value
+  private isAnimating: boolean = false;
+
   constructor() {
     super();
     console.log('[ActionTimerPhaseHandler] Initialized');
@@ -144,12 +151,12 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   }
 
   /**
-   * Update action timer logic - calculate who goes next and set final AT values
+   * Update action timer logic - calculate who goes next and animate AT values
    */
   protected updatePhase(
     state: CombatState,
     encounter: CombatEncounter,
-    _deltaTime: number
+    deltaTime: number
   ): CombatState | null {
     // Check victory/defeat conditions first
     if (encounter.isVictory(state)) {
@@ -170,37 +177,69 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
     // Only calculate once when entering this phase
     if (!this.turnCalculated) {
-      this.calculateNextTurn(state.unitManifest);
+      this.startAnimation(state.unitManifest);
       this.turnCalculated = true;
+    }
 
-      // Find the ready unit (should be the one we just calculated)
-      const readyUnit = this.getReadyUnit(state.unitManifest);
+    // Animate the timers
+    if (this.isAnimating) {
+      this.animationStartTime += deltaTime;
+      const progress = Math.min(this.animationStartTime / this.animationDuration, 1.0);
 
-      if (readyUnit) {
-        console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
+      // Update all units' timers based on animation progress
+      const allUnits = state.unitManifest.getAllUnits();
+      for (const placement of allUnits) {
+        const unit = placement.unit;
+        const startValue = this.startTimers.get(unit.name) || 0;
+        const targetValue = this.targetTimers.get(unit.name) || 0;
+        const currentValue = startValue + (targetValue - startValue) * progress;
 
-        // Transition to unit-turn phase
-        return {
-          ...state,
-          phase: 'unit-turn'
-        };
+        // Direct mutation of private field
+        (unit as any)._actionTimer = currentValue;
+      }
+
+      // Check if animation is complete
+      if (progress >= 1.0) {
+        this.isAnimating = false;
+
+        // Find the ready unit
+        const readyUnit = this.getReadyUnit(state.unitManifest);
+
+        if (readyUnit) {
+          console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
+
+          // Transition to unit-turn phase
+          return {
+            ...state,
+            phase: 'unit-turn'
+          };
+        }
       }
     }
 
-    // Already calculated, waiting for transition
+    // Animation in progress or waiting
     return state;
   }
 
   /**
-   * Calculate who will reach 100 first, then advance all timers to that moment
+   * Start the animation by calculating final AT values and storing start/target values
    * @param manifest Current unit manifest
    */
-  private calculateNextTurn(
+  private startAnimation(
     manifest: import('./CombatUnitManifest').CombatUnitManifest
   ): void {
     const allUnits = manifest.getAllUnits();
 
-    // Calculate time until each unit reaches 100
+    // Store starting values
+    this.startTimers.clear();
+    this.targetTimers.clear();
+
+    for (const placement of allUnits) {
+      const unit = placement.unit;
+      this.startTimers.set(unit.name, unit.actionTimer);
+    }
+
+    // Calculate time until first unit reaches 100
     let minTimeToReady = Infinity;
 
     for (const placement of allUnits) {
@@ -219,16 +258,19 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       return;
     }
 
-    // Advance all units' timers by that amount of time
+    // Calculate target values for all units
     for (const placement of allUnits) {
       const unit = placement.unit;
       const increment = unit.speed * minTimeToReady * ACTION_TIMER_MULTIPLIER;
-
-      // Direct mutation of private field
-      (placement.unit as any)._actionTimer += increment;
+      const targetValue = unit.actionTimer + increment;
+      this.targetTimers.set(unit.name, targetValue);
     }
 
-    console.log(`[ActionTimerPhaseHandler] Advanced all timers by ${minTimeToReady.toFixed(2)} seconds`);
+    console.log(`[ActionTimerPhaseHandler] Starting animation to advance timers by ${minTimeToReady.toFixed(2)} seconds`);
+
+    // Start animation
+    this.animationStartTime = 0;
+    this.isAnimating = true;
   }
 
   /**
