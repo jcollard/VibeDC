@@ -23,6 +23,10 @@ export class EnemySpriteSequence implements CinematicSequence {
   private readonly unit: CombatUnit;
   private readonly position: Position;
 
+  // Cache off-screen canvas for performance (avoid creating 60 canvases/second)
+  private spriteCanvas: HTMLCanvasElement | null = null;
+  private spriteCtx: CanvasRenderingContext2D | null = null;
+
   /**
    * @param unit - The enemy unit to materialize
    * @param position - The position on the map where the enemy should appear
@@ -123,19 +127,23 @@ export class EnemySpriteSequence implements CinematicSequence {
     const x = Math.round(offsetX + this.position.x * tileSize);
     const y = Math.round(offsetY + this.position.y * tileSize);
 
-    // Create off-screen canvas for the sprite
-    const spriteCanvas = document.createElement('canvas');
-    spriteCanvas.width = tileSize;
-    spriteCanvas.height = tileSize;
-    const spriteCtx = spriteCanvas.getContext('2d');
+    // Create/reuse off-screen canvas for the sprite
+    if (!this.spriteCanvas) {
+      this.spriteCanvas = document.createElement('canvas');
+      this.spriteCanvas.width = tileSize;
+      this.spriteCanvas.height = tileSize;
+      this.spriteCtx = this.spriteCanvas.getContext('2d');
+      if (this.spriteCtx) {
+        this.spriteCtx.imageSmoothingEnabled = false;
+      }
+    }
 
-    if (!spriteCtx) return;
+    if (!this.spriteCtx) return;
 
-    spriteCtx.imageSmoothingEnabled = false;
-
-    // Render the full sprite to the off-screen canvas
+    // Clear canvas and render the full sprite to it
+    this.spriteCtx.clearRect(0, 0, tileSize, tileSize);
     SpriteRenderer.renderSpriteById(
-      spriteCtx,
+      this.spriteCtx,
       this.unit.spriteId,
       spriteImages,
       spriteSize,
@@ -152,7 +160,7 @@ export class EnemySpriteSequence implements CinematicSequence {
         if (this.shouldDrawPixel(px, py, alpha)) {
           // Draw this pixel block from the sprite canvas to the main canvas
           ctx.drawImage(
-            spriteCanvas,
+            this.spriteCanvas,
             px, py, ditherPixelSize, ditherPixelSize,  // Source rectangle
             x + px, y + py, ditherPixelSize, ditherPixelSize  // Destination rectangle
           );
