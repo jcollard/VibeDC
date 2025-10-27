@@ -6,12 +6,39 @@
 - **Sprites**: Use `@react-app/src/utils/SpriteRenderer.ts`
   - Handles sprite sheet slicing and scaling correctly
   - Example: `SpriteRenderer.renderSpriteById(ctx, 'ui-simple-4', spriteImages, 12, x, y, width, height)`
-  - Never use `ctx.drawImage()` directly for sprites
+  - **Never use `ctx.drawImage()` directly for sprite sheet images**
+  - **Exception**: `ctx.drawImage()` is allowed for copying from off-screen canvases/buffers to the main canvas
 
 - **Text**: Use `@react-app/src/utils/FontAtlasRenderer.ts`
   - Provides pixel-perfect font rendering from font atlases
   - Example: `FontAtlasRenderer.renderText(ctx, 'Hello', x, y, fontId, fontAtlas, scale, 'center', '#ffffff')`
   - Never use `ctx.fillText()` or `ctx.strokeText()`
+
+#### ctx.drawImage() Usage Clarification
+
+**❌ NOT ALLOWED**: Drawing directly from sprite sheet images
+```typescript
+// BAD: Bypasses SpriteRenderer's slicing logic
+const spriteSheet = spriteImages.get('characters');
+ctx.drawImage(spriteSheet, sx, sy, sw, sh, x, y, w, h); // Don't do this!
+
+// GOOD: Use SpriteRenderer instead
+SpriteRenderer.renderSpriteById(ctx, 'character-1', spriteImages, 12, x, y, w, h);
+```
+
+**✅ ALLOWED**: Copying from off-screen canvases or buffers
+```typescript
+// GOOD: Copying from buffer canvas to main canvas
+const buffer = document.createElement('canvas');
+// ... render complex content to buffer ...
+ctx.drawImage(buffer, x, y); // This is fine and efficient!
+
+// GOOD: Compositing multiple buffers
+ctx.drawImage(staticBuffer, 0, 0);
+ctx.drawImage(animatedBuffer, x, y);
+```
+
+**Why**: `SpriteRenderer` handles sprite sheet slicing, scaling, and coordinate calculations. Using `ctx.drawImage()` directly on sprite sheets would require manually calculating source rectangles and is error-prone. However, using `ctx.drawImage()` to copy from buffers is efficient and idiomatic.
 
 - **Always disable image smoothing**:
   ```typescript
@@ -356,6 +383,48 @@ handleMouseUp(relativeX, relativeY): boolean {
 - **Use off-screen canvases** for complex rendering (combat log buffer)
 - **Limit re-renders**: Only call `renderFrame()` when visuals actually change
 
+### Animation Sequence Pattern
+
+When implementing `CinematicSequence` for animations, cache reusable resources:
+
+**✅ DO**: Cache off-screen canvas as instance variable
+```typescript
+export class MySequence implements CinematicSequence {
+  // Cache off-screen canvas if used every frame
+  private offscreenCanvas: HTMLCanvasElement | null = null;
+  private offscreenCtx: CanvasRenderingContext2D | null = null;
+
+  render(state, encounter, context): void {
+    if (!this.offscreenCanvas) {
+      this.offscreenCanvas = document.createElement('canvas');
+      this.offscreenCanvas.width = width;
+      this.offscreenCanvas.height = height;
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+      if (this.offscreenCtx) {
+        this.offscreenCtx.imageSmoothingEnabled = false;
+      }
+    }
+    // Clear and reuse canvas...
+    this.offscreenCtx?.clearRect(0, 0, width, height);
+    // Render to cached canvas...
+  }
+}
+```
+
+**❌ DON'T**: Create new canvas objects every frame
+```typescript
+// BAD: Creates new canvas 60 times per second
+render() {
+  const canvas = document.createElement('canvas'); // Expensive allocation!
+  const ctx = canvas.getContext('2d');
+  // ...
+}
+```
+
+**Why**: Canvas creation involves DOM allocation and context setup. For animations that render every frame (60fps), this creates unnecessary garbage collection pressure and performance overhead.
+
+**Exception**: For one-time or infrequent rendering (< 1 fps), creating a canvas locally is acceptable if it simplifies cleanup and the performance impact is negligible.
+
 ### Animation Performance Pattern
 
 When animating content that includes static elements, separate static from dynamic:
@@ -509,9 +578,26 @@ for (let i = startIdx; i < endIdx && i < startIdx + maxVisibleLines; i++) {
   - Mistakes or anti-patterns that should be documented
   - Missing information that would prevent future issues
   - Better approaches than what's currently documented
+  - Ambiguities or edge cases that need clarification
+
+### After Completing Implementation
+- **Review compliance** with these guidelines
+- **Identify deviations** and determine if they were justified or problematic
+- **Propose guideline updates** based on lessons learned
+- **Document new patterns** that emerged during implementation
 
 ### Updating These Guidelines
 - Keep guidelines concise and actionable
 - Use examples to illustrate patterns
 - Document the "why" behind rules when not obvious
+- Include both good and bad examples for clarity
+- Add "Exception" notes when rules have valid edge cases
 - Update both GeneralGuidelines.md and `.claude/instructions.md` if quick reference needs changes
+
+### Example-Driven Documentation
+When adding new patterns:
+- Start with a clear statement of the rule
+- Provide ✅ **DO** example showing correct usage
+- Provide ❌ **DON'T** example showing what to avoid
+- Explain **Why** with performance/correctness reasoning
+- Document **Exceptions** if applicable
