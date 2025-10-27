@@ -3,6 +3,7 @@ import type { CombatState } from '../../models/combat/CombatState';
 import type { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { CombatConstants } from '../../models/combat/CombatConstants';
 
 /**
  * Result of a load operation
@@ -58,10 +59,13 @@ const LoadingState = {
 type LoadingState = (typeof LoadingState)[keyof typeof LoadingState];
 
 // Animation timing constants
-const FADE_DURATION = 300; // milliseconds per transition (fade-in/fade-out)
+const FADE_TO_LOADING_DURATION = 300; // milliseconds to fade from game to loading screen
+const FADE_TO_GAME_DURATION = 1000; // milliseconds to fade from loading screen to game
 const LOADING_MIN_DURATION = 100; // minimum loading screen display time
-const DITHER_BLOCK_SIZE = 4; // 4x4 pixel blocks for Bayer dithering
-const DITHER_RADIAL_INFLUENCE = 0.2; // center-to-edge gradient strength (0.0-1.0)
+
+// Diagonal wave dithering parameters (from ScreenFadeInSequence)
+const FADE_START_RANGE = 0.6; // First 60% of progress spreads the diagonal wave
+const FADE_RANGE = 0.4; // Each position fades over 40% of the total duration
 
 /**
  * LoadingView provides smooth dithered transitions when loading new state.
@@ -167,89 +171,124 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
   }, [fontLoaded, canvasWidth, canvasHeight, createLoadingScreenBuffer]);
 
   /**
-   * Linear easing (uniform transition speed)
+   * Ease-in-out cubic easing (smooth acceleration and deceleration)
+   * Same easing function used in ScreenFadeInSequence
    */
-  const linearEasing = useCallback((t: number): number => {
-    return t; // Direct 1:1 mapping for uniform progression
+  const easeInOutCubic = useCallback((t: number): number => {
+    if (t < 0.5) {
+      return 4 * t * t * t;
+    } else {
+      return 1 - Math.pow(-2 * t + 2, 3) / 2;
+    }
   }, []);
 
   /**
-   * Bayer 4x4 dither matrix (values 0-15)
+   * Bayer 4x4 dither matrix (values 0-15) from CombatConstants
    */
   const bayer4x4 = useMemo(
-    () => [
-      [0, 8, 2, 10],
-      [12, 4, 14, 6],
-      [3, 11, 1, 9],
-      [15, 7, 13, 5],
-    ],
+    () => CombatConstants.ANIMATION.DITHERING.BAYER_MATRIX,
     []
   );
 
   /**
-   * Dither between two buffers
+   * Calculate alpha value for a screen position based on diagonal wave effect
+   * Positions closer to top-left fade earlier, bottom-right fades later
+   * @param x - X position in pixels
+   * @param y - Y position in pixels
+   * @param width - Canvas width
+   * @param height - Canvas height
+   * @param globalProgress - Overall animation progress (0.0 to 1.0)
+   * @param reverse - If true, reverses the wave direction (bottom-right to top-left)
+   */
+  const calculatePositionAlpha = useCallback(
+    (x: number, y: number, width: number, height: number, globalProgress: number, reverse: boolean = false): number => {
+      // Calculate the diagonal distance from top-left (0,0) or bottom-right if reversed
+      const maxDistance = width + height;
+      const positionDistance = reverse ? (width - x) + (height - y) : x + y;
+      const normalizedDistance = maxDistance > 0 ? positionDistance / maxDistance : 0;
+
+      // Calculate the time when this position should start and finish fading
+      const fadeStartProgress = normalizedDistance * FADE_START_RANGE;
+      const localProgress = (globalProgress - fadeStartProgress) / FADE_RANGE;
+
+      // Clamp between 0 and 1
+      return Math.max(0, Math.min(1, localProgress));
+    },
+    []
+  );
+
+  /**
+   * Check if a dither block should be drawn based on alpha and Bayer matrix
+   * Uses the same pixel size as ScreenFadeInSequence
+   * @param x - X position of block
+   * @param y - Y position of block
+   * @param alpha - Alpha value (0.0 to 1.0)
+   */
+  const shouldDrawBlock = useCallback(
+    (x: number, y: number, alpha: number): boolean => {
+      const ditherPixelSize = CombatConstants.ANIMATION.DITHERING.PIXEL_SIZE;
+      const blockX = Math.floor(x / ditherPixelSize);
+      const blockY = Math.floor(y / ditherPixelSize);
+      const threshold = bayer4x4[blockY % 4][blockX % 4] / 16.0;
+      return alpha > threshold;
+    },
+    [bayer4x4]
+  );
+
+  /**
+   * Dither between two buffers using diagonal wave effect
    * @param ctx - Destination context
    * @param fromBuffer - Source buffer (visible at progress=0)
    * @param toBuffer - Destination buffer (visible at progress=1)
    * @param progress - Transition progress (0.0 to 1.0)
+   * @param reverse - If true, wave moves bottom-right to top-left (for error rollback)
    */
   const ditherBetweenBuffers = useCallback(
     (
       ctx: CanvasRenderingContext2D,
       fromBuffer: HTMLCanvasElement,
       toBuffer: HTMLCanvasElement,
-      progress: number
+      progress: number,
+      reverse: boolean = false
     ): void => {
       const width = ctx.canvas.width;
       const height = ctx.canvas.height;
+      const ditherPixelSize = CombatConstants.ANIMATION.DITHERING.PIXEL_SIZE;
 
-      // Apply linear easing
-      const easedProgress = linearEasing(progress);
+      // Apply ease-in-out cubic easing
+      const easedProgress = easeInOutCubic(progress);
 
       // First, draw FROM buffer as base
       ctx.drawImage(fromBuffer, 0, 0);
 
-      // Then, progressively draw TO buffer using dither pattern
-      for (let y = 0; y < height; y += DITHER_BLOCK_SIZE) {
-        for (let x = 0; x < width; x += DITHER_BLOCK_SIZE) {
-          // Calculate position-based alpha (radial gradient from center)
-          const centerX = width / 2;
-          const centerY = height / 2;
-          const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
-          const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-          const distFactor = 1 - dist / maxDist; // 1.0 at center, 0.0 at edges
-
-          // Combine global progress with distance factor
-          const localProgress = easedProgress + distFactor * DITHER_RADIAL_INFLUENCE - 0.1;
-          const clampedProgress = Math.max(0, Math.min(1, localProgress));
-
-          // Get Bayer threshold for this position
-          const bayerX = Math.floor((x / DITHER_BLOCK_SIZE) % 4);
-          const bayerY = Math.floor((y / DITHER_BLOCK_SIZE) % 4);
-          const threshold = bayer4x4[bayerY][bayerX] / 15.0;
+      // Then, progressively draw TO buffer using diagonal wave dither pattern
+      for (let y = 0; y < height; y += ditherPixelSize) {
+        for (let x = 0; x < width; x += ditherPixelSize) {
+          // Calculate position-based alpha using diagonal wave
+          const positionAlpha = calculatePositionAlpha(x, y, width, height, easedProgress, reverse);
 
           // Should we draw the TO buffer at this position?
-          if (clampedProgress > threshold) {
+          if (shouldDrawBlock(x, y, positionAlpha)) {
             ctx.drawImage(
               toBuffer,
               x,
               y,
-              DITHER_BLOCK_SIZE,
-              DITHER_BLOCK_SIZE, // source
+              ditherPixelSize,
+              ditherPixelSize, // source
               x,
               y,
-              DITHER_BLOCK_SIZE,
-              DITHER_BLOCK_SIZE // destination
+              ditherPixelSize,
+              ditherPixelSize // destination
             );
           }
         }
       }
     },
-    [linearEasing, bayer4x4]
+    [easeInOutCubic, calculatePositionAlpha, shouldDrawBlock]
   );
 
   /**
-   * Dither from source buffer to transparent
+   * Dither from source buffer to transparent using diagonal wave effect
    * @param ctx - Destination context
    * @param sourceBuffer - Buffer to fade out
    * @param progress - Hide progress (0.0 = fully visible, 1.0 = fully transparent)
@@ -258,47 +297,40 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
     (ctx: CanvasRenderingContext2D, sourceBuffer: HTMLCanvasElement, progress: number): void => {
       const width = ctx.canvas.width;
       const height = ctx.canvas.height;
+      const ditherPixelSize = CombatConstants.ANIMATION.DITHERING.PIXEL_SIZE;
 
-      // Apply easing
-      const easedProgress = linearEasing(progress);
+      // Apply ease-in-out cubic easing
+      const easedProgress = easeInOutCubic(progress);
 
       // Clear canvas first (reveals view beneath)
       ctx.clearRect(0, 0, width, height);
 
-      // Then selectively draw source pixels (fewer and fewer as progress increases)
-      for (let y = 0; y < height; y += DITHER_BLOCK_SIZE) {
-        for (let x = 0; x < width; x += DITHER_BLOCK_SIZE) {
-          const centerX = width / 2;
-          const centerY = height / 2;
-          const maxDist = Math.sqrt(centerX * centerX + centerY * centerY);
-          const dist = Math.sqrt((x - centerX) ** 2 + (y - centerY) ** 2);
-          const distFactor = 1 - dist / maxDist;
+      // Then selectively draw source pixels using diagonal wave (fewer as progress increases)
+      for (let y = 0; y < height; y += ditherPixelSize) {
+        for (let x = 0; x < width; x += ditherPixelSize) {
+          // Calculate position-based alpha using diagonal wave
+          const positionAlpha = calculatePositionAlpha(x, y, width, height, easedProgress, false);
 
-          const localProgress = easedProgress + distFactor * DITHER_RADIAL_INFLUENCE - 0.1;
-          const clampedProgress = Math.max(0, Math.min(1, localProgress));
+          // Inverted: draw source if position alpha is LOW (not yet faded)
+          const remainingAlpha = 1.0 - positionAlpha;
 
-          const bayerX = Math.floor((x / DITHER_BLOCK_SIZE) % 4);
-          const bayerY = Math.floor((y / DITHER_BLOCK_SIZE) % 4);
-          const threshold = bayer4x4[bayerY][bayerX] / 15.0;
-
-          // Inverted: draw source if progress LESS than threshold
-          if (clampedProgress < threshold) {
+          if (shouldDrawBlock(x, y, remainingAlpha)) {
             ctx.drawImage(
               sourceBuffer,
               x,
               y,
-              DITHER_BLOCK_SIZE,
-              DITHER_BLOCK_SIZE,
+              ditherPixelSize,
+              ditherPixelSize,
               x,
               y,
-              DITHER_BLOCK_SIZE,
-              DITHER_BLOCK_SIZE
+              ditherPixelSize,
+              ditherPixelSize
             );
           }
         }
       }
     },
-    [linearEasing, bayer4x4]
+    [easeInOutCubic, calculatePositionAlpha, shouldDrawBlock]
   );
 
   /**
@@ -351,7 +383,7 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
   useEffect(() => {
     switch (currentState) {
       case LoadingState.FADE_TO_LOADING:
-        if (elapsedTime >= FADE_DURATION) {
+        if (elapsedTime >= FADE_TO_LOADING_DURATION) {
           // Fade complete, notify parent (safe to dismount underlying view)
           onFadeInComplete();
 
@@ -389,7 +421,7 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
         break;
 
       case LoadingState.FADE_TO_GAME:
-        if (elapsedTime >= FADE_DURATION) {
+        if (elapsedTime >= FADE_TO_GAME_DURATION) {
           // Fade complete, return to idle
           setCurrentState(LoadingState.COMPLETE);
           setElapsedTime(0);
@@ -435,8 +467,8 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
         break;
 
       case LoadingState.FADE_TO_LOADING: {
-        // Dither FROM snapshot TO loading screen
-        const progress = Math.min(elapsedTime / FADE_DURATION, 1.0);
+        // Dither FROM snapshot TO loading screen (fast 300ms)
+        const progress = Math.min(elapsedTime / FADE_TO_LOADING_DURATION, 1.0);
         if (canvasSnapshot) {
           ditherBetweenBuffers(ctx, canvasSnapshot, loadingBuffer, progress);
         } else {
@@ -452,12 +484,12 @@ export const LoadingView: React.FC<LoadingViewProps> = ({
         break;
 
       case LoadingState.FADE_TO_GAME: {
-        // Dither FROM loading screen TO transparent
-        const progress = Math.min(elapsedTime / FADE_DURATION, 1.0);
+        // Dither FROM loading screen TO game (slow 1000ms for dramatic reveal)
+        const progress = Math.min(elapsedTime / FADE_TO_GAME_DURATION, 1.0);
 
         if (loadResult && !loadResult.success && canvasSnapshot) {
-          // Error: fade back to old snapshot
-          ditherBetweenBuffers(ctx, loadingBuffer, canvasSnapshot, progress);
+          // Error: fade back to old snapshot with REVERSED wave (bottom-right to top-left)
+          ditherBetweenBuffers(ctx, loadingBuffer, canvasSnapshot, progress, true);
         } else {
           // Success: fade to transparent (reveals remounted view beneath)
           ditherToTransparent(ctx, loadingBuffer, progress);
