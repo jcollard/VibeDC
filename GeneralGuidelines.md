@@ -106,6 +106,7 @@ ctx.drawImage(animatedBuffer, x, y);
   - Components with selection state
   - Any component that changes appearance based on user interaction
   - Interactive panel content (for hover detection across multiple frames)
+  - Components that need region/geometry data before first render
 
 - **When to recreate**:
   - Phase changes (deployment → battle)
@@ -340,6 +341,48 @@ handleHover(relativeX: number, relativeY: number): number | null {
 }
 ```
 
+### Panel Content Region Requirements
+
+When implementing `PanelContent` with hover detection that relies on cached region data:
+
+**❌ DON'T**: Assume the region is always available
+```typescript
+// BAD: lastRegion might be null before first render
+private lastRegion: PanelRegion | null = null;
+
+render(ctx, region, ...) {
+  this.lastRegion = region; // Only set during render
+}
+
+handleHover(relativeX, relativeY): number | null {
+  if (!this.lastRegion) return null; // Fails before first render!
+  // ... hover detection using this.lastRegion
+}
+```
+
+**✅ DO**: Provide a method to explicitly update the region before hover detection
+```typescript
+// GOOD: Explicit region update method
+updateRegion(region: PanelRegion): void {
+  this.lastRegion = region;
+}
+
+// Phase handler ensures region is set before hover detection
+handleInfoPanelHover(relativeX, relativeY, panelRegion, ...) {
+  this.cachedContent.updateRegion(panelRegion); // Set before detection
+  const hoveredIndex = this.cachedContent.handleHover(relativeX, relativeY);
+  this.cachedContent.updateHoveredIndex(hoveredIndex); // Update state
+  return hoveredIndex;
+}
+```
+
+**Why**: Hover detection may occur before the first render, when `lastRegion` cached during `render()` is still null. Always ensure the region is available before hover detection runs.
+
+**Pattern Summary**:
+1. Cache the region in `render()` for normal operation
+2. Provide `updateRegion()` method for pre-render hover detection
+3. Call `updateRegion()` before `handleHover()` in phase handlers
+
 ### Button Click Pattern (Mouse Down + Mouse Up)
 ```typescript
 // On mouse down: set active state
@@ -375,6 +418,80 @@ handleMouseUp(relativeX, relativeY): boolean {
 - Log coordinate values when debugging positioning
 - Log state changes for interaction debugging
 - Remove or comment out logs before committing
+
+### Creating Browser Console Debug Utilities
+
+For complex interactive systems (combat, dialogs, menus), create dedicated debugging utilities accessible via browser console:
+
+**✅ DO**: Create a debug utility class exposed on window
+```typescript
+// utils/SystemDebugger.ts
+class SystemDebuggerClass {
+  private loggingEnabled = false;
+
+  enableLogging(): void {
+    this.loggingEnabled = true;
+    console.log('[SystemDebugger] Logging ENABLED');
+  }
+
+  disableLogging(): void {
+    this.loggingEnabled = false;
+  }
+
+  isLoggingEnabled(): boolean {
+    return this.loggingEnabled;
+  }
+
+  simulateEvent(x: number, y: number): void {
+    // Dispatch synthetic events for testing
+    const canvas = document.querySelector('canvas');
+    if (!canvas) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const event = new MouseEvent('mousemove', {
+      clientX: rect.left + x,
+      clientY: rect.top + y,
+      bubbles: true
+    });
+    canvas.dispatchEvent(event);
+  }
+
+  help(): void {
+    console.log('Available commands: ...');
+  }
+}
+
+export const SystemDebugger = new SystemDebuggerClass();
+
+// Expose to window for browser console access
+if (typeof window !== 'undefined') {
+  (window as any).SystemDebugger = SystemDebugger;
+  console.log('[SystemDebugger] Ready! Type SystemDebugger.help() for usage');
+}
+```
+
+**Using Debug Utilities in Components:**
+```typescript
+// Gate logging behind debugger check (zero runtime cost when disabled)
+if (typeof window !== 'undefined' && (window as any).SystemDebugger?.isLoggingEnabled()) {
+  console.log('[Component] Event details:', { x, y, result });
+}
+```
+
+**Benefits:**
+- Test interactions without manual mouse movements
+- Reproduce bugs reliably with exact coordinates
+- Get detailed event flow logs on demand
+- Zero runtime cost when not in use
+- Professional debugging experience
+
+**Example Usage (Browser Console):**
+```javascript
+SystemDebugger.enableLogging()          // Enable detailed logs
+SystemDebugger.simulateEvent(280, 145)  // Simulate mouse at position
+SystemDebugger.getCanvasInfo()          // Show canvas details
+SystemDebugger.help()                   // Show all commands
+```
 
 ## Performance Considerations
 
