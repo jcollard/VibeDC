@@ -1,6 +1,6 @@
 import { PhaseBase } from './PhaseBase';
 import type { CombatState } from './CombatState';
-import type { CombatEncounter } from './CombatEncounter';
+import type { CombatEncounter, UnitPlacement } from './CombatEncounter';
 import type { PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
 import { CombatConstants } from './CombatConstants';
 import { DeploymentHeaderRenderer } from './managers/renderers/DeploymentHeaderRenderer';
@@ -24,6 +24,7 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
   private animationComplete = false;
   private initialized = false;
   private pendingLogMessages: string[] = [];
+  private enemyUnits: UnitPlacement[] = [];
 
   /**
    * Initialize the enemy deployment phase
@@ -33,15 +34,12 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
     if (this.initialized) return;
     this.initialized = true;
 
-    // 1. Create enemy units and add to manifest
-    const enemyUnits = encounter.createEnemyUnits();
-    for (const { unit, position } of enemyUnits) {
-      state.unitManifest.addUnit(unit, position);
-    }
+    // 1. Create enemy units (but don't add to manifest yet - they'll be added as animations complete)
+    this.enemyUnits = encounter.createEnemyUnits();
 
     // 2. Sort enemies by position: top to bottom, left to right
     // Primary sort: y-coordinate (row), Secondary sort: x-coordinate (column)
-    const sortedEnemyUnits = [...enemyUnits].sort((a, b) => {
+    const sortedEnemyUnits = [...this.enemyUnits].sort((a, b) => {
       if (a.position.y !== b.position.y) {
         return a.position.y - b.position.y; // Sort by row (top to bottom)
       }
@@ -92,6 +90,11 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
 
     if (complete && !this.animationComplete) {
       this.animationComplete = true;
+
+      // Add all enemies to manifest now that animations are complete
+      for (const { unit, position } of this.enemyUnits) {
+        state.unitManifest.addUnit(unit, position);
+      }
 
       // Transition to battle phase
       return {
