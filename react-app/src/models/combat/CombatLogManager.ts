@@ -106,7 +106,9 @@ export class CombatLogManager {
     for (const item of this.messageQueue) {
       const length = this.getPlainTextLength(item.message);
       const speed = item.charsPerSecond ?? this.DEFAULT_CHARS_PER_SECOND;
-      totalTime += length / speed;
+      // Treat empty messages as 1 character for timing consistency
+      const effectiveLength = Math.max(length, 1);
+      totalTime += effectiveLength / speed;
     }
 
     return totalTime;
@@ -161,7 +163,9 @@ export class CombatLogManager {
 
     // Calculate animation duration based on message length
     const speed = charsPerSecond ?? this.DEFAULT_CHARS_PER_SECOND;
-    this.animationDuration = plainTextLength / speed;
+    // Treat empty messages as 1 character for animation timing purposes
+    const effectiveLength = Math.max(plainTextLength, 1);
+    this.animationDuration = effectiveLength / speed;
 
     // Start animation for the new message
     this.animatingMessageIndex = this.messages.length - 1;
