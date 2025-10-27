@@ -84,9 +84,10 @@ class ActionTimerInfoPanelContent implements PanelContent {
  *
  * Current functionality:
  * - Displays battlefield (map + units)
- * - Increments action timers based on speed
- * - Shows turn order sorted by action timer (with values displayed)
- * - Detects when unit reaches 100 and transitions to unit-turn phase
+ * - Calculates who will reach 100 first
+ * - Sets all AT values to their state at that moment
+ * - Shows turn order sorted by predicted turn order (with final AT values displayed)
+ * - Transitions to unit-turn phase
  * - Victory/defeat condition checking
  *
  * Future functionality:
@@ -98,6 +99,9 @@ class ActionTimerInfoPanelContent implements PanelContent {
 export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHandler {
   // Cached panel content (per GeneralGuidelines.md lines 103-110)
   private infoPanelContent: ActionTimerInfoPanelContent | null = null;
+
+  // Flag to track if we've already calculated the turn
+  private turnCalculated: boolean = false;
 
   constructor() {
     super();
@@ -140,12 +144,12 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   }
 
   /**
-   * Update action timer logic - increment timers and check for ready units
+   * Update action timer logic - calculate who goes next and set final AT values
    */
   protected updatePhase(
     state: CombatState,
     encounter: CombatEncounter,
-    deltaTime: number
+    _deltaTime: number
   ): CombatState | null {
     // Check victory/defeat conditions first
     if (encounter.isVictory(state)) {
@@ -164,58 +168,67 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       };
     }
 
-    // Increment all units' action timers
-    const updatedManifest = this.incrementActionTimers(state.unitManifest, deltaTime);
+    // Only calculate once when entering this phase
+    if (!this.turnCalculated) {
+      this.calculateNextTurn(state.unitManifest);
+      this.turnCalculated = true;
 
-    // Check if any unit is ready to act (actionTimer >= 100)
-    const readyUnit = this.getReadyUnit(updatedManifest);
+      // Find the ready unit (should be the one we just calculated)
+      const readyUnit = this.getReadyUnit(state.unitManifest);
 
-    if (readyUnit) {
-      // Transition to unit-turn phase
-      console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
+      if (readyUnit) {
+        console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
 
-      return {
-        ...state,
-        unitManifest: updatedManifest,
-        phase: 'unit-turn'
-      };
+        // Transition to unit-turn phase
+        return {
+          ...state,
+          phase: 'unit-turn'
+        };
+      }
     }
 
-    // No unit ready, return state (units are mutated in place, so no state change needed)
+    // Already calculated, waiting for transition
     return state;
   }
 
   /**
-   * Increment all units' action timers based on their speed
+   * Calculate who will reach 100 first, then advance all timers to that moment
    * @param manifest Current unit manifest
-   * @param deltaTime Time since last frame (seconds)
-   * @returns Same manifest (units mutated for performance)
    */
-  private incrementActionTimers(
-    manifest: import('./CombatUnitManifest').CombatUnitManifest,
-    deltaTime: number
-  ): import('./CombatUnitManifest').CombatUnitManifest {
-    // Get all unit placements
+  private calculateNextTurn(
+    manifest: import('./CombatUnitManifest').CombatUnitManifest
+  ): void {
     const allUnits = manifest.getAllUnits();
 
-    // Cap deltaTime at 1 second to prevent large jumps
-    const cappedDeltaTime = Math.min(deltaTime, 1);
+    // Calculate time until each unit reaches 100
+    let minTimeToReady = Infinity;
 
-    // HACK: Direct mutation (not ideal, but matches current architecture)
-    // TODO: Refactor to immutable updates when unit state management improves
     for (const placement of allUnits) {
-      const increment = placement.unit.speed * cappedDeltaTime * ACTION_TIMER_MULTIPLIER;
-
-      // Direct mutation of private field
-      (placement.unit as any)._actionTimer += increment;
-
-      // Debug logging when timer gets close to 100
-      if (placement.unit.actionTimer >= 90 && placement.unit.actionTimer < 100) {
-        console.log(`[ActionTimerPhaseHandler] ${placement.unit.name} timer: ${placement.unit.actionTimer.toFixed(2)}`);
+      const unit = placement.unit;
+      if (unit.speed > 0) {
+        const timeToReady = (100 - unit.actionTimer) / (unit.speed * ACTION_TIMER_MULTIPLIER);
+        if (timeToReady < minTimeToReady) {
+          minTimeToReady = timeToReady;
+        }
       }
     }
 
-    return manifest;
+    // If no unit can reach 100 (all have speed 0), do nothing
+    if (minTimeToReady === Infinity) {
+      console.warn('[ActionTimerPhaseHandler] No units have speed > 0, cannot advance timers');
+      return;
+    }
+
+    // Advance all units' timers by that amount of time
+    for (const placement of allUnits) {
+      const unit = placement.unit;
+      const increment = unit.speed * minTimeToReady * ACTION_TIMER_MULTIPLIER;
+
+      // Direct mutation of private field
+      (placement.unit as any)._actionTimer += increment;
+    }
+
+    console.log(`[ActionTimerPhaseHandler] Advanced all timers by ${minTimeToReady.toFixed(2)} seconds`);
   }
 
   /**
@@ -249,12 +262,31 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
   /**
    * Get turn order renderer for top panel
-   * Shows units sorted by action timer (highest first), limited to 10 units
+   * Shows units sorted by predicted turn order (who will reach 100 first), limited to 10 units
    */
   getTopPanelRenderer(state: CombatState, _encounter: CombatEncounter): TopPanelRenderer {
-    // Get all units and sort by actionTimer (highest first)
+    // Get all units
     const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
-    const sortedUnits = units.sort((a, b) => b.actionTimer - a.actionTimer);
+
+    // Calculate time until each unit reaches 100 action timer
+    const unitsWithTime = units.map(unit => {
+      const timeToReady = unit.speed > 0
+        ? (100 - unit.actionTimer) / unit.speed
+        : Infinity;
+
+      return { unit, timeToReady };
+    });
+
+    // Sort by time to ready (ascending - soonest first), then alphabetically
+    unitsWithTime.sort((a, b) => {
+      if (a.timeToReady !== b.timeToReady) {
+        return a.timeToReady - b.timeToReady;
+      }
+      return a.unit.name.localeCompare(b.unit.name);
+    });
+
+    // Extract sorted units
+    const sortedUnits = unitsWithTime.map(item => item.unit);
 
     // Limit to 10 units for display
     const displayUnits = sortedUnits.slice(0, 10);

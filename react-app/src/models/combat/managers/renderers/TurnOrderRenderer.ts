@@ -90,7 +90,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         this.spriteSize
       );
 
-      // Render action timer value below sprite using small font
+      // Render action timer (AT) value below sprite
       if (smallFontAtlasImage) {
         const timerValue = Math.floor(unit.actionTimer); // Round down for display
         const timerText = timerValue.toString();
