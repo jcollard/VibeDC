@@ -57,8 +57,8 @@ export class DeploymentPhaseHandler extends PhaseBase {
   // Party selection dialog
   private partyDialog: PartySelectionDialog;
 
-  // Cached panel content for hover detection (per GeneralGuidelines.md - don't recreate every frame)
-  private hoverDetectionContent: PartyMembersContent | null = null;
+  // Cached panel content for both rendering and hover detection (per GeneralGuidelines.md - don't recreate every frame)
+  private cachedPartyMembersContent: PartyMembersContent | null = null;
 
   /**
    * @param uiStateManager - Optional UI state manager for centralized state management
@@ -439,18 +439,18 @@ export class DeploymentPhaseHandler extends PhaseBase {
     _state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult<DeploymentPanelData> {
-    // Get party members to handle the hover
-    const partyUnits = PartyMemberRegistry.getAll()
-      .map(member => PartyMemberRegistry.createPartyMember(member.id))
-      .filter((unit): unit is CombatUnit => unit !== undefined);
+    // Ensure cached content exists (same instance used for rendering)
+    if (!this.cachedPartyMembersContent) {
+      // Create on first hover (will also be created by getInfoPanelContent)
+      const partyUnits = PartyMemberRegistry.getAll()
+        .map(member => PartyMemberRegistry.createPartyMember(member.id))
+        .filter((unit): unit is CombatUnit => unit !== undefined);
 
-    if (partyUnits.length === 0) {
-      return { handled: false };
-    }
+      if (partyUnits.length === 0) {
+        return { handled: false };
+      }
 
-    // Create or update cached content for hover detection
-    if (!this.hoverDetectionContent) {
-      this.hoverDetectionContent = new PartyMembersContent(
+      this.cachedPartyMembersContent = new PartyMembersContent(
         {
           title: 'Party Members',
           titleColor: '#ffa500',
@@ -462,13 +462,14 @@ export class DeploymentPhaseHandler extends PhaseBase {
         12,
         null
       );
-    } else {
-      // Update party units in case they changed
-      this.hoverDetectionContent.updatePartyUnits(partyUnits);
     }
 
     // Get the hovered party member index
-    const hoveredIndex = this.hoverDetectionContent.handleHover(relativeX, relativeY);
+    const hoveredIndex = this.cachedPartyMembersContent.handleHover(relativeX, relativeY);
+
+    // CRITICAL: Update hover state on the cached instance immediately
+    // This ensures the instance that will be rendered has the correct hover state
+    this.cachedPartyMembersContent.updateHoveredIndex(hoveredIndex);
 
     if (hoveredIndex !== null) {
       return {
@@ -492,6 +493,7 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
   /**
    * Get info panel content - shows party members for selection
+   * Returns cached instance to ensure hover state persists across frames
    */
   getInfoPanelContent(
     _context: InfoPanelContext,
@@ -504,18 +506,26 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
     if (partyUnits.length === 0) return null;
 
-    // Return party members content for bottom info panel
-    return new PartyMembersContent(
-      {
-        title: 'Party Members',
-        titleColor: '#ffa500',
-        padding: 1,
-        lineSpacing: 8,
-      },
-      partyUnits,
-      new Map(), // spriteImages - will be provided by renderer
-      12, // spriteSize
-      null // hoveredPartyMemberIndex - will be managed by CombatView
-    );
+    // Create cached instance if it doesn't exist
+    if (!this.cachedPartyMembersContent) {
+      this.cachedPartyMembersContent = new PartyMembersContent(
+        {
+          title: 'Party Members',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        },
+        partyUnits,
+        new Map(), // spriteImages - will be provided by renderer
+        12, // spriteSize
+        null // hoveredPartyMemberIndex - will be updated by handleInfoPanelHover
+      );
+    } else {
+      // Update party units on existing cached instance
+      this.cachedPartyMembersContent.updatePartyUnits(partyUnits);
+    }
+
+    // Return the cached instance (same instance used for hover detection)
+    return this.cachedPartyMembersContent;
   }
 }
