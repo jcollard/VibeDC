@@ -35,10 +35,11 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement | null,
+    _fontId: string,
+    _fontAtlasImage: HTMLImageElement | null,
     spriteImages: Map<string, HTMLImageElement>,
-    spriteSize: number
+    spriteSize: number,
+    smallFontAtlasImage?: HTMLImageElement | null
   ): void {
     // Render units horizontally, starting from the left edge of the region
     let currentX = region.x;
@@ -62,21 +63,22 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         this.spriteSize
       );
 
-      // Render action timer value below sprite
-      if (fontAtlasImage) {
+      // Render action timer value below sprite using small font
+      if (smallFontAtlasImage) {
         const timerValue = Math.floor(unit.actionTimer); // Round down for display
         const timerText = timerValue.toString();
         const textX = currentX + this.spriteSize / 2; // Center under sprite
-        const textY = spriteY + this.spriteSize + 2; // 2px below sprite
+        const textY = spriteY + this.spriteSize + 1; // 1px below sprite
 
+        // Use 7px-04b03 font for small, readable numbers
         FontAtlasRenderer.renderText(
           ctx,
           timerText,
           textX,
           textY,
-          fontId,
-          fontAtlasImage,
-          1, // scale
+          '7px-04b03',
+          smallFontAtlasImage,
+          1, // Normal scale
           'center', // alignment
           '#ffffff' // color
         );

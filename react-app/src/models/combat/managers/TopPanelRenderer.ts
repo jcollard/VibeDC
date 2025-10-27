@@ -21,6 +21,7 @@ export interface TopPanelRenderer {
    * @param fontAtlasImage - Font atlas image
    * @param spriteImages - Map of sprite images
    * @param spriteSize - Size of sprites
+   * @param smallFontAtlasImage - Optional small font atlas (7px-04b03) for details
    */
   render(
     ctx: CanvasRenderingContext2D,
@@ -28,7 +29,8 @@ export interface TopPanelRenderer {
     fontId: string,
     fontAtlasImage: HTMLImageElement | null,
     spriteImages: Map<string, HTMLImageElement>,
-    spriteSize: number
+    spriteSize: number,
+    smallFontAtlasImage?: HTMLImageElement | null
   ): void;
 
   /**

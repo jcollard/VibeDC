@@ -20,7 +20,7 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
  * Formula: actionTimer += speed * deltaTime * ACTION_TIMER_MULTIPLIER
  * Higher values = faster combat pacing
  */
-const ACTION_TIMER_MULTIPLIER = 4;
+const ACTION_TIMER_MULTIPLIER = 1;
 
 /**
  * Placeholder info panel content for action timer phase
@@ -199,10 +199,13 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     // Get all unit placements
     const allUnits = manifest.getAllUnits();
 
+    // Cap deltaTime at 1 second to prevent large jumps
+    const cappedDeltaTime = Math.min(deltaTime, 1);
+
     // HACK: Direct mutation (not ideal, but matches current architecture)
     // TODO: Refactor to immutable updates when unit state management improves
     for (const placement of allUnits) {
-      const increment = placement.unit.speed * deltaTime * ACTION_TIMER_MULTIPLIER;
+      const increment = placement.unit.speed * cappedDeltaTime * ACTION_TIMER_MULTIPLIER;
 
       // Direct mutation of private field
       (placement.unit as any)._actionTimer += increment;

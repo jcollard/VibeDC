@@ -437,9 +437,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     ctx.restore();
 
     // Render layout UI
-    // Use 7px-04b03 for info panels/combat log, dungeon-slant for top panel
+    // Use 7px-04b03 for info panels/combat log and small text in top panel
+    // Use 15px-dungeonslant for main top panel text
     const layoutFontAtlas = fontLoader.get(unitInfoAtlasFont) || null;
     const topPanelFontAtlas = fontLoader.get('15px-dungeonslant') || null;
+    const topPanelSmallFontAtlas = fontLoader.get('7px-04b03') || null;
 
     layoutRenderer.renderLayout({
       ctx,
@@ -449,6 +451,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       fontId: unitInfoAtlasFont,
       fontAtlasImage: layoutFontAtlas,
       topPanelFontAtlasImage: topPanelFontAtlas,
+      topPanelSmallFontAtlasImage: topPanelSmallFontAtlas,
       spriteImages: spriteImagesRef.current,
       currentUnit: null, // Will be populated during combat phase
       targetUnit: targetUnitRef.current, // Set by clicking turn order

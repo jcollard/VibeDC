@@ -30,7 +30,8 @@ export class TopPanelManager {
     fontId: string,
     fontAtlasImage: HTMLImageElement | null,
     spriteImages: Map<string, HTMLImageElement>,
-    spriteSize: number
+    spriteSize: number,
+    smallFontAtlasImage?: HTMLImageElement | null
   ): void {
     if (!this.currentRenderer) return;
 
@@ -40,7 +41,8 @@ export class TopPanelManager {
       fontId,
       fontAtlasImage,
       spriteImages,
-      spriteSize
+      spriteSize,
+      smallFontAtlasImage
     );
   }
 
