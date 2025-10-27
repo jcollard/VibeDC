@@ -34,6 +34,7 @@ import {
   saveCombatToLocalStorage,
   loadCombatFromLocalStorage,
 } from '../../utils/combatStorage';
+import { LoadingView, type LoadResult } from './LoadingView';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -221,6 +222,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Save/load state
   const [saveErrorMessage, setSaveErrorMessage] = useState<string | null>(null);
+
+  // Loading state (for LoadingView component)
+  const [isLoading, setIsLoading] = useState(false);
+  const [showCombatView, setShowCombatView] = useState(true);
+  const canvasSnapshotRef = useRef<HTMLCanvasElement | null>(null);
 
   // Track which scroll arrow is currently pressed
   const scrollArrowPressedRef = useRef<'right' | 'left' | 'up' | 'down' | 'logUp' | 'logDown' | null>(null);
@@ -936,6 +942,115 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
   }, []);
 
+  // Canvas snapshot utility for LoadingView
+  const captureCanvasSnapshot = useCallback((): HTMLCanvasElement | null => {
+    const displayCanvas = displayCanvasRef.current;
+    if (!displayCanvas) return null;
+
+    const snapshot = document.createElement('canvas');
+    snapshot.width = CANVAS_WIDTH;
+    snapshot.height = CANVAS_HEIGHT;
+
+    const ctx = snapshot.getContext('2d');
+    if (!ctx) return null;
+
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(displayCanvas, 0, 0);
+
+    return snapshot;
+  }, []);
+
+  // LoadingView callbacks
+  const handleFadeInComplete = useCallback(() => {
+    // Safe to dismount CombatView now (loading screen is fully visible)
+    setShowCombatView(false);
+  }, []);
+
+  const handleLoadReady = useCallback(async (): Promise<LoadResult> => {
+    try {
+      // Perform actual load operation
+      const result = loadCombatFromLocalStorage();
+
+      if (result) {
+        // Reconstruct CombatLogManager from JSON
+        const newCombatLog = new CombatLogManager({
+          maxMessages: 100,
+          bufferLines: 21,
+          lineHeight: 8,
+          defaultColor: '#ffffff',
+        });
+
+        if (result.combatLog) {
+          // Restore messages (without animation state)
+          const messages = result.combatLog.getMessages();
+          messages.forEach((msg: string) => {
+            newCombatLog.addMessage(msg, Infinity); // Instant, no animation
+          });
+          newCombatLog.scrollToBottom();
+        }
+
+        return {
+          success: true,
+          combatState: result.combatState,
+          combatLog: newCombatLog,
+        };
+      } else {
+        return {
+          success: false,
+          error: 'No saved combat found in localStorage',
+        };
+      }
+    } catch (error) {
+      console.error('[CombatView] Load error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }, []);
+
+  const handleLoadComplete = useCallback(
+    (result: LoadResult) => {
+      if (result.success && result.combatState && result.combatLog) {
+        // Apply new state
+        setCombatState(result.combatState);
+
+        // Replace combat log manager (note: we can't replace the useMemo instance)
+        // Instead, we clear it and add messages in handleLoadReady
+        // Here we just copy the reference from the result
+        combatLogManager.clear();
+        const messages = result.combatLog.getMessages();
+        messages.forEach((msg: string) => {
+          combatLogManager.addMessage(msg, Infinity);
+        });
+        combatLogManager.scrollToBottom();
+
+        // Remount CombatView (will render new state)
+        setShowCombatView(true);
+
+        // Clear error message
+        setSaveErrorMessage(null);
+
+        // NOTE: Do NOT reset isLoading here - wait for onAnimationComplete callback
+      } else {
+        // Error: keep old state, remount CombatView
+        console.error('[CombatView] Load failed:', result.error);
+        setSaveErrorMessage(result.error || 'Load failed');
+
+        // Remount with OLD state (rollback)
+        setShowCombatView(true);
+
+        // NOTE: Do NOT reset isLoading here - wait for onAnimationComplete callback
+      }
+    },
+    [combatLogManager]
+  );
+
+  const handleAnimationComplete = useCallback(() => {
+    console.log('[CombatView] Animation complete, setting isLoading to false');
+    setIsLoading(false);
+  }, []);
+
   // Save/Load handlers
   const handleExportToFile = useCallback(() => {
     try {
@@ -999,29 +1114,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   }, [combatLogManager]);
 
   const handleLoadFromLocalStorage = useCallback(() => {
-    try {
-      const result = loadCombatFromLocalStorage();
-      if (result) {
-        // Update React state (triggers re-render)
-        setCombatState(result.combatState);
+    console.log('[CombatView] handleLoadFromLocalStorage called');
+    // Capture current canvas state before loading
+    canvasSnapshotRef.current = captureCanvasSnapshot();
 
-        // Copy messages to current combatLogManager
-        combatLogManager.clear();
-        const messages = result.combatLog.getMessages();
-        for (const message of messages) {
-          combatLogManager.addMessage(message, Infinity); // Add instantly
-        }
-        combatLogManager.scrollToBottom(); // Ensure all messages are visible
-
-        setSaveErrorMessage(null);
-      } else {
-        setSaveErrorMessage('No saved combat found in localStorage');
-      }
-    } catch (error) {
-      setSaveErrorMessage('Failed to load from localStorage');
-      console.error(error);
-    }
-  }, [combatLogManager]);
+    // Trigger loading transition
+    console.log('[CombatView] Setting isLoading to true');
+    setIsLoading(true);
+  }, [captureCanvasSnapshot]);
 
   return (
     <div
@@ -1355,19 +1455,35 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           justifyContent: 'center',
         }}
       >
-        <canvas
-          ref={displayCanvasRef}
-          onClick={handleCanvasClick}
-          onMouseDown={handleCanvasMouseDown}
-          onMouseUp={handleCanvasMouseUp}
-          onMouseMove={handleCanvasMouseMove}
-          style={{
-            ...canvasDisplayStyle,
-            imageRendering: 'pixelated',
-            objectFit: 'contain',
-            cursor: combatState.phase === 'deployment' ? 'pointer' : 'default',
-          } as React.CSSProperties}
+        {/* LoadingView overlay (always rendered, controls loading transitions) */}
+        <LoadingView
+          isLoading={isLoading}
+          canvasSnapshot={canvasSnapshotRef.current}
+          canvasWidth={CANVAS_WIDTH}
+          canvasHeight={CANVAS_HEIGHT}
+          displayStyle={canvasDisplayStyle}
+          onFadeInComplete={handleFadeInComplete}
+          onLoadReady={handleLoadReady}
+          onComplete={handleLoadComplete}
+          onAnimationComplete={handleAnimationComplete}
         />
+
+        {/* CombatView canvas (conditionally rendered) */}
+        {showCombatView && (
+          <canvas
+            ref={displayCanvasRef}
+            onClick={handleCanvasClick}
+            onMouseDown={handleCanvasMouseDown}
+            onMouseUp={handleCanvasMouseUp}
+            onMouseMove={handleCanvasMouseMove}
+            style={{
+              ...canvasDisplayStyle,
+              imageRendering: 'pixelated',
+              objectFit: 'contain',
+              cursor: combatState.phase === 'deployment' ? 'pointer' : 'default',
+            } as React.CSSProperties}
+          />
+        )}
       </div>
     </div>
   );
