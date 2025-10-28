@@ -228,8 +228,8 @@ export class ActionsMenuContent implements PanelContent {
     if (this.hoveredButtonIndex !== null) {
       const hoveredButton = this.buttons[this.hoveredButtonIndex];
       if (hoveredButton) {
-        // Add spacing after buttons
-        currentY += this.config.lineSpacing;
+        // Add 2px spacing after buttons
+        currentY += 2;
 
         // Wrap helper text to fit within panel width
         const wrappedLines = this.wrapText(
