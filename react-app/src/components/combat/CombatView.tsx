@@ -17,6 +17,7 @@ import { CombatConstants } from '../../models/combat/CombatConstants';
 import { CombatInputHandler } from '../../services/CombatInputHandler';
 import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
 import { FontAtlasLoader } from '../../services/FontAtlasLoader';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
 import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
@@ -228,6 +229,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Track debug grid overlay
   const [showDebugGrid, setShowDebugGrid] = useState<boolean>(false);
+
+  // Track FPS indicator
+  const [showFPS, setShowFPS] = useState<boolean>(false);
+  const fpsHistoryRef = useRef<number[]>([]);
+  const currentFPSRef = useRef<number>(60);
 
   // Track map scroll offset (in tiles)
   const [mapScrollX, setMapScrollX] = useState<number>(0);
@@ -535,6 +541,26 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       renderer.renderDebugGrid(ctx, '7px-04b03', debugFontAtlas);
     }
 
+    // Render FPS indicator (if enabled)
+    if (showFPS) {
+      const fpsFontAtlas = fontLoader.get('7px-04b03') || null;
+      if (fpsFontAtlas) {
+        const fpsText = `FPS: ${currentFPSRef.current}`;
+        const textColor = currentFPSRef.current < 30 ? '#ff0000' : currentFPSRef.current < 50 ? '#ffff00' : '#00ff00';
+        FontAtlasRenderer.renderText(
+          ctx,
+          fpsText,
+          CANVAS_WIDTH - 4,
+          CANVAS_HEIGHT - 8,
+          '7px-04b03',
+          fpsFontAtlas,
+          1,
+          'right',
+          textColor
+        );
+      }
+    }
+
     // Render cinematic overlay (e.g., screen fade-in) AFTER all other rendering
     if (cinematicManagerRef.current.isPlayingCinematic()) {
       cinematicManagerRef.current.render(combatState, activeEncounter, {
@@ -554,7 +580,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, activeEncounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, mapScrollX, mapScrollY]);
+  }, [spritesLoaded, combatState, windowSize, activeEncounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, showFPS, mapScrollX, mapScrollY]);
 
   // Animation loop
   useEffect(() => {
@@ -566,6 +592,19 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Calculate delta time in seconds
       const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
       lastFrameTimeRef.current = currentTime;
+
+      // Calculate FPS (frames per second)
+      if (deltaTime > 0) {
+        const fps = 1 / deltaTime;
+        fpsHistoryRef.current.push(fps);
+        // Keep only last 60 frames for averaging
+        if (fpsHistoryRef.current.length > 60) {
+          fpsHistoryRef.current.shift();
+        }
+        // Calculate average FPS
+        const avgFPS = fpsHistoryRef.current.reduce((a, b) => a + b, 0) / fpsHistoryRef.current.length;
+        currentFPSRef.current = Math.round(avgFPS);
+      }
 
       // Update cinematic manager (has priority over phase updates)
       const cinematicPlaying = cinematicManagerRef.current.update(deltaTime);
@@ -986,7 +1025,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         activeEncounter
       );
     }
-  }, [combatState, activeEncounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, layoutRenderer, renderFrame]);
+  }, [combatState, activeEncounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, layoutRenderer]);
 
   // Register map click handler
   useEffect(() => {
@@ -1344,6 +1383,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               }}
             />
             <span>Show Debug Grid</span>
+          </label>
+
+          {/* FPS Indicator Toggle */}
+          <label style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', cursor: 'pointer' }}>
+            <input
+              type="checkbox"
+              checked={showFPS}
+              onChange={(e) => setShowFPS(e.target.checked)}
+              style={{
+                marginRight: '8px',
+                cursor: 'pointer',
+                width: '16px',
+                height: '16px',
+              }}
+            />
+            <span>Show FPS</span>
           </label>
 
           {/* Manual Scale Selector */}

@@ -16,7 +16,8 @@
       "Bash(npm test)",
       "Bash(npm test -- DataLoader.test.ts)",
       "Bash(timeout 30 npm test)",
-      "Bash(npm run build:font-tool)"
+      "Bash(npm run build:font-tool)",
+      "Bash(git log --all --oneline --since=\"2 weeks ago\" -S \"renderFrame()\" -- react-app/src/components/combat/CombatView.tsx)"
     ],
     "deny": [],
     "ask": []
