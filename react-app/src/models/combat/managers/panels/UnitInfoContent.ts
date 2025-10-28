@@ -1,5 +1,7 @@
 import type { CombatUnit } from '../../CombatUnit';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
+import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
+import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion } from './PanelContent';
 
 /**
@@ -13,8 +15,8 @@ export interface UnitInfoConfig {
 }
 
 /**
- * Panel content that displays detailed information about a single combat unit.
- * Shows: unit name (as title), class, HP, MP, speed, and movement.
+ * Panel content that displays comprehensive information about a single combat unit.
+ * Shows: sprite, colored name, class(es), action timer, and two-column stats grid.
  */
 export class UnitInfoContent implements PanelContent {
   private config: UnitInfoConfig;
@@ -29,80 +31,217 @@ export class UnitInfoContent implements PanelContent {
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
     fontId: string,
-    fontAtlasImage: HTMLImageElement | null
+    fontAtlasImage: HTMLImageElement | null,
+    spriteImages?: Map<string, HTMLImageElement>,
+    spriteSize?: number
   ): void {
     if (!fontAtlasImage) return;
 
-    let currentY = region.y + this.config.padding;
+    const font = FontRegistry.getById(fontId);
+    if (!font) return;
 
-    // Render title
+    // ===== Section 1: Sprite (top-left corner) =====
+    const spriteX = region.x + this.config.padding;
+    const spriteY = region.y + this.config.padding;
+
+    if (spriteImages && spriteSize) {
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        this.unit.spriteId,
+        spriteImages,
+        spriteSize,
+        spriteX,
+        spriteY,
+        12,
+        12
+      );
+    }
+
+    // ===== Section 2: Name (to right of sprite) =====
+    const nameX = spriteX + 12 + 1; // sprite width + 1px gap
+    const nameY = spriteY;
+
+    // Determine name color based on allegiance
+    const nameColor = this.unit.isPlayerControlled ? '#00ff00' : '#ff0000';
+
     FontAtlasRenderer.renderText(
       ctx,
-      this.config.title,
-      region.x + this.config.padding,
-      currentY,
+      this.unit.name,
+      nameX,
+      nameY,
       fontId,
       fontAtlasImage,
       1,
       'left',
-      this.config.titleColor
+      nameColor
     );
-    currentY += this.config.lineSpacing;
 
-    // Unit class
+    // ===== Section 3: Class line (below name/sprite) =====
+    const classY = nameY + this.config.lineSpacing;
+    let classText = this.unit.unitClass.name;
+    if (this.unit.secondaryClass) {
+      classText += ` / ${this.unit.secondaryClass.name}`;
+    }
+
     FontAtlasRenderer.renderText(
       ctx,
-      this.unit.unitClass.name,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // HP
-    FontAtlasRenderer.renderText(
-      ctx,
-      `HP: ${this.unit.health}/${this.unit.maxHealth}`,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // MP
-    FontAtlasRenderer.renderText(
-      ctx,
-      `MP: ${this.unit.mana}/${this.unit.maxMana}`,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += this.config.lineSpacing;
-
-    // Speed and Movement
-    FontAtlasRenderer.renderText(
-      ctx,
-      `Spd:${this.unit.speed} Mov:${this.unit.movement}`,
-      region.x + this.config.padding,
-      currentY,
+      classText,
+      nameX,
+      classY,
       fontId,
       fontAtlasImage,
       1,
       'left',
       '#ffffff'
     );
+
+    // ===== Section 4: Action Timer (top-right corner) =====
+    const atLabelY = spriteY;
+
+    // Try full label first
+    const fullLabel = 'ACTION TIMER';
+    const fullLabelWidth = FontAtlasRenderer.measureText(fullLabel, font);
+    const availableWidth = region.width - (nameX - region.x) - 50; // Reserve space for name
+
+    if (fullLabelWidth <= availableWidth) {
+      // Option A: Use full label
+      const atLabelX = region.x + region.width - this.config.padding - fullLabelWidth;
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        fullLabel,
+        atLabelX,
+        atLabelY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+    } else {
+      // Option B: Use "AT" + clock icon
+      const atText = 'AT';
+      const atWidth = FontAtlasRenderer.measureText(atText, font);
+      const clockSize = 8; // Scaled down from 12
+      const gap = 1;
+      const totalWidth = clockSize + gap + atWidth;
+      const atLabelX = region.x + region.width - this.config.padding - totalWidth;
+
+      // Render clock icon
+      if (spriteImages && spriteSize) {
+        SpriteRenderer.renderSpriteById(
+          ctx,
+          'icons-5', // Clock sprite
+          spriteImages,
+          spriteSize,
+          atLabelX,
+          atLabelY,
+          clockSize,
+          clockSize
+        );
+      }
+
+      // Render "AT" text
+      FontAtlasRenderer.renderText(
+        ctx,
+        atText,
+        atLabelX + clockSize + gap,
+        atLabelY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+    }
+
+    // Render action timer value below label (right-aligned)
+    const atValue = `${Math.floor(this.unit.actionTimer)}/100`;
+    const atValueWidth = FontAtlasRenderer.measureText(atValue, font);
+    const atValueX = region.x + region.width - this.config.padding - atValueWidth;
+    const atValueY = atLabelY + this.config.lineSpacing;
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      atValue,
+      atValueX,
+      atValueY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      '#ffa500' // Orange
+    );
+
+    // ===== Section 5: Two-Column Stats Grid =====
+    // Define stats for each column
+    const leftColumnStats = [
+      { label: 'HP', value: `${this.unit.health}/${this.unit.maxHealth}` },
+      { label: 'MP', value: `${this.unit.mana}/${this.unit.maxMana}` },
+      { label: 'Spd', value: `${this.unit.speed}` },
+      { label: 'Mov', value: `${this.unit.movement}` }
+    ];
+
+    const rightColumnStats = [
+      { label: 'P.Pow', value: `${this.unit.physicalPower}` },
+      { label: 'M.Pow', value: `${this.unit.magicPower}` },
+      { label: 'P.Evd', value: `${this.unit.physicalEvade}` },
+      { label: 'M.Evd', value: `${this.unit.magicEvade}` },
+      { label: 'Cour', value: `${this.unit.courage}` },
+      { label: 'Attn', value: `${this.unit.attunement}` }
+    ];
+
+    // Calculate left column width
+    let maxLeftWidth = 0;
+    for (const stat of leftColumnStats) {
+      const text = `${stat.label} ${stat.value}`;
+      const width = FontAtlasRenderer.measureText(text, font);
+      if (width > maxLeftWidth) {
+        maxLeftWidth = width;
+      }
+    }
+
+    // Define column positions
+    const leftColumnX = region.x + this.config.padding;
+    const rightColumnX = leftColumnX + maxLeftWidth + 4; // 4px gap between columns
+    let statsY = classY + this.config.lineSpacing; // Start below class line
+
+    // Render left column
+    for (const stat of leftColumnStats) {
+      const text = `${stat.label} ${stat.value}`;
+      FontAtlasRenderer.renderText(
+        ctx,
+        text,
+        leftColumnX,
+        statsY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+      statsY += this.config.lineSpacing;
+    }
+
+    // Reset Y position for right column (parallel to left)
+    statsY = classY + this.config.lineSpacing;
+
+    // Render right column
+    for (const stat of rightColumnStats) {
+      const text = `${stat.label} ${stat.value}`;
+      FontAtlasRenderer.renderText(
+        ctx,
+        text,
+        rightColumnX,
+        statsY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+      statsY += this.config.lineSpacing;
+    }
   }
 
   /**

@@ -26,7 +26,9 @@ export class EmptyContent implements PanelContent {
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
     fontId: string,
-    fontAtlasImage: HTMLImageElement | null
+    fontAtlasImage: HTMLImageElement | null,
+    _spriteImages?: Map<string, HTMLImageElement>,
+    _spriteSize?: number
   ): void {
     if (!fontAtlasImage) return;
 

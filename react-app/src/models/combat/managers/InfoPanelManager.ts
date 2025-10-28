@@ -26,10 +26,12 @@ export class InfoPanelManager {
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
     fontId: string,
-    fontAtlasImage: HTMLImageElement | null
+    fontAtlasImage: HTMLImageElement | null,
+    spriteImages?: Map<string, HTMLImageElement>,
+    spriteSize?: number
   ): void {
     if (!this.content) return;
-    this.content.render(ctx, region, fontId, fontAtlasImage);
+    this.content.render(ctx, region, fontId, fontAtlasImage, spriteImages, spriteSize);
   }
 
 

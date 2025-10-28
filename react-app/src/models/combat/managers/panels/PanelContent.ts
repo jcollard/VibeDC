@@ -47,12 +47,16 @@ export interface PanelContent {
    * @param region - The region where content should be rendered
    * @param fontId - Font ID for text rendering
    * @param fontAtlasImage - Font atlas image for text rendering
+   * @param spriteImages - Optional map of sprite images for rendering sprites
+   * @param spriteSize - Optional base sprite size (e.g., 12 for 12x12 sprites)
    */
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
     fontId: string,
-    fontAtlasImage: HTMLImageElement | null
+    fontAtlasImage: HTMLImageElement | null,
+    spriteImages?: Map<string, HTMLImageElement>,
+    spriteSize?: number
   ): void;
 
   /**

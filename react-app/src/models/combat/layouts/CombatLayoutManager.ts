@@ -564,7 +564,9 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       ctx,
       { x, y, width, height },
       fontId,
-      fontAtlasImage
+      fontAtlasImage,
+      spriteImages,
+      spriteSize
     );
   }
 
@@ -579,7 +581,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager, isEnemyDeploymentPhase } = context;
+    const { ctx, targetUnit, fontId, fontAtlasImage, targetUnitPanelManager, isEnemyDeploymentPhase, spriteImages, spriteSize } = context;
     if (!targetUnitPanelManager) return;
 
     // Create or update appropriate content
@@ -633,7 +635,9 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       ctx,
       { x, y, width, height },
       fontId,
-      fontAtlasImage
+      fontAtlasImage,
+      spriteImages,
+      spriteSize
     );
   }
 }
