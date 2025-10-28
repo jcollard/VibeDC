@@ -258,6 +258,104 @@ const handleLoadComplete = (result: LoadResult) => {
 
 This pattern ensures strict sequencing: parent only resets state after child animation completes.
 
+### Phase Handler Animation State Management
+
+When implementing phase handlers with animation state (progress tracking, timers, flags), phase handlers are **recreated** when transitioning back to the same phase. Ensure animation state is properly initialized:
+
+**✅ DO**: Initialize animation state in constructor
+```typescript
+export class ActionTimerPhaseHandler extends PhaseBase {
+  // Animation state flags
+  private turnCalculated: boolean = false;
+  private animationStartTime: number = 0;
+  private isAnimating: boolean = false;
+
+  // Animation data (using WeakMap - see "WeakMap for Animation Data" section)
+  private startTimers: WeakMap<CombatUnit, number> = new WeakMap();
+  private targetTimers: WeakMap<CombatUnit, number> = new WeakMap();
+
+  constructor() {
+    super();
+    // State is automatically reset because constructor runs on each phase entry
+    // No explicit reset needed - fresh instance = fresh state
+  }
+
+  protected updatePhase(...): CombatState | null {
+    // First frame: calculate and start animation
+    if (!this.turnCalculated) {
+      this.startAnimation(state.unitManifest);
+      this.turnCalculated = true;
+    }
+
+    // Subsequent frames: animate
+    if (this.isAnimating) {
+      this.animationStartTime += deltaTime;
+      // ... animate timers ...
+    }
+
+    // Transition when complete
+    if (progress >= 1.0) {
+      return { ...state, phase: 'unit-turn' };
+    }
+
+    return state;
+  }
+}
+```
+
+**✅ ALSO ACCEPTABLE**: Explicit reset method (if needed for testing or reuse)
+```typescript
+export class ActionTimerPhaseHandler extends PhaseBase {
+  private turnCalculated: boolean = false;
+  private animationStartTime: number = 0;
+  private isAnimating: boolean = false;
+
+  constructor() {
+    super();
+    this.resetAnimationState();
+  }
+
+  private resetAnimationState(): void {
+    this.turnCalculated = false;
+    this.animationStartTime = 0;
+    this.isAnimating = false;
+    // WeakMaps auto-cleanup, but we could recreate them if needed
+    this.startTimers = new WeakMap();
+    this.targetTimers = new WeakMap();
+  }
+}
+```
+
+**❌ DON'T**: Forget that handlers are recreated on phase re-entry
+```typescript
+// BAD: Assumes handler persists across phase transitions
+export class ActionTimerPhaseHandler extends PhaseBase {
+  private animationPlayed: boolean = false;
+
+  protected updatePhase(...): CombatState | null {
+    // BUG: This will ALWAYS be false because constructor resets it!
+    if (!this.animationPlayed) {
+      playAnimation();
+      this.animationPlayed = true;  // Never persists to next phase entry
+    }
+  }
+}
+```
+
+**Why**: Phase handlers are instantiated when a phase is entered. When transitioning deployment → action-timer → unit-turn → action-timer, the second action-timer phase gets a **new instance** of ActionTimerPhaseHandler. Any state in the old instance is lost.
+
+**Implications**:
+- ✅ Animation state automatically resets on re-entry (usually desired)
+- ✅ No need to explicitly clear animation flags
+- ⚠️ Can't persist state across multiple visits to same phase (use CombatState for that)
+- ⚠️ Instance variables only exist during one continuous phase period
+
+**When to use CombatState vs instance variables**:
+- **CombatState**: Persists across phase transitions (turn count, unit positions)
+- **Instance variables**: Only exists during current phase (animation progress, cached UI)
+
+**Real-world example**: ActionTimerPhaseHandler uses instance variables for animation state (`animationStartTime`, `turnCalculated`). These reset to initial values each time combat returns to action-timer phase, ensuring the animation plays fresh each turn.
+
 ### WeakMap for Object-to-ID Mapping
 
 When you need bidirectional lookup between objects and IDs, use `Map` for primary storage and `WeakMap` for reverse lookup:
@@ -326,6 +424,81 @@ addUnit(unit: Unit): void {
 - Multiple objects may share the same name/properties
 
 **Real-world bug**: CombatUnitManifest originally used `unit.name` as the map key. When combat had 4 Goblins, they all overwrote each other in the map, leaving only 1 Goblin. Fixed by using auto-incrementing IDs with WeakMap for reverse lookup.
+
+### WeakMap for Animation Data
+
+When storing temporary data associated with unit instances (animation targets, cached values, progress tracking), use WeakMap instead of Map with unit names or other properties:
+
+**✅ DO**: Use WeakMap with unit instances as keys
+```typescript
+export class ActionTimerPhaseHandler extends PhaseBase {
+  // Animation state - stores per-unit data keyed by unit instance
+  private startTimers: WeakMap<CombatUnit, number> = new WeakMap();
+  private targetTimers: WeakMap<CombatUnit, number> = new WeakMap();
+
+  private startAnimation(manifest: CombatUnitManifest): void {
+    for (const placement of manifest.getAllUnits()) {
+      const unit = placement.unit;
+
+      // Store data keyed by unit instance
+      this.startTimers.set(unit, unit.actionTimer);
+      const targetValue = calculateTarget(unit);
+      this.targetTimers.set(unit, targetValue);
+    }
+  }
+
+  protected updatePhase(state: CombatState, ...): CombatState | null {
+    for (const placement of state.unitManifest.getAllUnits()) {
+      const unit = placement.unit;
+
+      // Retrieve data using unit instance as key
+      const startValue = this.startTimers.get(unit) || 0;
+      const targetValue = this.targetTimers.get(unit) || 0;
+      const currentValue = lerp(startValue, targetValue, progress);
+
+      // Update unit state
+      (unit as any)._actionTimer = currentValue;
+    }
+  }
+}
+```
+
+**❌ DON'T**: Use unit names as map keys
+```typescript
+// BAD: Breaks with duplicate names
+private startTimers: Map<string, number> = new Map();
+private targetTimers: Map<string, number> = new Map();
+
+private startAnimation(manifest: CombatUnitManifest): void {
+  for (const placement of manifest.getAllUnits()) {
+    const unit = placement.unit;
+
+    // PROBLEM: If there are 3 "Goblin" units, they all use same key!
+    this.startTimers.set(unit.name, unit.actionTimer);  // Overwrites previous Goblin!
+    this.targetTimers.set(unit.name, targetValue);      // Only stores data for last Goblin
+  }
+}
+
+protected updatePhase(...): CombatState | null {
+  // BUG: All Goblins get the same animation values because they share a key
+  const startValue = this.startTimers.get(unit.name);  // Wrong value!
+}
+```
+
+**Benefits**:
+- Works correctly with duplicate unit names (multiple "Goblin" units)
+- Automatic garbage collection when units are removed from combat
+- Type-safe (compiler prevents using wrong key type)
+- No memory leaks from orphaned animation data
+- Cleaner code (no need to generate unique string keys)
+
+**When to use**:
+- Temporary animation data tied to unit instances (start/target values, progress)
+- Per-unit cached calculations during a phase
+- Any per-unit state that doesn't need to persist after the phase or combat ends
+- Animation state in phase handlers
+
+**Real-world bug**: ActionTimerPhaseHandler originally used `Map<string, number>` with `unit.name` as keys. When combat had multiple units with the same name (e.g., 3 Goblins), the animation only tracked data for one Goblin - all three would animate to the same target value. Fixed by using `WeakMap<CombatUnit, number>` with unit instances as keys.
 
 ## Event Handling
 

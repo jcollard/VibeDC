@@ -134,7 +134,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     const startX = region.x + (region.width - totalWidth) / 2;
 
     // Position sprites at the bottom of the panel (same as in render)
-    const spriteY = region.y + region.height - this.spriteSize - 7 + 2;
+    const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
 
     // Determine which unit was clicked
     let currentX = startX;

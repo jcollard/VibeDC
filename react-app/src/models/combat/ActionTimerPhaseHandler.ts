@@ -9,6 +9,7 @@ import type {
 } from './CombatPhaseHandler';
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
+import type { CombatUnit } from './CombatUnit';
 import type { TopPanelRenderer } from './managers/TopPanelRenderer';
 import type { PanelContent, PanelRegion, PanelClickResult } from './managers/panels/PanelContent';
 import type { UnitPlacement } from './CombatUnitManifest';
@@ -106,8 +107,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   // Animation state
   private animationStartTime: number = 0;
   private animationDuration: number = 1.0; // 1 second animation
-  private startTimers: Map<string, number> = new Map(); // unit name -> starting AT value
-  private targetTimers: Map<string, number> = new Map(); // unit name -> target AT value
+  private startTimers: WeakMap<CombatUnit, number> = new WeakMap(); // unit instance -> starting AT value
+  private targetTimers: WeakMap<CombatUnit, number> = new WeakMap(); // unit instance -> target AT value
   private isAnimating: boolean = false;
 
   constructor() {
@@ -190,8 +191,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       const allUnits = state.unitManifest.getAllUnits();
       for (const placement of allUnits) {
         const unit = placement.unit;
-        const startValue = this.startTimers.get(unit.name) || 0;
-        const targetValue = this.targetTimers.get(unit.name) || 0;
+        const startValue = this.startTimers.get(unit) || 0;
+        const targetValue = this.targetTimers.get(unit) || 0;
         const currentValue = startValue + (targetValue - startValue) * progress;
 
         // Direct mutation of private field
@@ -230,13 +231,14 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   ): void {
     const allUnits = manifest.getAllUnits();
 
-    // Store starting values
-    this.startTimers.clear();
-    this.targetTimers.clear();
+    // Store starting values (WeakMap doesn't have clear(), just create new instances)
+    // Note: WeakMaps don't have a clear() method, but since we're setting all values
+    // in the loop below, any old values for units no longer in manifest will be
+    // automatically garbage collected
 
     for (const placement of allUnits) {
       const unit = placement.unit;
-      this.startTimers.set(unit.name, unit.actionTimer);
+      this.startTimers.set(unit, unit.actionTimer);
     }
 
     // Calculate time until first unit reaches 100
@@ -263,7 +265,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       const unit = placement.unit;
       const increment = unit.speed * minTimeToReady * ACTION_TIMER_MULTIPLIER;
       const targetValue = unit.actionTimer + increment;
-      this.targetTimers.set(unit.name, targetValue);
+      this.targetTimers.set(unit, targetValue);
     }
 
     console.log(`[ActionTimerPhaseHandler] Starting animation to advance timers by ${minTimeToReady.toFixed(2)} seconds`);
