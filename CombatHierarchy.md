@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.3
-**Last Updated:** Tue, Oct 28, 2025 (add-delay-and-endturn branch - Delay/End Turn actions with slide animations)
+**Version:** 1.4
+**Last Updated:** Tue, Oct 28, 2025 (main branch - Dynamic actions menu with unit-specific buttons and helper text)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -516,36 +516,54 @@ react-app/src/
 **Used By:** InfoPanelManager during deployment phase
 
 #### `managers/panels/ActionsMenuContent.ts`
-**Purpose:** Action menu for active unit's turn with Delay and End Turn actions
+**Purpose:** Dynamic action menu for active unit's turn with unit-specific actions
 **Exports:** `ActionsMenuContent`, `ActionsMenuConfig`, `ActionButton`
-**Key Methods:** render(), handleClick(), handleHover(), setButtonsDisabled()
+**Key Methods:** render(), handleClick(), handleHover(), setButtonsDisabled(), updateUnit(), buildButtonList()
 **Current Functionality:**
-- Shows "ACTIONS" title in white
-- Displays "Delay" button (sets actionTimer to 50)
-- Displays "End Turn" button (sets actionTimer to 0)
+- Shows "ACTIONS" title in orange (#ffa500)
+- Dynamically generates buttons based on unit's stats and classes
+- Action buttons (in order):
+  1. Move - "Move this unit up to {X} tiles" (shows unit.movement)
+  2. Attack - "Perform a basic attack with this unit's weapon"
+  3. {Primary Class} - "Perform a {Primary Class} action" (shows unit.unitClass.name)
+  4. {Secondary Class} - "Perform a {Secondary Class} action" (conditional, only if unit.secondaryClass exists)
+  5. Delay - "Take no moves or actions and sets Action Timer to 50"
+  6. End Turn - "Ends your turn and sets Action Timer to 0"
 - Button states: White (enabled), Grey (disabled), Yellow (hovered)
+- Helper text displays at bottom of panel on hover with automatic text wrapping
 - Disables buttons after click to prevent double-actions
 - Re-enabled on phase entry by CombatLayoutManager
-- Returns PanelClickResult with `{ type: 'action-selected', actionId: 'delay' | 'end-turn' }`
+- Returns PanelClickResult with `{ type: 'action-selected', actionId: 'move' | 'attack' | 'primary-class' | 'secondary-class' | 'delay' | 'end-turn' }`
+**State Management Pattern:**
+- `updateUnit(unit)` method refreshes button list without losing hover state
+- Cached in CombatLayoutManager (per GeneralGuidelines.md)
+- Constructor accepts optional unit parameter for flexibility
+- `getCurrentUnit()` getter for accessing current unit
 **Button Disable Pattern:**
 - `setButtonsDisabled(disabled)` method to control button state
 - `buttonsDisabled` flag prevents clicks when true
 - Called by CombatLayoutManager on unit-turn phase entry to re-enable buttons
+**Helper Text Feature:**
+- Shows description at bottom of panel when hovering over any button
+- Uses wrapText() method to automatically wrap text to fit panel width
+- Wraps on word boundaries, multiple lines supported
+- Helper text color: #888888 (HELPER_TEXT constant from colors.ts)
+- Appears with spacing line after buttons
 **Button Layout:**
 - Title line: "ACTIONS" (line 0)
 - Blank line (line 1)
-- "Delay" button (line 2)
-- "End Turn" button (line 3)
+- Dynamic action buttons (lines 2-7, depending on unit's secondary class)
+- Spacing line (after last button)
+- Helper text (on hover, wrapped to fit)
 - Uses 7px-04b03 font with 8px line spacing
 **Future Functionality:**
-- Move action with pathfinding
-- Attack action with target selection
-- Ability action with ability menu
+- Actual execution of Move action with pathfinding
+- Actual execution of Attack action with damage calculation
+- Actual execution of class actions with ability system integration
 - Keyboard shortcuts
-- Button tooltips explaining actions
 - Animation/feedback when button pressed
-**Dependencies:** FontAtlasRenderer
-**Used By:** InfoPanelManager for bottom panel during unit-turn phase
+**Dependencies:** FontAtlasRenderer, FontRegistry, CombatUnit, colors.ts (HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT)
+**Used By:** InfoPanelManager (via CombatLayoutManager) for bottom panel during unit-turn phase
 
 #### `managers/panels/EmptyContent.ts`
 **Purpose:** Empty panel with optional title
@@ -559,6 +577,18 @@ react-app/src/
 **Key Methods:** render(), handleClick(), handleMouseDown(), handleMouseUp(), handleHover()
 **Dependencies:** SpriteRenderer, FontAtlasRenderer
 **Used By:** PartyMembersContent, other interactive panels
+
+#### `managers/panels/colors.ts`
+**Purpose:** Centralized color constants for panel UI elements
+**Exports:** Color constants (all strings with hex color values)
+**Constants:**
+- `HELPER_TEXT` - #888888 (grey) - Helper text in panels
+- `ENABLED_TEXT` - #ffffff (white) - Enabled buttons and primary text
+- `HOVERED_TEXT` - #ffff00 (yellow) - Hovered buttons
+- `DISABLED_TEXT` - #888888 (grey) - Disabled buttons
+**Usage Pattern:** Import and use constants instead of hardcoding colors
+**Used By:** ActionsMenuContent, future panel implementations
+**Rationale:** Ensures consistent colors across panels, easy to modify globally
 
 #### `managers/panels/index.ts`
 **Purpose:** Re-exports all panel content implementations
@@ -1052,14 +1082,14 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 57 Core Files
+## File Count: 58 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
 **Rendering:** 2 files
-**Layout & UI:** 14 files (added ActionsMenuContent)
+**Layout & UI:** 15 files (ActionsMenuContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
 **Cinematics:** 8 files
 **Unit System:** 7 files
