@@ -80,10 +80,18 @@ export interface CombatPhaseHandler {
   getRequiredSprites(state: CombatState, encounter: CombatEncounter): PhaseSprites;
 
   /**
-   * Render phase-specific overlays on top of the base map.
-   * This is called after the map tiles are rendered but before the final buffer swap.
+   * Render phase-specific overlays on top of the base map (before units are drawn).
+   * This is called after the map tiles are rendered but before units.
+   * Examples: deployment zones, movement ranges, attack ranges
    */
   render(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void;
+
+  /**
+   * Render phase-specific UI overlays (after units are drawn).
+   * This is called after units are rendered, so UI elements appear on top.
+   * Examples: cursors, selection indicators, UI overlays
+   */
+  renderUI?(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void;
 
   /**
    * Handle phase-specific updates (e.g., user input, state transitions).

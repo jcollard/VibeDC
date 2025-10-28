@@ -66,6 +66,66 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     console.log('[UnitTurnPhaseHandler] Initialized');
   }
 
+  /**
+   * Render a sprite with color tinting
+   * Uses an off-screen buffer to apply color tinting without affecting the rest of the canvas
+   */
+  private renderTintedSprite(
+    ctx: CanvasRenderingContext2D,
+    spriteId: string,
+    spriteImages: Map<string, HTMLImageElement>,
+    spriteSize: number,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    tintColor: string,
+    alpha: number = 1.0
+  ): void {
+    // Create an off-screen canvas for tinting
+    const buffer = document.createElement('canvas');
+    buffer.width = width;
+    buffer.height = height;
+    const bufferCtx = buffer.getContext('2d');
+    if (!bufferCtx) return;
+
+    // Render sprite to buffer
+    SpriteRenderer.renderSpriteById(
+      bufferCtx,
+      spriteId,
+      spriteImages,
+      spriteSize,
+      0,
+      0,
+      width,
+      height
+    );
+
+    // Apply color tint using multiply blend mode
+    bufferCtx.globalCompositeOperation = 'multiply';
+    bufferCtx.fillStyle = tintColor;
+    bufferCtx.fillRect(0, 0, width, height);
+
+    // Restore the sprite's alpha channel
+    bufferCtx.globalCompositeOperation = 'destination-in';
+    SpriteRenderer.renderSpriteById(
+      bufferCtx,
+      spriteId,
+      spriteImages,
+      spriteSize,
+      0,
+      0,
+      width,
+      height
+    );
+
+    // Draw the tinted sprite to the main canvas
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(buffer, x, y);
+    ctx.restore();
+  }
+
   getRequiredSprites(state: CombatState, _encounter: CombatEncounter): PhaseSprites {
     const spriteIds = new Set<string>();
 
@@ -99,11 +159,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       const x = Math.floor(offsetX + (position.x * tileSize));
       const y = Math.floor(offsetY + (position.y * tileSize));
 
-      // Render with transparency
-      ctx.save();
-      ctx.globalAlpha = CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALPHA;
-
-      SpriteRenderer.renderSpriteById(
+      // Render with yellow tint and transparency
+      this.renderTintedSprite(
         ctx,
         CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
         spriteImages,
@@ -111,23 +168,24 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         x,
         y,
         tileSize,
-        tileSize
+        tileSize,
+        CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALBEDO,
+        CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALPHA
       );
-
-      ctx.restore();
     }
   }
 
   renderUI(_state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
     const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
 
-    // Render active unit cursor (blinking) - rendered AFTER units per user feedback
+    // Render active unit cursor (dark green, blinking) - rendered AFTER units per user feedback
     if (this.activeUnitPosition && this.cursorVisible) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
       const x = Math.floor(offsetX + (this.activeUnitPosition.x * tileSize));
       const y = Math.floor(offsetY + (this.activeUnitPosition.y * tileSize));
 
-      SpriteRenderer.renderSpriteById(
+      // Render with dark green tint
+      this.renderTintedSprite(
         ctx,
         CombatConstants.UNIT_TURN.CURSOR_SPRITE_ID,
         spriteImages,
@@ -135,17 +193,20 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         x,
         y,
         tileSize,
-        tileSize
+        tileSize,
+        CombatConstants.UNIT_TURN.CURSOR_ALBEDO_DARK_GREEN,
+        1.0
       );
     }
 
-    // Render target cursor (always visible) - rendered AFTER units per user feedback
+    // Render target cursor (red, always visible) - rendered AFTER units per user feedback
     if (this.targetedUnitPosition) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
       const x = Math.floor(offsetX + (this.targetedUnitPosition.x * tileSize));
       const y = Math.floor(offsetY + (this.targetedUnitPosition.y * tileSize));
 
-      SpriteRenderer.renderSpriteById(
+      // Render with red tint
+      this.renderTintedSprite(
         ctx,
         CombatConstants.UNIT_TURN.TARGET_CURSOR_SPRITE_ID,
         spriteImages,
@@ -153,7 +214,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         x,
         y,
         tileSize,
-        tileSize
+        tileSize,
+        CombatConstants.UNIT_TURN.TARGET_CURSOR_ALBEDO,
+        1.0
       );
     }
   }
