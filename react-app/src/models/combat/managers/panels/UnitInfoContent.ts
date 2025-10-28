@@ -24,6 +24,7 @@ export class UnitInfoContent implements PanelContent {
   private unit: CombatUnit;
   private hoveredStatId: string | null = null;
   private lastRegionWidth: number = 0; // Cache region width for hit detection
+  private lastRegionHeight: number = 0; // Cache region height for hit detection
 
   // Helper text for each stat
   private readonly statHelperText: Record<string, string> = {
@@ -58,8 +59,9 @@ export class UnitInfoContent implements PanelContent {
     const font = FontRegistry.getById(fontId);
     if (!font) return;
 
-    // Cache region width for hit detection
+    // Cache region dimensions for hit detection
     this.lastRegionWidth = region.width;
+    this.lastRegionHeight = region.height;
 
     // ===== Section 1: Sprite (top-left corner) =====
     const spriteX = region.x + this.config.padding;
@@ -408,6 +410,18 @@ export class UnitInfoContent implements PanelContent {
    * @returns Hover state change info or null if unchanged
    */
   handleHover(relativeX: number, relativeY: number): unknown {
+    // Check if mouse is outside panel bounds
+    if (relativeX < 0 || relativeY < 0 ||
+        relativeX >= this.lastRegionWidth ||
+        relativeY >= this.lastRegionHeight) {
+      // Clear hover state if mouse is outside panel
+      if (this.hoveredStatId !== null) {
+        this.hoveredStatId = null;
+        return { statId: null };
+      }
+      return null;
+    }
+
     const statId = this.getStatIdAt(relativeX, relativeY);
 
     // Update hover state if changed

@@ -42,6 +42,8 @@ export class ActionsMenuContent implements PanelContent {
   private hoveredButtonIndex: number | null = null;
   private buttonsDisabled: boolean = false; // Disable after first click
   private currentUnit: CombatUnit | null = null;
+  private lastRegionWidth: number = 0; // Cache region width for bounds checking
+  private lastRegionHeight: number = 0; // Cache region height for bounds checking
 
   constructor(config: ActionsMenuConfig, unit?: CombatUnit) {
     this.config = config;
@@ -179,6 +181,10 @@ export class ActionsMenuContent implements PanelContent {
   ): void {
     if (!fontAtlasImage) return;
 
+    // Cache region dimensions for bounds checking
+    this.lastRegionWidth = region.width;
+    this.lastRegionHeight = region.height;
+
     let currentY = region.y + this.config.padding;
 
     // Render title
@@ -297,6 +303,18 @@ export class ActionsMenuContent implements PanelContent {
     relativeX: number,
     relativeY: number
   ): unknown {
+    // Check if mouse is outside panel bounds
+    if (relativeX < 0 || relativeY < 0 ||
+        relativeX >= this.lastRegionWidth ||
+        relativeY >= this.lastRegionHeight) {
+      // Clear hover state if mouse is outside panel
+      if (this.hoveredButtonIndex !== null) {
+        this.hoveredButtonIndex = null;
+        return { buttonIndex: null };
+      }
+      return null;
+    }
+
     // Ignore hover if this is not the player's unit
     if (!this.currentUnit || !this.currentUnit.isPlayerControlled) {
       // Clear hover state during enemy turns
