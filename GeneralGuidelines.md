@@ -45,7 +45,19 @@ ctx.drawImage(animatedBuffer, x, y);
   ctx.imageSmoothingEnabled = false;
   ```
 
-- **Round all coordinates** to integers for pixel-perfect rendering
+- **Round all coordinates to integers** for pixel-perfect rendering:
+  ```typescript
+  // DO: Explicitly round coordinates, especially when calculated
+  const x = Math.floor(region.x + region.width / 2);
+  const y = Math.floor(region.y + offset);
+  ctx.drawImage(image, x, y);
+
+  // OK: When coordinates are known to be integers (e.g., tile positions)
+  const tileX = col * 12; // Always integer if col is integer
+  const tileY = row * 12; // Always integer if row is integer
+  ctx.drawImage(image, tileX, tileY);
+  ```
+  **Why**: Sub-pixel rendering causes blurriness in pixel art. Even if coordinates are currently integers, explicit rounding future-proofs against layout changes.
 
 ## Screen Layout & Coordinate Systems
 
@@ -199,6 +211,49 @@ return state;
 ```
 
 **Why**: React uses reference equality to detect changes. If you mutate the existing object, `updatedState === combatState` will be `true`, and React won't re-render or trigger `useEffect` hooks. Always return a new object when state changes.
+
+### State Preservation vs. Reset Pattern
+
+When updating collections in stateful components, provide separate methods for explicit reset vs. state preservation:
+
+**✅ DO**: Separate methods for different update semantics
+```typescript
+class ScrollableRenderer {
+  private scrollOffset: number = 0;
+  private items: Item[];
+
+  // Explicit reset - user changed context
+  setItems(items: Item[]): void {
+    this.items = items;
+    this.scrollOffset = 0; // Reset to start
+  }
+
+  // Preserve state - data updated within same context
+  updateItems(items: Item[]): void {
+    this.items = items;
+    // Clamp scroll to valid range if list shrunk
+    const maxOffset = Math.max(0, this.items.length - this.visibleCount);
+    this.scrollOffset = Math.min(this.scrollOffset, maxOffset);
+  }
+}
+```
+
+**❌ DON'T**: Single method with unclear semantics
+```typescript
+// BAD: Unclear if scroll should reset
+setItems(items: Item[]): void {
+  this.items = items;
+  // Should we reset scroll? Unclear!
+}
+```
+
+**When to Use**:
+- Scrollable lists (preserve scroll when data updates)
+- Paginated views (preserve page when items change)
+- Filtered views (preserve scroll when filter updates)
+- Expanded/collapsed trees (preserve expansion state)
+
+**Real-world example**: TurnOrderRenderer uses `setUnits()` for explicit reset and `updateUnits()` to preserve scroll position when unit list changes during animation.
 
 ### Async Operations with Animations
 
