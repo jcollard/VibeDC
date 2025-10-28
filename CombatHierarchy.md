@@ -213,15 +213,20 @@ react-app/src/
 **Current Functionality:**
 - Identifies ready unit (first in turn order with AT >= 100)
 - Displays colored ready message: "[Unit Name] is ready!" (green for players, red for enemies)
+- Auto-selects active unit on turn start (via strategy pattern)
 - Shows blinking dark green cursor on active unit (0.5s blink rate)
+- Shows red target cursor only when targeting different unit (not on active unit)
 - Initializes appropriate strategy based on unit.isPlayerControlled
 - Delegates all turn behavior to strategy.update()
 - Gets movement range, target info from strategy
 - Waits for strategy to return TurnAction
+**UI Panels:**
+- Top panel: Shows unit name as title (green for players, red for enemies)
+- Bottom panel: Shows "ACTIONS" menu stub (future: action buttons)
 **Rendering:**
 - Uses dual-method rendering pattern (render() and renderUI())
 - render(): Movement range highlights (yellow tiles) - BEFORE units
-- renderUI(): Active/target cursors (green/red) - AFTER units
+- renderUI(): Active unit cursor (green, blinking), target cursor (red, only on different units) - AFTER units
 - Cached tinting buffer for color tinting (avoids GC pressure)
 - Queries strategy for movement range and target position each frame
 **Turn Order Logic:**
@@ -261,9 +266,10 @@ react-app/src/
 **Exports:** `PlayerTurnStrategy`
 **Implements:** TurnStrategy
 **Current Functionality:**
+- Auto-selects active unit on turn start (shows in top panel, displays movement range)
 - Calculates movement range on turn start using MovementRangeCalculator
 - Handles map clicks to select units
-- Shows selected unit info in panel
+- Shows selected unit info in panel with unit name as title (green for players)
 - Recalculates movement range for selected unit
 - Returns null from update() (waits for player action menu in future)
 **Future Functionality:**
@@ -284,6 +290,7 @@ react-app/src/
 **Exports:** `EnemyTurnStrategy`
 **Implements:** TurnStrategy
 **Current Functionality:**
+- Auto-selects active unit on turn start (shows in top panel with red title)
 - Calculates movement range on turn start
 - Adds thinking delay (1.0 second) for visual feedback
 - Returns `{ type: 'end-turn' }` action after delay (placeholder)
@@ -332,7 +339,13 @@ react-app/src/
 **Purpose:** Main UI layout coordinator (panels, combat log, turn order, scroll arrows)
 **Exports:** `CombatLayoutManager`
 **Key Methods:** renderLayout(), getMapViewport(), get[Panel]Region(), handleMapScrollClick()
-**Dependencies:** HorizontalVerticalLayout, InfoPanelManager, panel content implementations
+**Panel Content Logic:**
+- Deployment phase: PartyMembersContent (bottom panel)
+- Enemy-deployment phase: EmptyContent (bottom panel)
+- Unit-turn phase: ActionsMenuContent (bottom panel), UnitInfoContent with unit name/color (top panel)
+- Other phases: UnitInfoContent (if unit available), EmptyContent (if no unit)
+**Phase Detection:** Uses flags (isDeploymentPhase, isEnemyDeploymentPhase) and currentUnit presence
+**Dependencies:** HorizontalVerticalLayout, InfoPanelManager, panel content implementations, CombatConstants
 **Used By:** CombatView for all UI rendering
 
 #### `layouts/CombatLayoutRenderer.ts`
@@ -428,15 +441,19 @@ react-app/src/
 **Purpose:** Interface for info panel content with event handling
 **Exports:** `PanelContent`, `PanelRegion`, `PanelClickResult`
 **Key Methods:** render(), handleClick(), handleHover(), handleMouseDown()
-**Implementations:** UnitInfoContent, PartyMembersContent, EmptyContent
+**Implementations:** UnitInfoContent, PartyMembersContent, ActionsMenuContent, EmptyContent
 **Used By:** InfoPanelManager
 
 #### `managers/panels/UnitInfoContent.ts`
 **Purpose:** Displays unit stats, health, mana, abilities
 **Exports:** `UnitInfoContent`
-**Key Methods:** render(), updateUnit()
+**Key Methods:** render(), updateUnit(unit, title?, titleColor?)
+**Current Functionality:**
+- Shows unit name as panel title (color-coded: green for players, red for enemies)
+- Displays class, HP, MP, Speed, Movement stats
+- Title and color can be dynamically updated via updateUnit()
 **Dependencies:** CombatUnit, FontAtlasRenderer
-**Used By:** InfoPanelManager for unit info panels
+**Used By:** InfoPanelManager for unit info panels (top panel during unit-turn phase)
 
 #### `managers/panels/PartyMembersContent.ts`
 **Purpose:** Grid of party member portraits with Enter Combat button
@@ -444,6 +461,23 @@ react-app/src/
 **Key Methods:** render(), handleClick(), handleHover(), updateHoveredIndex(), updateDeploymentInfo()
 **Dependencies:** CombatUnit, PanelButton, SpriteRenderer
 **Used By:** InfoPanelManager during deployment phase
+
+#### `managers/panels/ActionsMenuContent.ts`
+**Purpose:** Action menu for active unit's turn (stub implementation)
+**Exports:** `ActionsMenuContent`
+**Key Methods:** render(), handleClick()
+**Current Functionality:**
+- Shows "ACTIONS" title
+- Displays placeholder text "(Menu coming soon)"
+**Future Functionality:**
+- Attack button
+- Move button
+- Ability button (if unit has abilities)
+- Wait button
+- End Turn button
+- Returns PanelClickResult with action selection
+**Dependencies:** FontAtlasRenderer
+**Used By:** InfoPanelManager for bottom panel during unit-turn phase
 
 #### `managers/panels/EmptyContent.ts`
 **Purpose:** Empty panel with optional title
@@ -950,14 +984,14 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 56 Core Files
+## File Count: 57 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
 **Rendering:** 2 files
-**Layout & UI:** 13 files
+**Layout & UI:** 14 files (added ActionsMenuContent)
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
 **Cinematics:** 8 files
 **Unit System:** 7 files
