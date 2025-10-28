@@ -195,7 +195,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
     // Only calculate once when entering this phase
     if (!this.turnCalculated) {
-      this.startAnimation(state.unitManifest);
+      this.startAnimation(state.unitManifest, state.tickCount ?? 0);
       this.turnCalculated = true;
     }
 
@@ -250,14 +250,17 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
    * Stores start/target values for animation
    * Only simulates ticks if no units are already ready (AT >= 100)
    * @param manifest Current unit manifest
+   * @param currentTickCount Current tick count from CombatState
    */
   private startAnimation(
-    manifest: import('./CombatUnitManifest').CombatUnitManifest
+    manifest: import('./CombatUnitManifest').CombatUnitManifest,
+    currentTickCount: number
   ): void {
     const allUnits = manifest.getAllUnits();
 
-    // Store starting tick count for animation
-    this.startTickCount = this.tickCount;
+    // Store starting tick count for animation (from CombatState)
+    this.startTickCount = currentTickCount;
+    this.tickCount = currentTickCount;
 
     // Store starting values
     for (const placement of allUnits) {
