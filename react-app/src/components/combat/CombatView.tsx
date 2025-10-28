@@ -19,7 +19,6 @@ import { SpriteAssetLoader } from '../../services/SpriteAssetLoader';
 import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { CombatUIStateManager } from '../../models/combat/CombatUIState';
-import { useCombatUIState } from '../../hooks/useCombatUIState';
 import { CombatRenderer } from '../../models/combat/rendering/CombatRenderer';
 import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FontRegistry } from '../../utils/FontRegistry';
@@ -68,8 +67,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Initialize UI state manager
   const uiStateManager = useMemo(() => new CombatUIStateManager(), []);
-  // Subscribe to UI state changes to trigger re-renders when state changes
-  const uiState = useCombatUIState(uiStateManager);
 
   // Initialize phase handler based on current phase (pass UI state manager)
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler(uiStateManager));
@@ -580,7 +577,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     if (displayCtx) {
       renderer.displayBuffer(displayCtx, bufferCanvas);
     }
-  }, [spritesLoaded, combatState, windowSize, activeEncounter, renderer, uiState, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, showFPS, mapScrollX, mapScrollY]);
+  }, [spritesLoaded, combatState, windowSize, activeEncounter, renderer, titleAtlasFont, messageAtlasFont, dialogAtlasFont, unitInfoAtlasFont, layoutRenderer, mapRenderer, showDebugGrid, showFPS, mapScrollX, mapScrollY]);
 
   // Animation loop
   useEffect(() => {
