@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.1
-**Last Updated:** Mon, Oct 27, 2025 6:38:45 PM (commit b994ffa - turn order scrolling feature)
+**Version:** 1.2
+**Last Updated:** Mon, Oct 27, 2025 (unit-highlight-plan branch - unit turn interaction feature)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -14,6 +14,7 @@ This document provides a token-efficient reference for AI agents to quickly unde
 
 - **Add a new combat phase** → Implement `CombatPhaseHandler`, update `CombatView` phase switching
 - **Modify rendering** → `CombatRenderer` (maps/units), `CombatLayoutManager` (UI layout)
+- **Add movement/pathfinding logic** → `MovementRangeCalculator` utility, phase handler integration
 - **Add deployment zone logic** → `DeploymentPhaseHandler`, `DeploymentZoneRenderer`
 - **Change turn order display** → `TurnOrderRenderer`, `TopPanelManager`
 - **Modify turn order scrolling** → `TurnOrderRenderer` (scroll arrows, hold-to-scroll), cached by phase handlers
@@ -77,12 +78,18 @@ react-app/src/
 #### `CombatUnit.ts`
 **Purpose:** Interface for combat-ready characters (stats, abilities, classes)
 **Exports:** `CombatUnit` interface
-**Key Properties:** name, health, mana, speed, actionTimer, spriteId, abilities
+**Key Properties:** name, health, mana, speed, actionTimer, spriteId, abilities, isPlayerControlled
 **Action Timer System:**
 - actionTimer: Current AT value (0-100+), increases by speed * deltaTime * multiplier
 - Starts at 0 at combat start
 - When reaches 100+, unit is ready to take their turn
 - Used by ActionTimerPhaseHandler for turn order calculation
+**Player Control System:**
+- isPlayerControlled: boolean getter - distinguishes player units from enemies
+- Set to true during deployment for party members
+- Set to false for enemy units
+- Used for team identification in pathfinding and AI
+- Serialized/deserialized with unit data
 **Implementations:** HumanoidUnit, MonsterUnit
 **Used By:** All unit-related components, rendering, combat logic
 
@@ -98,7 +105,12 @@ react-app/src/
 #### `CombatConstants.ts`
 **Purpose:** Centralized configuration (canvas size, colors, text, animations)
 **Exports:** `CombatConstants` object
-**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT
+**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN
+**UNIT_TURN Section:**
+- Cursor colors and sprite IDs (active unit, target unit)
+- Movement range highlight settings (color, alpha, sprite)
+- Ready message colors (player green, enemy red)
+- Cursor blink rate (0.5 seconds)
 **Used By:** All combat files for consistent values
 
 #### `CombatUIState.ts`
@@ -115,8 +127,12 @@ react-app/src/
 #### `CombatPhaseHandler.ts`
 **Purpose:** Interface for phase-specific behavior and event handling
 **Exports:** `CombatPhaseHandler`, `PhaseEventResult`, `PhaseRenderContext`, `MouseEventContext`
-**Key Methods:** getRequiredSprites(), render(), update(), handle[Event]()
-**Implementations:** DeploymentPhaseHandler, EnemyDeploymentPhaseHandler
+**Key Methods:** getRequiredSprites(), render(), renderUI(), update(), handle[Event]()
+**Rendering Methods:**
+- render(): Called after map tiles, before units (for underlays like movement ranges)
+- renderUI(): Called after units (for overlays like cursors, UI elements) [optional]
+- Dual-method pattern enables proper Z-ordering control
+**Implementations:** DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler
 **Used By:** CombatView (phase switching), phase implementations
 
 #### `PhaseBase.ts`
@@ -130,6 +146,7 @@ react-app/src/
 **Purpose:** Player unit deployment phase (select zones, place units, enter combat)
 **Exports:** `DeploymentPhaseHandler`, `DeploymentPanelData`, `DeploymentActionData`
 **Key Methods:** handleDeploymentAction(), handleTileClick(), getSelectedZoneIndex()
+**Player Control Setup:** Sets isPlayerControlled=true on deployed units
 **Dependencies:** DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager, PartySelectionDialog
 **Used By:** CombatView during deployment phase
 
@@ -185,33 +202,47 @@ react-app/src/
 **Transitions To:** unit-turn phase (when first unit reaches 100)
 
 #### `UnitTurnPhaseHandler.ts`
-**Purpose:** Individual unit's turn - action selection and execution (STUB IMPLEMENTATION)
+**Purpose:** Individual unit's turn - cursor display, unit selection, movement range visualization
 **Exports:** `UnitTurnPhaseHandler`
-**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent()
+**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick()
 **Current Functionality:**
 - Identifies ready unit (first in turn order with AT >= 100)
-- Logs "{Unit Name} is ready to act." to console
-- Displays turn order in top panel sorted by time-to-ready (who acts next)
+- Displays colored ready message: "[Unit Name] is ready!" (green for players, red for enemies)
+- Shows blinking dark green cursor on active unit (0.5s blink rate)
+- Allows clicking units to select as targets
+- Displays red cursor on targeted units
+- Calculates and displays movement range using flood-fill pathfinding
+- Shows movement range as yellow highlighted tiles (33% alpha)
+- Updates info panel to show targeted unit stats (or active unit if no target)
+- Updates bottom panel to show active unit
+- Displays turn order in top panel sorted by time-to-ready
 - Shows tick counter from state in top panel
-- Displays all units with scrolling support (no limit)
-- Stays in phase indefinitely (waits for action implementation)
+- Waits for player input on player-controlled units
+**Rendering:**
+- Uses dual-method rendering pattern (render() and renderUI())
+- render(): Movement range highlights (yellow tiles) - BEFORE units
+- renderUI(): Active/target cursors (green/red) - AFTER units
+- Cached tinting buffer for color tinting (avoids GC pressure)
+**Player Control:**
+- Units have isPlayerControlled flag (set during deployment)
+- Player-controlled units wait for input
+- Enemy units will use AI (future implementation)
 **Turn Order Logic:**
 - Calculates timeToReady = (100 - actionTimer) / speed for each unit
 - Sorts ascending (soonest first), then alphabetically by name
 - Uses same calculation as ActionTimerPhaseHandler for consistency
 **Caching Strategy:**
 - Caches TurnOrderRenderer instance to preserve scroll state
-- Uses updateUnits() to update unit list without resetting scroll position
-- Scroll state persists while waiting for action implementation
+- Caches UnitInfoContent to preserve hover state
+- Caches tinting buffer canvas to avoid per-frame allocations
+- Uses updateUnits() to update unit list without resetting scroll
 **Future Functionality:**
 - Action menu (Attack, Ability, Move, Wait, End Turn)
-- Movement/attack range display
-- Action targeting and execution
-- Action outcome animation
-- Status effect processing
-- AI enemy turn logic
-- Return to action-timer phase after action completes
-**Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter
+- Actual movement execution
+- Action execution
+- AI enemy turns
+- Action timer reset/overflow handling
+**Dependencies:** PhaseBase, TurnOrderRenderer, MovementRangeCalculator, CombatEncounter
 **Used By:** CombatView during unit-turn phase
 **Transitions To:** action-timer phase (when implemented - after unit completes action)
 
@@ -527,6 +558,20 @@ react-app/src/
 ---
 
 ### 8. Utilities & Predicates
+
+#### `utils/MovementRangeCalculator.ts`
+**Purpose:** Calculates reachable tiles for unit movement using flood-fill pathfinding
+**Exports:** `MovementRangeCalculator`, `MovementRangeOptions`
+**Key Methods:** calculateReachableTiles() (static)
+**Algorithm:** BFS flood-fill with orthogonal movement only (4 directions)
+**Pathfinding Rules:**
+- Checks terrain walkability via CombatMap.isWalkable()
+- Can path THROUGH friendly units (same isPlayerControlled value)
+- Cannot END movement on occupied tiles (any unit)
+- Cannot path through enemy units
+**Performance:** O(tiles × movement range) - negligible for 32×18 maps
+**Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
+**Used By:** UnitTurnPhaseHandler for movement range display
 
 #### `CombatPredicate.ts`
 **Purpose:** Victory/defeat condition evaluation
@@ -852,7 +897,7 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 54+ Core Files
+## File Count: 55+ Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
@@ -862,7 +907,7 @@ Per GeneralGuidelines.md, components with state are cached:
 **Deployment:** 4 files
 **Cinematics:** 8 files
 **Unit System:** 7 files
-**Utilities:** 1 file
+**Utilities:** 2 files (CombatPredicate, MovementRangeCalculator)
 **Serialization:** 2 files (CombatSaveData, combatStorage)
 
 ---
