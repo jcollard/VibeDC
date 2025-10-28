@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.2
-**Last Updated:** Mon, Oct 27, 2025 (unit-highlight-plan branch - unit turn interaction feature)
+**Version:** 1.3
+**Last Updated:** Tue, Oct 28, 2025 (add-delay-and-endturn branch - Delay/End Turn actions with slide animations)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -58,6 +58,10 @@ react-app/src/
 **Key Fields:** turnNumber, map, phase, unitManifest, tilesetId, tickCount
 **Combat Phases:** 'deployment' | 'enemy-deployment' | 'action-timer' | 'unit-turn' | 'victory' | 'defeat'
 **Tick Counter:** tickCount (optional number) - tracks discrete tick increments throughout combat, updated by ActionTimerPhaseHandler, passed to all phases
+**Transient State Fields (NOT serialized):**
+- `pendingSlideAnimation` (boolean): Flag to trigger immediate slide animation when entering action-timer phase after Delay/End Turn action. Cleared by ActionTimerPhaseHandler after triggering the slide.
+- `previousTurnOrder` (CombatUnit[]): Previous turn order (unit instances) before Delay/End Turn action. Used to animate FROM this order TO the new order. Cleared by ActionTimerPhaseHandler after starting the animation.
+- `pendingActionTimerMutation` ({ unit, newValue }): Pending action timer mutation to apply when entering action-timer phase. Delays the mutation until after phase transition to avoid showing new turn order in unit-turn phase for one frame. Applied by ActionTimerPhaseHandler at start of updatePhase().
 **Dependencies:** CombatMap, CombatUnitManifest
 **Used By:** All phase handlers, CombatView, renderers, serialization
 
@@ -159,35 +163,54 @@ react-app/src/
 **Transitions To:** action-timer phase
 
 #### `ActionTimerPhaseHandler.ts`
-**Purpose:** Active Time Battle (ATB) system - simulates discrete ticks and animates turn order
+**Purpose:** Active Time Battle (ATB) system - simulates discrete ticks and animates turn order with slide transitions
 **Exports:** `ActionTimerPhaseHandler`, `ActionTimerInfoPanelContent`
-**Key Methods:** getTopPanelRenderer(), getInfoPanelContent(), handleMapClick(), handleMouseMove(), updatePhase(), startAnimation()
+**Key Methods:** getTopPanelRenderer(), getInfoPanelContent(), handleMapClick(), handleMouseMove(), updatePhase(), startAnimation(), triggerImmediateSlide()
 **Current Functionality:**
 - Simulates discrete tick increments until first unit reaches 100 AT
 - Each tick: actionTimer += speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER
 - Ticks are whole number increments (no fractional ticks to reach exactly 100)
-- Animates all units' action timers from current to final state over 1 second
+- Animates through discrete tick snapshots, displaying each for TICK_DISPLAY_DURATION
 - Shows turn order sorted by predicted turn order (who acts next) in top panel
-- Displays current action timer (AT) values below unit sprites
-- Dynamically re-sorts units during animation as relative positions change
+- Displays ticks-until-ready below unit sprites (not raw AT values)
+- Units slide smoothly to new positions when turn order changes during ticks
+- Handles immediate slide animations triggered by Delay/End Turn actions
 - Placeholder info panel with "Action Timer Phase" text
 - Mouse event logging
 - Victory/defeat condition checking
 **Key Constants:**
 - ACTION_TIMER_MULTIPLIER: 1 (controls combat pacing)
 - TICK_SIZE: 1 (size of each discrete tick increment)
-- animationDuration: 1.0 second (AT value animation time)
+- TICK_DISPLAY_DURATION: 0.5 seconds (time to display each discrete tick)
+- POSITION_SLIDE_DURATION: 0.3333 seconds (time for units to slide to new positions)
 - maxTicks: 10000 (safety limit for simulation)
+**Animation Modes:**
+- 'idle': No animation in progress
+- 'immediate-slide': Triggered by Delay/End Turn actions, slides units to new order
+- 'discrete-ticks': Normal tick animation with position slides on order changes
+**Immediate Slide Pattern:**
+- Triggered when entering action-timer phase with pendingSlideAnimation=true
+- Applies pendingActionTimerMutation FIRST in updatePhase() (before any rendering)
+- Captures previousTurnOrder from state (unit instances, not names)
+- Starts slide animation from previous positions to new positions
+- Waits for slide completion before starting discrete tick animation
+- Transitions to 'discrete-ticks' mode after slide completes
+**Deferred Slide Pattern:**
+- If TurnOrderRenderer region not cached yet, stores pendingSlideNewOrder
+- Triggers animation on first render() call when region becomes available
+- Skips updateUnits() call in getTopPanelRenderer() when pending deferred slide exists
 **Tick Simulation:**
-- Creates working copies of all unit timers
+- Creates TickSnapshot[] array with timer values and turn order for each tick
 - Increments all timers by discrete amounts each tick
 - Stops when any unit reaches >= 100
 - No fractional ticks - units may exceed 100 by different amounts
+- Stores complete turn order at each tick for position change detection
 **Animation Pattern:**
-- Uses WeakMap<CombatUnit, number> for per-unit start/target AT values
+- Uses WeakMap<CombatUnit, number> for per-unit timer tracking
 - Avoids duplicate name issues (multiple "Goblin" units work correctly)
-- Linear interpolation from current AT to final AT over 1 second
-- Turn order updates every frame based on timeToReady calculation
+- Discrete updates: timer values change only at tick boundaries
+- Turn order recalculated at each tick based on updated timers
+- Slide animation triggered when turn order changes between ticks
 **Caching Strategy:**
 - Caches TurnOrderRenderer instance to preserve scroll state across animation frames
 - Uses updateUnits() to update unit list without resetting scroll position
@@ -204,7 +227,7 @@ react-app/src/
 #### `UnitTurnPhaseHandler.ts`
 **Purpose:** Individual unit's turn - delegates behavior to strategy pattern (player vs enemy)
 **Exports:** `UnitTurnPhaseHandler`
-**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick()
+**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick(), executeAction()
 **Architecture:** Uses Strategy Pattern to separate player input from AI decision-making
 - Creates PlayerTurnStrategy for player-controlled units
 - Creates EnemyTurnStrategy for AI-controlled units
@@ -219,16 +242,24 @@ react-app/src/
 - Initializes appropriate strategy based on unit.isPlayerControlled
 - Delegates all turn behavior to strategy.update()
 - Gets movement range, target info from strategy
-- Waits for strategy to return TurnAction
+- **Executes Delay and End Turn actions from action menu**
+- **Transitions back to action-timer phase with slide animation**
 **UI Panels:**
 - Top panel: Shows unit name as title (green for players, red for enemies)
-- Bottom panel: Shows "ACTIONS" menu stub (future: action buttons)
+- Bottom panel: Shows "ACTIONS" menu with Delay and End Turn buttons
 **Rendering:**
 - Uses dual-method rendering pattern (render() and renderUI())
 - render(): Movement range highlights (yellow tiles) - BEFORE units
 - renderUI(): Active unit cursor (green, blinking), target cursor (red, only on different units) - AFTER units
 - Cached tinting buffer for color tinting (avoids GC pressure)
 - Queries strategy for movement range and target position each frame
+**Delay/End Turn Execution Pattern:**
+- Captures previousTurnOrder (unit instances) BEFORE mutation
+- Defers actionTimer mutation using pendingActionTimerMutation field in CombatState
+- Sets pendingSlideAnimation=true flag
+- Returns new state with phase='action-timer'
+- ActionTimerPhaseHandler applies mutation at start of updatePhase() and triggers slide animation
+- Prevents one-frame flash of final state before animation
 **Turn Order Logic:**
 - Calculates timeToReady = (100 - actionTimer) / speed for each unit
 - Sorts ascending (soonest first), then alphabetically by name
@@ -239,11 +270,12 @@ react-app/src/
 - Caches tinting buffer canvas to avoid per-frame allocations
 - Caches strategy instance for duration of turn
 **Future Functionality:**
-- Execute TurnAction when strategy returns one
-- Transition back to action-timer phase after action execution
+- Execute Move action with pathfinding
+- Execute Attack action with damage calculation
+- Execute Ability action with ability system integration
 **Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy
 **Used By:** CombatView during unit-turn phase
-**Transitions To:** action-timer phase (when TurnAction execution is implemented)
+**Transitions To:** action-timer phase (when Delay/End Turn executed)
 
 ---
 
@@ -254,11 +286,11 @@ react-app/src/
 **Exports:** `TurnStrategy`, `TurnAction`
 **Key Methods:** onTurnStart(), onTurnEnd(), update(), handleMapClick(), handleMouseMove(), getTargetedUnit(), getTargetedPosition(), getMovementRange()
 **TurnAction Types:**
-- `{ type: 'wait' }` - End turn without action
-- `{ type: 'move', target: Position }` - Move to position
-- `{ type: 'attack', target: Position }` - Attack target at position
-- `{ type: 'ability', abilityId: string, target?: Position }` - Use ability
-- `{ type: 'end-turn' }` - Explicitly end turn
+- `{ type: 'delay' }` - Set actionTimer to 50, return to action-timer phase
+- `{ type: 'end-turn' }` - Set actionTimer to 0, return to action-timer phase
+- `{ type: 'move', target: Position }` - Move to position (future)
+- `{ type: 'attack', target: Position }` - Attack target at position (future)
+- `{ type: 'ability', abilityId: string, target?: Position }` - Use ability (future)
 **Used By:** PlayerTurnStrategy, EnemyTurnStrategy implementations
 
 #### `strategies/PlayerTurnStrategy.ts`
@@ -342,8 +374,11 @@ react-app/src/
 **Panel Content Logic:**
 - Deployment phase: PartyMembersContent (bottom panel)
 - Enemy-deployment phase: EmptyContent (bottom panel)
-- Unit-turn phase: ActionsMenuContent (bottom panel), UnitInfoContent with unit name/color (top panel)
+- Unit-turn phase: ActionsMenuContent (bottom panel) with buttons re-enabled, UnitInfoContent with unit name/color (top panel)
 - Other phases: UnitInfoContent (if unit available), EmptyContent (if no unit)
+**Button State Management:**
+- Calls `setButtonsDisabled(false)` on ActionsMenuContent when entering unit-turn phase
+- Ensures buttons are clickable after previous turn's action completed
 **Phase Detection:** Uses flags (isDeploymentPhase, isEnemyDeploymentPhase) and currentUnit presence
 **Dependencies:** HorizontalVerticalLayout, InfoPanelManager, panel content implementations, CombatConstants
 **Used By:** CombatView for all UI rendering
@@ -384,9 +419,9 @@ react-app/src/
 **Used By:** TopPanelManager
 
 #### `managers/renderers/TurnOrderRenderer.ts`
-**Purpose:** Renders turn order with unit sprites, action timer values, tick counter, title, and scrolling support
+**Purpose:** Renders turn order with unit sprites, ticks-until-ready values, tick counter, title, scrolling support, and slide animations
 **Exports:** `TurnOrderRenderer`
-**Key Methods:** render(), handleClick(), handleMouseDown(), handleMouseUp(), handleMouseLeave(), setUnits(), updateUnits(), setClickHandler()
+**Key Methods:** render(), handleClick(), handleMouseDown(), handleMouseUp(), handleMouseLeave(), setUnits(), updateUnits(), setClickHandler(), startSlideAnimation(), updateSlideAnimation(), getUnits()
 **Constructor Overload:**
 - `(units, onUnitClick?)` - legacy signature with click handler
 - `(units, tickCount, onUnitClick?)` - new signature with tick counter
@@ -397,9 +432,22 @@ react-app/src/
 - Tick counter displayed below clock sprite in white
 - Units centered horizontally and aligned to bottom of panel
 - Unit sprites with 12px spacing between them
-- Action timer (AT) values displayed below each sprite in white
+- Ticks-until-ready displayed below each sprite in white (formula: `Math.ceil((100 - actionTimer) / speed)`)
 - Supports dual font rendering (15px-dungeonslant and 7px-04b03)
 - Clickable unit portraits for selection
+**Slide Animation Features:**
+- Smooth linear interpolation between previous and target unit positions
+- Duration: 0.3333 seconds (configurable via slideAnimationDuration)
+- Supports units sliding off-screen (position 9+) gracefully
+- Uses WeakMap<CombatUnit, number> for position tracking (handles duplicate names)
+- Renders ALL animating units, not just first 8 from new order
+**Animation State:**
+- slideAnimationActive: Whether animation is currently playing
+- slideAnimationElapsedTime: Progress through animation
+- previousPositions: WeakMap of unit → previous X coordinate
+- targetPositions: WeakMap of unit → target X coordinate
+- animatingUnits: Array of all units participating in animation
+- pendingSlideNewOrder: Deferred animation when region not yet cached
 **Scrolling Features:**
 - Displays up to 8 units at once with horizontal scrolling for 8+ units
 - Scroll arrows (minimap-6, minimap-8) stacked vertically on right side
@@ -410,23 +458,28 @@ react-app/src/
 - Mouse leave/up stops continuous scrolling
 - Scroll state preserved across animation updates via updateUnits()
 - Scroll state reset when setUnits() called (explicit context change)
+- Scroll resets to 0 when slide animation starts (shows first 8 units)
+**Clipping:**
+- Canvas clipping with extended height (region.height + 7px)
+- Allows ticks-until-ready text to render 7px below panel without being cut off
 **Layout:**
 - Title: centered at top, no padding
 - Clock: left side (4px padding), "TIME" label at top, tick count below sprite
 - Sprites: bottom-aligned with 3px downward shift, centered as group
-- AT values: centered below each sprite
+- Ticks-until-ready values: centered below each sprite
 - Arrows: right edge, stacked (left arrow at y=0, right arrow at y=12)
 - Max visible units: 8 (allows scrolling through larger unit lists)
 **Color Scheme:**
 - Title text: #FFA500 (orange)
 - "TIME" label: #FFA500 (orange, matches title)
-- Tick counter: #ffffff (white, matches AT values)
-- AT values: #ffffff (white)
+- Tick counter: #ffffff (white, matches ticks-until-ready)
+- Ticks-until-ready: #ffffff (white)
 **State Management:**
 - Cached by phase handlers (ActionTimerPhaseHandler, UnitTurnPhaseHandler)
 - Maintains scroll offset across renders
 - Uses updateUnits() to preserve scroll position during animation frames
 - Uses setUnits() to reset scroll when entering new context
+- Exposes getUnits() for capturing previous order before mutations
 **Dependencies:** CombatUnit, SpriteRenderer, FontAtlasRenderer
 **Used By:** TopPanelManager during action-timer and unit-turn phases
 
@@ -463,19 +516,34 @@ react-app/src/
 **Used By:** InfoPanelManager during deployment phase
 
 #### `managers/panels/ActionsMenuContent.ts`
-**Purpose:** Action menu for active unit's turn (stub implementation)
-**Exports:** `ActionsMenuContent`
-**Key Methods:** render(), handleClick()
+**Purpose:** Action menu for active unit's turn with Delay and End Turn actions
+**Exports:** `ActionsMenuContent`, `ActionsMenuConfig`, `ActionButton`
+**Key Methods:** render(), handleClick(), handleHover(), setButtonsDisabled()
 **Current Functionality:**
-- Shows "ACTIONS" title
-- Displays placeholder text "(Menu coming soon)"
+- Shows "ACTIONS" title in white
+- Displays "Delay" button (sets actionTimer to 50)
+- Displays "End Turn" button (sets actionTimer to 0)
+- Button states: White (enabled), Grey (disabled), Yellow (hovered)
+- Disables buttons after click to prevent double-actions
+- Re-enabled on phase entry by CombatLayoutManager
+- Returns PanelClickResult with `{ type: 'action-selected', actionId: 'delay' | 'end-turn' }`
+**Button Disable Pattern:**
+- `setButtonsDisabled(disabled)` method to control button state
+- `buttonsDisabled` flag prevents clicks when true
+- Called by CombatLayoutManager on unit-turn phase entry to re-enable buttons
+**Button Layout:**
+- Title line: "ACTIONS" (line 0)
+- Blank line (line 1)
+- "Delay" button (line 2)
+- "End Turn" button (line 3)
+- Uses 7px-04b03 font with 8px line spacing
 **Future Functionality:**
-- Attack button
-- Move button
-- Ability button (if unit has abilities)
-- Wait button
-- End Turn button
-- Returns PanelClickResult with action selection
+- Move action with pathfinding
+- Attack action with target selection
+- Ability action with ability menu
+- Keyboard shortcuts
+- Button tooltips explaining actions
+- Animation/feedback when button pressed
 **Dependencies:** FontAtlasRenderer
 **Used By:** InfoPanelManager for bottom panel during unit-turn phase
 
