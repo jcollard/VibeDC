@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
 **Version:** 1.0
-**Last Updated:** 2025-10-27
+**Last Updated:** Mon, Oct 27, 2025 5:40:30 PM (commit 03c52db - tick counter system)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -53,8 +53,9 @@ react-app/src/
 #### `CombatState.ts`
 **Purpose:** Central state container for active combat
 **Exports:** `CombatState`, `CombatPhase`, `CombatStateJSON`, `serializeCombatState()`, `deserializeCombatState()`
-**Key Fields:** turnNumber, map, phase, unitManifest, tilesetId
+**Key Fields:** turnNumber, map, phase, unitManifest, tilesetId, tickCount
 **Combat Phases:** 'deployment' | 'enemy-deployment' | 'action-timer' | 'unit-turn' | 'victory' | 'defeat'
+**Tick Counter:** tickCount (optional number) - tracks discrete tick increments throughout combat, updated by ActionTimerPhaseHandler, passed to all phases
 **Dependencies:** CombatMap, CombatUnitManifest
 **Used By:** All phase handlers, CombatView, renderers, serialization
 
@@ -185,8 +186,14 @@ react-app/src/
 **Current Functionality:**
 - Identifies ready unit (first in turn order with AT >= 100)
 - Logs "{Unit Name} is ready to act." to console
-- Displays turn order in top panel (same as action-timer phase)
+- Displays turn order in top panel sorted by time-to-ready (who acts next)
+- Shows tick counter from state in top panel
+- Limited to 8 units for display (matches action-timer phase)
 - Stays in phase indefinitely (waits for action implementation)
+**Turn Order Logic:**
+- Calculates timeToReady = (100 - actionTimer) / speed for each unit
+- Sorts ascending (soonest first), then alphabetically by name
+- Uses same calculation as ActionTimerPhaseHandler for consistency
 **Future Functionality:**
 - Action menu (Attack, Ability, Move, Wait, End Turn)
 - Movement/attack range display
@@ -264,11 +271,17 @@ react-app/src/
 **Used By:** TopPanelManager
 
 #### `managers/renderers/TurnOrderRenderer.ts`
-**Purpose:** Renders turn order with unit sprites, action timer values, and title
+**Purpose:** Renders turn order with unit sprites, action timer values, tick counter, and title
 **Exports:** `TurnOrderRenderer`
 **Key Methods:** render(), handleClick(), setUnits(), setClickHandler()
+**Constructor Overload:**
+- `(units, onUnitClick?)` - legacy signature with click handler
+- `(units, tickCount, onUnitClick?)` - new signature with tick counter
+- Second parameter can be function (onUnitClick) or number (tickCount)
 **Rendering Features:**
 - "Action Timers" title in orange (7px-04b03 font) at top of panel
+- Clock sprite (icons-5) on left side with "TIME" label above
+- Tick counter displayed below clock sprite in white
 - Units centered horizontally and aligned to bottom of panel
 - Unit sprites with 12px spacing between them
 - Action timer (AT) values displayed below each sprite in white
@@ -276,9 +289,15 @@ react-app/src/
 - Clickable unit portraits for selection
 **Layout:**
 - Title: centered at top, no padding
+- Clock: left side (4px padding), "TIME" label at top, tick count below sprite
 - Sprites: bottom-aligned with 3px downward shift, centered as group
 - AT values: centered below each sprite
-- Limited to 10 units for display
+- Limited to 8 units for display (reduced from 10 to make room for clock)
+**Color Scheme:**
+- Title text: #FFA500 (orange)
+- "TIME" label: #FFA500 (orange, matches title)
+- Tick counter: #ffffff (white, matches AT values)
+- AT values: #ffffff (white)
 **Dependencies:** CombatUnit, SpriteRenderer, FontAtlasRenderer
 **Used By:** TopPanelManager during action-timer and unit-turn phases
 

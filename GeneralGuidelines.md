@@ -1350,6 +1350,64 @@ enum LoadingState {
 
 **Real-world usage**: LoadingView uses this pattern for its state machine to avoid TS1294 errors while maintaining type safety for state transitions.
 
+### Constructor Overloading with Runtime Type Checking
+
+When adding optional parameters to an existing constructor, use runtime type checking to maintain backward compatibility:
+
+**✅ DO**: Check parameter types at runtime
+```typescript
+class TurnOrderRenderer {
+  private units: CombatUnit[];
+  private tickCount: number;
+  private onUnitClick?: (unit: CombatUnit) => void;
+
+  constructor(
+    units: CombatUnit[],
+    onUnitClickOrTickCount?: ((unit: CombatUnit) => void) | number,
+    tickCount: number = 0
+  ) {
+    this.units = units;
+
+    // Handle overloaded constructor: second param can be onUnitClick or tickCount
+    if (typeof onUnitClickOrTickCount === 'function') {
+      this.onUnitClick = onUnitClickOrTickCount;
+      this.tickCount = 0; // Default when callback is provided
+    } else if (typeof onUnitClickOrTickCount === 'number') {
+      this.tickCount = onUnitClickOrTickCount;
+      this.onUnitClick = undefined;
+    } else {
+      this.tickCount = tickCount;
+      this.onUnitClick = undefined;
+    }
+  }
+}
+
+// Usage: Both signatures work
+const renderer1 = new TurnOrderRenderer(units, handleClick); // Legacy
+const renderer2 = new TurnOrderRenderer(units, 42); // New with tick count
+```
+
+**❌ DON'T**: Break existing call sites
+```typescript
+// BAD: Forces all call sites to update immediately
+constructor(units: CombatUnit[], tickCount: number, onUnitClick?: (unit: CombatUnit) => void) {
+  // This breaks: new TurnOrderRenderer(units, handleClick)
+}
+```
+
+**Benefits**:
+- Maintains backward compatibility with existing code
+- Gradual migration path for new features
+- Type safety preserved through union types
+- Clear runtime behavior via typeof checks
+
+**When to Use**:
+- Adding new required data to existing constructors
+- Maintaining compatibility during refactoring
+- Phased rollout of new features across codebase
+
+**Real-world usage**: TurnOrderRenderer uses this pattern to add tick counter display while preserving existing click handler usage.
+
 ---
 
 ## Meta-Guidelines for AI Development
