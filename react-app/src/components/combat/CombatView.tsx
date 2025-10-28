@@ -529,6 +529,24 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       topPanelManager,
     });
 
+    // Update panel content with dynamic state from phase handler (preserves hover state)
+    if (combatState.phase === 'unit-turn') {
+      const handler = phaseHandlerRef.current as any;
+      const existingContent = bottomInfoPanelManager.getContent();
+
+      // Only update if the layout manager has already set ActionsMenuContent
+      if (existingContent && 'updateUnit' in existingContent) {
+        // Get dynamic state from phase handler using proper getter methods
+        const activeAction = typeof handler.getActiveAction === 'function' ? handler.getActiveAction() : null;
+        const unitHasMoved = typeof handler.hasUnitMoved === 'function' ? handler.hasUnitMoved() : false;
+
+        console.log(`[CombatView] Updating existing content - activeAction: ${activeAction}, hasMoved: ${unitHasMoved}`);
+
+        // Update the existing content with dynamic state (preserves hover state)
+        (existingContent as any).updateUnit(currentUnitToDisplay, unitHasMoved, activeAction);
+      }
+    }
+
     // Render map scroll arrows (after layout, before debug grid)
     const unitInfoFontAtlas = fontLoader.get(unitInfoAtlasFont) || null;
     layoutRenderer.renderMapScrollArrows({

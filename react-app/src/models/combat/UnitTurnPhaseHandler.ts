@@ -15,7 +15,6 @@ import type { CombatUnit } from './CombatUnit';
 import type { Position } from '../../types';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { UnitInfoContent } from './managers/panels/UnitInfoContent';
-import { ActionsMenuContent } from './managers/panels/ActionsMenuContent';
 import { SpriteRenderer } from '../../utils/SpriteRenderer';
 import { CombatConstants } from './CombatConstants';
 import type { TurnStrategy, TurnAction } from './strategies/TurnStrategy';
@@ -61,7 +60,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
   // Cached panel content (per GeneralGuidelines.md - cache stateful components)
   private unitInfoContent: UnitInfoContent | null = null;
-  private actionsMenuContent: ActionsMenuContent | null = null;
+  // Note: actionsMenuContent is managed by CombatLayoutManager, not cached here
 
   // Cached turn order renderer (maintains scroll state across renders)
   private turnOrderRenderer: TurnOrderRenderer | null = null;
@@ -634,13 +633,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     _state: CombatState,
     _encounter: CombatEncounter
   ): PanelContent | null {
-    // Determine which panel to show based on state
-    // If player unit turn: show action menu for active unit
-    // If targeting a different unit: show that unit's info
+    // This method only returns content for the TOP info panel (targeted unit info)
+    // The bottom panel (actions menu) is managed by CombatLayoutManager and updated by CombatView
 
     const targetedUnit = this.currentStrategy?.getTargetedUnit();
 
-    // If targeting a different unit than active, show that unit's info
+    // If targeting a different unit than active, show that unit's info in top panel
     if (targetedUnit && targetedUnit !== this.activeUnit && this.activeUnit) {
       // Determine title color based on unit's allegiance
       const titleColor = targetedUnit.isPlayerControlled
@@ -665,42 +663,6 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return this.unitInfoContent;
     }
 
-    // Show active unit's action menu
-    if (this.activeUnit) {
-      // Get current strategy mode for active button highlighting
-      const strategyMode = this.currentStrategy?.getMode() ?? 'normal';
-      const activeAction = strategyMode === 'moveSelection' ? 'move' : null;
-
-      console.log(`[UnitTurnPhaseHandler] Mode: ${strategyMode}, ActiveAction: ${activeAction}`);
-
-      // Determine title color
-      const titleColor = this.activeUnit.isPlayerControlled
-        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
-        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
-
-      // Create or update actions menu
-      if (!this.actionsMenuContent) {
-        this.actionsMenuContent = new ActionsMenuContent(
-          {
-            title: 'Actions',
-            titleColor: titleColor,
-            padding: 1,
-            lineSpacing: 8
-          },
-          this.activeUnit
-        );
-      }
-
-      // Update menu with current state
-      this.actionsMenuContent.updateUnit(
-        this.activeUnit,
-        this.unitHasMoved,
-        activeAction
-      );
-
-      return this.actionsMenuContent;
-    }
-
     return null;
   }
 
@@ -718,6 +680,21 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
    */
   getTargetedUnit(): CombatUnit | null {
     return this.currentStrategy?.getTargetedUnit() ?? null;
+  }
+
+  /**
+   * Get the current active action for the actions menu (e.g., 'move' when in move selection mode)
+   */
+  getActiveAction(): string | null {
+    const strategyMode = this.currentStrategy?.getMode() ?? 'normal';
+    return strategyMode === 'moveSelection' ? 'move' : null;
+  }
+
+  /**
+   * Check if the active unit has already moved this turn
+   */
+  hasUnitMoved(): boolean {
+    return this.unitHasMoved;
   }
 
   /**

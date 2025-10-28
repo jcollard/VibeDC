@@ -20,6 +20,13 @@ export class InfoPanelManager {
   }
 
   /**
+   * Get the current panel content
+   */
+  getContent(): PanelContent | null {
+    return this.content;
+  }
+
+  /**
    * Render the panel content to the canvas
    */
   render(

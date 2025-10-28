@@ -537,10 +537,10 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
           },
           currentUnit
         );
-      } else {
-        // Update with current unit (preserves hover state)
-        this.cachedBottomPanelContent.updateUnit(currentUnit);
       }
+      // Note: We intentionally DON'T call updateUnit here during unit-turn phase
+      // CombatView will call updateUnit with the correct dynamic state (activeAction, hasMoved)
+      // after this method sets the initial content
 
       // Re-enable buttons when entering unit-turn phase (they are disabled after clicking)
       this.cachedBottomPanelContent.setButtonsDisabled(false);
