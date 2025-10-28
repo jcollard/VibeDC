@@ -32,9 +32,8 @@ const TICK_SIZE = 1;
 /**
  * Time (in seconds) to display each discrete tick during animation
  * Default: 0.5s per tick (2 ticks per second)
- * Testing: 2.0s per tick
  */
-const TICK_DISPLAY_DURATION = 2.0;
+const TICK_DISPLAY_DURATION = 0.5;
 
 /**
  * Time (in seconds) for units to slide to new positions when order changes

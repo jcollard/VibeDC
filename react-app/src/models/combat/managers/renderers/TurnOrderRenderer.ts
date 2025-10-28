@@ -30,7 +30,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   // Position slide animation state
   private slideAnimationActive: boolean = false;
   private slideAnimationElapsedTime: number = 0;
-  private readonly slideAnimationDuration: number = 1.5; // seconds (testing: 1.5s, default: 0.25s)
+  private readonly slideAnimationDuration: number = 0.3333; // seconds
   private previousPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
   private targetPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
   private animatingUnits: CombatUnit[] = []; // Units that are currently animating
