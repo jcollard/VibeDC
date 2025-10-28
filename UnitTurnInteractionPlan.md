@@ -293,8 +293,14 @@ export class MovementRangeCalculator {
 4. **Unit Blocking:**
    - Friendly units: Can path through, cannot stop on
    - Enemy units: Block both pathing and stopping
-5. **Visited Tracking:** Prevent reprocessing same tile
+5. **Visited Tracking:** Prevent reprocessing same tile using Set with position keys
 6. **Result:** Array of all tiles unit can move to (excluding start)
+
+**Performance Notes:**
+- Per GeneralGuidelines.md Performance Considerations: Maps are small (32x18 tiles max)
+- BFS complexity: O(tiles × movement range) - negligible for this size
+- No caching needed - calculate on each click is fast enough
+- Use position string keys for Set (`"x,y"` format) for efficient lookups
 
 ---
 
@@ -348,16 +354,17 @@ getRequiredSprites(state: CombatState, encounter: CombatEncounter): PhaseSprites
 }
 ```
 
-#### Implement render() for Overlays
+#### Implement render() for Overlays (Before Units)
 
 ```typescript
 render(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
   const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
 
-  // Render movement range highlights (yellow tiles)
+  // Render movement range highlights (yellow tiles) - rendered BEFORE units
   for (const position of this.movementRange) {
-    const x = offsetX + (position.x * tileSize);
-    const y = offsetY + (position.y * tileSize);
+    // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+    const x = Math.floor(offsetX + (position.x * tileSize));
+    const y = Math.floor(offsetY + (position.y * tileSize));
 
     SpriteRenderer.renderSpriteById(
       ctx,
@@ -375,16 +382,19 @@ render(state: CombatState, encounter: CombatEncounter, context: PhaseRenderConte
 }
 ```
 
-#### Implement renderUI() for Cursors
+**Note:** `render()` is called BEFORE units are rendered. This method should only render elements that appear underneath units (movement range highlights).
+
+#### Implement renderUI() for Cursors (After Units)
 
 ```typescript
 renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
   const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
 
-  // Render active unit cursor (dark green, blinking)
+  // Render active unit cursor (dark green, blinking) - rendered AFTER units per user feedback
   if (this.activeUnitPosition && this.cursorVisible) {
-    const x = offsetX + (this.activeUnitPosition.x * tileSize);
-    const y = offsetY + (this.activeUnitPosition.y * tileSize);
+    // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+    const x = Math.floor(offsetX + (this.activeUnitPosition.x * tileSize));
+    const y = Math.floor(offsetY + (this.activeUnitPosition.y * tileSize));
 
     SpriteRenderer.renderSpriteById(
       ctx,
@@ -399,10 +409,11 @@ renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderCon
     );
   }
 
-  // Render target cursor (red, always visible)
+  // Render target cursor (red, always visible) - rendered AFTER units per user feedback
   if (this.targetedUnitPosition) {
-    const x = offsetX + (this.targetedUnitPosition.x * tileSize);
-    const y = offsetY + (this.targetedUnitPosition.y * tileSize);
+    // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+    const x = Math.floor(offsetX + (this.targetedUnitPosition.x * tileSize));
+    const y = Math.floor(offsetY + (this.targetedUnitPosition.y * tileSize));
 
     SpriteRenderer.renderSpriteById(
       ctx,
@@ -418,6 +429,8 @@ renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderCon
   }
 }
 ```
+
+**Note:** `renderUI()` is called AFTER units are rendered. This ensures cursors appear ON TOP of unit sprites per user requirement.
 
 #### Update updatePhase()
 
@@ -526,6 +539,8 @@ handleMapClick(
 }
 ```
 
+**Important:** Per GeneralGuidelines.md Event Handling section, don't call `renderFrame()` here. The animation loop will render on the next frame automatically. Only call `renderFrame()` for discrete events where immediate feedback is critical and event frequency is low (clicks qualify, but the existing animation loop at 60fps is already handling this).
+
 #### Update getInfoPanelContent()
 
 ```typescript
@@ -541,7 +556,7 @@ getInfoPanelContent(
     return null;
   }
 
-  // Create or update cached instance
+  // Create or update cached instance (per GeneralGuidelines.md - cache stateful components)
   if (!this.infoPanelContent) {
     this.infoPanelContent = new UnitInfoContent(
       {
@@ -560,6 +575,8 @@ getInfoPanelContent(
   return this.infoPanelContent;
 }
 ```
+
+**Important Note:** UnitInfoContent should be cached and reused per GeneralGuidelines.md UI Component State section. Don't recreate it every frame.
 
 ---
 
@@ -689,6 +706,7 @@ try {
 - **Decision:** Cursors render in `renderUI()` to appear ABOVE units
 - **Rationale:** User feedback - cursors should be clearly visible over unit sprites
 - **Implementation:** Active cursor in `renderUI()`, movement range in `render()` (under units)
+- **Guidelines Compliance:** Per GeneralGuidelines.md Rendering Rules, all coordinates must be rounded using `Math.floor()` for pixel-perfect rendering
 
 ### Movement Through Units
 - **Decision:** Can path through friendly units, cannot end on ANY occupied tile
@@ -731,7 +749,7 @@ try {
 - `CombatUnit` interface and implementations
 - `CombatMap` with walkability data
 - `CombatUnitManifest` for unit tracking
-- `SpriteRenderer` for cursor/highlight rendering
+- `SpriteRenderer` for cursor/highlight rendering (per GeneralGuidelines.md - NEVER use `ctx.drawImage()` directly)
 - `UnitInfoContent` for stat display
 - Combat log system for ready messages
 
@@ -740,6 +758,13 @@ try {
 
 ### Constants
 - `CombatConstants.UNIT_TURN` section
+
+### Guidelines Compliance
+- **State Management:** Cache `UnitInfoContent` instance (don't recreate every frame)
+- **Rendering:** Use `SpriteRenderer` exclusively, round all coordinates with `Math.floor()`
+- **Event Handling:** Don't call `renderFrame()` in `handleMapClick()` - let animation loop handle it
+- **WeakMap Pattern:** Already using WeakMap for animation data in other phase handlers (follow same pattern if needed)
+- **Immutable State:** Always create new state objects when transitioning phases (use spread operator)
 
 ---
 
