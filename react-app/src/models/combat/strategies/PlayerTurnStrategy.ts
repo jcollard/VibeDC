@@ -346,8 +346,6 @@ export class PlayerTurnStrategy implements TurnStrategy {
         this.moveModePaths.set(key, path);
       }
     }
-
-    console.log(`[PlayerTurnStrategy] Entered move mode - cached ${this.moveModePaths.size} paths`);
   }
 
   /**

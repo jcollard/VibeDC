@@ -540,8 +540,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         const activeAction = typeof handler.getActiveAction === 'function' ? handler.getActiveAction() : null;
         const unitHasMoved = typeof handler.hasUnitMoved === 'function' ? handler.hasUnitMoved() : false;
 
-        console.log(`[CombatView] Updating existing content - activeAction: ${activeAction}, hasMoved: ${unitHasMoved}`);
-
         // Update the existing content with dynamic state (preserves hover state)
         (existingContent as any).updateUnit(currentUnitToDisplay, unitHasMoved, activeAction);
       }

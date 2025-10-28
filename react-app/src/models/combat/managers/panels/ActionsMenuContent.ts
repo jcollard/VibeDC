@@ -83,8 +83,6 @@ export class ActionsMenuContent implements PanelContent {
     this.currentUnit = unit;
     this.activeButtonId = activeAction;
 
-    console.log(`[ActionsMenuContent] updateUnit called - activeAction: ${activeAction}, activeButtonId: ${this.activeButtonId}`);
-
     // Rebuild button list with current state
     this.buttons = this.buildButtonList(unit, hasMoved);
 
@@ -215,10 +213,6 @@ export class ActionsMenuContent implements PanelContent {
       const isActive = button.id === this.activeButtonId;
       const isHovered = !isActive && this.hoveredButtonIndex === i; // Don't hover if active
 
-      if (button.id === 'move') {
-        console.log(`[ActionsMenuContent] Rendering Move button - id: ${button.id}, activeButtonId: ${this.activeButtonId}, isActive: ${isActive}, isHovered: ${isHovered}`);
-      }
-
       // Determine button color based on state (priority: disabled > active > hovered > enabled)
       let color: string;
       if (!button.enabled) {
@@ -229,10 +223,6 @@ export class ActionsMenuContent implements PanelContent {
         color = HOVERED_TEXT;
       } else {
         color = ENABLED_TEXT;
-      }
-
-      if (button.id === 'move') {
-        console.log(`[ActionsMenuContent] Move button color: ${color} (ACTIVE_COLOR=${ACTIVE_COLOR})`);
       }
 
       // Render button text
