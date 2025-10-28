@@ -56,4 +56,33 @@ export class TopPanelManager {
 
     return this.currentRenderer.handleClick(x, y, region);
   }
+
+  /**
+   * Handle mouse down events within the panel
+   */
+  handleMouseDown(x: number, y: number, region: PanelRegion): boolean {
+    if (!this.currentRenderer || !this.currentRenderer.handleMouseDown) {
+      return false;
+    }
+
+    return this.currentRenderer.handleMouseDown(x, y, region);
+  }
+
+  /**
+   * Handle mouse up events
+   */
+  handleMouseUp(): void {
+    if (this.currentRenderer && this.currentRenderer.handleMouseUp) {
+      this.currentRenderer.handleMouseUp();
+    }
+  }
+
+  /**
+   * Handle mouse leave events
+   */
+  handleMouseLeave(): void {
+    if (this.currentRenderer && this.currentRenderer.handleMouseLeave) {
+      this.currentRenderer.handleMouseLeave();
+    }
+  }
 }

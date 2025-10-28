@@ -22,6 +22,11 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   private scrollRightButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
   private scrollLeftButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
+  // Repeat scroll state
+  private scrollRepeatTimer: number | null = null;
+  private scrollRepeatDirection: 'left' | 'right' | null = null;
+  private readonly scrollRepeatInterval: number = 200; // ms between repeats
+
   constructor(units: CombatUnit[], onUnitClickOrTickCount?: ((unit: CombatUnit) => void) | number, tickCount: number = 0) {
     this.units = units;
 
@@ -380,5 +385,85 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       const maxOffset = Math.max(0, this.units.length - this.maxVisibleUnits);
       this.scrollOffset = Math.min(maxOffset, this.scrollOffset + 1);
     }
+  }
+
+  /**
+   * Start repeat scrolling in the given direction
+   */
+  private startRepeatScroll(direction: 'left' | 'right'): void {
+    // Clear any existing timer
+    this.stopRepeatScroll();
+
+    // Store direction
+    this.scrollRepeatDirection = direction;
+
+    // Set up repeat timer
+    this.scrollRepeatTimer = window.setInterval(() => {
+      if (this.scrollRepeatDirection === 'left') {
+        this.scrollLeft();
+      } else if (this.scrollRepeatDirection === 'right') {
+        this.scrollRight();
+      }
+    }, this.scrollRepeatInterval);
+  }
+
+  /**
+   * Stop repeat scrolling
+   */
+  private stopRepeatScroll(): void {
+    if (this.scrollRepeatTimer !== null) {
+      window.clearInterval(this.scrollRepeatTimer);
+      this.scrollRepeatTimer = null;
+    }
+    this.scrollRepeatDirection = null;
+  }
+
+  /**
+   * Handle mouse down events (starts scroll and repeat timer)
+   */
+  handleMouseDown(x: number, y: number, region: PanelRegion): boolean {
+    // Check if mouse down is within the panel region
+    if (x < region.x || x > region.x + region.width ||
+        y < region.y || y > region.y + region.height) {
+      return false;
+    }
+
+    // Check left arrow
+    if (this.scrollLeftButtonBounds &&
+        x >= this.scrollLeftButtonBounds.x &&
+        x <= this.scrollLeftButtonBounds.x + this.scrollLeftButtonBounds.width &&
+        y >= this.scrollLeftButtonBounds.y &&
+        y <= this.scrollLeftButtonBounds.y + this.scrollLeftButtonBounds.height) {
+      this.scrollLeft(); // Immediate scroll
+      this.startRepeatScroll('left'); // Start repeat timer
+      return true;
+    }
+
+    // Check right arrow
+    if (this.scrollRightButtonBounds &&
+        x >= this.scrollRightButtonBounds.x &&
+        x <= this.scrollRightButtonBounds.x + this.scrollRightButtonBounds.width &&
+        y >= this.scrollRightButtonBounds.y &&
+        y <= this.scrollRightButtonBounds.y + this.scrollRightButtonBounds.height) {
+      this.scrollRight(); // Immediate scroll
+      this.startRepeatScroll('right'); // Start repeat timer
+      return true;
+    }
+
+    return false;
+  }
+
+  /**
+   * Handle mouse up events (stops repeat timer)
+   */
+  handleMouseUp(): void {
+    this.stopRepeatScroll();
+  }
+
+  /**
+   * Handle mouse leave events (stops repeat timer)
+   */
+  handleMouseLeave(): void {
+    this.stopRepeatScroll();
   }
 }

@@ -186,6 +186,37 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   }
 
   /**
+   * Handle mouse down events on the top panel (turn order).
+   * Returns true if the event was handled, false otherwise.
+   */
+  handleTopPanelMouseDown(x: number, y: number, topPanelManager: any): boolean {
+    if (!topPanelManager) return false;
+
+    // Top panel is rows 0-1, columns 0-19 (x: 0, y: 0, width: 240px, height: 24px)
+    const region = { x: 0, y: 0, width: 240, height: 24 };
+
+    return topPanelManager.handleMouseDown(x, y, region);
+  }
+
+  /**
+   * Handle mouse up events on the top panel
+   */
+  handleTopPanelMouseUp(topPanelManager: any): void {
+    if (topPanelManager) {
+      topPanelManager.handleMouseUp();
+    }
+  }
+
+  /**
+   * Handle mouse leave events on the top panel
+   */
+  handleTopPanelMouseLeave(topPanelManager: any): void {
+    if (topPanelManager) {
+      topPanelManager.handleMouseLeave();
+    }
+  }
+
+  /**
    * Handle click events on the combat log scroll buttons.
    * Returns 'up', 'down', or null.
    */

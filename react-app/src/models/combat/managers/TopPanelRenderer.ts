@@ -45,4 +45,27 @@ export interface TopPanelRenderer {
     y: number,
     region: PanelRegion
   ): boolean;
+
+  /**
+   * Handle mouse down events within the panel
+   * @param x - Canvas x coordinate
+   * @param y - Canvas y coordinate
+   * @param region - The panel region
+   * @returns true if the event was handled, false otherwise
+   */
+  handleMouseDown?(
+    x: number,
+    y: number,
+    region: PanelRegion
+  ): boolean;
+
+  /**
+   * Handle mouse up events
+   */
+  handleMouseUp?(): void;
+
+  /**
+   * Handle mouse leave events (when mouse leaves the panel)
+   */
+  handleMouseLeave?(): void;
 }

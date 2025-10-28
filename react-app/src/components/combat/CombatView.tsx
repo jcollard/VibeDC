@@ -649,7 +649,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const canvasX = (event.clientX - rect.left) * scaleX;
     const canvasY = (event.clientY - rect.top) * scaleY;
 
-    // Check if clicking on top panel (turn order) first
+    // Check if mouse down on top panel (turn order) first - for hold-to-scroll
+    if (layoutRenderer.handleTopPanelMouseDown(canvasX, canvasY, topPanelManager)) {
+      renderFrame(); // Force immediate re-render to show scroll
+      return; // Event was handled, don't process other handlers
+    }
+
+    // Check if clicking on top panel (turn order) for unit selection
     if (layoutRenderer.handleTopPanelClick(canvasX, canvasY, topPanelManager)) {
       renderFrame(); // Force immediate re-render to show updated target
       return; // Click was handled, don't process other handlers
@@ -789,6 +795,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Stop continuous scrolling
     stopContinuousScroll();
 
+    // Stop top panel repeat scrolling
+    layoutRenderer.handleTopPanelMouseUp(topPanelManager);
+
     // Check if clicking on bottom info panel (for button mouse up)
     const panelRegion = layoutRenderer.getBottomInfoPanelRegion();
     if (canvasX >= panelRegion.x &&
@@ -814,6 +823,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       );
     }
   }, [combatState, activeEncounter, stopContinuousScroll, layoutRenderer, renderFrame]);
+
+  // Handle mouse leaving the canvas
+  const handleCanvasMouseLeave = useCallback(() => {
+    // Stop continuous scrolling
+    stopContinuousScroll();
+
+    // Stop top panel repeat scrolling
+    layoutRenderer.handleTopPanelMouseLeave(topPanelManager);
+  }, [stopContinuousScroll, layoutRenderer]);
 
   // Handle canvas click for deployment zone selection and character selection
   const handleCanvasClick = useCallback((event: React.MouseEvent<HTMLCanvasElement>) => {
@@ -1635,6 +1653,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             onMouseDown={handleCanvasMouseDown}
             onMouseUp={handleCanvasMouseUp}
             onMouseMove={handleCanvasMouseMove}
+            onMouseLeave={handleCanvasMouseLeave}
             style={{
               ...canvasDisplayStyle,
               imageRendering: 'pixelated',
