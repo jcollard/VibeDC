@@ -323,6 +323,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     encounter: CombatEncounter,
     deltaTime: number
   ): CombatState | null {
+    // DEBUG: Log tickCount on entry to first frame
+    if (!this.activeUnit) {
+      console.log(`[UnitTurnPhaseHandler] First frame - tickCount from state: ${state.tickCount}`);
+    }
+
     // Store state reference for click handlers
     this.currentState = state;
 
@@ -484,9 +489,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Return new state transitioning back to action-timer phase
     // Set pendingSlideAnimation flag and previousTurnOrder for animation
     // Store the pending mutation to be applied in action-timer phase
+    // IMPORTANT: Preserve tickCount from state to avoid resetting to old value
+    console.log(`[UnitTurnPhaseHandler] Returning to action-timer, state.tickCount: ${state.tickCount}`);
     return {
       ...state,
       phase: 'action-timer' as const,
+      tickCount: state.tickCount, // Explicitly preserve tickCount
       pendingSlideAnimation: true,
       previousTurnOrder: previousTurnOrder.length > 0 ? previousTurnOrder : undefined,
       pendingActionTimerMutation: { unit: this.activeUnit, newValue: newActionTimer }

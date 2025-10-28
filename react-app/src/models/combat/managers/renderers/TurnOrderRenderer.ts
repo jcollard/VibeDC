@@ -184,8 +184,6 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     this.slideAnimationElapsedTime += deltaTime;
     const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
 
-    console.log('[TurnOrderRenderer] Slide animation progress:', progress.toFixed(2), 'elapsed:', this.slideAnimationElapsedTime.toFixed(2));
-
     if (progress >= 1.0) {
       console.log('[TurnOrderRenderer] Slide animation complete!');
       this.slideAnimationActive = false;
@@ -325,8 +323,6 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     if (this.slideAnimationActive) {
       const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
 
-      console.log('[TurnOrderRenderer] Rendering animation, animatingUnits:', this.animatingUnits.length, 'progress:', progress.toFixed(2));
-
       for (const unit of this.animatingUnits) {
         const previousX = this.previousPositions.get(unit);
         const targetX = this.targetPositions.get(unit);
@@ -337,11 +333,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
           continue;
         }
 
-        console.log(`[TurnOrderRenderer] Unit ${unit.name}: previousX=${previousX}, targetX=${targetX}`);
-
         // Linear interpolation
         const currentX = previousX + (targetX - previousX) * progress;
-        console.log(`[TurnOrderRenderer] Interpolating ${unit.name} to ${currentX.toFixed(1)}`);
 
         // Render the unit at interpolated position
         this.renderUnitAtPosition(ctx, unit, currentX, spriteY, spriteImages, spriteSize, smallFontAtlasImage);

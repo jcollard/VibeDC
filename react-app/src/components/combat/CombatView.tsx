@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import type { CombatState } from '../../models/combat/CombatState';
+import type { CombatState, CombatPhase } from '../../models/combat/CombatState';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
@@ -71,6 +71,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Initialize phase handler based on current phase (pass UI state manager)
   const phaseHandlerRef = useRef<CombatPhaseHandler>(new DeploymentPhaseHandler(uiStateManager));
 
+  // Track which phase the current handler is for (to avoid recreating unnecessarily)
+  const currentPhaseRef = useRef<CombatPhase>('deployment');
+
   // Track loaded encounter (overrides prop when loading a save)
   const loadedEncounterRef = useRef<CombatEncounter | null>(null);
 
@@ -79,6 +82,13 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
   // Switch phase handler when phase changes
   useEffect(() => {
+    // Only create a new handler if the phase actually changed
+    if (currentPhaseRef.current === combatState.phase) {
+      return; // Handler is already correct for this phase
+    }
+
+    currentPhaseRef.current = combatState.phase;
+
     if (combatState.phase === 'deployment') {
       phaseHandlerRef.current = new DeploymentPhaseHandler(uiStateManager);
     } else if (combatState.phase === 'enemy-deployment') {

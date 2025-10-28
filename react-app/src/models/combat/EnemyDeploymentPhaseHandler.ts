@@ -104,6 +104,7 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
       const newState = {
         ...state,
         phase: 'action-timer' as const,
+        tickCount: 0, // Initialize tick count when first entering action-timer phase
       };
       console.log('[EnemyDeploymentPhaseHandler] Returning new state with phase:', newState.phase);
       return newState;

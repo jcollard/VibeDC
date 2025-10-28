@@ -248,6 +248,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     // Only calculate once when entering this phase (normal flow without pending slide)
     if (!this.turnCalculated) {
       console.log('[ActionTimerPhaseHandler] First entry to phase, pendingSlideAnimation:', state.pendingSlideAnimation, 'animationMode:', this.animationMode);
+      console.log('[ActionTimerPhaseHandler] state.tickCount:', state.tickCount);
       this.startAnimation(state.unitManifest, state.tickCount ?? 0);
       this.turnCalculated = true;
     }
@@ -326,6 +327,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
             console.log('[ActionTimerPhaseHandler] Reset turnCalculated and animationMode for next entry');
 
             // Transition to unit-turn phase
+            console.log(`[ActionTimerPhaseHandler] Transitioning to unit-turn, setting tickCount: ${finalSnapshot.tickNumber}`);
             return {
               ...state,
               phase: 'unit-turn',
