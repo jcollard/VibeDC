@@ -1,5 +1,7 @@
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion, PanelClickResult } from './PanelContent';
+import { HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT } from './colors';
 
 /**
  * Configuration for actions menu panel appearance
@@ -18,6 +20,7 @@ interface ActionButton {
   id: string;           // Action ID ('delay', 'end-turn')
   label: string;        // Display text
   enabled: boolean;     // Whether button is clickable
+  helperText: string;   // Description shown on hover
 }
 
 /**
@@ -43,8 +46,18 @@ export class ActionsMenuContent implements PanelContent {
 
     // Define action buttons
     this.buttons = [
-      { id: 'delay', label: 'Delay', enabled: true },
-      { id: 'end-turn', label: 'End Turn', enabled: true }
+      {
+        id: 'delay',
+        label: 'Delay',
+        enabled: true,
+        helperText: 'Take no moves or actions and sets this Unit\'s Action Timer to 50'
+      },
+      {
+        id: 'end-turn',
+        label: 'End Turn',
+        enabled: true,
+        helperText: 'Ends your turn and sets this Unit\'s Action Timer to 0'
+      }
     ];
   }
 
@@ -94,11 +107,11 @@ export class ActionsMenuContent implements PanelContent {
       // Determine button color based on state
       let color: string;
       if (!button.enabled) {
-        color = '#888888'; // Grey (disabled)
+        color = DISABLED_TEXT;
       } else if (isHovered) {
-        color = '#ffff00'; // Yellow (hovered)
+        color = HOVERED_TEXT;
       } else {
-        color = '#ffffff'; // White (enabled)
+        color = ENABLED_TEXT;
       }
 
       // Render button text
@@ -115,6 +128,38 @@ export class ActionsMenuContent implements PanelContent {
       );
 
       currentY += this.config.lineSpacing;
+    }
+
+    // Render helper text if a button is hovered
+    if (this.hoveredButtonIndex !== null) {
+      const hoveredButton = this.buttons[this.hoveredButtonIndex];
+      if (hoveredButton) {
+        // Add spacing after buttons
+        currentY += this.config.lineSpacing;
+
+        // Wrap helper text to fit within panel width
+        const wrappedLines = this.wrapText(
+          hoveredButton.helperText,
+          region.width - (this.config.padding * 2),
+          fontId
+        );
+
+        // Render each line of helper text
+        for (const line of wrappedLines) {
+          FontAtlasRenderer.renderText(
+            ctx,
+            line,
+            region.x + this.config.padding,
+            currentY,
+            fontId,
+            fontAtlasImage,
+            1,
+            'left',
+            HELPER_TEXT
+          );
+          currentY += this.config.lineSpacing;
+        }
+      }
     }
   }
 
@@ -160,6 +205,49 @@ export class ActionsMenuContent implements PanelContent {
     }
 
     return null;
+  }
+
+  /**
+   * Wrap text to fit within a maximum width
+   * @param text - Text to wrap
+   * @param maxWidth - Maximum width in pixels
+   * @param fontId - Font ID for text measurement
+   * @returns Array of text lines
+   */
+  private wrapText(text: string, maxWidth: number, fontId: string): string[] {
+    const font = FontRegistry.getById(fontId);
+    if (!font) {
+      return [text];
+    }
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = FontAtlasRenderer.measureText(testLine, font);
+
+      if (testWidth <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        // If current line has content, push it and start new line
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          // Word itself is too long, just add it anyway
+          lines.push(word);
+        }
+      }
+    }
+
+    // Add the last line
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines.length > 0 ? lines : [text];
   }
 
   /**
