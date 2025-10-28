@@ -444,9 +444,6 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Use shared selection logic
     this.selectUnit(unit, placement.position, this.currentState);
-
-    // Add combat log message
-    this.pendingLogMessages.push(`Selected ${unit.name}`);
   }
 
   handleMapClick(
@@ -468,16 +465,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.selectUnit(unit, { x: tileX, y: tileY }, state);
 
       return {
-        handled: true,
-        logMessage: `Selected ${unit.name}`
+        handled: true
       };
     } else {
       // Clear selection if clicking empty tile
       this.clearSelection();
 
       return {
-        handled: true,
-        logMessage: `Clicked tile (${tileX}, ${tileY})`
+        handled: true
       };
     }
   }

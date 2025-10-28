@@ -506,7 +506,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       deployedUnitCount: combatState.unitManifest.getAllUnits().length,
       totalDeploymentZones: activeEncounter.playerDeploymentZones.length,
       onEnterCombat: () => {
-        combatLogManager.addMessage(CombatConstants.TEXT.STARTING_ENEMY_DEPLOYMENT);
         setCombatState({ ...combatState, phase: 'enemy-deployment' });
       },
       combatLogManager,
