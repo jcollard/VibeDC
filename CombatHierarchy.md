@@ -427,7 +427,7 @@ react-app/src/
 - `(units, tickCount, onUnitClick?)` - new signature with tick counter
 - Second parameter can be function (onUnitClick) or number (tickCount)
 **Rendering Features:**
-- "Action Timers" title in orange (7px-04b03 font) at top of panel
+- "TIME UNTIL NEXT TURN" title in orange (7px-04b03 font) at top of panel
 - Clock sprite (icons-5) on left side with "TIME" label above
 - Tick counter displayed below clock sprite in white
 - Units centered horizontally and aligned to bottom of panel

@@ -236,14 +236,14 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       this.startSlideAnimation(newOrder);
     }
 
-    // Render "Action Timers" title at the top in yellow/orange using small font
+    // Render "TIME UNTIL NEXT TURN" title at the top in yellow/orange using small font
     if (smallFontAtlasImage) {
       const titleX = region.x + region.width / 2;
       const titleY = region.y; // No padding from top
 
       FontAtlasRenderer.renderText(
         ctx,
-        'Action Timers',
+        'TIME UNTIL NEXT TURN',
         titleX,
         titleY,
         '7px-04b03',
