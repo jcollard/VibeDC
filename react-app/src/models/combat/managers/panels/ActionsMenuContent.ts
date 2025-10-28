@@ -269,6 +269,11 @@ export class ActionsMenuContent implements PanelContent {
       return null;
     }
 
+    // Ignore clicks if this is not the player's unit
+    if (!this.currentUnit || !this.currentUnit.isPlayerControlled) {
+      return null;
+    }
+
     const buttonIndex = this.getButtonIndexAt(relativeX, relativeY);
 
     if (buttonIndex !== null) {
@@ -293,6 +298,16 @@ export class ActionsMenuContent implements PanelContent {
     relativeX: number,
     relativeY: number
   ): unknown {
+    // Ignore hover if this is not the player's unit
+    if (!this.currentUnit || !this.currentUnit.isPlayerControlled) {
+      // Clear hover state during enemy turns
+      if (this.hoveredButtonIndex !== null) {
+        this.hoveredButtonIndex = null;
+        return { buttonIndex: null };
+      }
+      return null;
+    }
+
     const buttonIndex = this.getButtonIndexAt(relativeX, relativeY);
 
     // Update hover state if changed
