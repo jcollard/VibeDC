@@ -535,7 +535,10 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
           lineSpacing: 8,
         });
       }
-      // ActionsMenuContent is stateless, no need to update
+
+      // Re-enable buttons when entering unit-turn phase (they are disabled after clicking)
+      this.cachedBottomPanelContent.setButtonsDisabled(false);
+
       currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
     } else {
       // Empty state

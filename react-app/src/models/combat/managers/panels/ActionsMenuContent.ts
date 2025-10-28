@@ -36,6 +36,7 @@ export class ActionsMenuContent implements PanelContent {
   private readonly config: ActionsMenuConfig;
   private readonly buttons: ActionButton[];
   private hoveredButtonIndex: number | null = null;
+  private buttonsDisabled: boolean = false; // Disable after first click
 
   constructor(config: ActionsMenuConfig) {
     this.config = config;
@@ -45,6 +46,17 @@ export class ActionsMenuContent implements PanelContent {
       { id: 'delay', label: 'Delay', enabled: true },
       { id: 'end-turn', label: 'End Turn', enabled: true }
     ];
+  }
+
+  /**
+   * Enable or disable all buttons (used to prevent double-clicks)
+   */
+  setButtonsDisabled(disabled: boolean): void {
+    this.buttonsDisabled = disabled;
+    // Update all button states
+    for (const button of this.buttons) {
+      button.enabled = !disabled;
+    }
   }
 
   render(
@@ -110,6 +122,11 @@ export class ActionsMenuContent implements PanelContent {
     relativeX: number,
     relativeY: number
   ): PanelClickResult {
+    // Ignore clicks if buttons are disabled
+    if (this.buttonsDisabled) {
+      return null;
+    }
+
     const buttonIndex = this.getButtonIndexAt(relativeX, relativeY);
 
     if (buttonIndex !== null) {
@@ -117,6 +134,9 @@ export class ActionsMenuContent implements PanelContent {
 
       // Only handle click if button is enabled
       if (button.enabled) {
+        // Disable buttons immediately after click
+        this.setButtonsDisabled(true);
+
         return {
           type: 'action-selected',
           actionId: button.id

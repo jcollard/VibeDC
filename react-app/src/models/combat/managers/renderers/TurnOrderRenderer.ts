@@ -88,6 +88,14 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   }
 
   /**
+   * Get the current units array
+   * Used to check if turn order has changed before triggering slide animation
+   */
+  getUnits(): CombatUnit[] {
+    return this.units;
+  }
+
+  /**
    * Start a slide animation for units that changed positions
    * Called by ActionTimerPhaseHandler when turn order changes
    */
@@ -103,13 +111,31 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // Calculate current X positions based on current units array
     const currentXPositions = this.calculateUnitXPositions(this.units, this.cachedRegion);
     for (let i = 0; i < this.units.length; i++) {
-      this.previousPositions.set(this.units[i], currentXPositions[i]);
+      const unit = this.units[i];
+      if (i < this.maxVisibleUnits) {
+        // Unit is visible, use calculated position
+        this.previousPositions.set(unit, currentXPositions[i]);
+      } else {
+        // Unit is off-screen to the right, start from beyond right edge
+        // Add spriteSize to ensure it starts completely off-screen
+        const rightEdgeX = this.cachedRegion.x + this.cachedRegion.width + this.spriteSize;
+        this.previousPositions.set(unit, rightEdgeX);
+      }
     }
 
     // Calculate target X positions based on new order
     const targetXPositions = this.calculateUnitXPositions(newOrder, this.cachedRegion);
     for (let i = 0; i < newOrder.length; i++) {
-      this.targetPositions.set(newOrder[i], targetXPositions[i]);
+      const unit = newOrder[i];
+      if (i < this.maxVisibleUnits) {
+        // Unit will be visible, use calculated position
+        this.targetPositions.set(unit, targetXPositions[i]);
+      } else {
+        // Unit will be off-screen to the right, target is beyond right edge
+        // Add spriteSize to ensure it ends completely off-screen
+        const rightEdgeX = this.cachedRegion.x + this.cachedRegion.width + this.spriteSize;
+        this.targetPositions.set(unit, rightEdgeX);
+      }
     }
 
     // Update units array to new order
@@ -250,6 +276,12 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // Leave room for sprite (12px) + timer text (7px), shifted down 3px total (2px + 1px for sprite)
     const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
 
+    // Save context state and set clipping region for unit rendering
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(region.x, region.y, region.width, region.height);
+    ctx.clip();
+
     // If slide animation active, interpolate positions
     if (this.slideAnimationActive) {
       const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
@@ -286,7 +318,10 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       }
     }
 
-    // Render scroll arrows if needed
+    // Restore context state (removes clipping)
+    ctx.restore();
+
+    // Render scroll arrows if needed (AFTER restoring - arrows should not be clipped)
     this.renderScrollArrows(ctx, region, spriteImages, spriteSize);
   }
 

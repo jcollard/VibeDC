@@ -50,6 +50,13 @@ export interface CombatState {
    */
   tickCount?: number;
 
+  /**
+   * Flag indicating that a slide animation should be triggered immediately
+   * when entering action-timer phase (e.g., after Delay/End Turn action)
+   * Cleared by ActionTimerPhaseHandler after triggering the slide
+   */
+  pendingSlideAnimation?: boolean;
+
   // Additional fields will be added as combat mechanics are implemented
 }
 
@@ -63,6 +70,7 @@ export interface CombatStateJSON {
   map: CombatMapJSON;
   unitManifest: CombatUnitManifestJSON;
   tickCount?: number;
+  pendingSlideAnimation?: boolean;
 }
 
 /**
@@ -77,7 +85,8 @@ export function serializeCombatState(state: CombatState): CombatStateJSON {
     tilesetId: state.tilesetId,
     map: state.map.toJSON(),
     unitManifest: state.unitManifest.toJSON(),
-    tickCount: state.tickCount
+    tickCount: state.tickCount,
+    pendingSlideAnimation: state.pendingSlideAnimation
   };
 }
 
@@ -107,6 +116,7 @@ export function deserializeCombatState(json: CombatStateJSON): CombatState | nul
     tilesetId: json.tilesetId,
     map,
     unitManifest,
-    tickCount: json.tickCount
+    tickCount: json.tickCount,
+    pendingSlideAnimation: json.pendingSlideAnimation
   };
 }

@@ -389,9 +389,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     this.pendingLogMessages.push(logMessage);
 
     // Return new state transitioning back to action-timer phase
+    // Set pendingSlideAnimation flag to trigger immediate slide animation
     return {
       ...state,
-      phase: 'action-timer' as const
+      phase: 'action-timer' as const,
+      pendingSlideAnimation: true
     };
   }
 
