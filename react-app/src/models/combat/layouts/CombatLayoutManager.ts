@@ -13,7 +13,7 @@ import { CombatConstants } from '../CombatConstants';
  */
 export class CombatLayoutManager implements CombatLayoutRenderer {
   private readonly RIGHT_COLUMN_WIDTH = 144; // 12 tiles
-  private readonly TURN_ORDER_HEIGHT = 24; // 2 tiles
+  private readonly TURN_ORDER_HEIGHT = 28; // ~2.33 tiles (increased by 4px)
   private readonly COMBAT_LOG_HEIGHT = 44 + 4; // 5 lines (5 * 8 = 40) + 2px padding + 4px border bleed + 2px extra
   private readonly PANEL_PADDING = 1; // 1px padding
   private readonly frameLayout: HorizontalVerticalLayout;
@@ -33,11 +33,11 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     // Define the layout regions using tile-based dimensions
     // Canvas is 384x216 (32x18 tiles at 12px each)
     const regions: LayoutRegion[] = [
-      // Top-left: Turn order (20 tiles wide, 2 tiles tall)
-      { name: 'turnOrder', x: 0, y: 0, widthTiles: 20, heightTiles: 2 },
+      // Top-left: Turn order (20 tiles wide, ~2.33 tiles tall = 28px)
+      { name: 'turnOrder', x: 0, y: 0, widthTiles: 20, heightTiles: 28 / 12 },
 
-      // Middle-left: Map area (20 tiles wide, 12 tiles tall)
-      { name: 'map', x: 0, y: 24, widthTiles: 20, heightTiles: 12 },
+      // Middle-left: Map area (20 tiles wide, adjusted to fit)
+      { name: 'map', x: 0, y: 28, widthTiles: 20, heightTiles: (168 - 28) / 12 },
 
       // Spacer region (20 tiles wide, 4 tiles tall) - creates divider at y=168, extends to bottom
       { name: 'spacer', x: 0, y: 168, widthTiles: 20, heightTiles: 4 },

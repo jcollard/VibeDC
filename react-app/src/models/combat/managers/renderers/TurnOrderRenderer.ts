@@ -277,9 +277,11 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
 
     // Save context state and set clipping region for unit rendering
+    // Extend clipping height by 7px to accommodate AT text below sprites
+    const clipHeight = region.height + 7;
     ctx.save();
     ctx.beginPath();
-    ctx.rect(region.x, region.y, region.width, region.height);
+    ctx.rect(region.x, region.y, region.width, clipHeight);
     ctx.clip();
 
     // If slide animation active, interpolate positions
