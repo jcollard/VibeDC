@@ -62,6 +62,7 @@ export interface CombatStateJSON {
   tilesetId: string;
   map: CombatMapJSON;
   unitManifest: CombatUnitManifestJSON;
+  tickCount?: number;
 }
 
 /**
@@ -75,7 +76,8 @@ export function serializeCombatState(state: CombatState): CombatStateJSON {
     phase: state.phase,
     tilesetId: state.tilesetId,
     map: state.map.toJSON(),
-    unitManifest: state.unitManifest.toJSON()
+    unitManifest: state.unitManifest.toJSON(),
+    tickCount: state.tickCount
   };
 }
 
@@ -104,6 +106,7 @@ export function deserializeCombatState(json: CombatStateJSON): CombatState | nul
     phase: json.phase,
     tilesetId: json.tilesetId,
     map,
-    unitManifest
+    unitManifest,
+    tickCount: json.tickCount
   };
 }
