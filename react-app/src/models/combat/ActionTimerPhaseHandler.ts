@@ -380,6 +380,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     } else {
       // Update units in existing renderer (preserves scroll offset)
       this.turnOrderRenderer.updateUnits(sortedUnits);
+      // Update tick count for animation
+      this.turnOrderRenderer.updateTickCount(state.tickCount || this.tickCount || 0);
     }
 
     return this.turnOrderRenderer;

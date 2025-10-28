@@ -171,6 +171,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     } else {
       // Update units in existing renderer (preserves scroll offset)
       this.turnOrderRenderer.updateUnits(sortedUnits);
+      // Update tick count for display
+      this.turnOrderRenderer.updateTickCount(state.tickCount || 0);
     }
 
     return this.turnOrderRenderer;

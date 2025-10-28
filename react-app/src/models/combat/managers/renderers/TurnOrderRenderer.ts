@@ -66,6 +66,13 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   }
 
   /**
+   * Update the tick count (for animation)
+   */
+  updateTickCount(tickCount: number): void {
+    this.tickCount = tickCount;
+  }
+
+  /**
    * Set the click handler
    */
   setClickHandler(handler: (unit: CombatUnit) => void): void {
