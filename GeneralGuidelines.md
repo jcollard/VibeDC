@@ -59,6 +59,101 @@ ctx.drawImage(animatedBuffer, x, y);
   ```
   **Why**: Sub-pixel rendering causes blurriness in pixel art. Even if coordinates are currently integers, explicit rounding future-proofs against layout changes.
 
+### Color Tinting with Off-Screen Canvas
+
+When applying color tints to sprites using composite operations, **always use an off-screen buffer** to prevent affecting the rest of the canvas:
+
+**✅ DO**: Use cached off-screen buffer for tinting
+```typescript
+class MyPhaseHandler {
+  // Cache buffer as instance variable to avoid recreation every frame
+  private tintingBuffer: HTMLCanvasElement | null = null;
+  private tintingBufferCtx: CanvasRenderingContext2D | null = null;
+
+  private renderTintedSprite(
+    ctx: CanvasRenderingContext2D,
+    spriteId: string,
+    x: number,
+    y: number,
+    width: number,
+    height: number,
+    tintColor: string,
+    alpha: number = 1.0
+  ): void {
+    // Lazy initialize cached buffer
+    if (!this.tintingBuffer || !this.tintingBufferCtx) {
+      this.tintingBuffer = document.createElement('canvas');
+      this.tintingBufferCtx = this.tintingBuffer.getContext('2d');
+      if (!this.tintingBufferCtx) return;
+    }
+
+    // Resize buffer only if dimensions changed
+    if (this.tintingBuffer.width !== width || this.tintingBuffer.height !== height) {
+      this.tintingBuffer.width = width;
+      this.tintingBuffer.height = height;
+    }
+
+    const bufferCtx = this.tintingBufferCtx;
+
+    // Clear previous contents
+    bufferCtx.clearRect(0, 0, width, height);
+
+    // Reset composite operation to default
+    bufferCtx.globalCompositeOperation = 'source-over';
+
+    // Render sprite to buffer
+    SpriteRenderer.renderSpriteById(bufferCtx, spriteId, spriteImages, spriteSize, 0, 0, width, height);
+
+    // Apply color tint
+    bufferCtx.globalCompositeOperation = 'multiply';
+    bufferCtx.fillStyle = tintColor;
+    bufferCtx.fillRect(0, 0, width, height);
+
+    // Restore alpha channel
+    bufferCtx.globalCompositeOperation = 'destination-in';
+    SpriteRenderer.renderSpriteById(bufferCtx, spriteId, spriteImages, spriteSize, 0, 0, width, height);
+
+    // Copy to main canvas (ctx.drawImage exception - buffer to main canvas)
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.drawImage(this.tintingBuffer, x, y);
+    ctx.restore();
+  }
+}
+```
+
+**❌ DON'T**: Apply composite operations directly to main canvas
+```typescript
+// BAD: Fills entire viewport with tint color!
+ctx.globalCompositeOperation = 'multiply';
+ctx.fillStyle = tintColor;
+ctx.fillRect(x, y, width, height); // Affects whole canvas blend state!
+```
+
+**❌ DON'T**: Create new canvas every frame
+```typescript
+// BAD: Creates GC pressure, violates performance guidelines
+private renderTintedSprite(...) {
+  const buffer = document.createElement('canvas'); // 720+ canvases/sec at 60fps!
+  buffer.width = width;
+  buffer.height = height;
+  // ... tinting logic
+}
+```
+
+**Why**:
+- Composite operations like `multiply` affect the entire canvas blending state
+- Using an off-screen buffer isolates the tinting effect to just the sprite
+- Caching the buffer avoids creating 100+ canvas objects per second
+- Real-world bug: Initial cursor implementation filled viewport with black because `fillRect()` with multiply blend mode affected the entire canvas
+
+**Performance**:
+- **Before caching**: 720 canvas allocations/sec, ~414 KB/sec GC pressure
+- **After caching**: 1 canvas allocation total, ~0 KB/sec GC pressure
+- Memory overhead: 576 bytes for a 12×12 buffer (negligible)
+
+**Reference Implementation**: `@react-app/src/models/combat/UnitTurnPhaseHandler.ts` (renderTintedSprite method)
+
 ## Screen Layout & Coordinate Systems
 
 ### Tile-Based Grid System
@@ -812,6 +907,107 @@ if (handler.handleDeploymentAction) {
 
 **Migration Note**: When removing deprecated optional methods from base classes, provide a migration comment showing the new pattern for accessing phase-specific methods.
 
+### Render Pipeline Z-Ordering
+
+Phase handlers can implement two rendering methods to control Z-ordering (what appears on top of what):
+
+```typescript
+interface CombatPhaseHandler {
+  /**
+   * Render phase-specific overlays BEFORE units are drawn.
+   * Use for: movement range highlights, area effects, ground markers, shadows
+   * These elements appear UNDER units in the final render.
+   */
+  render?(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void;
+
+  /**
+   * Render phase-specific UI overlays AFTER units are drawn.
+   * Use for: cursors, selection indicators, floating UI, health bars
+   * These elements appear ON TOP of units in the final render.
+   */
+  renderUI?(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void;
+}
+```
+
+**Complete Render Order** (from bottom to top):
+1. Map terrain (tiles, walls)
+2. **Phase handler `render()`** - Underlays
+3. Deployment zones
+4. Units
+5. **Phase handler `renderUI()`** - Overlays
+6. Layout UI (panels, combat log, buttons)
+
+**When to Use Each Method:**
+
+**`render()` - Underlays (Before Units)**:
+- Movement range highlights (yellow tiles under units)
+- Area of effect indicators
+- Terrain effects (ice, fire, etc.)
+- Shadows
+- Ground markers
+
+**`renderUI()` - Overlays (After Units)**:
+- Cursors (active unit, target selection)
+- Selection indicators
+- Floating damage numbers
+- Status effect icons above units
+- Range indicators
+
+**Example Implementation:**
+```typescript
+class UnitTurnPhaseHandler implements CombatPhaseHandler {
+  render(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
+    const { ctx, tileSize, offsetX, offsetY } = context;
+
+    // Render yellow movement range tiles (UNDER units)
+    for (const position of this.movementRange) {
+      const x = Math.floor(offsetX + (position.x * tileSize));
+      const y = Math.floor(offsetY + (position.y * tileSize));
+
+      this.renderTintedSprite(ctx, 'particles-4', x, y, tileSize, tileSize, '#ffff00', 0.33);
+    }
+  }
+
+  renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
+    const { ctx, tileSize, offsetX, offsetY } = context;
+
+    // Render cursors (ON TOP of units)
+    if (this.activeUnitPosition && this.cursorVisible) {
+      const x = Math.floor(offsetX + (this.activeUnitPosition.x * tileSize));
+      const y = Math.floor(offsetY + (this.activeUnitPosition.y * tileSize));
+
+      this.renderTintedSprite(ctx, 'particles-5', x, y, tileSize, tileSize, '#006400', 1.0);
+    }
+  }
+}
+```
+
+**Common Mistakes:**
+
+❌ **DON'T**: Render cursors in `render()` - they'll appear under units
+```typescript
+render(state, encounter, context) {
+  // BAD: Cursor will be hidden behind units!
+  this.renderCursor(context);
+}
+```
+
+❌ **DON'T**: Render ground effects in `renderUI()` - they'll appear over units
+```typescript
+renderUI(state, encounter, context) {
+  // BAD: Movement range will cover units!
+  this.renderMovementRange(context);
+}
+```
+
+**Why Two Methods:**
+- Single `render()` method couldn't control whether elements appear above or below units
+- Clear separation makes intent explicit
+- Prevents Z-ordering bugs
+- Each phase can independently control its layer contributions
+
+**Reference Implementation**: `@react-app/src/models/combat/UnitTurnPhaseHandler.ts` demonstrates both methods working together for cursor rendering and movement range display.
+
 ## Common Patterns
 
 ### Conditional Rendering Based on Phase
@@ -1479,6 +1675,183 @@ constructor(units: CombatUnit[], tickCount: number, onUnitClick?: (unit: CombatU
   - Missing information that would prevent future issues
   - Better approaches than what's currently documented
   - Ambiguities or edge cases that need clarification
+
+### Implementation Planning for Complex Features
+
+For non-trivial features (3+ files changed, new systems introduced), **create a detailed implementation plan before writing code**:
+
+**✅ DO**: Create a comprehensive plan document
+```markdown
+# Feature Implementation Plan
+
+**Date:** YYYY-MM-DD
+**Feature:** Brief description
+**Branch:** feature-branch-name
+**Priority:** High/Medium/Low
+**Complexity:** High/Medium/Low
+
+---
+
+## Overview
+Brief description of the feature and its goals (2-3 paragraphs)
+
+## Requirements
+
+### Visual Specifications
+- Colors (with hex codes): #00ff00 for player, #ff0000 for enemy
+- Sizes: cursor 12×12px, blink rate 0.5s
+- Sprites: particles-5 for cursor, particles-4 for highlights
+- Alpha values: 33% for movement range
+
+### Behavior Specifications
+- Cursor blinks every 0.5 seconds
+- Click unit to select and show movement range
+- Movement range uses BFS flood-fill algorithm
+- Can path through friendlies, cannot end on occupied tiles
+
+### Technical Requirements
+- Must serialize isPlayerControlled flag
+- Performance: <100 object allocations per frame
+- Must follow GeneralGuidelines.md patterns
+
+## Implementation Tasks
+
+### 1. Task Name (Foundation)
+**Files:**
+- path/to/file1.ts
+- path/to/file2.ts
+
+**Changes:**
+```typescript
+// Pseudocode or key snippets showing the change
+interface CombatUnit {
+  get isPlayerControlled(): boolean;
+}
+```
+
+**Rationale:** Why this change is needed
+
+---
+
+### 2. Task Name (Dependencies on Task 1)
+...
+
+## Testing Plan
+- [ ] Cursor displays on active unit
+- [ ] Cursor blinks at 0.5s rate
+- [ ] Movement range highlights yellow
+- [ ] Can path through friendly units
+- [ ] Cannot end on occupied tiles
+- [ ] Serialization preserves isPlayerControlled
+- [ ] No visual regressions
+
+## Implementation Order
+1. Foundation (interfaces, base types) - no dependencies
+2. Utilities (movement calculator) - independent
+3. Phase handler updates - depends on #1, #2
+4. Integration testing - depends on all above
+
+## Notes & Decisions
+
+### Decision: Cache Tinting Buffer
+- **Choice:** Cache canvas buffer as instance variable
+- **Alternative:** Create new buffer each frame
+- **Rationale:** Avoids 720+ allocations/sec, follows performance guidelines
+- **Tradeoff:** 576 bytes persistent memory (negligible)
+
+### Guidelines Compliance
+- ✅ Uses SpriteRenderer exclusively
+- ✅ Caches stateful components (UnitInfoContent)
+- ✅ No renderFrame() in event handlers
+- ✅ Round all coordinates with Math.floor()
+
+### Performance Considerations
+- Maps are small (32×18 tiles max)
+- BFS complexity O(tiles × movement) - negligible
+- Tinting buffer cached to avoid GC pressure
+
+## Success Criteria
+✅ All visual specs met (colors, sizes, timing)
+✅ All behavioral specs met (selection, movement range)
+✅ All tests pass
+✅ Build succeeds with no warnings
+✅ 100% compliance with GeneralGuidelines.md
+✅ Performance within acceptable limits
+
+---
+
+**End of Implementation Plan**
+```
+
+**❌ DON'T**: Start coding without a plan
+```typescript
+// BAD: Diving straight into code without thinking through:
+// - What files need changes?
+// - What are the dependencies?
+// - How will this be tested?
+// - What performance implications?
+// - How does this fit with guidelines?
+
+class UnitTurnPhaseHandler {
+  // Just start coding and figure it out as we go...
+}
+```
+
+**Benefits of Planning:**
+- **Clear roadmap** prevents getting lost mid-implementation
+- **Documents decisions** and rationale for future developers
+- **Testing checklist** ensures thorough validation
+- **Guidelines compliance** integrated from the start
+- **Performance analysis** happens before coding, not after
+- **Dependencies mapped** prevents incorrect implementation order
+- **Reduces errors** by thinking through edge cases upfront
+
+**Recommended Plan Sections:**
+
+1. **Header**: Date, feature name, branch, priority, complexity
+2. **Overview**: High-level description (2-3 paragraphs)
+3. **Requirements**: Visual, behavioral, and technical specs
+4. **Implementation Tasks**: File-by-file changes with rationale
+5. **Testing Plan**: Comprehensive checklist
+6. **Implementation Order**: Task dependencies
+7. **Notes & Decisions**: Why choice A over B, guidelines compliance
+8. **Success Criteria**: Concrete definition of "done"
+
+**When to Create a Plan:**
+
+**Always plan when:**
+- Feature touches 3+ files
+- New system or pattern being introduced
+- Complex interactions between components
+- Performance considerations exist
+- Multiple valid approaches need evaluation
+
+**Planning optional for:**
+- Single-file bug fixes
+- Trivial changes (typos, formatting)
+- Changes with obvious implementation
+- Urgent hotfixes (but document afterward!)
+
+**Real-world Example:**
+
+The `UnitTurnInteractionPlan.md` document (784 lines) demonstrates exemplary planning for the unit turn interaction feature:
+- Complete visual and behavioral specifications
+- Step-by-step implementation tasks
+- Comprehensive testing checklist
+- Guidelines compliance notes throughout
+- Performance analysis and decisions
+- Clear success criteria
+
+**After Implementation:**
+
+Update the plan with:
+- ✅ Checkmarks for completed tasks
+- Notes on deviations from original plan
+- Lessons learned
+- New patterns discovered
+- Performance measurements (if applicable)
+
+This creates a valuable reference for similar features in the future.
 
 ### After Completing Implementation
 - **Review compliance** with these guidelines
