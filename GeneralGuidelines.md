@@ -1342,6 +1342,77 @@ handleMouseMove(x, y) {
 
 **Exception**: You may call `renderFrame()` for discrete events (clicks, button press) where immediate visual feedback is critical and the event frequency is low.
 
+### React Hook Dependencies and Animation Loops
+
+When using React hooks with animation loops, carefully manage `useCallback` and `useEffect` dependencies to avoid recreating callbacks unnecessarily.
+
+**❌ DON'T**: Include unused state in `useCallback` dependencies
+```typescript
+// BAD: uiState is in dependencies but never used in function body
+const renderFrame = useCallback(() => {
+  ctx.clearRect(0, 0, width, height);
+  renderer.render(ctx);
+  // uiState is NOT used anywhere here!
+}, [renderer, uiState]); // ❌ uiState causes unnecessary recreations
+
+useEffect(() => {
+  const animate = () => {
+    renderFrame();
+    requestAnimationFrame(animate);
+  };
+  requestAnimationFrame(animate);
+}, [renderFrame]); // Animation loop restarts when renderFrame changes
+```
+
+**Problem**: When `uiState` changes (e.g., on every mouse move):
+1. `renderFrame` callback is recreated
+2. `useEffect` cleanup runs, canceling animation loop
+3. New animation loop starts, calling `renderFrame()` synchronously
+4. This can happen 100+ times/second, causing massive FPS spikes and animation stuttering
+
+**✅ DO**: Only include dependencies that are actually used
+```typescript
+// GOOD: Only include what's actually used
+const renderFrame = useCallback(() => {
+  ctx.clearRect(0, 0, width, height);
+  renderer.render(ctx);
+  // uiStateManager is accessed via closure, no need in deps
+}, [renderer]); // ✅ Only renderer is used
+
+useEffect(() => {
+  const animate = () => {
+    renderFrame();
+    requestAnimationFrame(animate);
+  };
+  requestAnimationFrame(animate);
+}, [renderFrame]); // Animation loop stays stable
+```
+
+**✅ DO**: Use manager instances (not React state) for frequently changing data
+```typescript
+// GOOD: Manager pattern with refs
+const uiStateManager = useMemo(() => new CombatUIStateManager(), []);
+
+// Don't subscribe to state changes if you don't need React re-renders
+// const uiState = useCombatUIState(uiStateManager); // ❌ Causes re-renders
+
+// Animation loop accesses manager directly
+const renderFrame = useCallback(() => {
+  const hoveredCell = uiStateManager.getState().hoveredCell; // ✅ Direct access
+  if (hoveredCell) {
+    renderer.highlightCell(hoveredCell);
+  }
+}, [uiStateManager, renderer]);
+```
+
+**Why**:
+- Managers provide stable references that don't trigger re-renders
+- Animation loops should run independently of React's render cycle
+- React state should only be used for values that need to trigger UI updates
+- Unnecessary dependencies cause callback churn and animation loop restarts
+
+**Debugging Tip**: If FPS spikes to huge numbers (>1000) during mouse movement, you likely have synchronous `renderFrame()` calls caused by unnecessary hook dependency changes.
+
 ## Resource Loading Patterns
 
 ### Centralized Loader Services

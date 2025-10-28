@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.5
-**Last Updated:** Tue, Oct 28, 2025, 12:20 PM (unit-info-revision branch - Enhanced Unit Info panel with sprite, stats grid, and action timer)
+**Version:** 1.6
+**Last Updated:** Tue, Oct 28, 2025, 12:48 PM (main branch - Fixed animation loop performance bug + added FPS indicator)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose

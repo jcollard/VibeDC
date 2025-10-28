@@ -5,8 +5,8 @@ partyMembers:
   - id: "figher"
     name: "Barret"
     unitClassId: "fighter"
-    baseHealth: 30
-    baseMana: 20
+    baseHealth: 45
+    baseMana: 5
     basePhysicalPower: 10
     baseMagicPower: 10
     baseSpeed: 10
@@ -28,8 +28,8 @@ partyMembers:
   - id: "knight-001"
     name: "Roland"
     unitClassId: "fighter"
-    baseHealth: 45
-    baseMana: 15
+    baseHealth: 30
+    baseMana: 12
     basePhysicalPower: 18
     baseMagicPower: 5
     baseSpeed: 8
@@ -59,7 +59,7 @@ partyMembers:
   - id: "mage-001"
     name: "Aria"
     unitClassId: "apprentice"
-    baseHealth: 25
+    baseHealth: 12
     baseMana: 50
     basePhysicalPower: 6
     baseMagicPower: 22
@@ -81,7 +81,7 @@ partyMembers:
   - id: "rogue-001"
     name: "Shadow"
     unitClassId: "rogue"
-    baseHealth: 32
+    baseHealth: 20
     baseMana: 20
     basePhysicalPower: 14
     baseMagicPower: 8
