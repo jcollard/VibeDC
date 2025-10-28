@@ -8,5 +8,7 @@ export { PartyMembersContent } from './PartyMembersContent';
 export type { PartyMembersConfig, DeploymentInfo } from './PartyMembersContent';
 export { EmptyContent } from './EmptyContent';
 export type { EmptyContentConfig } from './EmptyContent';
+export { ActionsMenuContent } from './ActionsMenuContent';
+export type { ActionsMenuConfig } from './ActionsMenuContent';
 export { PanelButton } from './PanelButton';
 export type { PanelButtonConfig } from './PanelButton';

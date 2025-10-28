@@ -66,7 +66,7 @@ export const CombatConstants = {
   // Unit Turn Phase
   UNIT_TURN: {
     // Ready message colors
-    PLAYER_NAME_COLOR: '#00ff00',      // Green (matches deployment)
+    PLAYER_NAME_COLOR: '#00cc00',      // Green (matches deployment)
     ENEMY_NAME_COLOR: '#ff0000',       // Red (matches enemy deployment)
 
     // Active unit cursor (dark green, blinking)

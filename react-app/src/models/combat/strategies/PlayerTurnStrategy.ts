@@ -50,9 +50,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
       activeUnit: unit
     });
 
-    // Clear any previous target selection
-    this.targetedUnit = null;
-    this.targetedPosition = null;
+    // Auto-select the active unit at turn start (same behavior as clicking the unit)
+    this.targetedUnit = unit;
+    this.targetedPosition = position;
   }
 
   onTurnEnd(): void {

@@ -14,10 +14,10 @@ export interface UnitInfoConfig {
 
 /**
  * Panel content that displays detailed information about a single combat unit.
- * Shows: unit name, class, HP, MP, speed, and movement.
+ * Shows: unit name (as title), class, HP, MP, speed, and movement.
  */
 export class UnitInfoContent implements PanelContent {
-  private readonly config: UnitInfoConfig;
+  private config: UnitInfoConfig;
   private unit: CombatUnit;
 
   constructor(config: UnitInfoConfig, unit: CombatUnit) {
@@ -46,20 +46,6 @@ export class UnitInfoContent implements PanelContent {
       1,
       'left',
       this.config.titleColor
-    );
-    currentY += this.config.lineSpacing;
-
-    // Unit name
-    FontAtlasRenderer.renderText(
-      ctx,
-      this.unit.name,
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
     );
     currentY += this.config.lineSpacing;
 
@@ -120,12 +106,24 @@ export class UnitInfoContent implements PanelContent {
   }
 
   /**
-   * Update the unit being displayed
+   * Update the unit being displayed and the panel title/color
    * Call this instead of recreating the content when the unit changes
    * @param unit - New combat unit to display
+   * @param title - Optional new title (defaults to unit name)
+   * @param titleColor - Optional new title color (defaults to based on isPlayerControlled)
    */
-  updateUnit(unit: CombatUnit): void {
+  updateUnit(unit: CombatUnit, title?: string, titleColor?: string): void {
     this.unit = unit;
+
+    // Update title to unit name if not explicitly provided
+    if (title !== undefined) {
+      this.config.title = title;
+    }
+
+    // Update title color if provided
+    if (titleColor !== undefined) {
+      this.config.titleColor = titleColor;
+    }
   }
 
   // No interaction handling needed for unit info

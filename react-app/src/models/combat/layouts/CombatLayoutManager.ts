@@ -1,7 +1,8 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
 import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
 import { SpriteRenderer } from '../../../utils/SpriteRenderer';
-import { UnitInfoContent, PartyMembersContent, EmptyContent } from '../managers/panels';
+import { UnitInfoContent, PartyMembersContent, EmptyContent, ActionsMenuContent } from '../managers/panels';
+import { CombatConstants } from '../CombatConstants';
 
 /**
  * Layout 6: Left Map with Top Turn Order
@@ -24,9 +25,9 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   private mapScrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   // Cached panel content instances (per GeneralGuidelines.md - don't recreate every frame)
-  private cachedBottomPanelContent: PartyMembersContent | UnitInfoContent | EmptyContent | null = null;
+  private cachedBottomPanelContent: PartyMembersContent | UnitInfoContent | ActionsMenuContent | EmptyContent | null = null;
   private cachedTopPanelContent: UnitInfoContent | EmptyContent | null = null;
-  private previousPhase: 'deployment' | 'enemy-deployment' | 'battle' | null = null;
+  private previousPhase: 'deployment' | 'enemy-deployment' | 'battle' | 'unit-turn' | null = null;
 
   constructor() {
     // Define the layout regions using tile-based dimensions
@@ -474,7 +475,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     if (!currentUnitPanelManager) return;
 
     // Detect phase transition and clear cache
-    const currentPhase = isEnemyDeploymentPhase ? 'enemy-deployment' : (isDeploymentPhase ? 'deployment' : 'battle');
+    const currentPhase = isEnemyDeploymentPhase ? 'enemy-deployment' : (isDeploymentPhase ? 'deployment' : (currentUnit ? 'unit-turn' : 'battle'));
     if (this.previousPhase !== null && this.previousPhase !== currentPhase) {
       this.cachedBottomPanelContent = null;
     }
@@ -524,22 +525,17 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       }
       currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
     } else if (currentUnit) {
-      // During combat, show current unit
-      if (this.cachedBottomPanelContent instanceof UnitInfoContent) {
-        // Update existing content
-        this.cachedBottomPanelContent.updateUnit(currentUnit);
-      } else {
-        // Create new content
-        this.cachedBottomPanelContent = new UnitInfoContent(
-          {
-            title: 'Active Unit',
-            titleColor: '#ffa500',
-            padding: 1,
-            lineSpacing: 8,
-          },
-          currentUnit
-        );
+      // During unit-turn phase, show actions menu
+      if (!(this.cachedBottomPanelContent instanceof ActionsMenuContent)) {
+        // Create new actions menu content
+        this.cachedBottomPanelContent = new ActionsMenuContent({
+          title: 'ACTIONS',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        });
       }
+      // ActionsMenuContent is stateless, no need to update
       currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
     } else {
       // Empty state
@@ -590,15 +586,20 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       }
       targetUnitPanelManager.setContent(this.cachedTopPanelContent);
     } else if (targetUnit) {
+      // Determine title color based on unit's allegiance
+      const titleColor = targetUnit.isPlayerControlled
+        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+
       if (this.cachedTopPanelContent instanceof UnitInfoContent) {
-        // Update existing content
-        this.cachedTopPanelContent.updateUnit(targetUnit);
+        // Update existing content with unit name as title and appropriate color
+        this.cachedTopPanelContent.updateUnit(targetUnit, targetUnit.name, titleColor);
       } else {
-        // Create new content
+        // Create new content with unit name as title
         this.cachedTopPanelContent = new UnitInfoContent(
           {
-            title: 'Unit Info',
-            titleColor: '#ff6b6b',
+            title: targetUnit.name,
+            titleColor: titleColor,
             padding: 1,
             lineSpacing: 8,
           },

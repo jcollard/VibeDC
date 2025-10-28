@@ -52,8 +52,10 @@ export class EnemyTurnStrategy implements TurnStrategy {
     // Reset AI state
     this.thinkingTimer = 0;
     this.actionDecided = null;
-    this.targetedUnit = null;
-    this.targetedPosition = null;
+
+    // Auto-select the active enemy unit at turn start (for UI display)
+    this.targetedUnit = _unit;
+    this.targetedPosition = position;
   }
 
   onTurnEnd(): void {

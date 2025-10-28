@@ -234,24 +234,32 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     const targetedPosition = this.currentStrategy?.getTargetedPosition();
 
     // Render target cursor (red, always visible) - rendered AFTER units per user feedback
+    // Only show red cursor if targeting a DIFFERENT unit than the active unit
     if (targetedPosition) {
-      // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
-      const x = Math.floor(offsetX + (targetedPosition.x * tileSize));
-      const y = Math.floor(offsetY + (targetedPosition.y * tileSize));
+      const isTargetingActiveUnit =
+        this.activeUnitPosition &&
+        targetedPosition.x === this.activeUnitPosition.x &&
+        targetedPosition.y === this.activeUnitPosition.y;
 
-      // Render with red tint
-      this.renderTintedSprite(
-        ctx,
-        CombatConstants.UNIT_TURN.TARGET_CURSOR_SPRITE_ID,
-        spriteImages,
-        spriteSize,
-        x,
-        y,
-        tileSize,
-        tileSize,
-        CombatConstants.UNIT_TURN.TARGET_CURSOR_ALBEDO,
-        1.0
-      );
+      if (!isTargetingActiveUnit) {
+        // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+        const x = Math.floor(offsetX + (targetedPosition.x * tileSize));
+        const y = Math.floor(offsetY + (targetedPosition.y * tileSize));
+
+        // Render with red tint
+        this.renderTintedSprite(
+          ctx,
+          CombatConstants.UNIT_TURN.TARGET_CURSOR_SPRITE_ID,
+          spriteImages,
+          spriteSize,
+          x,
+          y,
+          tileSize,
+          tileSize,
+          CombatConstants.UNIT_TURN.TARGET_CURSOR_ALBEDO,
+          1.0
+        );
+      }
     }
   }
 
@@ -406,20 +414,25 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.infoPanelInitialized = true;
     }
 
+    // Determine title color based on unit's allegiance
+    const titleColor = displayUnit.isPlayerControlled
+      ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+      : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+
     // Create or update cached instance (per GeneralGuidelines.md - cache stateful components)
     if (!this.unitInfoContent) {
       this.unitInfoContent = new UnitInfoContent(
         {
-          title: 'Unit Info',
-          titleColor: '#ffa500',
+          title: displayUnit.name,
+          titleColor: titleColor,
           padding: 1,
           lineSpacing: 8,
         },
         displayUnit
       );
     } else {
-      // Update which unit is displayed
-      this.unitInfoContent.updateUnit(displayUnit);
+      // Update which unit is displayed, with unit name as title and appropriate color
+      this.unitInfoContent.updateUnit(displayUnit, displayUnit.name, titleColor);
     }
 
     return this.unitInfoContent;
