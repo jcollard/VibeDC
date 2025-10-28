@@ -8,11 +8,8 @@ import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler'
  * Turn action that can be performed by a unit
  */
 export type TurnAction =
-  | { type: 'wait' }              // End turn without doing anything
-  | { type: 'move'; target: Position }
-  | { type: 'attack'; target: Position }
-  | { type: 'ability'; abilityId: string; target?: Position }
-  | { type: 'end-turn' };         // Explicitly end turn
+  | { type: 'delay' }             // Set actionTimer to 50
+  | { type: 'end-turn' };         // Set actionTimer to 0
 
 /**
  * Strategy pattern for handling unit turns
@@ -97,4 +94,12 @@ export interface TurnStrategy {
    * Used to display yellow highlight tiles
    */
   getMovementRange(): Position[];
+
+  /**
+   * Handle action menu button selection
+   * Called when player selects an action from the actions menu
+   *
+   * @param actionId - The action selected ('delay', 'end-turn', etc.)
+   */
+  handleActionSelected(actionId: string): void;
 }

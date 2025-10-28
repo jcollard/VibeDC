@@ -36,6 +36,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Current combat state (needed for calculations)
   private currentState: CombatState | null = null;
 
+  // Pending action (set by handleActionSelected, returned by update)
+  private pendingAction: TurnAction | null = null;
+
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
     this.activeUnit = unit;
     this.activePosition = position;
@@ -63,6 +66,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.targetedPosition = null;
     this.movementRange = [];
     this.currentState = null;
+    this.pendingAction = null;
   }
 
   update(
@@ -75,8 +79,14 @@ export class PlayerTurnStrategy implements TurnStrategy {
     // Store current state for event handlers
     this.currentState = state;
 
-    // Player strategy waits for input - no automatic action
-    // Future: Check for action menu selection and return appropriate TurnAction
+    // If player has selected an action, return it
+    if (this.pendingAction) {
+      const action = this.pendingAction;
+      this.pendingAction = null; // Clear pending action
+      return action;
+    }
+
+    // Otherwise, wait for player input
     return null;
   }
 
@@ -168,6 +178,21 @@ export class PlayerTurnStrategy implements TurnStrategy {
       });
     } else {
       this.movementRange = [];
+    }
+  }
+
+  handleActionSelected(actionId: string): void {
+    // Convert actionId to TurnAction
+    switch (actionId) {
+      case 'delay':
+        this.pendingAction = { type: 'delay' };
+        break;
+      case 'end-turn':
+        this.pendingAction = { type: 'end-turn' };
+        break;
+      default:
+        console.warn('[PlayerTurnStrategy] Unknown action ID:', actionId);
+        this.pendingAction = null;
     }
   }
 }

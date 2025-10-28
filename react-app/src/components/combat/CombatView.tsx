@@ -796,8 +796,19 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             }
             return;
 
-          case 'unit-selected':
           case 'action-selected':
+            // Forward action selection to UnitTurnPhaseHandler strategy
+            // No renderFrame() needed - action will be processed in next update() call
+            if (combatState.phase === 'unit-turn') {
+              if ('handleActionSelected' in phaseHandlerRef.current) {
+                const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
+                unitTurnHandler.handleActionSelected(clickResult.actionId);
+                return; // Click was handled
+              }
+            }
+            break;
+
+          case 'unit-selected':
           case 'target-selected':
             // Future: Handle other click types
             break;

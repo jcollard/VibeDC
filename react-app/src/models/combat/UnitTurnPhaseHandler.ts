@@ -17,7 +17,7 @@ import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { UnitInfoContent } from './managers/panels/UnitInfoContent';
 import { SpriteRenderer } from '../../utils/SpriteRenderer';
 import { CombatConstants } from './CombatConstants';
-import type { TurnStrategy } from './strategies/TurnStrategy';
+import type { TurnStrategy, TurnAction } from './strategies/TurnStrategy';
 import { PlayerTurnStrategy } from './strategies/PlayerTurnStrategy';
 import { EnemyTurnStrategy } from './strategies/EnemyTurnStrategy';
 
@@ -328,15 +328,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
       // If strategy has decided on an action, execute it
       if (action) {
-        // TODO: Execute the action and transition back to action-timer phase
-        // For now, just log the action
-        console.log('[UnitTurnPhaseHandler] Action decided:', action);
+        // Execute the action
+        const newState = this.executeAction(action, state);
 
         // Clean up strategy
         this.currentStrategy.onTurnEnd();
 
-        // TODO: Execute action and return new state
-        // For now, just stay in this phase
+        // Return new state (transitions back to action-timer phase)
+        return newState;
       }
     }
 
@@ -350,6 +349,60 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Stay in unit-turn phase (waiting for action implementation)
     return state;
+  }
+
+  /**
+   * Execute a turn action (Delay or End Turn)
+   * Updates the active unit's action timer and transitions back to action-timer phase
+   */
+  private executeAction(action: TurnAction, state: CombatState): CombatState {
+    if (!this.activeUnit) {
+      console.warn('[UnitTurnPhaseHandler] No active unit for action execution');
+      return state;
+    }
+
+    let newActionTimer: number;
+    let logMessage: string;
+
+    // Determine action effects
+    switch (action.type) {
+      case 'delay':
+        newActionTimer = 50;
+        logMessage = `[color=${this.getUnitNameColor()}]${this.activeUnit.name}[/color] delays...`;
+        break;
+
+      case 'end-turn':
+        newActionTimer = 0;
+        logMessage = `[color=${this.getUnitNameColor()}]${this.activeUnit.name}[/color] ends turn.`;
+        break;
+
+      default:
+        console.warn('[UnitTurnPhaseHandler] Unknown action type:', action);
+        return state;
+    }
+
+    // Directly mutate the unit's action timer (units are mutable)
+    // This follows the same pattern as ActionTimerPhaseHandler
+    (this.activeUnit as any)._actionTimer = newActionTimer;
+
+    // Add message to combat log (via pending messages)
+    this.pendingLogMessages.push(logMessage);
+
+    // Return new state transitioning back to action-timer phase
+    return {
+      ...state,
+      phase: 'action-timer' as const
+    };
+  }
+
+  /**
+   * Get the color for the active unit's name in combat log messages
+   */
+  private getUnitNameColor(): string {
+    if (!this.activeUnit) return '#ffffff';
+    return this.activeUnit.isPlayerControlled
+      ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+      : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
   }
 
   getTopPanelRenderer(state: CombatState, _encounter: CombatEncounter): TopPanelRenderer {
@@ -508,5 +561,28 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     }
 
     return { handled: false };
+  }
+
+  handleInfoPanelClick(
+    _relativeX: number,
+    _relativeY: number,
+    _state: CombatState,
+    _encounter: CombatEncounter
+  ): PhaseEventResult {
+    // Panel clicks are not directly handled here - CombatView forwards
+    // PanelClickResult events from ActionsMenuContent to this handler
+    // This method exists to satisfy the CombatPhaseHandler interface
+    return { handled: false };
+  }
+
+  /**
+   * Handle action selection from the Actions menu panel
+   * Forwards the action to the current strategy (PlayerTurnStrategy or EnemyTurnStrategy)
+   * @param actionId - The ID of the selected action ('delay', 'end-turn', etc.)
+   */
+  handleActionSelected(actionId: string): void {
+    if (this.currentStrategy) {
+      this.currentStrategy.handleActionSelected(actionId);
+    }
   }
 }

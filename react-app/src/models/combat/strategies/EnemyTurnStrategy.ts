@@ -183,4 +183,9 @@ export class EnemyTurnStrategy implements TurnStrategy {
   //   // TODO: Implement movement target selection
   //   return null;
   // }
+
+  handleActionSelected(_actionId: string): void {
+    // Enemy strategy doesn't use action menu
+    // No-op implementation
+  }
 }

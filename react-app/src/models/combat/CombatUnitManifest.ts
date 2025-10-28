@@ -122,6 +122,36 @@ export class CombatUnitManifest {
   }
 
   /**
+   * Update a unit in the manifest with a new unit instance
+   * Preserves position and ID, updates unit reference
+   * @param updatedUnit - The updated unit instance (must already be in manifest)
+   * @param newUnitData - The new unit instance to replace it with
+   * @returns true if update succeeded, false if unit not found
+   */
+  updateUnit(oldUnit: CombatUnit, newUnit: CombatUnit): boolean {
+    const id = this.unitToId.get(oldUnit);
+    if (!id) {
+      console.warn('[CombatUnitManifest] Cannot update unit: not found in manifest');
+      return false;
+    }
+
+    const placement = this.units.get(id);
+    if (!placement) {
+      console.warn('[CombatUnitManifest] Unit ID exists but placement not found');
+      return false;
+    }
+
+    // Update the placement with new unit instance
+    placement.unit = newUnit;
+
+    // Update WeakMap to point to new unit instance
+    this.unitToId.delete(oldUnit);
+    this.unitToId.set(newUnit, id);
+
+    return true;
+  }
+
+  /**
    * Get all units
    */
   getAllUnits(): UnitPlacement[] {
