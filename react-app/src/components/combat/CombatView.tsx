@@ -954,6 +954,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     const { x: canvasX, y: canvasY } = coords;
 
+    // Check if hovering over top info panel (target unit info)
+    const topPanelRegion = layoutRenderer.getTopInfoPanelRegion();
+    topInfoPanelManager.handleHover(
+      canvasX,
+      canvasY,
+      topPanelRegion
+    );
+
     // Check if hovering over bottom info panel
     // The panel manager will delegate to the panel content (party members, unit info, etc.)
     const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();
@@ -1022,7 +1030,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         activeEncounter
       );
     }
-  }, [combatState, activeEncounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, layoutRenderer]);
+  }, [combatState, activeEncounter, inputHandler, uiStateManager, mapRenderer, mapScrollX, mapScrollY, partyUnits, bottomInfoPanelManager, topInfoPanelManager, layoutRenderer]);
 
   // Register map click handler
   useEffect(() => {

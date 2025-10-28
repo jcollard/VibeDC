@@ -3,6 +3,7 @@ import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion } from './PanelContent';
+import { HELPER_TEXT, HOVERED_TEXT } from './colors';
 
 /**
  * Configuration for unit info panel appearance
@@ -21,6 +22,22 @@ export interface UnitInfoConfig {
 export class UnitInfoContent implements PanelContent {
   private config: UnitInfoConfig;
   private unit: CombatUnit;
+  private hoveredStatId: string | null = null;
+
+  // Helper text for each stat
+  private readonly statHelperText: Record<string, string> = {
+    'HP': "Unit's health, if reduced to 0 the unit is knocked out",
+    'MP': "Unit's mana, required for magic based abilities",
+    'P.Pow': 'Physical Power is used to calculate physical damage',
+    'P.Evd': 'Evasion rate vs. Physical Attacks',
+    'M.Evd': 'Evasion rate vs. Magical Attacks',
+    'M.Pow': 'Magic Power is used to calculate magic damage',
+    'Move': 'The number of tiles this unit can move',
+    'Speed': "Unit's action timer increases by speed each turn",
+    'Courage': 'Used to determine success rate of some abilities',
+    'Attunement': 'Used to determine success rate of some abilities',
+    'Action Timer': 'Action Timer increases by Speed each turn. Unit acts when reaching 100.'
+  };
 
   constructor(config: UnitInfoConfig, unit: CombatUnit) {
     this.config = config;
@@ -98,6 +115,10 @@ export class UnitInfoContent implements PanelContent {
     // ===== Section 4: Action Timer (top-right corner) =====
     const atLabelY = spriteY;
 
+    // Determine Action Timer color based on hover state
+    const isActionTimerHovered = this.hoveredStatId === 'Action Timer';
+    const actionTimerColor = isActionTimerHovered ? HOVERED_TEXT : '#ffffff';
+
     // Try full label first
     const fullLabel = 'ACTION TIMER';
     const fullLabelWidth = FontAtlasRenderer.measureText(fullLabel, font);
@@ -116,7 +137,7 @@ export class UnitInfoContent implements PanelContent {
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        actionTimerColor
       );
     } else {
       // Option B: Use "AT" + clock icon
@@ -151,7 +172,7 @@ export class UnitInfoContent implements PanelContent {
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        actionTimerColor
       );
     }
 
@@ -170,7 +191,7 @@ export class UnitInfoContent implements PanelContent {
       fontAtlasImage,
       1,
       'left',
-      '#ffa500' // Orange
+      isActionTimerHovered ? HOVERED_TEXT : '#ffa500' // Yellow when hovered, orange otherwise
     );
 
     // ===== Section 5: Two-Column Stats Grid =====
@@ -207,6 +228,10 @@ export class UnitInfoContent implements PanelContent {
 
     // Render left column (label left-aligned, value right-aligned within column)
     for (const stat of leftColumnStats) {
+      // Determine color based on hover state
+      const isHovered = this.hoveredStatId === stat.label;
+      const color = isHovered ? HOVERED_TEXT : '#ffffff';
+
       // Render label
       FontAtlasRenderer.renderText(
         ctx,
@@ -217,7 +242,7 @@ export class UnitInfoContent implements PanelContent {
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        color
       );
 
       // Render value (right-aligned within column width)
@@ -232,7 +257,7 @@ export class UnitInfoContent implements PanelContent {
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        color
       );
 
       statsY += this.config.lineSpacing;
@@ -243,6 +268,10 @@ export class UnitInfoContent implements PanelContent {
 
     // Render right column (label left-aligned, value right-aligned within column)
     for (const stat of rightColumnStats) {
+      // Determine color based on hover state
+      const isHovered = this.hoveredStatId === stat.label;
+      const color = isHovered ? HOVERED_TEXT : '#ffffff';
+
       // Render label
       FontAtlasRenderer.renderText(
         ctx,
@@ -253,7 +282,7 @@ export class UnitInfoContent implements PanelContent {
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        color
       );
 
       // Render value (right-aligned within column width)
@@ -268,11 +297,83 @@ export class UnitInfoContent implements PanelContent {
         fontAtlasImage,
         1,
         'left',
-        '#ffffff'
+        color
       );
 
       statsY += this.config.lineSpacing;
     }
+
+    // ===== Section 6: Helper Text (below stats grid) =====
+    if (this.hoveredStatId !== null && this.statHelperText[this.hoveredStatId]) {
+      // Add spacing before helper text
+      statsY += 2;
+
+      // Wrap helper text to fit within panel width
+      const wrappedLines = this.wrapText(
+        this.statHelperText[this.hoveredStatId],
+        region.width - (this.config.padding * 2),
+        fontId
+      );
+
+      // Render each line of helper text
+      for (const line of wrappedLines) {
+        FontAtlasRenderer.renderText(
+          ctx,
+          line,
+          region.x + this.config.padding,
+          statsY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          HELPER_TEXT
+        );
+        statsY += this.config.lineSpacing;
+      }
+    }
+  }
+
+  /**
+   * Wrap text to fit within a maximum width
+   * @param text - Text to wrap
+   * @param maxWidth - Maximum width in pixels
+   * @param fontId - Font ID for text measurement
+   * @returns Array of text lines
+   */
+  private wrapText(text: string, maxWidth: number, fontId: string): string[] {
+    const font = FontRegistry.getById(fontId);
+    if (!font) {
+      return [text];
+    }
+
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      const testWidth = FontAtlasRenderer.measureText(testLine, font);
+
+      if (testWidth <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        // If current line has content, push it and start new line
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = word;
+        } else {
+          // Word itself is too long, just add it anyway
+          lines.push(word);
+        }
+      }
+    }
+
+    // Add the last line
+    if (currentLine) {
+      lines.push(currentLine);
+    }
+
+    return lines.length > 0 ? lines : [text];
   }
 
   /**
@@ -296,5 +397,79 @@ export class UnitInfoContent implements PanelContent {
     }
   }
 
-  // No interaction handling needed for unit info
+  /**
+   * Handle hover events to show helper text for stats
+   * @param relativeX - X coordinate relative to panel region
+   * @param relativeY - Y coordinate relative to panel region
+   * @returns Hover state change info or null if unchanged
+   */
+  handleHover(relativeX: number, relativeY: number): unknown {
+    const statId = this.getStatIdAt(relativeX, relativeY);
+
+    // Update hover state if changed
+    if (statId !== this.hoveredStatId) {
+      this.hoveredStatId = statId;
+      return { statId }; // Signal that hover state changed
+    }
+
+    return null;
+  }
+
+  /**
+   * Determine which stat (if any) is at the given panel-relative coordinates
+   * Returns stat ID (label) or null if no stat at that position
+   */
+  private getStatIdAt(relativeX: number, relativeY: number): string | null {
+    // Calculate layout positions (must match render method)
+    const padding = this.config.padding;
+    const lineSpacing = this.config.lineSpacing;
+
+    // Sprite and name section height
+    const spriteY = padding;
+    const nameY = spriteY;
+    const classY = nameY + lineSpacing;
+    const statsStartY = classY + lineSpacing + 4;
+
+    // Check Action Timer region (top-right)
+    // Action Timer label is at spriteY, value is at spriteY + lineSpacing
+    const atLabelY = spriteY;
+    const atValueY = atLabelY + lineSpacing;
+
+    // Approximate Action Timer region (right side of panel)
+    // This covers both the label and value rows
+    if (relativeY >= atLabelY && relativeY < atValueY + lineSpacing) {
+      // Check if X is on the right side (rough approximation)
+      if (relativeX > padding + 50) { // Assume Action Timer takes right portion
+        return 'Action Timer';
+      }
+    }
+
+    // Check if Y is within stats grid
+    if (relativeY < statsStartY) {
+      return null; // Above stats grid
+    }
+
+    // Calculate which stats row (0-4)
+    const statsRowY = relativeY - statsStartY;
+    const rowIndex = Math.floor(statsRowY / lineSpacing);
+
+    if (rowIndex < 0 || rowIndex >= 5) {
+      return null; // Outside stats grid rows
+    }
+
+    // Define stat labels (must match render order)
+    const leftColumnStats = ['HP', 'P.Pow', 'M.Pow', 'Move', 'Courage'];
+    const rightColumnStats = ['MP', 'P.Evd', 'M.Evd', 'Speed', 'Attunement'];
+
+    // Determine column based on X position (approximate midpoint)
+    const midX = padding + ((relativeX - padding) / 2);
+
+    if (relativeX < midX) {
+      // Left column
+      return leftColumnStats[rowIndex];
+    } else {
+      // Right column
+      return rightColumnStats[rowIndex];
+    }
+  }
 }

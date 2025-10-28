@@ -1,23 +1,7 @@
 {
   "permissions": {
     "allow": [
-      "Bash(npm create vite@latest react-app -- --template react-ts)",
-      "Bash(npm install)",
-      "Bash(npm install firebase)",
-      "Bash(npm install -g firebase-tools)",
-      "Bash(firebase init emulators)",
-      "Bash(npm init -y)",
-      "Bash(npm install firebase-admin firebase-functions@latest)",
-      "Bash(npm install --save-dev typescript @types/node)",
-      "Bash(tree -L 3 -I node_modules \"/c/Users/User/git/CaptainCoderOrg/VibeDC/react-app/src\")",
-      "Bash(npm run build)",
-      "Bash(node generate-sprites.js)",
-      "Bash(npm test -- CombatEncounter.test.ts)",
-      "Bash(npm test)",
-      "Bash(npm test -- DataLoader.test.ts)",
-      "Bash(timeout 30 npm test)",
-      "Bash(npm run build:font-tool)",
-      "Bash(git log --all --oneline --since=\"2 weeks ago\" -S \"renderFrame()\" -- react-app/src/components/combat/CombatView.tsx)"
+      "Bash(npm run build)"
     ],
     "deny": [],
     "ask": []
