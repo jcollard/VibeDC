@@ -30,10 +30,11 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   // Position slide animation state
   private slideAnimationActive: boolean = false;
   private slideAnimationElapsedTime: number = 0;
-  private readonly slideAnimationDuration: number = 0.25; // seconds (configurable)
+  private readonly slideAnimationDuration: number = 1.5; // seconds (testing: 1.5s, default: 0.25s)
   private previousPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
   private targetPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
   private cachedRegion: PanelRegion | null = null; // Cached from last render
+  private pendingSlideNewOrder: CombatUnit[] | null = null; // Pending slide to trigger on next render
 
   constructor(units: CombatUnit[], onUnitClickOrTickCount?: ((unit: CombatUnit) => void) | number, tickCount: number = 0) {
     this.units = units;
@@ -100,16 +101,27 @@ export class TurnOrderRenderer implements TopPanelRenderer {
    * Called by ActionTimerPhaseHandler when turn order changes
    */
   startSlideAnimation(newOrder: CombatUnit[]): void {
+    console.log('[TurnOrderRenderer] startSlideAnimation called with', newOrder.length, 'units');
+
     if (!this.cachedRegion) {
-      console.warn('[TurnOrderRenderer] Cannot start slide animation: region not cached');
+      console.log('[TurnOrderRenderer] Region not cached yet, deferring slide animation to next render');
+      this.pendingSlideNewOrder = newOrder;
       return;
     }
+
+    console.log('[TurnOrderRenderer] Starting slide animation, cachedRegion:', this.cachedRegion);
 
     // Reset scroll to show first 8 units during animation (per user requirement)
     this.scrollOffset = 0;
 
+    // Debug: Log what units we're working with
+    console.log('[TurnOrderRenderer] this.units (current, first 8):', this.units.slice(0, 8).map(u => u.name));
+    console.log('[TurnOrderRenderer] newOrder (target, first 8):', newOrder.slice(0, 8).map(u => u.name));
+
     // Calculate current X positions based on current units array
     const currentXPositions = this.calculateUnitXPositions(this.units, this.cachedRegion);
+    console.log('[TurnOrderRenderer] Current X positions:', currentXPositions);
+
     for (let i = 0; i < this.units.length; i++) {
       const unit = this.units[i];
       if (i < this.maxVisibleUnits) {
@@ -125,6 +137,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
 
     // Calculate target X positions based on new order
     const targetXPositions = this.calculateUnitXPositions(newOrder, this.cachedRegion);
+    console.log('[TurnOrderRenderer] Target X positions:', targetXPositions);
+
     for (let i = 0; i < newOrder.length; i++) {
       const unit = newOrder[i];
       if (i < this.maxVisibleUnits) {
@@ -144,6 +158,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // Start animation
     this.slideAnimationActive = true;
     this.slideAnimationElapsedTime = 0;
+    console.log('[TurnOrderRenderer] Slide animation started! Active:', this.slideAnimationActive);
   }
 
   /**
@@ -157,7 +172,10 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     this.slideAnimationElapsedTime += deltaTime;
     const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
 
+    console.log('[TurnOrderRenderer] Slide animation progress:', progress.toFixed(2), 'elapsed:', this.slideAnimationElapsedTime.toFixed(2));
+
     if (progress >= 1.0) {
+      console.log('[TurnOrderRenderer] Slide animation complete!');
       this.slideAnimationActive = false;
       return false; // Animation complete
     }
@@ -197,6 +215,15 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   ): void {
     // Cache region at start of render (for slide animation)
     this.cachedRegion = region;
+
+    // Check if we have a pending slide animation to trigger now that region is cached
+    if (this.pendingSlideNewOrder) {
+      console.log('[TurnOrderRenderer] Triggering deferred slide animation in render');
+      const newOrder = this.pendingSlideNewOrder;
+      this.pendingSlideNewOrder = null;
+      this.startSlideAnimation(newOrder);
+    }
+
     // Render "Action Timers" title at the top in yellow/orange using small font
     if (smallFontAtlasImage) {
       const titleX = region.x + region.width / 2;
@@ -287,15 +314,19 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // If slide animation active, interpolate positions
     if (this.slideAnimationActive) {
       const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
+      console.log('[TurnOrderRenderer] Rendering animation, visibleUnits:', visibleUnits.length, 'progress:', progress.toFixed(2));
 
       for (const unit of visibleUnits) {
         const previousX = this.previousPositions.get(unit);
         const targetX = this.targetPositions.get(unit);
 
+        console.log(`[TurnOrderRenderer] Unit ${unit.name}: previousX=${previousX}, targetX=${targetX}`);
+
         let currentX: number;
         if (previousX !== undefined && targetX !== undefined) {
           // Linear interpolation
           currentX = previousX + (targetX - previousX) * progress;
+          console.log(`[TurnOrderRenderer] Interpolating ${unit.name} to ${currentX.toFixed(1)}`);
         } else {
           // Unit wasn't in previous order or isn't in target order
           // Just render at target position (calculate it)

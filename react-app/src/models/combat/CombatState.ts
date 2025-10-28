@@ -57,6 +57,13 @@ export interface CombatState {
    */
   pendingSlideAnimation?: boolean;
 
+  /**
+   * Previous turn order (unit IDs) before Delay/End Turn action
+   * Used to animate FROM this order TO the new order
+   * Cleared by ActionTimerPhaseHandler after starting the animation
+   */
+  previousTurnOrder?: string[];
+
   // Additional fields will be added as combat mechanics are implemented
 }
 
@@ -71,6 +78,7 @@ export interface CombatStateJSON {
   unitManifest: CombatUnitManifestJSON;
   tickCount?: number;
   pendingSlideAnimation?: boolean;
+  previousTurnOrder?: string[];
 }
 
 /**
@@ -86,7 +94,8 @@ export function serializeCombatState(state: CombatState): CombatStateJSON {
     map: state.map.toJSON(),
     unitManifest: state.unitManifest.toJSON(),
     tickCount: state.tickCount,
-    pendingSlideAnimation: state.pendingSlideAnimation
+    pendingSlideAnimation: state.pendingSlideAnimation,
+    previousTurnOrder: state.previousTurnOrder
   };
 }
 
@@ -117,6 +126,7 @@ export function deserializeCombatState(json: CombatStateJSON): CombatState | nul
     map,
     unitManifest,
     tickCount: json.tickCount,
-    pendingSlideAnimation: json.pendingSlideAnimation
+    pendingSlideAnimation: json.pendingSlideAnimation,
+    previousTurnOrder: json.previousTurnOrder
   };
 }

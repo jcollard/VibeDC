@@ -381,6 +381,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         return state;
     }
 
+    // Capture current turn order BEFORE mutation (for slide animation)
+    // Get turn order from the turn order renderer if available
+    const previousTurnOrder = this.turnOrderRenderer
+      ? this.turnOrderRenderer.getUnits().map(u => u.name)
+      : [];
+
     // Directly mutate the unit's action timer (units are mutable)
     // This follows the same pattern as ActionTimerPhaseHandler
     (this.activeUnit as any)._actionTimer = newActionTimer;
@@ -389,11 +395,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     this.pendingLogMessages.push(logMessage);
 
     // Return new state transitioning back to action-timer phase
-    // Set pendingSlideAnimation flag to trigger immediate slide animation
+    // Set pendingSlideAnimation flag and previousTurnOrder for animation
     return {
       ...state,
       phase: 'action-timer' as const,
-      pendingSlideAnimation: true
+      pendingSlideAnimation: true,
+      previousTurnOrder: previousTurnOrder.length > 0 ? previousTurnOrder : undefined
     };
   }
 

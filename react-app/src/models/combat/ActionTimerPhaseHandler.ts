@@ -32,8 +32,9 @@ const TICK_SIZE = 1;
 /**
  * Time (in seconds) to display each discrete tick during animation
  * Default: 0.5s per tick (2 ticks per second)
+ * Testing: 2.0s per tick
  */
-const TICK_DISPLAY_DURATION = 0.5;
+const TICK_DISPLAY_DURATION = 2.0;
 
 /**
  * Time (in seconds) for units to slide to new positions when order changes
@@ -212,22 +213,29 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       };
     }
 
-    // Only calculate once when entering this phase
-    if (!this.turnCalculated) {
-      this.startAnimation(state.unitManifest, state.tickCount ?? 0);
-      this.turnCalculated = true;
-    }
-
-    // Check for pending slide animation (immediate slide after Delay/End Turn)
-    if (state.pendingSlideAnimation && this.animationMode === 'idle') {
-      this.triggerImmediateSlide(state.unitManifest);
+    // Check for pending slide animation FIRST (immediate slide after Delay/End Turn)
+    // This must happen before startAnimation() to avoid skipping the slide
+    if (!this.turnCalculated && state.pendingSlideAnimation && this.animationMode === 'idle') {
+      console.log('[ActionTimerPhaseHandler] Pending slide animation detected on entry! Triggering immediate slide...');
+      console.log('[ActionTimerPhaseHandler] Previous turn order:', state.previousTurnOrder);
+      this.triggerImmediateSlide(state.unitManifest, state.previousTurnOrder);
       this.animationMode = 'immediate-slide';
+      this.turnCalculated = true; // Mark as calculated to avoid re-initializing
+      console.log('[ActionTimerPhaseHandler] Animation mode set to immediate-slide');
 
-      // Clear flag from state
+      // Clear flag and previous order from state
       return {
         ...state,
-        pendingSlideAnimation: false
+        pendingSlideAnimation: false,
+        previousTurnOrder: undefined
       };
+    }
+
+    // Only calculate once when entering this phase (normal flow without pending slide)
+    if (!this.turnCalculated) {
+      console.log('[ActionTimerPhaseHandler] First entry to phase, pendingSlideAnimation:', state.pendingSlideAnimation, 'animationMode:', this.animationMode);
+      this.startAnimation(state.unitManifest, state.tickCount ?? 0);
+      this.turnCalculated = true;
     }
 
     // Handle immediate slide mode
@@ -236,6 +244,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
       if (!slideInProgress) {
         // Slide complete, transition to discrete ticks mode
+        console.log('[ActionTimerPhaseHandler] Immediate slide complete, starting discrete tick animation');
+        this.startAnimation(state.unitManifest, state.tickCount ?? 0);
         this.animationMode = 'discrete-ticks';
         this.isAnimating = true; // Start discrete tick animation
       }
@@ -262,8 +272,11 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
         // Check if turn order changed
         if (this.turnOrderChanged(snapshot.turnOrder)) {
+          console.log('[ActionTimerPhaseHandler] Turn order changed at tick', this.currentTickIndex, '- triggering slide animation');
           // Trigger slide animation in TurnOrderRenderer (Task 5)
           this.startPositionSlideAnimation(snapshot.turnOrder);
+        } else {
+          console.log('[ActionTimerPhaseHandler] Turn order unchanged at tick', this.currentTickIndex);
         }
 
         // Update displayed turn order
@@ -293,8 +306,10 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
           if (readyUnit) {
             console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
 
-            // Reset animation mode for next time we enter action-timer phase
+            // Reset state for next time we enter action-timer phase
             this.animationMode = 'idle';
+            this.turnCalculated = false;
+            console.log('[ActionTimerPhaseHandler] Reset turnCalculated and animationMode for next entry');
 
             // Transition to unit-turn phase
             return {
@@ -475,23 +490,22 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
   /**
    * Trigger an immediate slide animation when entering action-timer phase
-   * after a Delay or End Turn action. Calculates new turn order based on
-   * current AT values and triggers slide animation in TurnOrderRenderer.
+   * after a Delay or End Turn action. Uses previousTurnOrder from state to
+   * animate FROM the old order TO the new calculated order.
    *
    * @param manifest Current unit manifest
+   * @param previousTurnOrderIds Previous unit IDs from state (before mutation)
    */
   private triggerImmediateSlide(
-    manifest: import('./CombatUnitManifest').CombatUnitManifest
+    manifest: import('./CombatUnitManifest').CombatUnitManifest,
+    previousTurnOrderIds?: string[]
   ): void {
     if (!this.turnOrderRenderer) {
       console.warn('[ActionTimerPhaseHandler] Cannot trigger immediate slide: no renderer');
       return;
     }
 
-    // Get current turn order from renderer
-    const currentOrder = this.turnOrderRenderer.getUnits();
-
-    // Calculate new turn order
+    // Calculate new turn order based on current AT values (after mutation)
     const allUnits = manifest.getAllUnits();
     const units = allUnits.map(p => p.unit);
     const currentTimers = new Map<CombatUnit, number>();
@@ -500,17 +514,42 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     }
     const newTurnOrder = this.calculateTurnOrder(units, currentTimers);
 
-    // Check if order actually changed
-    const orderChanged = !this.arraysEqual(currentOrder, newTurnOrder);
+    // If we have previous order names, reconstruct the unit array in that order
+    if (previousTurnOrderIds && previousTurnOrderIds.length > 0) {
+      const unitMap = new Map<string, CombatUnit>();
+      for (const unit of units) {
+        unitMap.set(unit.name, unit);
+      }
+      const previousOrder = previousTurnOrderIds
+        .map(name => unitMap.get(name))
+        .filter(u => u !== undefined) as CombatUnit[];
 
-    if (orderChanged) {
-      // Trigger slide animation
-      this.turnOrderRenderer.startSlideAnimation(newTurnOrder);
-      console.log('[ActionTimerPhaseHandler] Triggered immediate slide animation');
+      // Check if order actually changed
+      const orderChanged = !this.arraysEqual(previousOrder, newTurnOrder);
+
+      if (orderChanged) {
+        // IMPORTANT: We need to set the internal units array to previousOrder
+        // WITHOUT calling updateUnits (which would recalculate positions)
+        // Set it directly using the private access
+        (this.turnOrderRenderer as any).units = previousOrder;
+
+        // Debug: Log the first 8 units in each order
+        console.log('[ActionTimerPhaseHandler] Previous order (first 8):', previousOrder.slice(0, 8).map(u => u.name));
+        console.log('[ActionTimerPhaseHandler] New order (first 8):', newTurnOrder.slice(0, 8).map(u => u.name));
+        console.log('[ActionTimerPhaseHandler] Set renderer.units to previousOrder. Now calling startSlideAnimation...');
+
+        // Now trigger slide to new order (it will use previousOrder as starting positions)
+        this.turnOrderRenderer.startSlideAnimation(newTurnOrder);
+        console.log('[ActionTimerPhaseHandler] Triggered immediate slide animation from previous order');
+      } else {
+        // No animation needed, but still update units
+        this.turnOrderRenderer.updateUnits(newTurnOrder);
+        console.log('[ActionTimerPhaseHandler] No slide needed - order unchanged');
+      }
     } else {
-      // No animation needed, but still update units
+      // No previous order provided, just update directly (no animation possible)
       this.turnOrderRenderer.updateUnits(newTurnOrder);
-      console.log('[ActionTimerPhaseHandler] No slide needed - order unchanged');
+      console.log('[ActionTimerPhaseHandler] No previous order provided, skipping animation');
     }
   }
 
@@ -599,10 +638,20 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     if (!this.turnOrderRenderer) {
       this.turnOrderRenderer = new TurnOrderRenderer(sortedUnits, currentTickNumber);
     } else {
-      // Update units in existing renderer (preserves scroll offset)
-      // Note: updateUnits is called in updatePhase when tick changes
-      // This ensures the renderer is always up to date
-      this.turnOrderRenderer.updateUnits(sortedUnits);
+      // IMPORTANT: Don't update units if we have a pending deferred slide animation
+      // The units array was set to previousOrder in triggerImmediateSlide, and we
+      // don't want to overwrite it before the deferred slide triggers in render()
+      const hasPendingDeferredSlide = (this.turnOrderRenderer as any).pendingSlideNewOrder !== null;
+
+      if (!hasPendingDeferredSlide) {
+        // Update units in existing renderer (preserves scroll offset)
+        // Note: updateUnits is called in updatePhase when tick changes
+        // This ensures the renderer is always up to date
+        this.turnOrderRenderer.updateUnits(sortedUnits);
+      } else {
+        console.log('[ActionTimerPhaseHandler] Skipping updateUnits - pending deferred slide animation');
+      }
+
       // Update tick count (Task 7)
       this.turnOrderRenderer.updateTickCount(currentTickNumber);
     }
