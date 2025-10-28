@@ -202,31 +202,28 @@ react-app/src/
 **Transitions To:** unit-turn phase (when first unit reaches 100)
 
 #### `UnitTurnPhaseHandler.ts`
-**Purpose:** Individual unit's turn - cursor display, unit selection, movement range visualization
+**Purpose:** Individual unit's turn - delegates behavior to strategy pattern (player vs enemy)
 **Exports:** `UnitTurnPhaseHandler`
 **Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick()
+**Architecture:** Uses Strategy Pattern to separate player input from AI decision-making
+- Creates PlayerTurnStrategy for player-controlled units
+- Creates EnemyTurnStrategy for AI-controlled units
+- Delegates input handling, target selection, and action decisions to strategy
+- Keeps single 'unit-turn' phase for both player and enemy turns
 **Current Functionality:**
 - Identifies ready unit (first in turn order with AT >= 100)
 - Displays colored ready message: "[Unit Name] is ready!" (green for players, red for enemies)
 - Shows blinking dark green cursor on active unit (0.5s blink rate)
-- Allows clicking units to select as targets
-- Displays red cursor on targeted units
-- Calculates and displays movement range using flood-fill pathfinding
-- Shows movement range as yellow highlighted tiles (33% alpha)
-- Updates info panel to show targeted unit stats (or active unit if no target)
-- Updates bottom panel to show active unit
-- Displays turn order in top panel sorted by time-to-ready
-- Shows tick counter from state in top panel
-- Waits for player input on player-controlled units
+- Initializes appropriate strategy based on unit.isPlayerControlled
+- Delegates all turn behavior to strategy.update()
+- Gets movement range, target info from strategy
+- Waits for strategy to return TurnAction
 **Rendering:**
 - Uses dual-method rendering pattern (render() and renderUI())
 - render(): Movement range highlights (yellow tiles) - BEFORE units
 - renderUI(): Active/target cursors (green/red) - AFTER units
 - Cached tinting buffer for color tinting (avoids GC pressure)
-**Player Control:**
-- Units have isPlayerControlled flag (set during deployment)
-- Player-controlled units wait for input
-- Enemy units will use AI (future implementation)
+- Queries strategy for movement range and target position each frame
 **Turn Order Logic:**
 - Calculates timeToReady = (100 - actionTimer) / speed for each unit
 - Sorts ascending (soonest first), then alphabetically by name
@@ -235,20 +232,83 @@ react-app/src/
 - Caches TurnOrderRenderer instance to preserve scroll state
 - Caches UnitInfoContent to preserve hover state
 - Caches tinting buffer canvas to avoid per-frame allocations
-- Uses updateUnits() to update unit list without resetting scroll
+- Caches strategy instance for duration of turn
 **Future Functionality:**
-- Action menu (Attack, Ability, Move, Wait, End Turn)
-- Actual movement execution
-- Action execution
-- AI enemy turns
-- Action timer reset/overflow handling
-**Dependencies:** PhaseBase, TurnOrderRenderer, MovementRangeCalculator, CombatEncounter
+- Execute TurnAction when strategy returns one
+- Transition back to action-timer phase after action execution
+**Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy
 **Used By:** CombatView during unit-turn phase
-**Transitions To:** action-timer phase (when implemented - after unit completes action)
+**Transitions To:** action-timer phase (when TurnAction execution is implemented)
 
 ---
 
-### 3. Rendering System
+### 3. Turn Strategies (Strategy Pattern)
+
+#### `strategies/TurnStrategy.ts`
+**Purpose:** Interface defining turn behavior contract for player and AI
+**Exports:** `TurnStrategy`, `TurnAction`
+**Key Methods:** onTurnStart(), onTurnEnd(), update(), handleMapClick(), handleMouseMove(), getTargetedUnit(), getTargetedPosition(), getMovementRange()
+**TurnAction Types:**
+- `{ type: 'wait' }` - End turn without action
+- `{ type: 'move', target: Position }` - Move to position
+- `{ type: 'attack', target: Position }` - Attack target at position
+- `{ type: 'ability', abilityId: string, target?: Position }` - Use ability
+- `{ type: 'end-turn' }` - Explicitly end turn
+**Used By:** PlayerTurnStrategy, EnemyTurnStrategy implementations
+
+#### `strategies/PlayerTurnStrategy.ts`
+**Purpose:** Player turn behavior - waits for input, shows UI
+**Exports:** `PlayerTurnStrategy`
+**Implements:** TurnStrategy
+**Current Functionality:**
+- Calculates movement range on turn start using MovementRangeCalculator
+- Handles map clicks to select units
+- Shows selected unit info in panel
+- Recalculates movement range for selected unit
+- Returns null from update() (waits for player action menu in future)
+**Future Functionality:**
+- Show action menu when clicking active unit
+- Return appropriate TurnAction when player confirms action
+- Handle ability selection and targeting
+- Show valid target indicators on hover
+**State Tracking:**
+- activeUnit, activePosition: The unit whose turn it is
+- targetedUnit, targetedPosition: Currently selected unit (for inspection)
+- movementRange: Yellow highlight tiles showing where unit can move
+- currentState: Reference to CombatState for calculations
+**Dependencies:** MovementRangeCalculator
+**Used By:** UnitTurnPhaseHandler for player-controlled units
+
+#### `strategies/EnemyTurnStrategy.ts`
+**Purpose:** AI turn behavior - automatically decides actions
+**Exports:** `EnemyTurnStrategy`
+**Implements:** TurnStrategy
+**Current Functionality:**
+- Calculates movement range on turn start
+- Adds thinking delay (1.0 second) for visual feedback
+- Returns `{ type: 'end-turn' }` action after delay (placeholder)
+**Future Functionality:**
+- Scan for player units in attack range → attack best target
+- Scan for player units in movement + attack range → move + attack
+- Move toward closest player unit if no attacks available
+- Use abilities strategically
+**AI Helper Methods (commented, ready for implementation):**
+- `_findPlayerUnits()` - Locates all player-controlled units
+- `_calculateDistance()` - Manhattan distance between positions
+- `_findBestAttackTarget()` - Selects optimal attack target (weakest/closest)
+- `_findBestMovementTarget()` - Selects optimal movement destination
+**State Tracking:**
+- movementRange: Tiles enemy can move to
+- thinkingTimer, thinkingDuration: Delay before decision (visual feedback)
+- actionDecided: Cached decision once made
+- targetedUnit, targetedPosition: AI's chosen target (for visualization)
+**Input Handling:** Returns `{ handled: false }` - enemies don't respond to player input
+**Dependencies:** MovementRangeCalculator
+**Used By:** UnitTurnPhaseHandler for enemy-controlled units
+
+---
+
+### 4. Rendering System
 
 #### `rendering/CombatRenderer.ts`
 **Purpose:** Core rendering for map tiles and units
@@ -890,11 +950,12 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 53 Core Files
+## File Count: 56 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
+**Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
 **Rendering:** 2 files
 **Layout & UI:** 13 files
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)

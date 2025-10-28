@@ -16,25 +16,31 @@ import type { Position } from '../../types';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { UnitInfoContent } from './managers/panels/UnitInfoContent';
 import { SpriteRenderer } from '../../utils/SpriteRenderer';
-import { MovementRangeCalculator } from './utils/MovementRangeCalculator';
 import { CombatConstants } from './CombatConstants';
+import type { TurnStrategy } from './strategies/TurnStrategy';
+import { PlayerTurnStrategy } from './strategies/PlayerTurnStrategy';
+import { EnemyTurnStrategy } from './strategies/EnemyTurnStrategy';
 
 /**
- * Unit turn phase handler - manages individual unit turns
+ * Unit turn phase handler - manages individual unit turns using strategy pattern
+ *
+ * Architecture:
+ * - Uses TurnStrategy pattern to separate player input from AI decision-making
+ * - PlayerTurnStrategy: waits for player input, shows action menus
+ * - EnemyTurnStrategy: automatically decides actions using AI rules
  *
  * Current functionality:
  * - Displays unit ready message with colored names
  * - Shows blinking cursor on active unit
- * - Allows unit selection and displays movement range
+ * - Delegates turn behavior to strategy (player vs enemy)
  * - Shows target cursor on selected units
  * - Displays unit stats in info panel
- * - Waits for player input (player-controlled units)
  *
  * Future functionality:
  * - Action menu (Attack, Ability, Move, Wait, End Turn)
  * - Actual movement execution
  * - Action execution
- * - AI enemy turns
+ * - More sophisticated AI strategies
  * - Action timer reset/overflow handling
  */
 export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandler {
@@ -43,10 +49,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   private activeUnitPosition: Position | null = null;
   private readyMessageWritten: boolean = false;
 
-  // Target selection
-  private targetedUnit: CombatUnit | null = null;
-  private targetedUnitPosition: Position | null = null;
-  private movementRange: Position[] = [];
+  // Strategy pattern - handles player vs enemy behavior
+  private currentStrategy: TurnStrategy | null = null;
 
   // Cursor animation
   private cursorBlinkTimer: number = 0;
@@ -177,8 +181,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.pendingLogMessages = [];
     }
 
+    // Get movement range from strategy
+    const movementRange = this.currentStrategy?.getMovementRange() ?? [];
+
     // Render movement range highlights (yellow tiles) - rendered BEFORE units
-    for (const position of this.movementRange) {
+    for (const position of movementRange) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
       const x = Math.floor(offsetX + (position.x * tileSize));
       const y = Math.floor(offsetY + (position.y * tileSize));
@@ -223,11 +230,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       );
     }
 
+    // Get target position from strategy
+    const targetedPosition = this.currentStrategy?.getTargetedPosition();
+
     // Render target cursor (red, always visible) - rendered AFTER units per user feedback
-    if (this.targetedUnitPosition) {
+    if (targetedPosition) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
-      const x = Math.floor(offsetX + (this.targetedUnitPosition.x * tileSize));
-      const y = Math.floor(offsetY + (this.targetedUnitPosition.y * tileSize));
+      const x = Math.floor(offsetX + (targetedPosition.x * tileSize));
+      const y = Math.floor(offsetY + (targetedPosition.y * tileSize));
 
       // Render with red tint
       this.renderTintedSprite(
@@ -262,11 +272,19 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return a.unit.name.localeCompare(b.unit.name);
     });
 
-    // Initialize active unit on first frame
+    // Initialize active unit and strategy on first frame
     if (sortedUnits.length > 0 && !this.activeUnit) {
       const readyPlacement = sortedUnits[0];
       this.activeUnit = readyPlacement.unit;
       this.activeUnitPosition = readyPlacement.position;
+
+      // Initialize appropriate strategy based on unit control
+      this.currentStrategy = this.activeUnit.isPlayerControlled
+        ? new PlayerTurnStrategy()
+        : new EnemyTurnStrategy();
+
+      // Notify strategy that turn is starting
+      this.currentStrategy.onTurnStart(this.activeUnit, this.activeUnitPosition, state);
     }
 
     // Write ready message once
@@ -288,6 +306,30 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     if (this.cursorBlinkTimer >= CombatConstants.UNIT_TURN.CURSOR_BLINK_RATE) {
       this.cursorBlinkTimer = 0;
       this.cursorVisible = !this.cursorVisible;
+    }
+
+    // Update strategy and check for action decision
+    if (this.currentStrategy && this.activeUnit && this.activeUnitPosition) {
+      const action = this.currentStrategy.update(
+        this.activeUnit,
+        this.activeUnitPosition,
+        state,
+        encounter,
+        deltaTime
+      );
+
+      // If strategy has decided on an action, execute it
+      if (action) {
+        // TODO: Execute the action and transition back to action-timer phase
+        // For now, just log the action
+        console.log('[UnitTurnPhaseHandler] Action decided:', action);
+
+        // Clean up strategy
+        this.currentStrategy.onTurnEnd();
+
+        // TODO: Execute action and return new state
+        // For now, just stay in this phase
+      }
     }
 
     // Check victory/defeat conditions
@@ -350,8 +392,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     _state: CombatState,
     _encounter: CombatEncounter
   ): PanelContent | null {
-    // Determine which unit to display (target takes priority)
-    const displayUnit = this.targetedUnit ?? this.activeUnit;
+    // Get targeted unit from strategy (target takes priority over active unit)
+    const targetedUnit = this.currentStrategy?.getTargetedUnit();
+    const displayUnit = targetedUnit ?? this.activeUnit;
 
     if (!displayUnit) {
       return null;
@@ -395,42 +438,16 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
    * This should be displayed in the "Unit Info" panel (top).
    */
   getTargetedUnit(): CombatUnit | null {
-    return this.targetedUnit;
-  }
-
-  /**
-   * Select a unit and calculate its movement range.
-   * Called by both map clicks and turn order clicks.
-   */
-  private selectUnit(unit: CombatUnit, position: Position, state: CombatState): void {
-    this.targetedUnit = unit;
-    this.targetedUnitPosition = position;
-
-    // Calculate movement range for this unit
-    this.movementRange = MovementRangeCalculator.calculateReachableTiles({
-      startPosition: this.targetedUnitPosition,
-      movement: this.targetedUnit.movement,
-      map: state.map,
-      unitManifest: state.unitManifest,
-      activeUnit: this.targetedUnit
-    });
-  }
-
-  /**
-   * Clear the currently selected unit and movement range.
-   */
-  private clearSelection(): void {
-    this.targetedUnit = null;
-    this.targetedUnitPosition = null;
-    this.movementRange = [];
+    return this.currentStrategy?.getTargetedUnit() ?? null;
   }
 
   /**
    * Handle unit clicks from the turn order panel
+   * Delegates to the current strategy (PlayerTurnStrategy handles this, EnemyTurnStrategy ignores it)
    */
   private handleTurnOrderUnitClick(unit: CombatUnit): void {
-    if (!this.currentState) {
-      console.warn('[UnitTurnPhaseHandler] Cannot handle turn order click - no current state');
+    if (!this.currentState || !this.currentStrategy) {
+      console.warn('[UnitTurnPhaseHandler] Cannot handle turn order click - no current state or strategy');
       return;
     }
 
@@ -442,48 +459,41 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return;
     }
 
-    // Use shared selection logic
-    this.selectUnit(unit, placement.position, this.currentState);
+    // Create a fake mouse event context for the strategy
+    const context: MouseEventContext = {
+      canvasX: 0,
+      canvasY: 0,
+      tileX: placement.position.x,
+      tileY: placement.position.y
+    };
+
+    // Delegate to strategy
+    this.currentStrategy.handleMapClick(context, this.currentState, this.currentState as any);
   }
 
   handleMapClick(
     context: MouseEventContext,
     state: CombatState,
-    _encounter: CombatEncounter
+    encounter: CombatEncounter
   ): PhaseEventResult {
-    const { tileX, tileY } = context;
-
-    if (tileX === undefined || tileY === undefined) {
-      return { handled: false };
+    // Delegate to strategy
+    if (this.currentStrategy) {
+      return this.currentStrategy.handleMapClick(context, state, encounter);
     }
 
-    // Check if a unit is at this position
-    const unit = state.unitManifest.getUnitAtPosition({ x: tileX, y: tileY });
-
-    if (unit) {
-      // Use shared selection logic
-      this.selectUnit(unit, { x: tileX, y: tileY }, state);
-
-      return {
-        handled: true
-      };
-    } else {
-      // Clear selection if clicking empty tile
-      this.clearSelection();
-
-      return {
-        handled: true
-      };
-    }
+    return { handled: false };
   }
 
   handleMouseMove(
-    _context: MouseEventContext,
-    _state: CombatState,
-    _encounter: CombatEncounter
+    context: MouseEventContext,
+    state: CombatState,
+    encounter: CombatEncounter
   ): PhaseEventResult {
-    return {
-      handled: false
-    };
+    // Delegate to strategy
+    if (this.currentStrategy) {
+      return this.currentStrategy.handleMouseMove(context, state, encounter);
+    }
+
+    return { handled: false };
   }
 }
