@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.0
-**Last Updated:** Mon, Oct 27, 2025 5:40:30 PM (commit 03c52db - tick counter system)
+**Version:** 1.1
+**Last Updated:** Mon, Oct 27, 2025 6:38:45 PM (commit b994ffa - turn order scrolling feature)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -16,6 +16,7 @@ This document provides a token-efficient reference for AI agents to quickly unde
 - **Modify rendering** → `CombatRenderer` (maps/units), `CombatLayoutManager` (UI layout)
 - **Add deployment zone logic** → `DeploymentPhaseHandler`, `DeploymentZoneRenderer`
 - **Change turn order display** → `TurnOrderRenderer`, `TopPanelManager`
+- **Modify turn order scrolling** → `TurnOrderRenderer` (scroll arrows, hold-to-scroll), cached by phase handlers
 - **Add info panel content** → Implement `PanelContent` interface
 - **Modify combat log** → `CombatLogManager`
 - **Add cinematic sequence** → Implement `CinematicSequence`, use `CinematicManager`
@@ -170,6 +171,10 @@ react-app/src/
 - Avoids duplicate name issues (multiple "Goblin" units work correctly)
 - Linear interpolation from current AT to final AT over 1 second
 - Turn order updates every frame based on timeToReady calculation
+**Caching Strategy:**
+- Caches TurnOrderRenderer instance to preserve scroll state across animation frames
+- Uses updateUnits() to update unit list without resetting scroll position
+- Scroll state persists throughout animation phase
 **Future Functionality:**
 - Speed modifiers from status effects
 - Time stop effects
@@ -188,12 +193,16 @@ react-app/src/
 - Logs "{Unit Name} is ready to act." to console
 - Displays turn order in top panel sorted by time-to-ready (who acts next)
 - Shows tick counter from state in top panel
-- Limited to 8 units for display (matches action-timer phase)
+- Displays all units with scrolling support (no limit)
 - Stays in phase indefinitely (waits for action implementation)
 **Turn Order Logic:**
 - Calculates timeToReady = (100 - actionTimer) / speed for each unit
 - Sorts ascending (soonest first), then alphabetically by name
 - Uses same calculation as ActionTimerPhaseHandler for consistency
+**Caching Strategy:**
+- Caches TurnOrderRenderer instance to preserve scroll state
+- Uses updateUnits() to update unit list without resetting scroll position
+- Scroll state persists while waiting for action implementation
 **Future Functionality:**
 - Action menu (Attack, Ability, Move, Wait, End Turn)
 - Movement/attack range display
@@ -271,9 +280,9 @@ react-app/src/
 **Used By:** TopPanelManager
 
 #### `managers/renderers/TurnOrderRenderer.ts`
-**Purpose:** Renders turn order with unit sprites, action timer values, tick counter, and title
+**Purpose:** Renders turn order with unit sprites, action timer values, tick counter, title, and scrolling support
 **Exports:** `TurnOrderRenderer`
-**Key Methods:** render(), handleClick(), setUnits(), setClickHandler()
+**Key Methods:** render(), handleClick(), handleMouseDown(), handleMouseUp(), handleMouseLeave(), setUnits(), updateUnits(), setClickHandler()
 **Constructor Overload:**
 - `(units, onUnitClick?)` - legacy signature with click handler
 - `(units, tickCount, onUnitClick?)` - new signature with tick counter
@@ -287,17 +296,33 @@ react-app/src/
 - Action timer (AT) values displayed below each sprite in white
 - Supports dual font rendering (15px-dungeonslant and 7px-04b03)
 - Clickable unit portraits for selection
+**Scrolling Features:**
+- Displays up to 8 units at once with horizontal scrolling for 8+ units
+- Scroll arrows (minimap-6, minimap-8) stacked vertically on right side
+- Left arrow (top): Scroll to previous units
+- Right arrow (bottom): Scroll to next units
+- Hold-to-scroll with 200ms repeat interval
+- Click arrows for single-unit scroll, hold for continuous scrolling
+- Mouse leave/up stops continuous scrolling
+- Scroll state preserved across animation updates via updateUnits()
+- Scroll state reset when setUnits() called (explicit context change)
 **Layout:**
 - Title: centered at top, no padding
 - Clock: left side (4px padding), "TIME" label at top, tick count below sprite
 - Sprites: bottom-aligned with 3px downward shift, centered as group
 - AT values: centered below each sprite
-- Limited to 8 units for display (reduced from 10 to make room for clock)
+- Arrows: right edge, stacked (left arrow at y=0, right arrow at y=12)
+- Max visible units: 8 (allows scrolling through larger unit lists)
 **Color Scheme:**
 - Title text: #FFA500 (orange)
 - "TIME" label: #FFA500 (orange, matches title)
 - Tick counter: #ffffff (white, matches AT values)
 - AT values: #ffffff (white)
+**State Management:**
+- Cached by phase handlers (ActionTimerPhaseHandler, UnitTurnPhaseHandler)
+- Maintains scroll offset across renders
+- Uses updateUnits() to preserve scroll position during animation frames
+- Uses setUnits() to reset scroll when entering new context
 **Dependencies:** CombatUnit, SpriteRenderer, FontAtlasRenderer
 **Used By:** TopPanelManager during action-timer and unit-turn phases
 
