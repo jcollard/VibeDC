@@ -527,13 +527,19 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     } else if (currentUnit) {
       // During unit-turn phase, show actions menu
       if (!(this.cachedBottomPanelContent instanceof ActionsMenuContent)) {
-        // Create new actions menu content
-        this.cachedBottomPanelContent = new ActionsMenuContent({
-          title: 'ACTIONS',
-          titleColor: '#ffa500',
-          padding: 1,
-          lineSpacing: 8,
-        });
+        // Create new actions menu content with unit
+        this.cachedBottomPanelContent = new ActionsMenuContent(
+          {
+            title: 'ACTIONS',
+            titleColor: '#ffa500',
+            padding: 1,
+            lineSpacing: 8,
+          },
+          currentUnit
+        );
+      } else {
+        // Update with current unit (preserves hover state)
+        this.cachedBottomPanelContent.updateUnit(currentUnit);
       }
 
       // Re-enable buttons when entering unit-turn phase (they are disabled after clicking)

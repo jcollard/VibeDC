@@ -2,6 +2,7 @@ import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion, PanelClickResult } from './PanelContent';
 import { HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT } from './colors';
+import type { CombatUnit } from '../../CombatUnit';
 
 /**
  * Configuration for actions menu panel appearance
@@ -37,28 +38,124 @@ interface ActionButton {
  */
 export class ActionsMenuContent implements PanelContent {
   private readonly config: ActionsMenuConfig;
-  private readonly buttons: ActionButton[];
+  private buttons: ActionButton[];
   private hoveredButtonIndex: number | null = null;
   private buttonsDisabled: boolean = false; // Disable after first click
+  private currentUnit: CombatUnit | null = null;
 
-  constructor(config: ActionsMenuConfig) {
+  constructor(config: ActionsMenuConfig, unit?: CombatUnit) {
     this.config = config;
 
-    // Define action buttons
-    this.buttons = [
-      {
-        id: 'delay',
-        label: 'Delay',
+    if (unit) {
+      this.currentUnit = unit;
+      this.buttons = this.buildButtonList(unit);
+    } else {
+      // Fallback: just Delay and End Turn if no unit provided
+      this.currentUnit = null;
+      this.buttons = [
+        {
+          id: 'delay',
+          label: 'Delay',
+          enabled: true,
+          helperText: 'Take no moves or actions and sets Action Timer to 50'
+        },
+        {
+          id: 'end-turn',
+          label: 'End Turn',
+          enabled: true,
+          helperText: 'Ends your turn and sets Action Timer to 0'
+        }
+      ];
+    }
+  }
+
+  /**
+   * Update the action menu for a new unit without resetting hover state
+   * @param unit - The combat unit whose turn it is
+   */
+  updateUnit(unit: CombatUnit): void {
+    // Store current unit reference
+    this.currentUnit = unit;
+
+    // Rebuild button list based on unit stats and classes
+    this.buttons = this.buildButtonList(unit);
+
+    // Validate hover index is still valid
+    if (this.hoveredButtonIndex !== null &&
+        this.hoveredButtonIndex >= this.buttons.length) {
+      this.hoveredButtonIndex = null;
+    }
+
+    // Mark buttons as enabled (reset disabled state from previous turn)
+    this.buttonsDisabled = false;
+  }
+
+  /**
+   * Build dynamic button list based on unit's stats and classes
+   */
+  private buildButtonList(unit: CombatUnit): ActionButton[] {
+    const buttons: ActionButton[] = [];
+
+    // Move button
+    buttons.push({
+      id: 'move',
+      label: 'Move',
+      enabled: true,
+      helperText: `Move this unit up to ${unit.movement} tiles`
+    });
+
+    // Attack button
+    buttons.push({
+      id: 'attack',
+      label: 'Attack',
+      enabled: true,
+      helperText: 'Perform a basic attack with this unit\'s weapon'
+    });
+
+    // Primary class button
+    const primaryClassName = unit.unitClass.name;
+    buttons.push({
+      id: 'primary-class',
+      label: primaryClassName,
+      enabled: true,
+      helperText: `Perform a ${primaryClassName} action`
+    });
+
+    // Secondary class button (conditional)
+    if (unit.secondaryClass) {
+      const secondaryClassName = unit.secondaryClass.name;
+      buttons.push({
+        id: 'secondary-class',
+        label: secondaryClassName,
         enabled: true,
-        helperText: 'Take no moves or actions and sets this Unit\'s Action Timer to 50'
-      },
-      {
-        id: 'end-turn',
-        label: 'End Turn',
-        enabled: true,
-        helperText: 'Ends your turn and sets this Unit\'s Action Timer to 0'
-      }
-    ];
+        helperText: `Perform a ${secondaryClassName} action`
+      });
+    }
+
+    // Delay button
+    buttons.push({
+      id: 'delay',
+      label: 'Delay',
+      enabled: true,
+      helperText: 'Take no moves or actions and sets Action Timer to 50'
+    });
+
+    // End Turn button
+    buttons.push({
+      id: 'end-turn',
+      label: 'End Turn',
+      enabled: true,
+      helperText: 'Ends your turn and sets Action Timer to 0'
+    });
+
+    return buttons;
+  }
+
+  /**
+   * Get the current unit this menu is displaying actions for
+   */
+  getCurrentUnit(): CombatUnit | null {
+    return this.currentUnit;
   }
 
   /**
