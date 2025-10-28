@@ -33,6 +33,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   private readonly slideAnimationDuration: number = 1.5; // seconds (testing: 1.5s, default: 0.25s)
   private previousPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
   private targetPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
+  private animatingUnits: CombatUnit[] = []; // Units that are currently animating
   private cachedRegion: PanelRegion | null = null; // Cached from last render
   private pendingSlideNewOrder: CombatUnit[] | null = null; // Pending slide to trigger on next render
 
@@ -155,10 +156,21 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // Update units array to new order
     this.units = newOrder;
 
+    // Store all units that need to be rendered during animation
+    // This includes units from BOTH previous and new order (so units can slide off screen)
+    const animatingUnitsSet = new Set<CombatUnit>();
+    for (let i = 0; i < this.units.length; i++) {
+      const unit = this.units[i];
+      if (this.previousPositions.get(unit) !== undefined && this.targetPositions.get(unit) !== undefined) {
+        animatingUnitsSet.add(unit);
+      }
+    }
+    this.animatingUnits = Array.from(animatingUnitsSet);
+
     // Start animation
     this.slideAnimationActive = true;
     this.slideAnimationElapsedTime = 0;
-    console.log('[TurnOrderRenderer] Slide animation started! Active:', this.slideAnimationActive);
+    console.log('[TurnOrderRenderer] Slide animation started! Active:', this.slideAnimationActive, 'animating', this.animatingUnits.length, 'units');
   }
 
   /**
@@ -297,8 +309,6 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // Calculate visible window based on scroll position
     const startIndex = this.scrollOffset;
     const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, this.units.length);
-    const visibleUnits = this.units.slice(startIndex, endIndex);
-
     // Position sprites at the bottom of the panel
     // Leave room for sprite (12px) + timer text (7px), shifted down 3px total (2px + 1px for sprite)
     const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
@@ -314,36 +324,31 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // If slide animation active, interpolate positions
     if (this.slideAnimationActive) {
       const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
-      console.log('[TurnOrderRenderer] Rendering animation, visibleUnits:', visibleUnits.length, 'progress:', progress.toFixed(2));
 
-      for (const unit of visibleUnits) {
+      console.log('[TurnOrderRenderer] Rendering animation, animatingUnits:', this.animatingUnits.length, 'progress:', progress.toFixed(2));
+
+      for (const unit of this.animatingUnits) {
         const previousX = this.previousPositions.get(unit);
         const targetX = this.targetPositions.get(unit);
 
+        // These should always be defined since we filtered them when creating animatingUnits
+        if (previousX === undefined || targetX === undefined) {
+          console.warn(`[TurnOrderRenderer] Unit ${unit.name}: missing animation data, skipping`);
+          continue;
+        }
+
         console.log(`[TurnOrderRenderer] Unit ${unit.name}: previousX=${previousX}, targetX=${targetX}`);
 
-        let currentX: number;
-        if (previousX !== undefined && targetX !== undefined) {
-          // Linear interpolation
-          currentX = previousX + (targetX - previousX) * progress;
-          console.log(`[TurnOrderRenderer] Interpolating ${unit.name} to ${currentX.toFixed(1)}`);
-        } else {
-          // Unit wasn't in previous order or isn't in target order
-          // Just render at target position (calculate it)
-          const targetXPositions = this.calculateUnitXPositions(this.units, region);
-          const index = visibleUnits.indexOf(unit);
-          if (index >= 0 && index < targetXPositions.length) {
-            currentX = targetXPositions[index];
-          } else {
-            continue; // Skip unit if can't determine position
-          }
-        }
+        // Linear interpolation
+        const currentX = previousX + (targetX - previousX) * progress;
+        console.log(`[TurnOrderRenderer] Interpolating ${unit.name} to ${currentX.toFixed(1)}`);
 
         // Render the unit at interpolated position
         this.renderUnitAtPosition(ctx, unit, currentX, spriteY, spriteImages, spriteSize, smallFontAtlasImage);
       }
     } else {
       // No animation, render at static positions
+      const visibleUnits = this.units.slice(startIndex, endIndex);
       const positions = this.calculateUnitXPositions(this.units, region);
       for (let i = 0; i < visibleUnits.length; i++) {
         if (i >= positions.length) break;
