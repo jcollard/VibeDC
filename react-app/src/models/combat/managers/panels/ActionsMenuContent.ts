@@ -193,10 +193,7 @@ export class ActionsMenuContent implements PanelContent {
     );
     currentY += this.config.lineSpacing;
 
-    // Skip a line after title
-    currentY += this.config.lineSpacing;
-
-    // Render action buttons
+    // Render action buttons (no blank line after title)
     for (let i = 0; i < this.buttons.length; i++) {
       const button = this.buttons[i];
       const isHovered = this.hoveredButtonIndex === i;
@@ -369,16 +366,14 @@ export class ActionsMenuContent implements PanelContent {
   private getButtonIndexAt(_relativeX: number, relativeY: number): number | null {
     // Calculate button regions based on layout
     // Title line: padding
-    // Blank line: padding + lineSpacing
-    // First button: padding + (lineSpacing * 2)
-    // Second button: padding + (lineSpacing * 3)
+    // First button: padding + lineSpacing
+    // Second button: padding + (lineSpacing * 2)
     // etc.
 
     const titleHeight = this.config.lineSpacing;
-    const blankLineHeight = this.config.lineSpacing;
-    const buttonsStartY = this.config.padding + titleHeight + blankLineHeight;
+    const buttonsStartY = this.config.padding + titleHeight;
 
-    // Check if click is below the title and blank line
+    // Check if click is below the title
     if (relativeY < buttonsStartY) {
       return null;
     }
