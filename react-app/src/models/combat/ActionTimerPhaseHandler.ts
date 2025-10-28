@@ -248,6 +248,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   /**
    * Start the animation by simulating discrete ticks until a unit reaches 100
    * Stores start/target values for animation
+   * Only simulates ticks if no units are already ready (AT >= 100)
    * @param manifest Current unit manifest
    */
   private startAnimation(
@@ -262,6 +263,25 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     for (const placement of allUnits) {
       const unit = placement.unit;
       this.startTimers.set(unit, unit.actionTimer);
+    }
+
+    // Check if any unit is already ready (AT >= 100)
+    const alreadyReady = allUnits.some(p => p.unit.actionTimer >= 100);
+
+    // If someone is already ready, don't simulate any ticks
+    if (alreadyReady) {
+      console.log('[ActionTimerPhaseHandler] Unit already ready (AT >= 100), skipping tick simulation');
+      // Target values are same as start values (no change)
+      for (const placement of allUnits) {
+        const unit = placement.unit;
+        this.targetTimers.set(unit, unit.actionTimer);
+      }
+      this.targetTickCount = this.startTickCount; // No ticks simulated
+
+      // Start animation (instant completion since progress will be 1.0 immediately)
+      this.animationStartTime = 0;
+      this.isAnimating = true;
+      return;
     }
 
     // Simulate discrete ticks until a unit reaches 100
