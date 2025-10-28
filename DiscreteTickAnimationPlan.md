@@ -185,22 +185,30 @@ protected updatePhase(...): CombatState | null {
 
     // Check if animation complete
     if (this.currentTickIndex >= this.tickSnapshots.length - 1) {
-      this.isAnimating = false;
-      // Apply final tick values
-      const finalSnapshot = this.tickSnapshots[this.tickSnapshots.length - 1];
-      for (const [unit, timerValue] of finalSnapshot.unitTimers.entries()) {
-        (unit as any)._actionTimer = timerValue;
-      }
+      // Final tick reached - check if slide animation is still playing
+      const slideInProgress = this.cachedTurnOrderRenderer?.updateSlideAnimation(deltaTime);
 
-      // Transition to unit-turn phase
-      const readyUnit = this.getReadyUnit(state.unitManifest);
-      if (readyUnit) {
-        return {
-          ...state,
-          phase: 'unit-turn',
-          tickCount: finalSnapshot.tickNumber
-        };
+      if (!slideInProgress) {
+        // Slide complete (or no slide) - transition to unit-turn phase
+        this.isAnimating = false;
+
+        // Apply final tick values
+        const finalSnapshot = this.tickSnapshots[this.tickSnapshots.length - 1];
+        for (const [unit, timerValue] of finalSnapshot.unitTimers.entries()) {
+          (unit as any)._actionTimer = timerValue;
+        }
+
+        // Transition to unit-turn phase
+        const readyUnit = this.getReadyUnit(state.unitManifest);
+        if (readyUnit) {
+          return {
+            ...state,
+            phase: 'unit-turn',
+            tickCount: finalSnapshot.tickNumber
+          };
+        }
       }
+      // If slide still in progress, stay in this phase and continue animating
     }
   }
 
@@ -250,6 +258,9 @@ export class TurnOrderRenderer implements TopPanelRenderer {
    * Called by ActionTimerPhaseHandler when turn order changes
    */
   startSlideAnimation(newOrder: CombatUnit[], region: PanelRegion): void {
+    // Reset scroll to show first 8 units during animation (per user requirement)
+    this.scrollOffset = 0;
+
     // Calculate current X positions based on current units array
     const currentXPositions = this.calculateUnitXPositions(this.units, region);
     for (let i = 0; i < this.units.length; i++) {
@@ -533,39 +544,39 @@ if (targetTickIndex > this.currentTickIndex && targetTickIndex < this.tickSnapsh
 
 ---
 
-## Questions for User
+## Questions for User (ANSWERED)
 
 1. **Slide Easing:** Should position slides use:
    - **Linear** (constant speed): Simpler, more "mechanical" feel
    - **Ease-out** (fast→slow): Smoother, more "natural" feel
    - **Ease-in-out** (slow→fast→slow): Most polished, but may feel sluggish
 
-   **Recommendation:** Linear for now (simplest), can refine later if needed.
+   **Answer:** ✅ **Linear** (agreed with recommendation)
 
 2. **Multiple Position Changes:** If a unit moves multiple positions in one tick (e.g., position 3 → position 1, jumping over two units), should it:
    - **Slide the full distance**: Unit slides from old X to new X directly
    - **Step through intermediate positions**: Unit "bounces" through intermediate slots
 
-   **Recommendation:** Slide the full distance (simpler, clearer).
+   **Answer:** ✅ **Slide the full distance** (agreed with recommendation)
 
 3. **Slide During Final Tick:** If turn order changes on the final tick (the tick where someone reaches AT=100), should we:
    - **Skip the slide** and transition immediately to unit-turn phase
    - **Show the slide** and delay transition until slide completes
 
-   **Recommendation:** Skip the slide on final tick (faster transition to unit's turn).
+   **Answer:** ✅ **Show the slide** (user wants to see the transition, different from recommendation)
 
 4. **Configurable Constants Location:** Should TICK_DISPLAY_DURATION and POSITION_SLIDE_DURATION be:
    - **File-level constants** in ActionTimerPhaseHandler.ts (simple, but requires code change)
    - **CombatConstants** entries (more discoverable, easier to tune)
 
-   **Recommendation:** File-level constants for now, can move to CombatConstants later if needed.
+   **Answer:** ✅ **File-level constants** (agreed with recommendation)
 
 5. **Scrolling During Slide:** If the user scrolls the turn order panel while a slide animation is active, should we:
    - **Cancel the slide** and jump to final positions
    - **Continue the slide** for visible units only
    - **Prevent scrolling** during slide (lock the UI)
 
-   **Recommendation:** Continue the slide for visible units (least disruptive).
+   **Answer:** ✅ **Always reset to show position 0-7** (reset scroll to first 8 units when animation starts, different from recommendation)
 
 ---
 
@@ -643,6 +654,210 @@ if (targetTickIndex > this.currentTickIndex && targetTickIndex < this.tickSnapsh
 ✅ 100% compliance with GeneralGuidelines.md
 ✅ No performance regressions (60 fps maintained)
 ✅ Configuration constants easy to tune (TICK_DISPLAY_DURATION, POSITION_SLIDE_DURATION)
+
+---
+
+## Relevant Context from Guidelines and Architecture
+
+### GeneralGuidelines.md - Key Patterns
+
+#### WeakMap for Animation Data (Lines 577-651)
+**Pattern:** Use WeakMap with unit instances as keys for temporary animation data
+```typescript
+// Correct: Works with duplicate unit names
+private startTimers: WeakMap<CombatUnit, number> = new WeakMap();
+private targetTimers: WeakMap<CombatUnit, number> = new WeakMap();
+
+// Store data keyed by unit instance
+this.startTimers.set(unit, unit.actionTimer);
+
+// Wrong: Breaks with duplicate names
+private startTimers: Map<string, number> = new Map();
+this.startTimers.set(unit.name, unit.actionTimer); // Multiple "Goblin" units overwrite!
+```
+
+**Benefits:**
+- Works correctly with duplicate unit names (multiple "Goblin" units)
+- Automatic garbage collection when units removed
+- Type-safe (compiler prevents wrong key type)
+
+**Current Implementation:** ActionTimerPhaseHandler already uses this pattern for startTimers and targetTimers - preserve this in refactor.
+
+#### State Preservation vs Reset Pattern (Lines 311-351)
+**Pattern:** Separate methods for explicit reset vs state preservation
+```typescript
+// Explicit reset - user changed context
+setItems(items: Item[]): void {
+  this.items = items;
+  this.scrollOffset = 0; // Reset to start
+}
+
+// Preserve state - data updated within same context
+updateItems(items: Item[]): void {
+  this.items = items;
+  // Clamp scroll to valid range if list shrunk
+  const maxOffset = Math.max(0, this.items.length - this.visibleCount);
+  this.scrollOffset = Math.min(this.scrollOffset, maxOffset);
+}
+```
+
+**Current Implementation:** TurnOrderRenderer already has this pattern:
+- `setUnits()` - resets scroll state (used on phase entry)
+- `updateUnits()` - preserves scroll state (used during animation)
+
+**New Requirement:** `startSlideAnimation()` should reset scroll to 0 (show first 8 units) per user answer to Question 5.
+
+#### Rendering Pipeline (Lines 910-1009)
+**Pattern:** Phase handlers use dual-method rendering for Z-ordering
+```typescript
+interface CombatPhaseHandler {
+  render?(...): void;    // BEFORE units (underlays: movement range, effects)
+  renderUI?(...): void;  // AFTER units (overlays: cursors, UI)
+}
+```
+
+**Render Order:**
+1. Map terrain (tiles, walls)
+2. Phase handler `render()` - Underlays
+3. Deployment zones
+4. Units
+5. Phase handler `renderUI()` - Overlays
+6. Layout UI (panels, combat log, buttons)
+
+**Current Implementation:** ActionTimerPhaseHandler doesn't override render/renderUI (no visual overlays). This refactor doesn't add visual overlays, so no changes needed.
+
+#### No renderFrame() in Event Handlers (Lines 236-242, 1323-1344)
+**Rule:** Update state only in event handlers, let animation loop handle rendering
+```typescript
+// Wrong: Blocks animation loop
+handleMouseMove(x, y) {
+  this.hoveredItem = this.detectHover(x, y);
+  renderFrame(); // Can fire 100+ times/second!
+}
+
+// Correct: Fast state update, rendering happens in animation loop
+handleMouseMove(x, y) {
+  this.hoveredItem = this.detectHover(x, y);
+  // Animation loop will render on next frame (~16ms)
+}
+```
+
+**Application:** This refactor doesn't add new event handlers, but keep in mind for future work.
+
+#### Immutable State Updates (Lines 288-308)
+**Rule:** Always create new state objects with spread operator
+```typescript
+// Correct: Create new state object
+return {
+  ...state,
+  phase: 'battle' as const,
+  tickCount: finalTickNumber
+};
+
+// Wrong: Mutates state, breaks React change detection
+state.phase = 'battle';
+return state;
+```
+
+**Application:** Task 3 transition to unit-turn phase already uses spread operator correctly.
+
+#### Direct Mutation for CombatUnit Fields (Lines 409-450)
+**Pattern:** CombatUnit objects are mutable, update fields directly (not spread operator)
+```typescript
+// Correct: Direct mutation preserves object identity
+(unit as any)._actionTimer = newValue;
+
+// Wrong: Creates new object, breaks WeakMap references
+const updatedUnit = { ...unit, actionTimer: newValue };
+```
+
+**Rationale:** Using spread operator creates new object with different identity, breaking WeakMap references in CombatUnitManifest.
+
+**Current Implementation:** ActionTimerPhaseHandler already uses direct mutation (line 219). Preserve this pattern in Task 3.
+
+### CombatHierarchy.md - Relevant Architecture
+
+#### ActionTimerPhaseHandler Current State (Lines 161-203)
+**Current Functionality:**
+- Simulates discrete tick increments until first unit reaches 100 AT
+- Each tick: `actionTimer += speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER`
+- Animates all units' action timers from current to final state over 1 second
+- Shows turn order sorted by predicted turn order in top panel
+- Displays current AT values below unit sprites
+- Dynamically re-sorts units during animation as relative positions change
+
+**Animation Pattern:**
+- Uses WeakMap<CombatUnit, number> for per-unit start/target AT values
+- Linear interpolation from current AT to final AT over 1 second
+- Turn order updates every frame based on timeToReady calculation
+
+**Caching Strategy:**
+- Caches TurnOrderRenderer instance to preserve scroll state across animation frames
+- Uses updateUnits() to update unit list without resetting scroll position
+- Scroll state persists throughout animation phase
+
+**Key Constants:**
+- ACTION_TIMER_MULTIPLIER: 1 (controls combat pacing)
+- TICK_SIZE: 1 (size of each discrete tick increment)
+- animationDuration: 1.0 second (AT value animation time)
+
+**Changes Needed:**
+- Replace continuous interpolation with discrete tick snapshots
+- Add TICK_DISPLAY_DURATION constant (0.5s per tick)
+- Store TickSnapshot[] array instead of single target values
+- Step through snapshots discretely instead of interpolating
+
+#### TurnOrderRenderer Current Features (Lines 386-432)
+**Rendering Features:**
+- "Action Timers" title in orange at top
+- Clock sprite with "TIME" label and tick counter
+- Units centered horizontally, bottom-aligned
+- Unit sprites with 12px spacing
+- AT values displayed below each sprite in white
+
+**Scrolling Features:**
+- Displays up to 8 units at once
+- Scroll arrows on right side (stacked vertically)
+- Hold-to-scroll with 200ms repeat interval
+- Scroll state preserved via updateUnits()
+- Scroll state reset via setUnits()
+
+**State Management:**
+- Cached by phase handlers
+- Maintains scroll offset across renders
+- Uses updateUnits() to preserve scroll during animation
+- Uses setUnits() to reset scroll when entering new context
+
+**Changes Needed:**
+- Add slide animation state (previousPositions, targetPositions WeakMaps)
+- Add startSlideAnimation() method
+- Add updateSlideAnimation() method returning boolean (animation in progress?)
+- Cache region in render() for use in startSlideAnimation()
+- Reset scroll to 0 in startSlideAnimation() per user requirement
+- Interpolate X positions during slide animation in render()
+
+#### Turn Order Calculation (Lines 232-236)
+**Current Algorithm:**
+- Calculates timeToReady = (100 - actionTimer) / speed for each unit
+- Sorts ascending (soonest first), then alphabetically by name
+- Same calculation used in ActionTimerPhaseHandler and UnitTurnPhaseHandler
+
+**Changes Needed:**
+- Store turn order in each TickSnapshot (pre-calculated)
+- Compare previous tick's order to current tick's order to detect changes
+- Trigger slide animation when order changes
+
+#### Tick Counter Display (Lines 59-60, 392-407)
+**Current Implementation:**
+- CombatState.tickCount (optional number) - persists across phases
+- ActionTimerPhaseHandler updates tickCount on phase transition
+- TurnOrderRenderer displays tick counter below clock sprite
+- Constructor overload accepts tickCount parameter
+
+**Changes Needed:**
+- Store tickNumber in each TickSnapshot
+- Update TurnOrderRenderer.updateTickCount() on each tick transition
+- Final tick's tickNumber written to state.tickCount on phase transition
 
 ---
 
