@@ -35,10 +35,10 @@ export class UnitInfoContent implements PanelContent {
     'M.Evd': 'Evasion rate vs. Magical Attacks',
     'M.Pow': 'Magic Power determines magic damage',
     'Move': 'The number of tiles this unit can move',
-    'Speed': "Action Timer increases by Speed each turn. Units at when reaching 100.",
+    'Speed': "Action Timer increases by Speed each turn. Units act when reaching 100.",
     'Courage': 'Courage determines if some abilities succeed',
     'Attunement': 'Attunement determines if some abilities succeed',
-    'Action Timer': 'Action Timer increases by Speed each turn. Units at when reaching 100.'
+    'Action Timer': 'Action Timer increases by Speed each turn. Units act when reaching 100.'
   };
 
   constructor(config: UnitInfoConfig, unit: CombatUnit) {
