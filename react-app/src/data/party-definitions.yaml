@@ -16,7 +16,6 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 10
     spriteId: "crystalwarriors-14"
-    secondaryClassId: "rogue"
     reactionAbilityId: "parry-001"
     passiveAbilityId: "meat-shield-001"
     movementAbilityId: "journeyman-001"

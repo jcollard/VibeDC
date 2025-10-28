@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.4
-**Last Updated:** Tue, Oct 28, 2025 (main branch - Dynamic actions menu with unit-specific buttons and helper text)
+**Version:** 1.5
+**Last Updated:** Tue, Oct 28, 2025, 12:20 PM (unit-info-revision branch - Enhanced Unit Info panel with sprite, stats grid, and action timer)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -400,7 +400,10 @@ react-app/src/
 #### `managers/InfoPanelManager.ts`
 **Purpose:** Delegates rendering and input to PanelContent implementations
 **Exports:** `InfoPanelManager`
-**Key Methods:** setContent(), render(), handleClick(), handleHover(), handleMouseDown()
+**Key Methods:** setContent(), render(ctx, region, fontId, fontAtlasImage, spriteImages?, spriteSize?), handleClick(), handleHover(), handleMouseDown()
+**Rendering:**
+- Forwards all render parameters including optional spriteImages and spriteSize to panel content
+- Transforms canvas coordinates to panel-relative coordinates for event handling
 **Dependencies:** PanelContent
 **Used By:** CombatLayoutManager for bottom/top info panels
 
@@ -491,22 +494,45 @@ react-app/src/
 **Used By:** TopPanelManager during deployment phases
 
 #### `managers/panels/PanelContent.ts`
-**Purpose:** Interface for info panel content with event handling
+**Purpose:** Interface for info panel content with event handling and sprite rendering support
 **Exports:** `PanelContent`, `PanelRegion`, `PanelClickResult`
-**Key Methods:** render(), handleClick(), handleHover(), handleMouseDown()
+**Key Methods:** render(ctx, region, fontId, fontAtlasImage, spriteImages?, spriteSize?), handleClick(), handleHover(), handleMouseDown()
+**Interface Updates:**
+- render() method now accepts optional spriteImages and spriteSize parameters for sprite rendering
+- Enables panel content to render unit sprites and UI elements
+- Backward compatible - parameters are optional
 **Implementations:** UnitInfoContent, PartyMembersContent, ActionsMenuContent, EmptyContent
 **Used By:** InfoPanelManager
 
 #### `managers/panels/UnitInfoContent.ts`
-**Purpose:** Displays unit stats, health, mana, abilities
-**Exports:** `UnitInfoContent`
+**Purpose:** Comprehensive unit information display with sprite, stats grid, and action timer
+**Exports:** `UnitInfoContent`, `UnitInfoConfig`
 **Key Methods:** render(), updateUnit(unit, title?, titleColor?)
 **Current Functionality:**
-- Shows unit name as panel title (color-coded: green for players, red for enemies)
-- Displays class, HP, MP, Speed, Movement stats
-- Title and color can be dynamically updated via updateUnit()
-**Dependencies:** CombatUnit, FontAtlasRenderer
-**Used By:** InfoPanelManager for unit info panels (top panel during unit-turn phase)
+- **Header Section:**
+  - 12×12px unit sprite (top-left corner)
+  - Colored unit name (green for player, red for enemy) with 2px gap after sprite
+  - Primary/Secondary class line (format: "Fighter/Mage" or just "Fighter" if no secondary)
+  - Action Timer in top-right corner (adaptive: "ACTION TIMER" or "AT" + clock icon based on space)
+  - Action Timer value in orange (#ffa500), right-aligned, format: "XX/100"
+- **Stats Grid (Two Columns with 8px gap, 4px spacing after classes):**
+  - Left column (5 stats): HP, P.Pow, M.Pow, Move, Courage
+  - Right column (5 stats): MP, P.Evd, M.Evd, Speed, Attunement
+  - Each column: 67px width (50% of available space minus 4px for gap)
+  - Labels left-aligned at column start, values right-aligned at column end
+  - HP/MP show current/max format (e.g., "45/50")
+  - All other stats show single value (e.g., "12")
+- **Layout Details:**
+  - Panel size: 144px × 108px (12 tiles × 9 tiles)
+  - Uses 7px-04b03 font with 8px line spacing
+  - 1px padding around edges
+  - Title and color dynamically updated via updateUnit()
+**State Management:**
+- Cached in CombatLayoutManager (per GeneralGuidelines.md)
+- updateUnit() preserves instance, updates displayed unit
+- No hover state (read-only display)
+**Dependencies:** CombatUnit, FontAtlasRenderer, SpriteRenderer, FontRegistry
+**Used By:** InfoPanelManager for unit info panels (top and bottom panels during unit-turn phase)
 
 #### `managers/panels/PartyMembersContent.ts`
 **Purpose:** Grid of party member portraits with Enter Combat button
