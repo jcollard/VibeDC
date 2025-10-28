@@ -66,6 +66,15 @@ export interface CombatState {
    */
   previousTurnOrder?: CombatUnit[];
 
+  /**
+   * Pending action timer mutation to apply when entering action-timer phase
+   * Format: { unit: CombatUnit, newValue: number }
+   * This delays the mutation until after the phase transition to avoid showing
+   * the new turn order in unit-turn phase for one frame
+   * NOTE: This is NOT serialized - it's a transient runtime-only field
+   */
+  pendingActionTimerMutation?: { unit: CombatUnit; newValue: number };
+
   // Additional fields will be added as combat mechanics are implemented
 }
 

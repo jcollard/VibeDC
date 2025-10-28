@@ -388,20 +388,24 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       ? this.turnOrderRenderer.getUnits()
       : [];
 
-    // Directly mutate the unit's action timer (units are mutable)
-    // This follows the same pattern as ActionTimerPhaseHandler
-    (this.activeUnit as any)._actionTimer = newActionTimer;
+    // IMPORTANT: Do NOT mutate the action timer here!
+    // If we mutate now, the current frame will render with the new turn order,
+    // causing a visual "flash" before the animation starts.
+    // Instead, store the mutation in state and apply it in ActionTimerPhaseHandler.
+    // (this.activeUnit as any)._actionTimer = newActionTimer; // REMOVED
 
     // Add message to combat log (via pending messages)
     this.pendingLogMessages.push(logMessage);
 
     // Return new state transitioning back to action-timer phase
     // Set pendingSlideAnimation flag and previousTurnOrder for animation
+    // Store the pending mutation to be applied in action-timer phase
     return {
       ...state,
       phase: 'action-timer' as const,
       pendingSlideAnimation: true,
-      previousTurnOrder: previousTurnOrder.length > 0 ? previousTurnOrder : undefined
+      previousTurnOrder: previousTurnOrder.length > 0 ? previousTurnOrder : undefined,
+      pendingActionTimerMutation: { unit: this.activeUnit, newValue: newActionTimer }
     };
   }
 

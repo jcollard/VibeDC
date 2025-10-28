@@ -196,6 +196,21 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     encounter: CombatEncounter,
     deltaTime: number
   ): CombatState | null {
+    // Apply pending action timer mutation FIRST (before any rendering or calculations)
+    // This mutation was deferred from unit-turn phase to avoid showing the new order
+    // for one frame before the animation starts
+    if (state.pendingActionTimerMutation) {
+      const { unit, newValue } = state.pendingActionTimerMutation;
+      (unit as any)._actionTimer = newValue;
+      console.log('[ActionTimerPhaseHandler] Applied pending action timer mutation:', unit.name, '→', newValue);
+
+      // Clear the pending mutation from state
+      state = {
+        ...state,
+        pendingActionTimerMutation: undefined
+      };
+    }
+
     // Check victory/defeat conditions first
     if (encounter.isVictory(state)) {
       console.log('[ActionTimerPhaseHandler] Victory conditions met');
@@ -598,13 +613,23 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
     // Handle immediate-slide mode (no snapshots yet)
     if (this.animationMode === 'immediate-slide') {
-      // Calculate turn order based on current AT values
-      const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
-      const unitTimers = new Map<CombatUnit, number>();
-      for (const unit of units) {
-        unitTimers.set(unit, unit.actionTimer);
+      // If we have a pending deferred slide, use the current renderer's units (previousOrder)
+      // Otherwise we'd show the new order before the animation starts
+      const hasPendingDeferredSlide = this.turnOrderRenderer && (this.turnOrderRenderer as any).pendingSlideNewOrder !== null;
+
+      if (hasPendingDeferredSlide) {
+        // Use the units already set in the renderer (previousOrder)
+        sortedUnits = this.turnOrderRenderer!.getUnits();
+        console.log('[ActionTimerPhaseHandler] Using renderer units for immediate-slide with pending deferred slide');
+      } else {
+        // Calculate turn order based on current AT values
+        const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
+        const unitTimers = new Map<CombatUnit, number>();
+        for (const unit of units) {
+          unitTimers.set(unit, unit.actionTimer);
+        }
+        sortedUnits = this.calculateTurnOrder(units, unitTimers);
       }
-      sortedUnits = this.calculateTurnOrder(units, unitTimers);
       currentTickNumber = state.tickCount || 0;
     }
     // Use snapshots if available (discrete-ticks mode)
