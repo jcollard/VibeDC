@@ -138,12 +138,35 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   getTopPanelRenderer(state: CombatState, _encounter: CombatEncounter): TopPanelRenderer {
-    // Show same turn order as action-timer phase
+    // Use same turn order logic as ActionTimerPhaseHandler
+    // Get all units
     const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
-    const sortedUnits = units.sort((a, b) => b.actionTimer - a.actionTimer);
-    const displayUnits = sortedUnits.slice(0, 10);
 
-    return new TurnOrderRenderer(displayUnits);
+    // Calculate time until each unit reaches 100 action timer
+    const unitsWithTime = units.map(unit => {
+      const timeToReady = unit.speed > 0
+        ? (100 - unit.actionTimer) / unit.speed
+        : Infinity;
+
+      return { unit, timeToReady };
+    });
+
+    // Sort by time to ready (ascending - soonest first), then alphabetically
+    unitsWithTime.sort((a, b) => {
+      if (a.timeToReady !== b.timeToReady) {
+        return a.timeToReady - b.timeToReady;
+      }
+      return a.unit.name.localeCompare(b.unit.name);
+    });
+
+    // Extract sorted units
+    const sortedUnits = unitsWithTime.map(item => item.unit);
+
+    // Limit to 8 units for display (same as action-timer phase)
+    const displayUnits = sortedUnits.slice(0, 8);
+
+    // Create renderer with tick count from state
+    return new TurnOrderRenderer(displayUnits, state.tickCount || 0);
   }
 
   getInfoPanelContent(

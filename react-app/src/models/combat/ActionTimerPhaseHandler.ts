@@ -120,6 +120,11 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   private targetTimers: WeakMap<CombatUnit, number> = new WeakMap(); // unit instance -> target AT value
   private isAnimating: boolean = false;
 
+  // Tick counter - number of discrete ticks simulated to reach ready unit
+  private tickCount: number = 0;
+  private startTickCount: number = 0; // Tick count at start of animation
+  private targetTickCount: number = 0; // Tick count at end of animation
+
   constructor() {
     super();
     console.log('[ActionTimerPhaseHandler] Initialized');
@@ -196,6 +201,9 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       this.animationStartTime += deltaTime;
       const progress = Math.min(this.animationStartTime / this.animationDuration, 1.0);
 
+      // Animate tick count
+      this.tickCount = Math.floor(this.startTickCount + (this.targetTickCount - this.startTickCount) * progress);
+
       // Update all units' timers based on animation progress
       const allUnits = state.unitManifest.getAllUnits();
       for (const placement of allUnits) {
@@ -211,6 +219,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       // Check if animation is complete
       if (progress >= 1.0) {
         this.isAnimating = false;
+        // Ensure tick count is set to final value
+        this.tickCount = this.targetTickCount;
 
         // Find the ready unit
         const readyUnit = this.getReadyUnit(state.unitManifest);
@@ -218,10 +228,11 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
         if (readyUnit) {
           console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
 
-          // Transition to unit-turn phase
+          // Transition to unit-turn phase, passing tick count in state
           return {
             ...state,
-            phase: 'unit-turn'
+            phase: 'unit-turn',
+            tickCount: this.tickCount
           };
         }
       }
@@ -240,6 +251,9 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     manifest: import('./CombatUnitManifest').CombatUnitManifest
   ): void {
     const allUnits = manifest.getAllUnits();
+
+    // Store starting tick count for animation
+    this.startTickCount = this.tickCount;
 
     // Store starting values
     for (const placement of allUnits) {
@@ -289,7 +303,10 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       this.targetTimers.set(unit, targetValue);
     }
 
-    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks to reach first ready unit`);
+    // Store target tick count for animation
+    this.targetTickCount = this.startTickCount + tickCount;
+
+    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks to reach first ready unit (${this.startTickCount} -> ${this.targetTickCount})`);
 
     // Start animation
     this.animationStartTime = 0;
@@ -327,7 +344,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
   /**
    * Get turn order renderer for top panel
-   * Shows units sorted by predicted turn order (who will reach 100 first), limited to 10 units
+   * Shows units sorted by predicted turn order (who will reach 100 first), limited to 8 units
    */
   getTopPanelRenderer(state: CombatState, _encounter: CombatEncounter): TopPanelRenderer {
     // Get all units
@@ -353,12 +370,12 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     // Extract sorted units
     const sortedUnits = unitsWithTime.map(item => item.unit);
 
-    // Limit to 10 units for display
-    const displayUnits = sortedUnits.slice(0, 10);
+    // Limit to 8 units for display (reduced from 10 to make room for clock)
+    const displayUnits = sortedUnits.slice(0, 8);
 
-    // Create new renderer each time with current units
+    // Create new renderer each time with current units and tick count from state
     // (TurnOrderRenderer requires units in constructor, can't cache)
-    return new TurnOrderRenderer(displayUnits);
+    return new TurnOrderRenderer(displayUnits, state.tickCount || this.tickCount || 0);
   }
 
   /**

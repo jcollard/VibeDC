@@ -4,18 +4,30 @@ import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 
 /**
- * Renders the turn order as a horizontal list of unit sprites.
+ * Renders the turn order as a horizontal list of unit sprites with tick counter.
  * Supports clicking on units to select them as the target.
  */
 export class TurnOrderRenderer implements TopPanelRenderer {
   private units: CombatUnit[];
+  private tickCount: number;
   private onUnitClick?: (unit: CombatUnit) => void;
   private readonly spriteSpacing: number = 12; // 1 tile spacing between sprites
   private readonly spriteSize: number = 12; // Sprite size in pixels
 
-  constructor(units: CombatUnit[], onUnitClick?: (unit: CombatUnit) => void) {
+  constructor(units: CombatUnit[], onUnitClickOrTickCount?: ((unit: CombatUnit) => void) | number, tickCount: number = 0) {
     this.units = units;
-    this.onUnitClick = onUnitClick;
+
+    // Handle overloaded constructor: second param can be onUnitClick or tickCount
+    if (typeof onUnitClickOrTickCount === 'function') {
+      this.onUnitClick = onUnitClickOrTickCount;
+      this.tickCount = 0; // Default when callback is provided
+    } else if (typeof onUnitClickOrTickCount === 'number') {
+      this.tickCount = onUnitClickOrTickCount;
+      this.onUnitClick = undefined;
+    } else {
+      this.tickCount = tickCount;
+      this.onUnitClick = undefined;
+    }
   }
 
   /**
@@ -56,6 +68,58 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         1,
         'center',
         '#FFA500' // Orange color
+      );
+    }
+
+    // Render clock sprite and tick counter on the left
+    const clockX = region.x + 4; // Left aligned with padding (shifted right 2px from original 2px)
+    const clockY = region.y + region.height - this.spriteSize - 7 + 3; // Same Y as unit sprites
+
+    // Render "TIME" label above clock
+    if (smallFontAtlasImage) {
+      const timeLabelX = clockX + this.spriteSize / 2 + 1; // Shifted right 1px
+      const timeLabelY = region.y; // Same Y as title
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        'TIME',
+        timeLabelX,
+        timeLabelY,
+        '7px-04b03',
+        smallFontAtlasImage,
+        1,
+        'center',
+        '#FFA500' // Orange color (same as title)
+      );
+    }
+
+    // Render clock sprite (icons-5)
+    SpriteRenderer.renderSpriteById(
+      ctx,
+      'icons-5',
+      spriteImages,
+      spriteSize,
+      clockX,
+      clockY,
+      this.spriteSize,
+      this.spriteSize
+    );
+
+    // Render tick count below clock
+    if (smallFontAtlasImage) {
+      const tickTextX = clockX + this.spriteSize / 2;
+      const tickTextY = clockY + this.spriteSize;
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        this.tickCount.toString(),
+        tickTextX,
+        tickTextY,
+        '7px-04b03',
+        smallFontAtlasImage,
+        1,
+        'center',
+        '#ffffff' // White color (same as AT values)
       );
     }
 

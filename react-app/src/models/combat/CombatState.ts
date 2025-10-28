@@ -44,6 +44,12 @@ export interface CombatState {
    */
   unitManifest: CombatUnitManifest;
 
+  /**
+   * Number of discrete ticks that have occurred in combat
+   * Updated by ActionTimerPhaseHandler, displayed in turn order
+   */
+  tickCount?: number;
+
   // Additional fields will be added as combat mechanics are implemented
 }
 
