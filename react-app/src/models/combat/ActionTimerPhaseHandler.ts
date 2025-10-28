@@ -18,10 +18,16 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 
 /**
  * Multiplier for action timer fill rate
- * Formula: actionTimer += speed * deltaTime * ACTION_TIMER_MULTIPLIER
+ * Formula: actionTimer += speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER (per tick)
  * Higher values = faster combat pacing
  */
 const ACTION_TIMER_MULTIPLIER = 1;
+
+/**
+ * Size of each discrete tick in the action timer system
+ * Timers advance in whole tick increments, not fractional amounts
+ */
+const TICK_SIZE = 1;
 
 /**
  * Placeholder info panel content for action timer phase
@@ -84,18 +90,21 @@ class ActionTimerInfoPanelContent implements PanelContent {
  * Action timer phase handler - manages turn order via action timers
  *
  * Current functionality:
+ * - Simulates discrete ticks until first unit reaches 100 AT
+ * - Each tick increments: actionTimer += speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER
+ * - Ticks are whole number increments (no fractional ticks)
+ * - Animates all units' AT values from current to final state over 1 second
+ * - Shows turn order sorted by predicted turn order (who acts next)
+ * - Dynamically re-sorts units during animation
  * - Displays battlefield (map + units)
- * - Calculates who will reach 100 first
- * - Sets all AT values to their state at that moment
- * - Shows turn order sorted by predicted turn order (with final AT values displayed)
- * - Transitions to unit-turn phase
+ * - Transitions to unit-turn phase when animation completes
  * - Victory/defeat condition checking
  *
  * Future functionality:
  * - Speed modifiers from status effects
  * - Time stop effects
  * - Timer overflow handling (carry over to next turn)
- * - Configurable ACTION_TIMER_MULTIPLIER
+ * - Configurable ACTION_TIMER_MULTIPLIER and TICK_SIZE
  */
 export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHandler {
   // Cached panel content (per GeneralGuidelines.md lines 103-110)
@@ -223,7 +232,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   }
 
   /**
-   * Start the animation by calculating final AT values and storing start/target values
+   * Start the animation by simulating discrete ticks until a unit reaches 100
+   * Stores start/target values for animation
    * @param manifest Current unit manifest
    */
   private startAnimation(
@@ -231,44 +241,55 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   ): void {
     const allUnits = manifest.getAllUnits();
 
-    // Store starting values (WeakMap doesn't have clear(), just create new instances)
-    // Note: WeakMaps don't have a clear() method, but since we're setting all values
-    // in the loop below, any old values for units no longer in manifest will be
-    // automatically garbage collected
-
+    // Store starting values
     for (const placement of allUnits) {
       const unit = placement.unit;
       this.startTimers.set(unit, unit.actionTimer);
     }
 
-    // Calculate time until first unit reaches 100
-    let minTimeToReady = Infinity;
+    // Simulate discrete ticks until a unit reaches 100
+    let tickCount = 0;
+    const maxTicks = 10000; // Safety limit to prevent infinite loop
+    let foundReadyUnit = false;
 
+    // Create temporary working copies of timer values
+    const workingTimers = new Map<CombatUnit, number>();
     for (const placement of allUnits) {
-      const unit = placement.unit;
-      if (unit.speed > 0) {
-        const timeToReady = (100 - unit.actionTimer) / (unit.speed * ACTION_TIMER_MULTIPLIER);
-        if (timeToReady < minTimeToReady) {
-          minTimeToReady = timeToReady;
+      workingTimers.set(placement.unit, placement.unit.actionTimer);
+    }
+
+    // Tick until someone reaches 100
+    while (!foundReadyUnit && tickCount < maxTicks) {
+      tickCount++;
+
+      // Increment all units by one discrete tick
+      for (const placement of allUnits) {
+        const unit = placement.unit;
+        const currentTimer = workingTimers.get(unit) || 0;
+        const increment = unit.speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER;
+        const newTimer = currentTimer + increment;
+        workingTimers.set(unit, newTimer);
+
+        // Check if this unit reached 100
+        if (newTimer >= 100) {
+          foundReadyUnit = true;
         }
       }
     }
 
-    // If no unit can reach 100 (all have speed 0), do nothing
-    if (minTimeToReady === Infinity) {
-      console.warn('[ActionTimerPhaseHandler] No units have speed > 0, cannot advance timers');
+    if (!foundReadyUnit) {
+      console.warn('[ActionTimerPhaseHandler] No unit reached 100 after maximum ticks');
       return;
     }
 
-    // Calculate target values for all units
+    // Store target values from simulation
     for (const placement of allUnits) {
       const unit = placement.unit;
-      const increment = unit.speed * minTimeToReady * ACTION_TIMER_MULTIPLIER;
-      const targetValue = unit.actionTimer + increment;
+      const targetValue = workingTimers.get(unit) || unit.actionTimer;
       this.targetTimers.set(unit, targetValue);
     }
 
-    console.log(`[ActionTimerPhaseHandler] Starting animation to advance timers by ${minTimeToReady.toFixed(2)} seconds`);
+    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks to reach first ready unit`);
 
     // Start animation
     this.animationStartTime = 0;

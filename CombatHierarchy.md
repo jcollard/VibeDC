@@ -140,12 +140,14 @@ react-app/src/
 **Transitions To:** action-timer phase
 
 #### `ActionTimerPhaseHandler.ts`
-**Purpose:** Active Time Battle (ATB) system - calculates and animates turn order
+**Purpose:** Active Time Battle (ATB) system - simulates discrete ticks and animates turn order
 **Exports:** `ActionTimerPhaseHandler`, `ActionTimerInfoPanelContent`
 **Key Methods:** getTopPanelRenderer(), getInfoPanelContent(), handleMapClick(), handleMouseMove(), updatePhase(), startAnimation()
 **Current Functionality:**
-- Calculates which unit reaches 100 action timer first based on speed
-- Animates all units' action timers to final state over 1 second
+- Simulates discrete tick increments until first unit reaches 100 AT
+- Each tick: actionTimer += speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER
+- Ticks are whole number increments (no fractional ticks to reach exactly 100)
+- Animates all units' action timers from current to final state over 1 second
 - Shows turn order sorted by predicted turn order (who acts next) in top panel
 - Displays current action timer (AT) values below unit sprites
 - Dynamically re-sorts units during animation as relative positions change
@@ -154,7 +156,14 @@ react-app/src/
 - Victory/defeat condition checking
 **Key Constants:**
 - ACTION_TIMER_MULTIPLIER: 1 (controls combat pacing)
+- TICK_SIZE: 1 (size of each discrete tick increment)
 - animationDuration: 1.0 second (AT value animation time)
+- maxTicks: 10000 (safety limit for simulation)
+**Tick Simulation:**
+- Creates working copies of all unit timers
+- Increments all timers by discrete amounts each tick
+- Stops when any unit reaches >= 100
+- No fractional ticks - units may exceed 100 by different amounts
 **Animation Pattern:**
 - Uses WeakMap<CombatUnit, number> for per-unit start/target AT values
 - Avoids duplicate name issues (multiple "Goblin" units work correctly)
@@ -164,7 +173,7 @@ react-app/src/
 - Speed modifiers from status effects
 - Time stop effects
 - Timer overflow handling (carry over to next turn)
-- Configurable ACTION_TIMER_MULTIPLIER
+- Configurable ACTION_TIMER_MULTIPLIER and TICK_SIZE
 **Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter, CombatUnit (for WeakMap keys)
 **Used By:** CombatView during action-timer phase
 **Transitions To:** unit-turn phase (when first unit reaches 100)
