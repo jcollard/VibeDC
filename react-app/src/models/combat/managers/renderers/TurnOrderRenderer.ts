@@ -219,6 +219,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
 
   /**
    * Render left/right scroll arrows when appropriate
+   * Both arrows are stacked vertically on the right side
    */
   private renderScrollArrows(
     ctx: CanvasRenderingContext2D,
@@ -227,41 +228,11 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     spriteSize: number
   ): void {
     const arrowSize = 12; // 1 tile (same as sprite size)
+    const arrowX = region.x + region.width - arrowSize; // Right edge
 
-    // Calculate arrow Y position (vertically centered in panel)
-    const arrowY = region.y + (region.height - arrowSize) / 2;
-
-    // Right arrow (show if we can scroll right)
-    if (this.canScrollRight()) {
-      const arrowX = region.x + region.width - arrowSize; // Right edge
-
-      SpriteRenderer.renderSpriteById(
-        ctx,
-        'minimap-6', // Right arrow sprite (same as map scrolling)
-        spriteImages,
-        spriteSize,
-        arrowX,
-        arrowY,
-        arrowSize,
-        arrowSize
-      );
-
-      // Store bounds for click detection
-      this.scrollRightButtonBounds = {
-        x: arrowX,
-        y: arrowY,
-        width: arrowSize,
-        height: arrowSize
-      };
-    } else {
-      this.scrollRightButtonBounds = null;
-    }
-
-    // Left arrow (show if we can scroll left)
+    // Left arrow on top (if we can scroll left)
     if (this.canScrollLeft()) {
-      // Position left arrow to the right of the clock area
-      // Clock is at x=4, width=12, so start at x=20 (with 4px padding)
-      const arrowX = region.x + 20;
+      const leftArrowY = region.y; // Top of panel
 
       SpriteRenderer.renderSpriteById(
         ctx,
@@ -269,7 +240,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         spriteImages,
         spriteSize,
         arrowX,
-        arrowY,
+        leftArrowY,
         arrowSize,
         arrowSize
       );
@@ -277,12 +248,38 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       // Store bounds for click detection
       this.scrollLeftButtonBounds = {
         x: arrowX,
-        y: arrowY,
+        y: leftArrowY,
         width: arrowSize,
         height: arrowSize
       };
     } else {
       this.scrollLeftButtonBounds = null;
+    }
+
+    // Right arrow on bottom (if we can scroll right)
+    if (this.canScrollRight()) {
+      const rightArrowY = region.y + arrowSize; // Bottom half of panel (12px down)
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-6', // Right arrow sprite (same as map scrolling)
+        spriteImages,
+        spriteSize,
+        arrowX,
+        rightArrowY,
+        arrowSize,
+        arrowSize
+      );
+
+      // Store bounds for click detection
+      this.scrollRightButtonBounds = {
+        x: arrowX,
+        y: rightArrowY,
+        width: arrowSize,
+        height: arrowSize
+      };
+    } else {
+      this.scrollRightButtonBounds = null;
     }
   }
 
