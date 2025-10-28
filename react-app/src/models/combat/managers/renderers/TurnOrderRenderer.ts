@@ -14,6 +14,14 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   private readonly spriteSpacing: number = 12; // 1 tile spacing between sprites
   private readonly spriteSize: number = 12; // Sprite size in pixels
 
+  // Scroll state
+  private scrollOffset: number = 0; // Index of first visible unit
+  private readonly maxVisibleUnits: number = 8; // Max units to show at once
+
+  // Arrow button bounds for click detection
+  private scrollRightButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private scrollLeftButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+
   constructor(units: CombatUnit[], onUnitClickOrTickCount?: ((unit: CombatUnit) => void) | number, tickCount: number = 0) {
     this.units = units;
 
@@ -31,10 +39,25 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   }
 
   /**
-   * Update the units to display
+   * Update the units to display and reset scroll position
    */
   setUnits(units: CombatUnit[]): void {
     this.units = units;
+    this.scrollOffset = 0; // Reset to start when units change
+  }
+
+  /**
+   * Update the units without resetting scroll position
+   * Use this when the unit list changes but you want to preserve scroll state
+   */
+  updateUnits(units: CombatUnit[]): void {
+    this.units = units;
+    // Don't reset scrollOffset - preserve scroll position
+    // But clamp it if it's now out of bounds
+    const maxOffset = Math.max(0, this.units.length - this.maxVisibleUnits);
+    if (this.scrollOffset > maxOffset) {
+      this.scrollOffset = maxOffset;
+    }
   }
 
   /**
@@ -123,9 +146,14 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       );
     }
 
-    // Calculate total width needed for all units
-    const totalUnits = Math.min(this.units.length, Math.floor(region.width / (this.spriteSize + this.spriteSpacing)));
-    const totalWidth = totalUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
+    // Calculate visible window based on scroll position
+    const startIndex = this.scrollOffset;
+    const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, this.units.length);
+    const visibleUnits = this.units.slice(startIndex, endIndex);
+
+    // Calculate total width for visible units
+    const totalVisibleUnits = visibleUnits.length;
+    const totalWidth = totalVisibleUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
 
     // Calculate starting X to center the units
     const startX = region.x + (region.width - totalWidth) / 2;
@@ -136,7 +164,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
 
     let currentX = startX;
 
-    for (const unit of this.units) {
+    for (const unit of visibleUnits) {
       // Check if we've exceeded the region width
       if (currentX + this.spriteSize > region.x + region.width) {
         break; // Stop rendering if we run out of space
@@ -179,31 +207,129 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       // Move to next position
       currentX += this.spriteSize + this.spriteSpacing;
     }
+
+    // Render scroll arrows if needed
+    this.renderScrollArrows(ctx, region, spriteImages, spriteSize);
+  }
+
+  /**
+   * Render left/right scroll arrows when appropriate
+   */
+  private renderScrollArrows(
+    ctx: CanvasRenderingContext2D,
+    region: PanelRegion,
+    spriteImages: Map<string, HTMLImageElement>,
+    spriteSize: number
+  ): void {
+    const arrowSize = 12; // 1 tile (same as sprite size)
+
+    // Calculate arrow Y position (vertically centered in panel)
+    const arrowY = region.y + (region.height - arrowSize) / 2;
+
+    // Right arrow (show if we can scroll right)
+    if (this.canScrollRight()) {
+      const arrowX = region.x + region.width - arrowSize; // Right edge
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-6', // Right arrow sprite (same as map scrolling)
+        spriteImages,
+        spriteSize,
+        arrowX,
+        arrowY,
+        arrowSize,
+        arrowSize
+      );
+
+      // Store bounds for click detection
+      this.scrollRightButtonBounds = {
+        x: arrowX,
+        y: arrowY,
+        width: arrowSize,
+        height: arrowSize
+      };
+    } else {
+      this.scrollRightButtonBounds = null;
+    }
+
+    // Left arrow (show if we can scroll left)
+    if (this.canScrollLeft()) {
+      // Position left arrow to the right of the clock area
+      // Clock is at x=4, width=12, so start at x=20 (with 4px padding)
+      const arrowX = region.x + 20;
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        'minimap-8', // Left arrow sprite (same as map scrolling)
+        spriteImages,
+        spriteSize,
+        arrowX,
+        arrowY,
+        arrowSize,
+        arrowSize
+      );
+
+      // Store bounds for click detection
+      this.scrollLeftButtonBounds = {
+        x: arrowX,
+        y: arrowY,
+        width: arrowSize,
+        height: arrowSize
+      };
+    } else {
+      this.scrollLeftButtonBounds = null;
+    }
   }
 
   handleClick(x: number, y: number, region: PanelRegion): boolean {
-    if (!this.onUnitClick) return false;
-
     // Check if click is within the panel region
     if (x < region.x || x > region.x + region.width ||
         y < region.y || y > region.y + region.height) {
       return false;
     }
 
-    // Calculate total width needed for all units (same as in render)
-    const totalUnits = Math.min(this.units.length, Math.floor(region.width / (this.spriteSize + this.spriteSpacing)));
-    const totalWidth = totalUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
+    // Priority 1: Check left arrow click
+    if (this.scrollLeftButtonBounds &&
+        x >= this.scrollLeftButtonBounds.x &&
+        x <= this.scrollLeftButtonBounds.x + this.scrollLeftButtonBounds.width &&
+        y >= this.scrollLeftButtonBounds.y &&
+        y <= this.scrollLeftButtonBounds.y + this.scrollLeftButtonBounds.height) {
+      this.scrollLeft();
+      return true; // Event handled
+    }
 
-    // Calculate starting X to center the units (same as in render)
+    // Priority 2: Check right arrow click
+    if (this.scrollRightButtonBounds &&
+        x >= this.scrollRightButtonBounds.x &&
+        x <= this.scrollRightButtonBounds.x + this.scrollRightButtonBounds.width &&
+        y >= this.scrollRightButtonBounds.y &&
+        y <= this.scrollRightButtonBounds.y + this.scrollRightButtonBounds.height) {
+      this.scrollRight();
+      return true; // Event handled
+    }
+
+    // Priority 3: Check unit sprite clicks (using visible window)
+    if (!this.onUnitClick) return false;
+
+    // Calculate visible window (same as in render)
+    const startIndex = this.scrollOffset;
+    const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, this.units.length);
+    const visibleUnits = this.units.slice(startIndex, endIndex);
+
+    // Calculate total width for visible units
+    const totalVisibleUnits = visibleUnits.length;
+    const totalWidth = totalVisibleUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
+
+    // Calculate starting X to center the units
     const startX = region.x + (region.width - totalWidth) / 2;
 
-    // Position sprites at the bottom of the panel (same as in render)
+    // Position sprites at the bottom of the panel
     const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
 
     // Determine which unit was clicked
     let currentX = startX;
 
-    for (const unit of this.units) {
+    for (const unit of visibleUnits) {
       // Check if we've exceeded the region width
       if (currentX + this.spriteSize > region.x + region.width) {
         break;
@@ -221,5 +347,38 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     }
 
     return false;
+  }
+
+  /**
+   * Check if we can scroll left (not at start)
+   */
+  private canScrollLeft(): boolean {
+    return this.scrollOffset > 0;
+  }
+
+  /**
+   * Check if we can scroll right (more units beyond visible window)
+   */
+  private canScrollRight(): boolean {
+    return this.scrollOffset + this.maxVisibleUnits < this.units.length;
+  }
+
+  /**
+   * Scroll left by 1 unit (decrement offset)
+   */
+  private scrollLeft(): void {
+    if (this.canScrollLeft()) {
+      this.scrollOffset = Math.max(0, this.scrollOffset - 1);
+    }
+  }
+
+  /**
+   * Scroll right by 1 unit (increment offset)
+   */
+  private scrollRight(): void {
+    if (this.canScrollRight()) {
+      const maxOffset = Math.max(0, this.units.length - this.maxVisibleUnits);
+      this.scrollOffset = Math.min(maxOffset, this.scrollOffset + 1);
+    }
   }
 }

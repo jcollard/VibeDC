@@ -110,6 +110,9 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   // Cached panel content (per GeneralGuidelines.md lines 103-110)
   private infoPanelContent: ActionTimerInfoPanelContent | null = null;
 
+  // Cached turn order renderer (maintains scroll state across renders)
+  private turnOrderRenderer: TurnOrderRenderer | null = null;
+
   // Flag to track if we've already calculated the turn
   private turnCalculated: boolean = false;
 
@@ -344,7 +347,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
   /**
    * Get turn order renderer for top panel
-   * Shows units sorted by predicted turn order (who will reach 100 first), limited to 8 units
+   * Shows units sorted by predicted turn order (who will reach 100 first)
+   * Caches renderer instance to maintain scroll state
    */
   getTopPanelRenderer(state: CombatState, _encounter: CombatEncounter): TopPanelRenderer {
     // Get all units
@@ -370,12 +374,15 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     // Extract sorted units
     const sortedUnits = unitsWithTime.map(item => item.unit);
 
-    // Limit to 8 units for display (reduced from 10 to make room for clock)
-    const displayUnits = sortedUnits.slice(0, 8);
+    // Create or update cached renderer (maintains scroll state)
+    if (!this.turnOrderRenderer) {
+      this.turnOrderRenderer = new TurnOrderRenderer(sortedUnits, state.tickCount || this.tickCount || 0);
+    } else {
+      // Update units in existing renderer (preserves scroll offset)
+      this.turnOrderRenderer.updateUnits(sortedUnits);
+    }
 
-    // Create new renderer each time with current units and tick count from state
-    // (TurnOrderRenderer requires units in constructor, can't cache)
-    return new TurnOrderRenderer(displayUnits, state.tickCount || this.tickCount || 0);
+    return this.turnOrderRenderer;
   }
 
   /**

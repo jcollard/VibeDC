@@ -85,6 +85,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   private infoPanelContent: UnitTurnInfoPanelContent | null = null;
   private messageWritten: boolean = false;
 
+  // Cached turn order renderer (maintains scroll state across renders)
+  private turnOrderRenderer: TurnOrderRenderer | null = null;
+
   constructor() {
     super();
     console.log('[UnitTurnPhaseHandler] Initialized');
@@ -162,11 +165,15 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Extract sorted units
     const sortedUnits = unitsWithTime.map(item => item.unit);
 
-    // Limit to 8 units for display (same as action-timer phase)
-    const displayUnits = sortedUnits.slice(0, 8);
+    // Create or update cached renderer (maintains scroll state)
+    if (!this.turnOrderRenderer) {
+      this.turnOrderRenderer = new TurnOrderRenderer(sortedUnits, state.tickCount || 0);
+    } else {
+      // Update units in existing renderer (preserves scroll offset)
+      this.turnOrderRenderer.updateUnits(sortedUnits);
+    }
 
-    // Create renderer with tick count from state
-    return new TurnOrderRenderer(displayUnits, state.tickCount || 0);
+    return this.turnOrderRenderer;
   }
 
   getInfoPanelContent(
