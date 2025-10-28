@@ -55,6 +55,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Currently hovered movement path (for yellow preview)
   private hoveredMovePath: Position[] | null = null;
 
+  // Pending message to display in combat log (consumed by phase handler)
+  private pendingMessage: string | null = null;
+
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
     this.activeUnit = unit;
     this.activePosition = position;
@@ -127,16 +130,24 @@ export class PlayerTurnStrategy implements TurnStrategy {
       return { handled: false };
     }
 
+    const clickedPosition = { x: tileX, y: tileY };
+    const unit = state.unitManifest.getUnitAtPosition(clickedPosition);
+
     // Handle move mode clicks
     if (this.mode === 'moveSelection') {
-      return this.handleMoveClick({ x: tileX, y: tileY });
+      // If clicked on a unit, exit move mode and select that unit
+      if (unit) {
+        this.exitMoveMode();
+        this.selectUnit(unit, clickedPosition, state);
+        return { handled: true };
+      }
+      // Otherwise, try to move to the clicked tile
+      return this.handleMoveClick(clickedPosition);
     }
 
     // Normal mode: unit selection
-    const unit = state.unitManifest.getUnitAtPosition({ x: tileX, y: tileY });
-
     if (unit) {
-      this.selectUnit(unit, { x: tileX, y: tileY }, state);
+      this.selectUnit(unit, clickedPosition, state);
       return { handled: true };
     } else {
       this.clearSelection();
@@ -313,6 +324,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
     this.mode = 'moveSelection';
 
+    // Add combat log message
+    this.pendingMessage = `Click a tile to move ${this.activeUnit.name}`;
+
     // Pre-calculate all paths to valid tiles (performance optimization)
     this.moveModePaths.clear();
 
@@ -342,6 +356,15 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.mode = 'normal';
     this.moveModePaths.clear();
     this.hoveredMovePath = null;
+  }
+
+  /**
+   * Get and clear any pending combat log message
+   */
+  getPendingMessage(): string | null {
+    const message = this.pendingMessage;
+    this.pendingMessage = null;
+    return message;
   }
 
   /**

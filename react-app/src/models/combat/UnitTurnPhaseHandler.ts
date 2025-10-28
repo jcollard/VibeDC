@@ -245,8 +245,28 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   renderUI(_state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
     const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
 
+    // Render animated unit during movement (rendered AFTER normal units to override)
+    if (this.movementSequence) {
+      const animatedUnit = this.movementSequence.getUnit();
+      const renderPosition = this.movementSequence.getUnitRenderPosition();
+
+      const x = Math.floor(offsetX + (renderPosition.x * tileSize));
+      const y = Math.floor(offsetY + (renderPosition.y * tileSize));
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        animatedUnit.spriteId,
+        spriteImages,
+        spriteSize,
+        x,
+        y,
+        tileSize,
+        tileSize
+      );
+    }
+
     // Render active unit cursor (dark green, blinking) - rendered AFTER units per user feedback
-    if (this.activeUnitPosition && this.cursorVisible) {
+    if (this.activeUnitPosition && this.cursorVisible && !this.movementSequence) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
       const x = Math.floor(offsetX + (this.activeUnitPosition.x * tileSize));
       const y = Math.floor(offsetY + (this.activeUnitPosition.y * tileSize));
@@ -312,7 +332,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       const isComplete = this.movementSequence.update(deltaTime);
 
       if (isComplete) {
-        // Animation finished - apply position change
+        // Animation finished - finalize position
         const newState = this.completeMoveAnimation(state);
         this.movementSequence = null;
 
@@ -374,6 +394,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Update strategy and check for action decision
     if (this.currentStrategy && this.activeUnit && this.activeUnitPosition) {
+      // Check for pending messages from strategy (e.g., "Click a tile to move...")
+      if ('getPendingMessage' in this.currentStrategy) {
+        const message = (this.currentStrategy as any).getPendingMessage();
+        if (message) {
+          this.pendingLogMessages.push(message);
+        }
+      }
+
       const action = this.currentStrategy.update(
         this.activeUnit,
         this.activeUnitPosition,
@@ -528,6 +556,15 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       x: Math.round(finalPosition.x),
       y: Math.round(finalPosition.y)
     };
+
+    // Update strategy's targeted position to match new location
+    if (this.currentStrategy && 'selectUnit' in this.currentStrategy) {
+      (this.currentStrategy as any).selectUnit(
+        this.activeUnit,
+        this.activeUnitPosition,
+        state
+      );
+    }
 
     // Mark unit as having moved
     this.unitHasMoved = true;
