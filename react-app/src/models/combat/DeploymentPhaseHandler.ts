@@ -15,7 +15,6 @@ import type { CombatUIStateManager } from './CombatUIState';
 import { DeploymentUI } from './deployment/DeploymentUI';
 import { DeploymentZoneRenderer } from './deployment/DeploymentZoneRenderer';
 import { UnitDeploymentManager } from './deployment/UnitDeploymentManager';
-import { PartySelectionDialog } from './deployment/PartySelectionDialog';
 import { PhaseBase } from './PhaseBase';
 import { CombatUnitManifest } from './CombatUnitManifest';
 import { DeploymentHeaderRenderer } from './managers/renderers/DeploymentHeaderRenderer';
@@ -54,9 +53,6 @@ export class DeploymentPhaseHandler extends PhaseBase {
   // Deployment manager
   private deploymentManager: UnitDeploymentManager;
 
-  // Party selection dialog
-  private partyDialog: PartySelectionDialog;
-
   // Cached panel content for both rendering and hover detection (per GeneralGuidelines.md - don't recreate every frame)
   private cachedPartyMembersContent: PartyMembersContent | null = null;
 
@@ -68,7 +64,6 @@ export class DeploymentPhaseHandler extends PhaseBase {
     this.ui = new DeploymentUI();
     this.zoneRenderer = new DeploymentZoneRenderer();
     this.deploymentManager = new UnitDeploymentManager(uiStateManager);
-    this.partyDialog = new PartySelectionDialog(uiStateManager);
   }
 
   /**
@@ -209,30 +204,6 @@ export class DeploymentPhaseHandler extends PhaseBase {
 
 
 
-  /**
-   * Get the currently hovered character index
-   * Delegates to PartySelectionDialog
-   */
-  getHoveredCharacterIndex(): number | null {
-    return this.partyDialog.getHoveredCharacterIndex();
-  }
-
-  /**
-   * Handle click on character in the selection dialog
-   * Delegates to PartySelectionDialog
-   */
-  handleCharacterClick(
-    canvasX: number,
-    canvasY: number,
-    characterCount: number
-  ): number | null {
-    return this.partyDialog.handleCharacterClick(
-      canvasX,
-      canvasY,
-      characterCount,
-      this.getSelectedZoneIndex()
-    );
-  }
 
 
   /**
@@ -284,10 +255,10 @@ export class DeploymentPhaseHandler extends PhaseBase {
   }
 
   /**
-   * Render deployment phase UI elements (header and dialog - rendered after units)
+   * Render deployment phase UI elements (header and instruction message - rendered after units)
    */
   renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, offsetX, offsetY, spriteImages, titleAtlasFontId, messageAtlasFontId, dialogAtlasFontId, fontAtlasImages } = context;
+    const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, spriteImages, titleAtlasFontId, messageAtlasFontId, fontAtlasImages } = context;
 
     // Render "Deploy Units" header
     const titleFontId = titleAtlasFontId || '15px-dungeonslant';
@@ -315,25 +286,6 @@ export class DeploymentPhaseHandler extends PhaseBase {
     if (!shouldShowButton) {
       this.ui.renderInstructionMessage(ctx, canvasWidth, spriteSize, spriteImages, instructionY, messageFontId, messageAtlas);
     }
-
-    // Get the dialog font atlas image
-    const dialogFontIdToUse = dialogAtlasFontId || '7px-04b03';
-    const fontAtlasImage = fontAtlasImages?.get(dialogFontIdToUse) || null;
-
-    // Render character selection dialog
-    this.partyDialog.render(
-      ctx,
-      encounter,
-      canvasWidth,
-      tileSize,
-      spriteSize,
-      offsetX,
-      offsetY,
-      dialogFontIdToUse,
-      fontAtlasImage,
-      spriteImages,
-      this.getSelectedZoneIndex()
-    );
   }
 
   // --- PHASE-AGNOSTIC EVENT HANDLERS ---
@@ -403,26 +355,15 @@ export class DeploymentPhaseHandler extends PhaseBase {
   }
 
   /**
-   * Handle mouse move - update hover states for party dialog
+   * Handle mouse move - no longer needed as party selection is handled by info panel
    * Note: Button hover is now handled by PartyMembersContent in info panel
    */
   handleMouseMove(
-    context: MouseEventContext,
+    _context: MouseEventContext,
     _state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult {
-    const { canvasX, canvasY } = context;
-    const partySize = PartyMemberRegistry.getAll().length;
-
-    // Update party dialog hover state
-    const dialogHandled = this.partyDialog.handleMouseMove(
-      canvasX,
-      canvasY,
-      partySize,
-      this.getSelectedZoneIndex()
-    );
-
-    return { handled: dialogHandled };
+    return { handled: false };
   }
 
   /**

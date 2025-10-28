@@ -147,7 +147,7 @@ react-app/src/
 **Exports:** `DeploymentPhaseHandler`, `DeploymentPanelData`, `DeploymentActionData`
 **Key Methods:** handleDeploymentAction(), handleTileClick(), getSelectedZoneIndex()
 **Player Control Setup:** Sets isPlayerControlled=true on deployed units
-**Dependencies:** DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager, PartySelectionDialog
+**Dependencies:** DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager, PartyMembersContent (info panel)
 **Used By:** CombatView during deployment phase
 
 #### `EnemyDeploymentPhaseHandler.ts`
@@ -434,13 +434,6 @@ react-app/src/
 **Key Methods:** handleTileClick(), getSelectedZoneIndex(), clearSelectedZone()
 **Dependencies:** CombatUIStateManager
 **Used By:** DeploymentPhaseHandler
-
-#### `deployment/PartySelectionDialog.ts`
-**Purpose:** Character selection dialog with hover/click handling (legacy - now uses info panels)
-**Exports:** `PartySelectionDialog`
-**Key Methods:** render(), handleCharacterClick(), handleMouseMove()
-**Dependencies:** SpriteRenderer, FontAtlasRenderer, DialogRenderer
-**Used By:** DeploymentPhaseHandler (legacy support)
 
 ---
 
@@ -897,14 +890,14 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 55+ Core Files
+## File Count: 53 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Rendering:** 2 files
 **Layout & UI:** 13 files
-**Deployment:** 4 files
+**Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
 **Cinematics:** 8 files
 **Unit System:** 7 files
 **Utilities:** 2 files (CombatPredicate, MovementRangeCalculator)
