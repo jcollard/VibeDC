@@ -383,8 +383,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Capture current turn order BEFORE mutation (for slide animation)
     // Get turn order from the turn order renderer if available
+    // Store the actual unit instances (not names) to handle duplicate names correctly
     const previousTurnOrder = this.turnOrderRenderer
-      ? this.turnOrderRenderer.getUnits().map(u => u.name)
+      ? this.turnOrderRenderer.getUnits()
       : [];
 
     // Directly mutate the unit's action timer (units are mutable)

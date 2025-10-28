@@ -1,5 +1,6 @@
 import type { CombatMap, CombatMapJSON } from './CombatMap';
 import type { CombatUnitManifest, CombatUnitManifestJSON } from './CombatUnitManifest';
+import type { CombatUnit } from './CombatUnit';
 import { CombatMap as CombatMapImpl } from './CombatMap';
 import { CombatUnitManifest as CombatUnitManifestImpl } from './CombatUnitManifest';
 
@@ -58,11 +59,12 @@ export interface CombatState {
   pendingSlideAnimation?: boolean;
 
   /**
-   * Previous turn order (unit IDs) before Delay/End Turn action
+   * Previous turn order (unit instances) before Delay/End Turn action
    * Used to animate FROM this order TO the new order
    * Cleared by ActionTimerPhaseHandler after starting the animation
+   * NOTE: This is NOT serialized - it's a transient runtime-only field
    */
-  previousTurnOrder?: string[];
+  previousTurnOrder?: CombatUnit[];
 
   // Additional fields will be added as combat mechanics are implemented
 }
@@ -78,7 +80,7 @@ export interface CombatStateJSON {
   unitManifest: CombatUnitManifestJSON;
   tickCount?: number;
   pendingSlideAnimation?: boolean;
-  previousTurnOrder?: string[];
+  // previousTurnOrder is NOT serialized - it's a transient runtime-only field
 }
 
 /**
@@ -94,8 +96,8 @@ export function serializeCombatState(state: CombatState): CombatStateJSON {
     map: state.map.toJSON(),
     unitManifest: state.unitManifest.toJSON(),
     tickCount: state.tickCount,
-    pendingSlideAnimation: state.pendingSlideAnimation,
-    previousTurnOrder: state.previousTurnOrder
+    pendingSlideAnimation: state.pendingSlideAnimation
+    // previousTurnOrder is NOT serialized - it's transient
   };
 }
 
@@ -126,7 +128,7 @@ export function deserializeCombatState(json: CombatStateJSON): CombatState | nul
     map,
     unitManifest,
     tickCount: json.tickCount,
-    pendingSlideAnimation: json.pendingSlideAnimation,
-    previousTurnOrder: json.previousTurnOrder
+    pendingSlideAnimation: json.pendingSlideAnimation
+    // previousTurnOrder is NOT deserialized - it's transient
   };
 }

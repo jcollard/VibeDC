@@ -494,11 +494,11 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
    * animate FROM the old order TO the new calculated order.
    *
    * @param manifest Current unit manifest
-   * @param previousTurnOrderIds Previous unit IDs from state (before mutation)
+   * @param previousTurnOrder Previous unit instances from state (before mutation)
    */
   private triggerImmediateSlide(
     manifest: import('./CombatUnitManifest').CombatUnitManifest,
-    previousTurnOrderIds?: string[]
+    previousTurnOrder?: CombatUnit[]
   ): void {
     if (!this.turnOrderRenderer) {
       console.warn('[ActionTimerPhaseHandler] Cannot trigger immediate slide: no renderer');
@@ -514,31 +514,23 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     }
     const newTurnOrder = this.calculateTurnOrder(units, currentTimers);
 
-    // If we have previous order names, reconstruct the unit array in that order
-    if (previousTurnOrderIds && previousTurnOrderIds.length > 0) {
-      const unitMap = new Map<string, CombatUnit>();
-      for (const unit of units) {
-        unitMap.set(unit.name, unit);
-      }
-      const previousOrder = previousTurnOrderIds
-        .map(name => unitMap.get(name))
-        .filter(u => u !== undefined) as CombatUnit[];
-
+    // If we have previous order (unit instances), use it for animation
+    if (previousTurnOrder && previousTurnOrder.length > 0) {
       // Check if order actually changed
-      const orderChanged = !this.arraysEqual(previousOrder, newTurnOrder);
+      const orderChanged = !this.arraysEqual(previousTurnOrder, newTurnOrder);
 
       if (orderChanged) {
-        // IMPORTANT: We need to set the internal units array to previousOrder
+        // IMPORTANT: We need to set the internal units array to previousTurnOrder
         // WITHOUT calling updateUnits (which would recalculate positions)
         // Set it directly using the private access
-        (this.turnOrderRenderer as any).units = previousOrder;
+        (this.turnOrderRenderer as any).units = previousTurnOrder;
 
         // Debug: Log the first 8 units in each order
-        console.log('[ActionTimerPhaseHandler] Previous order (first 8):', previousOrder.slice(0, 8).map(u => u.name));
+        console.log('[ActionTimerPhaseHandler] Previous order (first 8):', previousTurnOrder.slice(0, 8).map(u => u.name));
         console.log('[ActionTimerPhaseHandler] New order (first 8):', newTurnOrder.slice(0, 8).map(u => u.name));
         console.log('[ActionTimerPhaseHandler] Set renderer.units to previousOrder. Now calling startSlideAnimation...');
 
-        // Now trigger slide to new order (it will use previousOrder as starting positions)
+        // Now trigger slide to new order (it will use previousTurnOrder as starting positions)
         this.turnOrderRenderer.startSlideAnimation(newTurnOrder);
         console.log('[ActionTimerPhaseHandler] Triggered immediate slide animation from previous order');
       } else {
