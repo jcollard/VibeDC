@@ -64,13 +64,17 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   // Track if info panel has been initialized for this phase
   private infoPanelInitialized: boolean = false;
 
+  // Cached tinting buffer (reused across all tinting operations to avoid creating canvases every frame)
+  private tintingBuffer: HTMLCanvasElement | null = null;
+  private tintingBufferCtx: CanvasRenderingContext2D | null = null;
+
   constructor() {
     super();
   }
 
   /**
    * Render a sprite with color tinting
-   * Uses an off-screen buffer to apply color tinting without affecting the rest of the canvas
+   * Uses a cached off-screen buffer to apply color tinting without affecting the rest of the canvas
    */
   private renderTintedSprite(
     ctx: CanvasRenderingContext2D,
@@ -84,12 +88,27 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     tintColor: string,
     alpha: number = 1.0
   ): void {
-    // Create an off-screen canvas for tinting
-    const buffer = document.createElement('canvas');
-    buffer.width = width;
-    buffer.height = height;
-    const bufferCtx = buffer.getContext('2d');
-    if (!bufferCtx) return;
+    // Lazy initialize cached tinting buffer
+    if (!this.tintingBuffer || !this.tintingBufferCtx) {
+      this.tintingBuffer = document.createElement('canvas');
+      this.tintingBufferCtx = this.tintingBuffer.getContext('2d');
+      if (!this.tintingBufferCtx) return; // Should never happen, but safety check
+    }
+
+    // Resize buffer only if dimensions changed
+    if (this.tintingBuffer.width !== width || this.tintingBuffer.height !== height) {
+      this.tintingBuffer.width = width;
+      this.tintingBuffer.height = height;
+    }
+
+    // TypeScript now knows bufferCtx is non-null due to early return above
+    const bufferCtx = this.tintingBufferCtx;
+
+    // Clear previous contents
+    bufferCtx.clearRect(0, 0, width, height);
+
+    // Reset composite operation to default (in case previous operation left it modified)
+    bufferCtx.globalCompositeOperation = 'source-over';
 
     // Render sprite to buffer
     SpriteRenderer.renderSpriteById(
@@ -124,7 +143,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Draw the tinted sprite to the main canvas
     ctx.save();
     ctx.globalAlpha = alpha;
-    ctx.drawImage(buffer, x, y);
+    ctx.drawImage(this.tintingBuffer, x, y);
     ctx.restore();
   }
 
