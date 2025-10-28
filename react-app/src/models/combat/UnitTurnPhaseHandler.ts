@@ -61,9 +61,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   // Pending combat log messages (added in render when combatLog is available)
   private pendingLogMessages: string[] = [];
 
+  // Track if info panel has been initialized for this phase
+  private infoPanelInitialized: boolean = false;
+
   constructor() {
     super();
-    console.log('[UnitTurnPhaseHandler] Initialized');
   }
 
   /**
@@ -325,6 +327,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return null;
     }
 
+    // Force recreation of panel content on first call to ensure it shows the active unit
+    if (!this.infoPanelInitialized) {
+      this.unitInfoContent = null;
+      this.infoPanelInitialized = true;
+    }
+
     // Create or update cached instance (per GeneralGuidelines.md - cache stateful components)
     if (!this.unitInfoContent) {
       this.unitInfoContent = new UnitInfoContent(
@@ -342,6 +350,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     }
 
     return this.unitInfoContent;
+  }
+
+  /**
+   * Get the unit that should be displayed in the info panel.
+   * Returns the targeted unit if one is selected, otherwise the active unit.
+   */
+  getDisplayUnit(): CombatUnit | null {
+    return this.targetedUnit ?? this.activeUnit;
   }
 
   handleMapClick(

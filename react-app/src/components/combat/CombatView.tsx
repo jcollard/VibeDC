@@ -461,6 +461,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
     }
 
+    // Get current unit to display from phase handler (for unit-turn phase)
+    let currentUnitToDisplay: CombatUnit | null = null;
+    if (combatState.phase === 'unit-turn' && 'getDisplayUnit' in phaseHandlerRef.current) {
+      const handler = phaseHandlerRef.current as any;
+      if (typeof handler.getDisplayUnit === 'function') {
+        currentUnitToDisplay = handler.getDisplayUnit();
+      }
+    }
+
     // Render layout UI
     // Use 7px-04b03 for info panels/combat log and small text in top panel
     // Use 15px-dungeonslant for main top panel text
@@ -478,7 +487,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       topPanelFontAtlasImage: topPanelFontAtlas,
       topPanelSmallFontAtlasImage: topPanelSmallFontAtlas,
       spriteImages: spriteImagesRef.current,
-      currentUnit: null, // Will be populated during combat phase
+      currentUnit: currentUnitToDisplay, // Provided by phase handler during unit-turn phase
       targetUnit: targetUnitRef.current, // Set by clicking turn order
       partyUnits: partyUnits, // Used during deployment phase
       isDeploymentPhase: combatState.phase === 'deployment',
