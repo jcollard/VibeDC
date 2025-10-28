@@ -28,17 +28,17 @@ export class UnitInfoContent implements PanelContent {
 
   // Helper text for each stat
   private readonly statHelperText: Record<string, string> = {
-    'HP': "Unit's health, if reduced to 0 the unit is knocked out",
-    'MP': "Unit's mana, required for magic based abilities",
-    'P.Pow': 'Physical Power is used to calculate physical damage',
+    'HP': "If HP is reduced to 0 the unit is knocked out",
+    'MP': "MP is required for magic based abilities",
+    'P.Pow': 'Physical Power determines physical damage',
     'P.Evd': 'Evasion rate vs. Physical Attacks',
     'M.Evd': 'Evasion rate vs. Magical Attacks',
-    'M.Pow': 'Magic Power is used to calculate magic damage',
+    'M.Pow': 'Magic Power determines magic damage',
     'Move': 'The number of tiles this unit can move',
-    'Speed': "Unit's action timer increases by speed each turn",
-    'Courage': 'Used to determine success rate of some abilities',
-    'Attunement': 'Used to determine success rate of some abilities',
-    'Action Timer': 'Action Timer increases by Speed each turn. Unit acts when reaching 100.'
+    'Speed': "Action Timer increases by Speed each turn. Units at when reaching 100.",
+    'Courage': 'Courage determines if some abilities succeed',
+    'Attunement': 'Attunement determines if some abilities succeed',
+    'Action Timer': 'Action Timer increases by Speed each turn. Units at when reaching 100.'
   };
 
   constructor(config: UnitInfoConfig, unit: CombatUnit) {
