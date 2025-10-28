@@ -68,6 +68,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   private tintingBuffer: HTMLCanvasElement | null = null;
   private tintingBufferCtx: CanvasRenderingContext2D | null = null;
 
+  // Store current state for click handlers
+  private currentState: CombatState | null = null;
+
   constructor() {
     super();
   }
@@ -247,6 +250,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     encounter: CombatEncounter,
     deltaTime: number
   ): CombatState | null {
+    // Store state reference for click handlers
+    this.currentState = state;
+
     // Find the unit with highest action timer (first ready)
     const allUnits = state.unitManifest.getAllUnits();
     const sortedUnits = allUnits.sort((a, b) => {
@@ -324,6 +330,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Create or update cached renderer (maintains scroll state)
     if (!this.turnOrderRenderer) {
       this.turnOrderRenderer = new TurnOrderRenderer(sortedUnits, state.tickCount || 0);
+
+      // Set click handler to select unit when clicked
+      this.turnOrderRenderer.setClickHandler((unit: CombatUnit) => {
+        this.handleTurnOrderUnitClick(unit);
+      });
     } else {
       // Update units in existing renderer (preserves scroll offset)
       this.turnOrderRenderer.updateUnits(sortedUnits);
@@ -387,6 +398,57 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     return this.targetedUnit;
   }
 
+  /**
+   * Select a unit and calculate its movement range.
+   * Called by both map clicks and turn order clicks.
+   */
+  private selectUnit(unit: CombatUnit, position: Position, state: CombatState): void {
+    this.targetedUnit = unit;
+    this.targetedUnitPosition = position;
+
+    // Calculate movement range for this unit
+    this.movementRange = MovementRangeCalculator.calculateReachableTiles({
+      startPosition: this.targetedUnitPosition,
+      movement: this.targetedUnit.movement,
+      map: state.map,
+      unitManifest: state.unitManifest,
+      activeUnit: this.targetedUnit
+    });
+  }
+
+  /**
+   * Clear the currently selected unit and movement range.
+   */
+  private clearSelection(): void {
+    this.targetedUnit = null;
+    this.targetedUnitPosition = null;
+    this.movementRange = [];
+  }
+
+  /**
+   * Handle unit clicks from the turn order panel
+   */
+  private handleTurnOrderUnitClick(unit: CombatUnit): void {
+    if (!this.currentState) {
+      console.warn('[UnitTurnPhaseHandler] Cannot handle turn order click - no current state');
+      return;
+    }
+
+    // Find the unit's position on the map
+    const placement = this.currentState.unitManifest.getAllUnits().find(p => p.unit === unit);
+
+    if (!placement) {
+      console.warn(`[UnitTurnPhaseHandler] Clicked unit not found in manifest: ${unit.name}`);
+      return;
+    }
+
+    // Use shared selection logic
+    this.selectUnit(unit, placement.position, this.currentState);
+
+    // Add combat log message
+    this.pendingLogMessages.push(`Selected ${unit.name}`);
+  }
+
   handleMapClick(
     context: MouseEventContext,
     state: CombatState,
@@ -402,28 +464,16 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     const unit = state.unitManifest.getUnitAtPosition({ x: tileX, y: tileY });
 
     if (unit) {
-      // Set as targeted unit
-      this.targetedUnit = unit;
-      this.targetedUnitPosition = { x: tileX, y: tileY };
-
-      // Calculate movement range for this unit
-      this.movementRange = MovementRangeCalculator.calculateReachableTiles({
-        startPosition: this.targetedUnitPosition,
-        movement: this.targetedUnit.movement,
-        map: state.map,
-        unitManifest: state.unitManifest,
-        activeUnit: this.targetedUnit
-      });
+      // Use shared selection logic
+      this.selectUnit(unit, { x: tileX, y: tileY }, state);
 
       return {
         handled: true,
         logMessage: `Selected ${unit.name}`
       };
     } else {
-      // Clear target if clicking empty tile
-      this.targetedUnit = null;
-      this.targetedUnitPosition = null;
-      this.movementRange = [];
+      // Clear selection if clicking empty tile
+      this.clearSelection();
 
       return {
         handled: true,
