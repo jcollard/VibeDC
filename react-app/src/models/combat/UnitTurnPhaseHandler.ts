@@ -353,11 +353,19 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   /**
-   * Get the unit that should be displayed in the info panel.
-   * Returns the targeted unit if one is selected, otherwise the active unit.
+   * Get the active unit (the unit whose turn it is).
+   * This should be displayed in the "Current Unit" panel (bottom).
    */
-  getDisplayUnit(): CombatUnit | null {
-    return this.targetedUnit ?? this.activeUnit;
+  getActiveUnit(): CombatUnit | null {
+    return this.activeUnit;
+  }
+
+  /**
+   * Get the targeted unit (the unit selected by clicking).
+   * This should be displayed in the "Unit Info" panel (top).
+   */
+  getTargetedUnit(): CombatUnit | null {
+    return this.targetedUnit;
   }
 
   handleMapClick(

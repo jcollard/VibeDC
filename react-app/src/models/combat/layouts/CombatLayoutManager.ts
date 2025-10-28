@@ -532,7 +532,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
         // Create new content
         this.cachedBottomPanelContent = new UnitInfoContent(
           {
-            title: 'CURRENT UNIT',
+            title: 'Active Unit',
             titleColor: '#ffa500',
             padding: 1,
             lineSpacing: 8,
@@ -546,7 +546,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       if (!(this.cachedBottomPanelContent instanceof EmptyContent)) {
         // Create new empty content (stateless, but cache it anyway)
         this.cachedBottomPanelContent = new EmptyContent({
-          title: 'CURRENT UNIT',
+          title: 'Active Unit',
           titleColor: '#ffa500',
           padding: 1,
           lineSpacing: 8,

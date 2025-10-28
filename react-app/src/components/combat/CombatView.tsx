@@ -461,12 +461,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }
     }
 
-    // Get current unit to display from phase handler (for unit-turn phase)
+    // Get units to display from phase handler (for unit-turn phase)
     let currentUnitToDisplay: CombatUnit | null = null;
-    if (combatState.phase === 'unit-turn' && 'getDisplayUnit' in phaseHandlerRef.current) {
+    let targetUnitToDisplay: CombatUnit | null = targetUnitRef.current;
+
+    if (combatState.phase === 'unit-turn') {
       const handler = phaseHandlerRef.current as any;
-      if (typeof handler.getDisplayUnit === 'function') {
-        currentUnitToDisplay = handler.getDisplayUnit();
+      // Get active unit for bottom panel (Active Unit)
+      if (typeof handler.getActiveUnit === 'function') {
+        currentUnitToDisplay = handler.getActiveUnit();
+      }
+      // Get targeted unit for top panel (Unit Info) - overrides turn order selection
+      if (typeof handler.getTargetedUnit === 'function') {
+        const targeted = handler.getTargetedUnit();
+        if (targeted) {
+          targetUnitToDisplay = targeted;
+        }
       }
     }
 
@@ -487,8 +497,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       topPanelFontAtlasImage: topPanelFontAtlas,
       topPanelSmallFontAtlasImage: topPanelSmallFontAtlas,
       spriteImages: spriteImagesRef.current,
-      currentUnit: currentUnitToDisplay, // Provided by phase handler during unit-turn phase
-      targetUnit: targetUnitRef.current, // Set by clicking turn order
+      currentUnit: currentUnitToDisplay, // Bottom panel - active unit whose turn it is
+      targetUnit: targetUnitToDisplay, // Top panel - targeted unit or turn order selection
       partyUnits: partyUnits, // Used during deployment phase
       isDeploymentPhase: combatState.phase === 'deployment',
       isEnemyDeploymentPhase: combatState.phase === 'enemy-deployment',
