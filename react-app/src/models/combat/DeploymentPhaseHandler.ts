@@ -142,6 +142,11 @@ export class DeploymentPhaseHandler extends PhaseBase {
         return { handled: false };
       }
 
+      // Set as player-controlled
+      if ('setPlayerControlled' in unit && typeof unit.setPlayerControlled === 'function') {
+        unit.setPlayerControlled(true);
+      }
+
       const newManifest = new CombatUnitManifest();
 
       // Copy existing units, excluding:

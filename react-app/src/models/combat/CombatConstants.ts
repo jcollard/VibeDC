@@ -63,6 +63,27 @@ export const CombatConstants = {
     ENEMY_NAME_COLOR: '#ff0000', // red for enemy names
   },
 
+  // Unit Turn Phase
+  UNIT_TURN: {
+    // Ready message colors
+    PLAYER_NAME_COLOR: '#00ff00',      // Green (matches deployment)
+    ENEMY_NAME_COLOR: '#ff0000',       // Red (matches enemy deployment)
+
+    // Active unit cursor (dark green, blinking)
+    CURSOR_SPRITE_ID: 'particles-5',
+    CURSOR_ALBEDO_DARK_GREEN: '#006400',
+    CURSOR_BLINK_RATE: 0.5,            // Full cycle (on→off→on) in seconds
+
+    // Target unit cursor (red, always visible)
+    TARGET_CURSOR_SPRITE_ID: 'particles-5',
+    TARGET_CURSOR_ALBEDO: '#ff0000',
+
+    // Movement range highlights (yellow, semi-transparent)
+    MOVEMENT_HIGHLIGHT_SPRITE: 'particles-4',
+    MOVEMENT_HIGHLIGHT_ALBEDO: '#ffff00',
+    MOVEMENT_HIGHLIGHT_ALPHA: 0.33,
+  },
+
   // Combat Log
   COMBAT_LOG: {
     MAX_MESSAGE_WIDTH: 200, // Maximum width in pixels for a single message line

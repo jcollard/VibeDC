@@ -340,6 +340,7 @@ describe('MonsterUnit', () => {
         manaUsed: 0,
         actionTimer: 0,
         spriteId: 'unknown',
+        isPlayerControlled: false,
       };
 
       const monster = MonsterUnit.fromJSON(json);

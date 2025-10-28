@@ -434,6 +434,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Render deployed units from the manifest (after deployment zones so they appear on top)
     renderer.renderUnits(ctx, combatState.unitManifest, spriteImagesRef.current, offsetX, offsetY);
 
+    // Render phase-specific UI overlays (after units so cursors appear on top)
+    if (phaseHandlerRef.current.renderUI) {
+      phaseHandlerRef.current.renderUI(combatState, activeEncounter, {
+        ctx,
+        canvasWidth: CANVAS_WIDTH,
+        canvasHeight: CANVAS_HEIGHT,
+        tileSize: TILE_SIZE,
+        spriteSize: SPRITE_SIZE,
+        offsetX,
+        offsetY,
+        spriteImages: spriteImagesRef.current,
+        fontAtlasImages: fontLoader.getAll(),
+        combatLog: combatLogManager,
+      });
+    }
+
     ctx.restore();
 
     // Update top panel renderer for action-timer and unit-turn phases

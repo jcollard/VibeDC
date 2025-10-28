@@ -141,6 +141,12 @@ export interface CombatUnit {
   get spriteId(): string;
 
   /**
+   * Whether this unit is controlled by the player
+   * Player-controlled units wait for input during their turn
+   */
+  get isPlayerControlled(): boolean;
+
+  /**
    * Converts the unit to a JSON-serializable format
    */
   toJSON(): unknown;

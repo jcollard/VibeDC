@@ -36,6 +36,7 @@ export interface HumanoidUnitJSON {
   bodyId: string | null;
   accessoryId: string | null;
   spriteId: string;
+  isPlayerControlled: boolean;
 }
 
 /**
@@ -78,6 +79,7 @@ export class HumanoidUnit implements CombatUnit {
   private _accessory: Equipment | null = null;
 
   private _spriteId: string;
+  private _isPlayerControlled: boolean = false;
 
   constructor(
     name: string,
@@ -92,7 +94,8 @@ export class HumanoidUnit implements CombatUnit {
     baseMagicEvade: number,
     baseCourage: number,
     baseAttunement: number,
-    spriteId: string = "default-humanoid"
+    spriteId: string = "default-humanoid",
+    isPlayerControlled: boolean = false
   ) {
     this._name = name;
     this._unitClass = unitClass;
@@ -107,6 +110,7 @@ export class HumanoidUnit implements CombatUnit {
     this.baseCourage = baseCourage;
     this.baseAttunement = baseAttunement;
     this._spriteId = spriteId;
+    this._isPlayerControlled = isPlayerControlled;
   }
 
   get name(): string {
@@ -211,6 +215,14 @@ export class HumanoidUnit implements CombatUnit {
 
   get spriteId(): string {
     return this._spriteId;
+  }
+
+  get isPlayerControlled(): boolean {
+    return this._isPlayerControlled;
+  }
+
+  setPlayerControlled(value: boolean): void {
+    this._isPlayerControlled = value;
   }
 
   // Equipment slot getters
@@ -566,6 +578,7 @@ export class HumanoidUnit implements CombatUnit {
       bodyId: this._body?.id ?? null,
       accessoryId: this._accessory?.id ?? null,
       spriteId: this._spriteId,
+      isPlayerControlled: this._isPlayerControlled,
     };
   }
 
@@ -596,7 +609,8 @@ export class HumanoidUnit implements CombatUnit {
       json.baseMagicEvade,
       json.baseCourage,
       json.baseAttunement,
-      json.spriteId ?? "default-humanoid"
+      json.spriteId ?? "default-humanoid",
+      json.isPlayerControlled ?? false
     );
 
     // Restore secondary class

@@ -28,6 +28,7 @@ export interface MonsterUnitJSON {
   manaUsed: number;
   actionTimer: number;
   spriteId: string;
+  isPlayerControlled: boolean;
 }
 
 /**
@@ -61,6 +62,7 @@ export class MonsterUnit implements CombatUnit {
   private _actionTimer: number = 0;
 
   private _spriteId: string;
+  private _isPlayerControlled: boolean = false;
 
   constructor(
     name: string,
@@ -75,7 +77,8 @@ export class MonsterUnit implements CombatUnit {
     baseMagicEvade: number,
     baseCourage: number,
     baseAttunement: number,
-    spriteId: string = "default-monster"
+    spriteId: string = "default-monster",
+    isPlayerControlled: boolean = false
   ) {
     this._name = name;
     this._unitClass = unitClass;
@@ -90,6 +93,7 @@ export class MonsterUnit implements CombatUnit {
     this.baseCourage = baseCourage;
     this.baseAttunement = baseAttunement;
     this._spriteId = spriteId;
+    this._isPlayerControlled = isPlayerControlled;
   }
 
   get name(): string {
@@ -194,6 +198,14 @@ export class MonsterUnit implements CombatUnit {
 
   get spriteId(): string {
     return this._spriteId;
+  }
+
+  get isPlayerControlled(): boolean {
+    return this._isPlayerControlled;
+  }
+
+  setPlayerControlled(value: boolean): void {
+    this._isPlayerControlled = value;
   }
 
   /**
@@ -309,6 +321,7 @@ export class MonsterUnit implements CombatUnit {
       manaUsed: this._manaUsed,
       actionTimer: this._actionTimer,
       spriteId: this._spriteId,
+      isPlayerControlled: this._isPlayerControlled,
     };
   }
 
@@ -337,7 +350,8 @@ export class MonsterUnit implements CombatUnit {
       json.baseMagicEvade,
       json.baseCourage,
       json.baseAttunement,
-      json.spriteId ?? "default-monster"
+      json.spriteId ?? "default-monster",
+      json.isPlayerControlled ?? false
     );
 
     // Restore learned abilities

@@ -10,108 +10,160 @@ import type {
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import type { TopPanelRenderer } from './managers/TopPanelRenderer';
-import type { PanelContent, PanelRegion, PanelClickResult } from './managers/panels/PanelContent';
+import type { PanelContent } from './managers/panels/PanelContent';
+import type { CombatUnit } from './CombatUnit';
+import type { Position } from '../../types';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
-import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
-
-/**
- * Stub info panel content for unit turn phase
- */
-class UnitTurnInfoPanelContent implements PanelContent {
-  render(
-    ctx: CanvasRenderingContext2D,
-    region: PanelRegion,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement | null
-  ): void {
-    if (!fontAtlasImage) return;
-
-    const centerX = region.x + region.width / 2;
-    const centerY = region.y + region.height / 2;
-
-    FontAtlasRenderer.renderText(
-      ctx,
-      'Unit Turn Phase',
-      centerX,
-      centerY - 10,
-      fontId,
-      fontAtlasImage,
-      1,
-      'center',
-      '#ffffff'
-    );
-
-    FontAtlasRenderer.renderText(
-      ctx,
-      'Turn actions coming soon',
-      centerX,
-      centerY + 10,
-      fontId,
-      fontAtlasImage,
-      1,
-      'center',
-      '#888888'
-    );
-  }
-
-  handleClick?(_relativeX: number, _relativeY: number): PanelClickResult {
-    return { type: 'button' };
-  }
-
-  handleHover?(_relativeX: number, _relativeY: number): unknown {
-    return null;
-  }
-}
+import { UnitInfoContent } from './managers/panels/UnitInfoContent';
+import { SpriteRenderer } from '../../utils/SpriteRenderer';
+import { MovementRangeCalculator } from './utils/MovementRangeCalculator';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Unit turn phase handler - manages individual unit turns
  *
- * STUB IMPLEMENTATION: Framework for future turn mechanics
- *
  * Current functionality:
- * - Displays unit ready message in console log
- * - Placeholder info panel
- * - Immediately returns to action-timer phase
+ * - Displays unit ready message with colored names
+ * - Shows blinking cursor on active unit
+ * - Allows unit selection and displays movement range
+ * - Shows target cursor on selected units
+ * - Displays unit stats in info panel
+ * - Waits for player input (player-controlled units)
  *
  * Future functionality:
  * - Action menu (Attack, Ability, Move, Wait, End Turn)
- * - Movement range display
- * - Target selection
+ * - Actual movement execution
  * - Action execution
  * - AI enemy turns
  * - Action timer reset/overflow handling
  */
 export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandler {
-  private infoPanelContent: UnitTurnInfoPanelContent | null = null;
-  private messageWritten: boolean = false;
+  // Turn state
+  private activeUnit: CombatUnit | null = null;
+  private activeUnitPosition: Position | null = null;
+  private readyMessageWritten: boolean = false;
+
+  // Target selection
+  private targetedUnit: CombatUnit | null = null;
+  private targetedUnitPosition: Position | null = null;
+  private movementRange: Position[] = [];
+
+  // Cursor animation
+  private cursorBlinkTimer: number = 0;
+  private cursorVisible: boolean = true;
+
+  // Cached panel content (per GeneralGuidelines.md - cache stateful components)
+  private unitInfoContent: UnitInfoContent | null = null;
 
   // Cached turn order renderer (maintains scroll state across renders)
   private turnOrderRenderer: TurnOrderRenderer | null = null;
+
+  // Pending combat log messages (added in render when combatLog is available)
+  private pendingLogMessages: string[] = [];
 
   constructor() {
     super();
     console.log('[UnitTurnPhaseHandler] Initialized');
   }
 
-  getRequiredSprites(_state: CombatState, _encounter: CombatEncounter): PhaseSprites {
+  getRequiredSprites(state: CombatState, _encounter: CombatEncounter): PhaseSprites {
     const spriteIds = new Set<string>();
+
+    // Add cursor and movement highlight sprites
+    spriteIds.add(CombatConstants.UNIT_TURN.CURSOR_SPRITE_ID);
+    spriteIds.add(CombatConstants.UNIT_TURN.TARGET_CURSOR_SPRITE_ID);
+    spriteIds.add(CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE);
+
+    // Add unit sprites
+    for (const placement of state.unitManifest.getAllUnits()) {
+      spriteIds.add(placement.unit.spriteId);
+    }
+
     return { spriteIds };
   }
 
-  render(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
-    // No overlays needed for stub
+  render(_state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
+    const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
+
+    // Add pending combat log messages on first render
+    if (this.pendingLogMessages.length > 0 && context.combatLog) {
+      for (const message of this.pendingLogMessages) {
+        context.combatLog.addMessage(message);
+      }
+      this.pendingLogMessages = [];
+    }
+
+    // Render movement range highlights (yellow tiles) - rendered BEFORE units
+    for (const position of this.movementRange) {
+      // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+      const x = Math.floor(offsetX + (position.x * tileSize));
+      const y = Math.floor(offsetY + (position.y * tileSize));
+
+      // Render with transparency
+      ctx.save();
+      ctx.globalAlpha = CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALPHA;
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
+        spriteImages,
+        spriteSize,
+        x,
+        y,
+        tileSize,
+        tileSize
+      );
+
+      ctx.restore();
+    }
   }
 
-  renderUI(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
-    // No UI overlays needed for stub
+  renderUI(_state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
+    const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
+
+    // Render active unit cursor (blinking) - rendered AFTER units per user feedback
+    if (this.activeUnitPosition && this.cursorVisible) {
+      // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+      const x = Math.floor(offsetX + (this.activeUnitPosition.x * tileSize));
+      const y = Math.floor(offsetY + (this.activeUnitPosition.y * tileSize));
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        CombatConstants.UNIT_TURN.CURSOR_SPRITE_ID,
+        spriteImages,
+        spriteSize,
+        x,
+        y,
+        tileSize,
+        tileSize
+      );
+    }
+
+    // Render target cursor (always visible) - rendered AFTER units per user feedback
+    if (this.targetedUnitPosition) {
+      // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
+      const x = Math.floor(offsetX + (this.targetedUnitPosition.x * tileSize));
+      const y = Math.floor(offsetY + (this.targetedUnitPosition.y * tileSize));
+
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        CombatConstants.UNIT_TURN.TARGET_CURSOR_SPRITE_ID,
+        spriteImages,
+        spriteSize,
+        x,
+        y,
+        tileSize,
+        tileSize
+      );
+    }
   }
 
   protected updatePhase(
     state: CombatState,
-    _encounter: CombatEncounter,
-    _deltaTime: number
+    encounter: CombatEncounter,
+    deltaTime: number
   ): CombatState | null {
-    // Find the unit with highest action timer
+    // Find the unit with highest action timer (first ready)
     const allUnits = state.unitManifest.getAllUnits();
     const sortedUnits = allUnits.sort((a, b) => {
       if (b.unit.actionTimer !== a.unit.actionTimer) {
@@ -120,23 +172,43 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return a.unit.name.localeCompare(b.unit.name);
     });
 
-    if (sortedUnits.length > 0 && !this.messageWritten) {
-      const readyUnit = sortedUnits[0].unit;
-
-      // Write message to console log
-      console.log(`[UnitTurnPhaseHandler] ${readyUnit.name} is ready to act.`);
-
-      // TODO: Add to combat log when available
-      // context.combatLog?.addMessage(`${readyUnit.name} is ready to act.`);
-
-      this.messageWritten = true;
+    // Initialize active unit on first frame
+    if (sortedUnits.length > 0 && !this.activeUnit) {
+      const readyPlacement = sortedUnits[0];
+      this.activeUnit = readyPlacement.unit;
+      this.activeUnitPosition = readyPlacement.position;
     }
 
-    // STUB: Stay in this phase - don't transition back
-    // TODO: Implement turn mechanics here (action menu, etc.)
-    // TODO: Transition back to action-timer when the turn is complete
+    // Write ready message once
+    if (this.activeUnit && !this.readyMessageWritten) {
+      const nameColor = this.activeUnit.isPlayerControlled
+        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
 
-    // No state change - stay in unit-turn phase
+      const logMessage = `[color=${nameColor}]${this.activeUnit.name}[/color] is ready!`;
+
+      // Queue message for combat log (will be added in render when combatLog is available)
+      this.pendingLogMessages.push(logMessage);
+
+      this.readyMessageWritten = true;
+    }
+
+    // Update cursor blink timer
+    this.cursorBlinkTimer += deltaTime;
+    if (this.cursorBlinkTimer >= CombatConstants.UNIT_TURN.CURSOR_BLINK_RATE) {
+      this.cursorBlinkTimer = 0;
+      this.cursorVisible = !this.cursorVisible;
+    }
+
+    // Check victory/defeat conditions
+    if (encounter.isVictory(state)) {
+      return { ...state, phase: 'victory' as const };
+    }
+    if (encounter.isDefeat(state)) {
+      return { ...state, phase: 'defeat' as const };
+    }
+
+    // Stay in unit-turn phase (waiting for action implementation)
     return state;
   }
 
@@ -183,24 +255,75 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     _state: CombatState,
     _encounter: CombatEncounter
   ): PanelContent | null {
-    if (!this.infoPanelContent) {
-      this.infoPanelContent = new UnitTurnInfoPanelContent();
+    // Determine which unit to display (target takes priority)
+    const displayUnit = this.targetedUnit ?? this.activeUnit;
+
+    if (!displayUnit) {
+      return null;
     }
 
-    return this.infoPanelContent;
+    // Create or update cached instance (per GeneralGuidelines.md - cache stateful components)
+    if (!this.unitInfoContent) {
+      this.unitInfoContent = new UnitInfoContent(
+        {
+          title: 'Unit Info',
+          titleColor: '#ffa500',
+          padding: 1,
+          lineSpacing: 8,
+        },
+        displayUnit
+      );
+    } else {
+      // Update which unit is displayed
+      this.unitInfoContent.updateUnit(displayUnit);
+    }
+
+    return this.unitInfoContent;
   }
 
   handleMapClick(
     context: MouseEventContext,
-    _state: CombatState,
+    state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult {
-    console.log(`[UnitTurnPhaseHandler] Map clicked at tile (${context.tileX}, ${context.tileY})`);
+    const { tileX, tileY } = context;
 
-    return {
-      handled: true,
-      logMessage: `Clicked tile (${context.tileX}, ${context.tileY})`
-    };
+    if (tileX === undefined || tileY === undefined) {
+      return { handled: false };
+    }
+
+    // Check if a unit is at this position
+    const unit = state.unitManifest.getUnitAtPosition({ x: tileX, y: tileY });
+
+    if (unit) {
+      // Set as targeted unit
+      this.targetedUnit = unit;
+      this.targetedUnitPosition = { x: tileX, y: tileY };
+
+      // Calculate movement range for this unit
+      this.movementRange = MovementRangeCalculator.calculateReachableTiles({
+        startPosition: this.targetedUnitPosition,
+        movement: this.targetedUnit.movement,
+        map: state.map,
+        unitManifest: state.unitManifest,
+        activeUnit: this.targetedUnit
+      });
+
+      return {
+        handled: true,
+        logMessage: `Selected ${unit.name}`
+      };
+    } else {
+      // Clear target if clicking empty tile
+      this.targetedUnit = null;
+      this.targetedUnitPosition = null;
+      this.movementRange = [];
+
+      return {
+        handled: true,
+        logMessage: `Clicked tile (${tileX}, ${tileY})`
+      };
+    }
   }
 
   handleMouseMove(
