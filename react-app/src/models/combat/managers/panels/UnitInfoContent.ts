@@ -23,6 +23,7 @@ export class UnitInfoContent implements PanelContent {
   private config: UnitInfoConfig;
   private unit: CombatUnit;
   private hoveredStatId: string | null = null;
+  private lastRegionWidth: number = 0; // Cache region width for hit detection
 
   // Helper text for each stat
   private readonly statHelperText: Record<string, string> = {
@@ -56,6 +57,9 @@ export class UnitInfoContent implements PanelContent {
 
     const font = FontRegistry.getById(fontId);
     if (!font) return;
+
+    // Cache region width for hit detection
+    this.lastRegionWidth = region.width;
 
     // ===== Section 1: Sprite (top-left corner) =====
     const spriteX = region.x + this.config.padding;
@@ -461,10 +465,15 @@ export class UnitInfoContent implements PanelContent {
     const leftColumnStats = ['HP', 'P.Pow', 'M.Pow', 'Move', 'Courage'];
     const rightColumnStats = ['MP', 'P.Evd', 'M.Evd', 'Speed', 'Attunement'];
 
-    // Determine column based on X position (approximate midpoint)
-    const midX = padding + ((relativeX - padding) / 2);
+    // Calculate column layout (must match render method)
+    const statsAreaWidth = this.lastRegionWidth - (padding * 2);
+    const columnGap = 8;
+    const columnWidth = (statsAreaWidth - columnGap) / 2;
 
-    if (relativeX < midX) {
+    // The dividing line between columns is at the end of left column + half the gap
+    const columnDivider = padding + columnWidth + (columnGap / 2);
+
+    if (relativeX < columnDivider) {
       // Left column
       return leftColumnStats[rowIndex];
     } else {
