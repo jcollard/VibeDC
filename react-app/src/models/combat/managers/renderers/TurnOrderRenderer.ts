@@ -394,10 +394,15 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       this.spriteSize
     );
 
-    // Render action timer (AT) value below sprite
+    // Render ticks until ready below sprite
     if (smallFontAtlasImage) {
-      const timerValue = Math.floor(unit.actionTimer); // Round down for display
-      const timerText = timerValue.toString();
+      // Calculate ticks until ready (when AT reaches 100)
+      const currentAT = unit.actionTimer;
+      const ticksUntilReady = unit.speed > 0
+        ? Math.ceil((100 - currentAT) / unit.speed)
+        : 999; // Show 999 for units with 0 speed
+
+      const timerText = ticksUntilReady.toString();
       const textX = x + this.spriteSize / 2; // Center under sprite
       const textY = y + this.spriteSize;
 

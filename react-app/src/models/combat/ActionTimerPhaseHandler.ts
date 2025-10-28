@@ -446,27 +446,31 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   }
 
   /**
-   * Calculate turn order based on actual AT values
-   * Sorts by AT value (descending - highest first), then alphabetically by name
+   * Calculate turn order based on time to reach 100 AT
+   * Sorts by time to ready (ascending - soonest first), then alphabetically by name
    * @param units All units in combat
    * @param timerValues Map of unit to current AT value
    * @returns Sorted array of units in turn order
    */
   private calculateTurnOrder(units: CombatUnit[], timerValues: Map<CombatUnit, number>): CombatUnit[] {
-    const unitsWithAT = units.map(unit => {
+    const unitsWithTime = units.map(unit => {
       const currentTimer = timerValues.get(unit) || unit.actionTimer;
-      return { unit, actionTimer: currentTimer };
+      const timeToReady = unit.speed > 0
+        ? (100 - currentTimer) / unit.speed
+        : Infinity;
+
+      return { unit, timeToReady };
     });
 
-    // Sort by AT value (descending - highest first), then alphabetically
-    unitsWithAT.sort((a, b) => {
-      if (a.actionTimer !== b.actionTimer) {
-        return b.actionTimer - a.actionTimer; // Descending: highest AT first
+    // Sort by time to ready (ascending - soonest first), then alphabetically
+    unitsWithTime.sort((a, b) => {
+      if (a.timeToReady !== b.timeToReady) {
+        return a.timeToReady - b.timeToReady;
       }
       return a.unit.name.localeCompare(b.unit.name);
     });
 
-    return unitsWithAT.map(item => item.unit);
+    return unitsWithTime.map(item => item.unit);
   }
 
   /**
