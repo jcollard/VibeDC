@@ -324,8 +324,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
     this.mode = 'moveSelection';
 
-    // Add combat log message
-    this.pendingMessage = `Click a tile to move ${this.activeUnit.name}`;
+    // Add combat log message with colored unit name
+    const nameColor = this.activeUnit.isPlayerControlled ? '#00cc00' : '#ff0000';
+    this.pendingMessage = `Click a tile to move [color=${nameColor}]${this.activeUnit.name}[/color]`;
 
     // Pre-calculate all paths to valid tiles (performance optimization)
     this.moveModePaths.clear();

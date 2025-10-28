@@ -151,6 +151,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     return savedScale;
   });
 
+  // Track max FPS setting
+  const [maxFPS, setMaxFPS] = useState<number>(() => {
+    return UISettings.getMaxFPS();
+  });
+
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
     width: '100%',
@@ -212,6 +217,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // State change will trigger useEffect recalculation via dependency
   }, []);
 
+  // Handle max FPS change
+  const handleMaxFPSChange = useCallback((fps: number) => {
+    UISettings.setMaxFPS(fps);
+    setMaxFPS(fps);
+  }, []);
+
   // Track the last displayed unit for info panel persistence
   const lastDisplayedUnitRef = useRef<CombatUnit | null>(null);
 
@@ -231,6 +242,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const [showFPS, setShowFPS] = useState<boolean>(false);
   const fpsHistoryRef = useRef<number[]>([]);
   const currentFPSRef = useRef<number>(60);
+  const accumulatedTimeRef = useRef<number>(0);
 
   // Track map scroll offset (in tiles)
   const [mapScrollX, setMapScrollX] = useState<number>(0);
@@ -603,34 +615,49 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         currentFPSRef.current = Math.round(avgFPS);
       }
 
-      // Update cinematic manager (has priority over phase updates)
-      const cinematicPlaying = cinematicManagerRef.current.update(deltaTime);
+      // FPS limiting for debugging
+      const maxFPS = UISettings.getMaxFPS();
+      const targetFrameDuration = maxFPS > 0 ? 1000 / maxFPS : 0; // milliseconds
+      accumulatedTimeRef.current += deltaTime * 1000; // convert to ms
 
-      // Initialize combat log after cinematic completes
-      if (!cinematicPlaying && introCinematicPlayedRef.current && !combatLogInitializedRef.current) {
-        combatLogInitializedRef.current = true;
-        combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
-        combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
-        combatLogManager.addMessage('', 3);
-        combatLogManager.addMessage(CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION);
-      }
-
-      // Update phase handler (for animations) only if no cinematic is playing
-      if (!cinematicPlaying && phaseHandlerRef.current.update) {
-        const updatedState = phaseHandlerRef.current.update(combatState, activeEncounter, deltaTime);
-        // If phase handler returns new state (e.g., phase transition), apply it
-        if (updatedState && updatedState !== combatState) {
-          setCombatState(updatedState);
+      // Only update and render if enough time has passed (or unlimited FPS)
+      if (maxFPS === 0 || accumulatedTimeRef.current >= targetFrameDuration) {
+        // Consume the accumulated time
+        if (maxFPS > 0) {
+          accumulatedTimeRef.current -= targetFrameDuration;
+        } else {
+          accumulatedTimeRef.current = 0;
         }
+
+        // Update cinematic manager (has priority over phase updates)
+        const cinematicPlaying = cinematicManagerRef.current.update(deltaTime);
+
+        // Initialize combat log after cinematic completes
+        if (!cinematicPlaying && introCinematicPlayedRef.current && !combatLogInitializedRef.current) {
+          combatLogInitializedRef.current = true;
+          combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE1);
+          combatLogManager.addMessage(CombatConstants.TEXT.WAYLAID_MESSAGE_LINE2);
+          combatLogManager.addMessage('', 3);
+          combatLogManager.addMessage(CombatConstants.TEXT.DEPLOYMENT_INSTRUCTION);
+        }
+
+        // Update phase handler (for animations) only if no cinematic is playing
+        if (!cinematicPlaying && phaseHandlerRef.current.update) {
+          const updatedState = phaseHandlerRef.current.update(combatState, activeEncounter, deltaTime);
+          // If phase handler returns new state (e.g., phase transition), apply it
+          if (updatedState && updatedState !== combatState) {
+            setCombatState(updatedState);
+          }
+        }
+
+        // Update combat log animations
+        combatLogManager.update(deltaTime);
+
+        // Render the frame
+        renderFrame();
       }
 
-      // Update combat log animations
-      combatLogManager.update(deltaTime);
-
-      // Render the frame
-      renderFrame();
-
-      // Schedule next frame
+      // Always schedule next frame (FPS limiting only skips updates/renders, not the loop)
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -1431,6 +1458,34 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
             <option value={3}>3x</option>
             <option value={4}>4x</option>
             <option value={5}>5x</option>
+          </select>
+
+          {/* Max FPS Selector */}
+          <label style={{ display: 'block', marginBottom: '4px' }}>
+            Max FPS (0 = unlimited):
+          </label>
+          <select
+            value={maxFPS}
+            onChange={(e) => handleMaxFPSChange(Number(e.target.value))}
+            style={{
+              width: '200px',
+              padding: '4px',
+              background: '#222',
+              border: '1px solid #555',
+              borderRadius: '3px',
+              color: '#fff',
+              fontFamily: 'monospace',
+              fontSize: '11px',
+              marginBottom: '16px',
+            }}
+          >
+            <option value={0}>Unlimited (~60 FPS)</option>
+            <option value={1}>1 FPS (debugging)</option>
+            <option value={5}>5 FPS (debugging)</option>
+            <option value={10}>10 FPS</option>
+            <option value={15}>15 FPS</option>
+            <option value={30}>30 FPS</option>
+            <option value={60}>60 FPS</option>
           </select>
 
             {/* Title Font Atlas Selector */}

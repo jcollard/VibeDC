@@ -18,6 +18,13 @@ export interface UISettingsConfig {
    * When set to 0 (or null), automatic scaling is used based on available space
    */
   manualScale: number;
+
+  /**
+   * Maximum frames per second (FPS) limit for debugging
+   * When set to 0 or null, runs at unlimited FPS (default ~60 FPS browser limit)
+   * Useful values: 1, 5, 10, 15, 30, 60
+   */
+  maxFPS: number;
 }
 
 /**
@@ -26,6 +33,7 @@ export interface UISettingsConfig {
 const DEFAULT_SETTINGS: UISettingsConfig = {
   integerScaling: true, // Default to integer scaling for crisp pixel art
   manualScale: 0, // 0 = automatic scaling
+  maxFPS: 0, // 0 = unlimited FPS
 };
 
 /**
@@ -68,6 +76,25 @@ export class UISettings {
    */
   static getManualScale(): number {
     return this.settings.manualScale;
+  }
+
+  /**
+   * Set maximum FPS limit (0 = unlimited)
+   * Useful for debugging to slow down frame rate and read console messages
+   *
+   * Usage in browser console:
+   *   UISettings.setMaxFPS(5)  // Slow to 5 FPS for debugging
+   *   UISettings.setMaxFPS(0)  // Reset to unlimited
+   */
+  static setMaxFPS(fps: number): void {
+    this.settings.maxFPS = Math.max(0, Math.floor(fps));
+  }
+
+  /**
+   * Get the current max FPS setting
+   */
+  static getMaxFPS(): number {
+    return this.settings.maxFPS;
   }
 
   /**

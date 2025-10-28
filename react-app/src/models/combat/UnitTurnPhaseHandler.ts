@@ -525,6 +525,10 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       path
     );
 
+    // Temporarily move unit off-screen in manifest to hide it during animation
+    // (we render it manually at the animated position in renderUI)
+    state.unitManifest.moveUnit(this.activeUnit, { x: -999, y: -999 });
+
     // Add log message
     const nameColor = this.getUnitNameColor();
     const logMessage = `[color=${nameColor}]${this.activeUnit.name}[/color] moves.`;
@@ -631,13 +635,13 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     _encounter: CombatEncounter
   ): PanelContent | null {
     // Determine which panel to show based on state
-    // If we have a targeted unit different from active, show their info
-    // Otherwise, show the active unit's action menu
+    // If player unit turn: show action menu for active unit
+    // If targeting a different unit: show that unit's info
 
     const targetedUnit = this.currentStrategy?.getTargetedUnit();
 
     // If targeting a different unit than active, show that unit's info
-    if (targetedUnit && targetedUnit !== this.activeUnit) {
+    if (targetedUnit && targetedUnit !== this.activeUnit && this.activeUnit) {
       // Determine title color based on unit's allegiance
       const titleColor = targetedUnit.isPlayerControlled
         ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
@@ -666,6 +670,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       // Get current strategy mode for active button highlighting
       const strategyMode = this.currentStrategy?.getMode() ?? 'normal';
       const activeAction = strategyMode === 'moveSelection' ? 'move' : null;
+
+      console.log(`[UnitTurnPhaseHandler] Mode: ${strategyMode}, ActiveAction: ${activeAction}`);
 
       // Determine title color
       const titleColor = this.activeUnit.isPlayerControlled
