@@ -9,7 +9,8 @@ import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler'
  */
 export type TurnAction =
   | { type: 'delay' }             // Set actionTimer to 50
-  | { type: 'end-turn' };         // Set actionTimer to 0
+  | { type: 'end-turn' }          // Set actionTimer to 0
+  | { type: 'move'; destination: Position }; // Move to destination
 
 /**
  * Strategy pattern for handling unit turns
@@ -102,4 +103,22 @@ export interface TurnStrategy {
    * @param actionId - The action selected ('delay', 'end-turn', etc.)
    */
   handleActionSelected(actionId: string): void;
+
+  /**
+   * Get the current strategy mode ('normal', 'moveSelection', etc.)
+   * Used to determine UI state and behavior
+   */
+  getMode(): string;
+
+  /**
+   * Get the movement path currently being previewed (for hover visualization)
+   * Returns null if no path is being previewed
+   */
+  getMovementPath(): Position[] | null;
+
+  /**
+   * Get the movement range color override (for move mode)
+   * Returns null for default color (yellow), or color string for override (green)
+   */
+  getMovementRangeColor(): string | null;
 }

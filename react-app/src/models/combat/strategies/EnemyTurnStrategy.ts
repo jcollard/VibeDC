@@ -188,4 +188,19 @@ export class EnemyTurnStrategy implements TurnStrategy {
     // Enemy strategy doesn't use action menu
     // No-op implementation
   }
+
+  getMode(): string {
+    // Enemy AI doesn't have modes (always auto-decides)
+    return 'normal';
+  }
+
+  getMovementPath(): Position[] | null {
+    // Enemy AI doesn't preview paths
+    return null;
+  }
+
+  getMovementRangeColor(): string | null {
+    // Enemy AI uses default color
+    return null;
+  }
 }

@@ -5,6 +5,13 @@ import type { CombatUnit } from '../CombatUnit';
 import type { Position } from '../../../types';
 import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler';
 import { MovementRangeCalculator } from '../utils/MovementRangeCalculator';
+import { MovementPathfinder } from '../utils/MovementPathfinder';
+import { CombatConstants } from '../CombatConstants';
+
+/**
+ * Strategy mode - defines what the player is currently doing
+ */
+type StrategyMode = 'normal' | 'moveSelection';
 
 /**
  * Player turn strategy - waits for player input to decide actions
@@ -39,10 +46,24 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Pending action (set by handleActionSelected, returned by update)
   private pendingAction: TurnAction | null = null;
 
+  // Strategy mode state machine
+  private mode: StrategyMode = 'normal';
+
+  // Movement path caching (pre-calculated when entering move mode)
+  private moveModePaths: Map<string, Position[]> = new Map();
+
+  // Currently hovered movement path (for yellow preview)
+  private hoveredMovePath: Position[] | null = null;
+
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
     this.activeUnit = unit;
     this.activePosition = position;
     this.currentState = state;
+
+    // Reset mode state
+    this.mode = 'normal';
+    this.moveModePaths.clear();
+    this.hoveredMovePath = null;
 
     // Calculate movement range for this unit
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
@@ -67,6 +88,11 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.movementRange = [];
     this.currentState = null;
     this.pendingAction = null;
+
+    // Clean up mode state
+    this.mode = 'normal';
+    this.moveModePaths.clear();
+    this.hoveredMovePath = null;
   }
 
   update(
@@ -101,32 +127,40 @@ export class PlayerTurnStrategy implements TurnStrategy {
       return { handled: false };
     }
 
-    // Check if a unit is at this position
+    // Handle move mode clicks
+    if (this.mode === 'moveSelection') {
+      return this.handleMoveClick({ x: tileX, y: tileY });
+    }
+
+    // Normal mode: unit selection
     const unit = state.unitManifest.getUnitAtPosition({ x: tileX, y: tileY });
 
     if (unit) {
-      // Select unit and calculate its movement range
       this.selectUnit(unit, { x: tileX, y: tileY }, state);
-
       return { handled: true };
     } else {
-      // Future: If clicking on valid movement tile, move to that position
-      // Future: If clicking on valid attack target, attack that position
-
-      // For now, just clear selection
       this.clearSelection();
-
       return { handled: true };
     }
   }
 
   handleMouseMove(
-    _context: MouseEventContext,
+    context: MouseEventContext,
     _state: CombatState,
     _encounter: CombatEncounter
   ): PhaseEventResult {
-    // Future: Show tooltips on hover
-    // Future: Highlight valid targets on hover
+    const { tileX, tileY } = context;
+
+    if (tileX === undefined || tileY === undefined) {
+      return { handled: false };
+    }
+
+    // Handle move mode hover
+    if (this.mode === 'moveSelection') {
+      this.updateHoveredPath({ x: tileX, y: tileY });
+      return { handled: true };
+    }
+
     return { handled: false };
   }
 
@@ -182,6 +216,17 @@ export class PlayerTurnStrategy implements TurnStrategy {
   }
 
   handleActionSelected(actionId: string): void {
+    // Handle mode toggles
+    if (actionId === 'move') {
+      this.toggleMoveMode();
+      return;
+    }
+
+    // Other actions cancel move mode
+    if (this.mode === 'moveSelection') {
+      this.exitMoveMode();
+    }
+
     // Convert actionId to TurnAction
     switch (actionId) {
       case 'delay':
@@ -194,5 +239,115 @@ export class PlayerTurnStrategy implements TurnStrategy {
         console.warn('[PlayerTurnStrategy] Unknown action ID:', actionId);
         this.pendingAction = null;
     }
+  }
+
+  getMode(): string {
+    return this.mode;
+  }
+
+  getMovementPath(): Position[] | null {
+    return this.hoveredMovePath;
+  }
+
+  getMovementRangeColor(): string | null {
+    return this.mode === 'moveSelection'
+      ? CombatConstants.UNIT_TURN.MOVEMENT_RANGE_COLOR_ACTIVE  // Green
+      : null;  // Default yellow
+  }
+
+  /**
+   * Update the hovered movement path (for yellow preview)
+   */
+  private updateHoveredPath(position: Position): void {
+    const key = this.positionKey(position);
+    const path = this.moveModePaths.get(key);
+
+    // Update hover state (instant replacement)
+    this.hoveredMovePath = path ?? null;
+  }
+
+  /**
+   * Handle click during move mode
+   */
+  private handleMoveClick(position: Position): PhaseEventResult {
+    const key = this.positionKey(position);
+    const path = this.moveModePaths.get(key);
+
+    if (!path || path.length === 0) {
+      // Clicked invalid tile - do nothing
+      return { handled: true };
+    }
+
+    // Valid tile clicked - initiate movement
+    this.pendingAction = {
+      type: 'move',
+      destination: position
+    };
+
+    // Clear all highlights immediately (before animation starts)
+    this.exitMoveMode();
+    this.movementRange = [];
+
+    return { handled: true };
+  }
+
+  /**
+   * Toggle move mode on/off
+   */
+  private toggleMoveMode(): void {
+    if (this.mode === 'moveSelection') {
+      this.exitMoveMode();
+    } else {
+      this.enterMoveMode();
+    }
+  }
+
+  /**
+   * Enter move selection mode
+   */
+  private enterMoveMode(): void {
+    if (!this.activeUnit || !this.activePosition || !this.currentState) {
+      console.warn('[PlayerTurnStrategy] Cannot enter move mode - missing active unit');
+      return;
+    }
+
+    this.mode = 'moveSelection';
+
+    // Pre-calculate all paths to valid tiles (performance optimization)
+    this.moveModePaths.clear();
+
+    for (const tile of this.movementRange) {
+      const path = MovementPathfinder.calculatePath({
+        start: this.activePosition,
+        end: tile,
+        maxRange: this.activeUnit.movement,
+        map: this.currentState.map,
+        unitManifest: this.currentState.unitManifest,
+        activeUnit: this.activeUnit
+      });
+
+      if (path.length > 0) {
+        const key = this.positionKey(tile);
+        this.moveModePaths.set(key, path);
+      }
+    }
+
+    console.log(`[PlayerTurnStrategy] Entered move mode - cached ${this.moveModePaths.size} paths`);
+  }
+
+  /**
+   * Exit move selection mode
+   */
+  private exitMoveMode(): void {
+    this.mode = 'normal';
+    this.moveModePaths.clear();
+    this.hoveredMovePath = null;
+  }
+
+  /**
+   * Convert position to string key for Map
+   */
+  private positionKey(position: Position): string {
+    return `${position.x},${position.y}`;
   }
 }

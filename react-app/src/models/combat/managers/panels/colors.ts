@@ -13,3 +13,6 @@ export const HOVERED_TEXT = '#ffff00';
 
 /** Color for disabled buttons (grey) */
 export const DISABLED_TEXT = '#888888';
+
+/** Color for active/selected buttons (green) */
+export const ACTIVE_COLOR = '#00ff00';

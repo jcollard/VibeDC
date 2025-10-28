@@ -15,11 +15,14 @@ import type { CombatUnit } from './CombatUnit';
 import type { Position } from '../../types';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { UnitInfoContent } from './managers/panels/UnitInfoContent';
+import { ActionsMenuContent } from './managers/panels/ActionsMenuContent';
 import { SpriteRenderer } from '../../utils/SpriteRenderer';
 import { CombatConstants } from './CombatConstants';
 import type { TurnStrategy, TurnAction } from './strategies/TurnStrategy';
 import { PlayerTurnStrategy } from './strategies/PlayerTurnStrategy';
 import { EnemyTurnStrategy } from './strategies/EnemyTurnStrategy';
+import { UnitMovementSequence } from './UnitMovementSequence';
+import { MovementPathfinder } from './utils/MovementPathfinder';
 
 /**
  * Unit turn phase handler - manages individual unit turns using strategy pattern
@@ -58,6 +61,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
   // Cached panel content (per GeneralGuidelines.md - cache stateful components)
   private unitInfoContent: UnitInfoContent | null = null;
+  private actionsMenuContent: ActionsMenuContent | null = null;
 
   // Cached turn order renderer (maintains scroll state across renders)
   private turnOrderRenderer: TurnOrderRenderer | null = null;
@@ -65,15 +69,18 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   // Pending combat log messages (added in render when combatLog is available)
   private pendingLogMessages: string[] = [];
 
-  // Track if info panel has been initialized for this phase
-  private infoPanelInitialized: boolean = false;
-
   // Cached tinting buffer (reused across all tinting operations to avoid creating canvases every frame)
   private tintingBuffer: HTMLCanvasElement | null = null;
   private tintingBufferCtx: CanvasRenderingContext2D | null = null;
 
   // Store current state for click handlers
   private currentState: CombatState | null = null;
+
+  // Movement tracking (resets when new unit's turn starts)
+  private unitHasMoved: boolean = false;
+
+  // Movement animation
+  private movementSequence: UnitMovementSequence | null = null;
 
   constructor() {
     super();
@@ -181,16 +188,20 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.pendingLogMessages = [];
     }
 
-    // Get movement range from strategy
+    // Get movement range and color override from strategy
     const movementRange = this.currentStrategy?.getMovementRange() ?? [];
+    const rangeColorOverride = this.currentStrategy?.getMovementRangeColor();
 
-    // Render movement range highlights (yellow tiles) - rendered BEFORE units
+    // Determine movement range color (green in move mode, yellow otherwise)
+    const rangeColor = rangeColorOverride ?? CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALBEDO;
+
+    // Render movement range highlights - rendered BEFORE units
     for (const position of movementRange) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
       const x = Math.floor(offsetX + (position.x * tileSize));
       const y = Math.floor(offsetY + (position.y * tileSize));
 
-      // Render with yellow tint and transparency
+      // Render with color override (green in move mode, yellow otherwise)
       this.renderTintedSprite(
         ctx,
         CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
@@ -200,9 +211,34 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         y,
         tileSize,
         tileSize,
-        CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALBEDO,
+        rangeColor,  // Use color override for green in move mode
         CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALPHA
       );
+    }
+
+    // Get movement path preview (yellow tiles on hover)
+    const movementPath = this.currentStrategy?.getMovementPath() ?? null;
+
+    // Render movement path preview - rendered BEFORE units, AFTER range
+    if (movementPath && movementPath.length > 0) {
+      for (const position of movementPath) {
+        const x = Math.floor(offsetX + (position.x * tileSize));
+        const y = Math.floor(offsetY + (position.y * tileSize));
+
+        // Yellow path overlay (including destination)
+        this.renderTintedSprite(
+          ctx,
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
+          spriteImages,
+          spriteSize,
+          x,
+          y,
+          tileSize,
+          tileSize,
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALBEDO,  // Yellow
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_ALPHA
+        );
+      }
     }
   }
 
@@ -271,6 +307,23 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Store state reference for click handlers
     this.currentState = state;
 
+    // Handle movement animation if in progress
+    if (this.movementSequence) {
+      const isComplete = this.movementSequence.update(deltaTime);
+
+      if (isComplete) {
+        // Animation finished - apply position change
+        const newState = this.completeMoveAnimation(state);
+        this.movementSequence = null;
+
+        // Stay in unit-turn phase (don't auto-advance turn)
+        return newState;
+      }
+
+      // Animation still playing - stay in phase
+      return state;
+    }
+
     // Find the unit with highest action timer (first ready)
     const allUnits = state.unitManifest.getAllUnits();
     const sortedUnits = allUnits.sort((a, b) => {
@@ -285,6 +338,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       const readyPlacement = sortedUnits[0];
       this.activeUnit = readyPlacement.unit;
       this.activeUnitPosition = readyPlacement.position;
+
+      // Reset movement tracking for new unit
+      this.unitHasMoved = false;
 
       // Initialize appropriate strategy based on unit control
       this.currentStrategy = this.activeUnit.isPlayerControlled
@@ -328,14 +384,15 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
       // If strategy has decided on an action, execute it
       if (action) {
-        // Execute the action
-        const newState = this.executeAction(action, state);
-
-        // Clean up strategy
-        this.currentStrategy.onTurnEnd();
-
-        // Return new state (transitions back to action-timer phase)
-        return newState;
+        if (action.type === 'move') {
+          // Start movement animation
+          return this.startMoveAnimation(action.destination, state);
+        } else {
+          // Execute other actions (delay, end-turn)
+          const newState = this.executeAction(action, state);
+          this.currentStrategy.onTurnEnd();
+          return newState;
+        }
       }
     }
 
@@ -410,6 +467,75 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   /**
+   * Start movement animation for active unit
+   */
+  private startMoveAnimation(destination: Position, state: CombatState): CombatState | null {
+    if (!this.activeUnit || !this.activeUnitPosition) {
+      console.warn('[UnitTurnPhaseHandler] Cannot start move - no active unit');
+      return state;
+    }
+
+    // Calculate path from current position to destination
+    const path = MovementPathfinder.calculatePath({
+      start: this.activeUnitPosition,
+      end: destination,
+      maxRange: this.activeUnit.movement,
+      map: state.map,
+      unitManifest: state.unitManifest,
+      activeUnit: this.activeUnit
+    });
+
+    if (path.length === 0) {
+      console.warn('[UnitTurnPhaseHandler] Cannot move - no valid path to destination');
+      return state;
+    }
+
+    // Create movement sequence
+    this.movementSequence = new UnitMovementSequence(
+      this.activeUnit,
+      this.activeUnitPosition,
+      path
+    );
+
+    // Add log message
+    const nameColor = this.getUnitNameColor();
+    const logMessage = `[color=${nameColor}]${this.activeUnit.name}[/color] moves.`;
+    this.pendingLogMessages.push(logMessage);
+
+    // Stay in unit-turn phase while animation plays
+    return state;
+  }
+
+  /**
+   * Complete movement animation - update position and set hasMoved flag
+   */
+  private completeMoveAnimation(state: CombatState): CombatState {
+    if (!this.movementSequence || !this.activeUnit || !this.activeUnitPosition) {
+      return state;
+    }
+
+    // Get final position from animation
+    const finalPosition = this.movementSequence.getDestination();
+
+    // Update unit position in manifest
+    state.unitManifest.moveUnit(this.activeUnit, {
+      x: Math.round(finalPosition.x),
+      y: Math.round(finalPosition.y)
+    });
+
+    // Update cached active position
+    this.activeUnitPosition = {
+      x: Math.round(finalPosition.x),
+      y: Math.round(finalPosition.y)
+    };
+
+    // Mark unit as having moved
+    this.unitHasMoved = true;
+
+    return state;
+  }
+
+  /**
    * Get the color for the active unit's name in combat log messages
    */
   private getUnitNameColor(): string {
@@ -467,42 +593,72 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     _state: CombatState,
     _encounter: CombatEncounter
   ): PanelContent | null {
-    // Get targeted unit from strategy (target takes priority over active unit)
+    // Determine which panel to show based on state
+    // If we have a targeted unit different from active, show their info
+    // Otherwise, show the active unit's action menu
+
     const targetedUnit = this.currentStrategy?.getTargetedUnit();
-    const displayUnit = targetedUnit ?? this.activeUnit;
 
-    if (!displayUnit) {
-      return null;
+    // If targeting a different unit than active, show that unit's info
+    if (targetedUnit && targetedUnit !== this.activeUnit) {
+      // Determine title color based on unit's allegiance
+      const titleColor = targetedUnit.isPlayerControlled
+        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+
+      // Create or update cached instance
+      if (!this.unitInfoContent) {
+        this.unitInfoContent = new UnitInfoContent(
+          {
+            title: targetedUnit.name,
+            titleColor: titleColor,
+            padding: 1,
+            lineSpacing: 8,
+          },
+          targetedUnit
+        );
+      } else {
+        this.unitInfoContent.updateUnit(targetedUnit, targetedUnit.name, titleColor);
+      }
+
+      return this.unitInfoContent;
     }
 
-    // Force recreation of panel content on first call to ensure it shows the active unit
-    if (!this.infoPanelInitialized) {
-      this.unitInfoContent = null;
-      this.infoPanelInitialized = true;
-    }
+    // Show active unit's action menu
+    if (this.activeUnit) {
+      // Get current strategy mode for active button highlighting
+      const strategyMode = this.currentStrategy?.getMode() ?? 'normal';
+      const activeAction = strategyMode === 'moveSelection' ? 'move' : null;
 
-    // Determine title color based on unit's allegiance
-    const titleColor = displayUnit.isPlayerControlled
-      ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
-      : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+      // Determine title color
+      const titleColor = this.activeUnit.isPlayerControlled
+        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
 
-    // Create or update cached instance (per GeneralGuidelines.md - cache stateful components)
-    if (!this.unitInfoContent) {
-      this.unitInfoContent = new UnitInfoContent(
-        {
-          title: displayUnit.name,
-          titleColor: titleColor,
-          padding: 1,
-          lineSpacing: 8,
-        },
-        displayUnit
+      // Create or update actions menu
+      if (!this.actionsMenuContent) {
+        this.actionsMenuContent = new ActionsMenuContent(
+          {
+            title: 'Actions',
+            titleColor: titleColor,
+            padding: 1,
+            lineSpacing: 8
+          },
+          this.activeUnit
+        );
+      }
+
+      // Update menu with current state
+      this.actionsMenuContent.updateUnit(
+        this.activeUnit,
+        this.unitHasMoved,
+        activeAction
       );
-    } else {
-      // Update which unit is displayed, with unit name as title and appropriate color
-      this.unitInfoContent.updateUnit(displayUnit, displayUnit.name, titleColor);
+
+      return this.actionsMenuContent;
     }
 
-    return this.unitInfoContent;
+    return null;
   }
 
   /**
@@ -598,5 +754,19 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     if (this.currentStrategy) {
       this.currentStrategy.handleActionSelected(actionId);
     }
+  }
+
+  /**
+   * Get whether the active unit has moved this turn
+   */
+  getHasMoved(): boolean {
+    return this.unitHasMoved;
+  }
+
+  /**
+   * Mark the active unit as having moved this turn
+   */
+  setHasMoved(value: boolean): void {
+    this.unitHasMoved = value;
   }
 }

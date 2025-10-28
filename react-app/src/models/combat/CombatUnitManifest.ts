@@ -107,18 +107,28 @@ export class CombatUnitManifest {
 
   /**
    * Move a unit to a new position
+   * Updates internal position tracking without changing unit references
+   *
+   * @param unit - The unit to move
+   * @param newPosition - The destination position
+   * @throws Error if unit is not in manifest
    */
-  moveUnit(unit: CombatUnit, newPosition: Position): boolean {
+  moveUnit(unit: CombatUnit, newPosition: Position): void {
     const id = this.unitToId.get(unit);
-    if (!id) return false;
+
+    if (!id) {
+      throw new Error(`Cannot move unit ${unit.name} - not found in manifest`);
+    }
 
     const placement = this.units.get(id);
     if (!placement) {
-      return false;
+      throw new Error(`Cannot move unit ${unit.name} - placement not found`);
     }
 
+    // Update position in placement
     placement.position = newPosition;
-    return true;
+
+    console.log(`[CombatUnitManifest] Moved ${unit.name} to (${newPosition.x}, ${newPosition.y})`);
   }
 
   /**

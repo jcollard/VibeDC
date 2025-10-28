@@ -1,7 +1,7 @@
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion, PanelClickResult } from './PanelContent';
-import { HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT } from './colors';
+import { HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT, ACTIVE_COLOR } from './colors';
 import type { CombatUnit } from '../../CombatUnit';
 
 /**
@@ -44,6 +44,7 @@ export class ActionsMenuContent implements PanelContent {
   private currentUnit: CombatUnit | null = null;
   private lastRegionWidth: number = 0; // Cache region width for bounds checking
   private lastRegionHeight: number = 0; // Cache region height for bounds checking
+  private activeButtonId: string | null = null; // Track which button is active (green)
 
   constructor(config: ActionsMenuConfig, unit?: CombatUnit) {
     this.config = config;
@@ -72,15 +73,18 @@ export class ActionsMenuContent implements PanelContent {
   }
 
   /**
-   * Update the action menu for a new unit without resetting hover state
+   * Update the action menu for a new unit
    * @param unit - The combat unit whose turn it is
+   * @param hasMoved - Whether the unit has moved this turn
+   * @param activeAction - The currently active action (for highlighting)
    */
-  updateUnit(unit: CombatUnit): void {
+  updateUnit(unit: CombatUnit, hasMoved: boolean = false, activeAction: string | null = null): void {
     // Store current unit reference
     this.currentUnit = unit;
+    this.activeButtonId = activeAction;
 
-    // Rebuild button list based on unit stats and classes
-    this.buttons = this.buildButtonList(unit);
+    // Rebuild button list with current state
+    this.buttons = this.buildButtonList(unit, hasMoved);
 
     // Validate hover index is still valid
     if (this.hoveredButtonIndex !== null &&
@@ -93,16 +97,18 @@ export class ActionsMenuContent implements PanelContent {
   }
 
   /**
-   * Build dynamic button list based on unit's stats and classes
+   * Build dynamic button list based on unit's stats, classes, and state
+   * @param unit - The combat unit
+   * @param hasMoved - Whether the unit has moved this turn
    */
-  private buildButtonList(unit: CombatUnit): ActionButton[] {
+  private buildButtonList(unit: CombatUnit, hasMoved: boolean = false): ActionButton[] {
     const buttons: ActionButton[] = [];
 
-    // Move button
+    // Move button (disabled if already moved)
     buttons.push({
       id: 'move',
       label: 'Move',
-      enabled: true,
+      enabled: !hasMoved,
       helperText: `Move this unit up to ${unit.movement} tiles`
     });
 
@@ -134,11 +140,11 @@ export class ActionsMenuContent implements PanelContent {
       });
     }
 
-    // Delay button
+    // Delay button (disabled if already moved)
     buttons.push({
       id: 'delay',
       label: 'Delay',
-      enabled: true,
+      enabled: !hasMoved,
       helperText: 'Take no moves or actions and sets Action Timer to 50'
     });
 
@@ -205,11 +211,14 @@ export class ActionsMenuContent implements PanelContent {
     for (let i = 0; i < this.buttons.length; i++) {
       const button = this.buttons[i];
       const isHovered = this.hoveredButtonIndex === i;
+      const isActive = button.id === this.activeButtonId;
 
       // Determine button color based on state
       let color: string;
       if (!button.enabled) {
         color = DISABLED_TEXT;
+      } else if (isActive) {
+        color = ACTIVE_COLOR; // Green for active button
       } else if (isHovered) {
         color = HOVERED_TEXT;
       } else {
