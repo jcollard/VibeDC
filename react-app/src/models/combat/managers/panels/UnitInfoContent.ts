@@ -80,7 +80,7 @@ export class UnitInfoContent implements PanelContent {
     const classY = nameY + this.config.lineSpacing;
     let classText = this.unit.unitClass.name;
     if (this.unit.secondaryClass) {
-      classText += ` / ${this.unit.secondaryClass.name}`;
+      classText += `/${this.unit.secondaryClass.name}`; // No spaces around slash
     }
 
     FontAtlasRenderer.renderText(
@@ -178,8 +178,9 @@ export class UnitInfoContent implements PanelContent {
     const leftColumnStats = [
       { label: 'HP', value: `${this.unit.health}/${this.unit.maxHealth}` },
       { label: 'MP', value: `${this.unit.mana}/${this.unit.maxMana}` },
-      { label: 'Spd', value: `${this.unit.speed}` },
-      { label: 'Mov', value: `${this.unit.movement}` }
+      { label: 'Speed', value: `${this.unit.speed}` },
+      { label: 'Movement', value: `${this.unit.movement}` },
+      { label: 'Cour', value: `${this.unit.courage}` }
     ];
 
     const rightColumnStats = [
@@ -187,31 +188,49 @@ export class UnitInfoContent implements PanelContent {
       { label: 'M.Pow', value: `${this.unit.magicPower}` },
       { label: 'P.Evd', value: `${this.unit.physicalEvade}` },
       { label: 'M.Evd', value: `${this.unit.magicEvade}` },
-      { label: 'Cour', value: `${this.unit.courage}` },
       { label: 'Attn', value: `${this.unit.attunement}` }
     ];
 
-    // Calculate left column width
-    let maxLeftWidth = 0;
+    // Calculate left column label width (for right-aligning values)
+    let maxLeftLabelWidth = 0;
     for (const stat of leftColumnStats) {
-      const text = `${stat.label} ${stat.value}`;
-      const width = FontAtlasRenderer.measureText(text, font);
-      if (width > maxLeftWidth) {
-        maxLeftWidth = width;
+      const labelWidth = FontAtlasRenderer.measureText(stat.label, font);
+      if (labelWidth > maxLeftLabelWidth) {
+        maxLeftLabelWidth = labelWidth;
       }
     }
 
+    // Calculate right column label width
+    let maxRightLabelWidth = 0;
+    for (const stat of rightColumnStats) {
+      const labelWidth = FontAtlasRenderer.measureText(stat.label, font);
+      if (labelWidth > maxRightLabelWidth) {
+        maxRightLabelWidth = labelWidth;
+      }
+    }
+
+    // Calculate total widths for positioning
+    // Left column: label + space + widest value
+    const maxLeftValueWidth = Math.max(
+      FontAtlasRenderer.measureText(`${this.unit.health}/${this.unit.maxHealth}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.mana}/${this.unit.maxMana}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.speed}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.movement}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.courage}`, font)
+    );
+    const leftColumnWidth = maxLeftLabelWidth + 1 + maxLeftValueWidth; // 1px space
+
     // Define column positions
     const leftColumnX = region.x + this.config.padding;
-    const rightColumnX = leftColumnX + maxLeftWidth + 4; // 4px gap between columns
-    let statsY = classY + this.config.lineSpacing; // Start below class line
+    const rightColumnX = leftColumnX + leftColumnWidth + 12; // 12px gap between columns
+    let statsY = classY + this.config.lineSpacing + 4; // Start below class line + 4px spacing
 
-    // Render left column
+    // Render left column (label left-aligned, value right-aligned)
     for (const stat of leftColumnStats) {
-      const text = `${stat.label} ${stat.value}`;
+      // Render label
       FontAtlasRenderer.renderText(
         ctx,
-        text,
+        stat.label,
         leftColumnX,
         statsY,
         fontId,
@@ -220,18 +239,44 @@ export class UnitInfoContent implements PanelContent {
         'left',
         '#ffffff'
       );
+
+      // Render value (right-aligned within column)
+      const valueWidth = FontAtlasRenderer.measureText(stat.value, font);
+      const valueX = leftColumnX + leftColumnWidth - valueWidth;
+      FontAtlasRenderer.renderText(
+        ctx,
+        stat.value,
+        valueX,
+        statsY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+
       statsY += this.config.lineSpacing;
     }
 
     // Reset Y position for right column (parallel to left)
-    statsY = classY + this.config.lineSpacing;
+    statsY = classY + this.config.lineSpacing + 4;
 
-    // Render right column
+    // Calculate right column value width for alignment
+    const maxRightValueWidth = Math.max(
+      FontAtlasRenderer.measureText(`${this.unit.physicalPower}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.magicPower}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.physicalEvade}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.magicEvade}`, font),
+      FontAtlasRenderer.measureText(`${this.unit.attunement}`, font)
+    );
+    const rightColumnWidth = maxRightLabelWidth + 1 + maxRightValueWidth;
+
+    // Render right column (label left-aligned, value right-aligned)
     for (const stat of rightColumnStats) {
-      const text = `${stat.label} ${stat.value}`;
+      // Render label
       FontAtlasRenderer.renderText(
         ctx,
-        text,
+        stat.label,
         rightColumnX,
         statsY,
         fontId,
@@ -240,6 +285,22 @@ export class UnitInfoContent implements PanelContent {
         'left',
         '#ffffff'
       );
+
+      // Render value (right-aligned within column)
+      const valueWidth = FontAtlasRenderer.measureText(stat.value, font);
+      const valueX = rightColumnX + rightColumnWidth - valueWidth;
+      FontAtlasRenderer.renderText(
+        ctx,
+        stat.value,
+        valueX,
+        statsY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+
       statsY += this.config.lineSpacing;
     }
   }
