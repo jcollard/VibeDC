@@ -530,8 +530,32 @@ react-app/src/
 **State Management:**
 - Cached in CombatLayoutManager (per GeneralGuidelines.md)
 - updateUnit() preserves instance, updates displayed unit
-- No hover state (read-only display)
-**Dependencies:** CombatUnit, FontAtlasRenderer, SpriteRenderer, FontRegistry
+- Supports hover interactions for stat tooltips
+- Caches region dimensions for accurate hit detection and bounds checking
+**Hover Feature:**
+- Yellow highlighting (HOVERED_TEXT #ffff00) for hovered stats and Action Timer
+- Helper text displayed below stats grid on hover with 2px spacing
+- Automatic text wrapping to fit panel width
+- Covers all 10 stats + Action Timer with descriptive tooltips
+- Helper text color: #888888 (HELPER_TEXT constant from colors.ts)
+- Clears hover state when mouse exits panel bounds
+**Stat Helper Text:**
+- HP: "Unit's health, if reduced to 0 the unit is knocked out"
+- MP: "Unit's mana, required for magic based abilities"
+- P.Pow: "Physical Power is used to calculate physical damage"
+- P.Evd: "Evasion rate vs. Physical Attacks"
+- M.Evd: "Evasion rate vs. Magical Attacks"
+- M.Pow: "Magic Power is used to calculate magic damage"
+- Move: "The number of tiles this unit can move"
+- Speed: "Unit's action timer increases by speed each turn"
+- Courage: "Used to determine success rate of some abilities"
+- Attunement: "Used to determine success rate of some abilities"
+- Action Timer: "Action Timer increases by Speed each turn. Unit acts when reaching 100."
+**Bounds Checking:**
+- Validates mouse coordinates are within panel bounds before processing hover
+- Prevents highlighting when hovering outside panel region (left, right, top, bottom)
+- Clears hover state when mouse exits panel
+**Dependencies:** CombatUnit, FontAtlasRenderer, SpriteRenderer, FontRegistry, colors.ts (HELPER_TEXT, HOVERED_TEXT)
 **Used By:** InfoPanelManager for unit info panels (top and bottom panels during unit-turn phase)
 
 #### `managers/panels/PartyMembersContent.ts`
@@ -575,6 +599,10 @@ react-app/src/
 - Wraps on word boundaries, multiple lines supported
 - Helper text color: #888888 (HELPER_TEXT constant from colors.ts)
 - Appears with spacing line after buttons
+**Bounds Checking:**
+- Validates mouse coordinates are within panel bounds before processing hover
+- Prevents highlighting when hovering outside panel region (left, right, top, bottom)
+- Clears hover state when mouse exits panel
 **Button Layout:**
 - Title line: "ACTIONS" (line 0)
 - Blank line (line 1)
