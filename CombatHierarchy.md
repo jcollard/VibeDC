@@ -54,6 +54,7 @@ react-app/src/
 **Purpose:** Central state container for active combat
 **Exports:** `CombatState`, `CombatPhase`, `CombatStateJSON`, `serializeCombatState()`, `deserializeCombatState()`
 **Key Fields:** turnNumber, map, phase, unitManifest, tilesetId
+**Combat Phases:** 'deployment' | 'enemy-deployment' | 'action-timer' | 'unit-turn' | 'victory' | 'defeat'
 **Dependencies:** CombatMap, CombatUnitManifest
 **Used By:** All phase handlers, CombatView, renderers, serialization
 
@@ -74,7 +75,12 @@ react-app/src/
 #### `CombatUnit.ts`
 **Purpose:** Interface for combat-ready characters (stats, abilities, classes)
 **Exports:** `CombatUnit` interface
-**Key Properties:** name, health, mana, speed, turnGauge, spriteId, abilities
+**Key Properties:** name, health, mana, speed, actionTimer, spriteId, abilities
+**Action Timer System:**
+- actionTimer: Current AT value (0-100+), increases by speed * deltaTime * multiplier
+- Starts at 0 at combat start
+- When reaches 100+, unit is ready to take their turn
+- Used by ActionTimerPhaseHandler for turn order calculation
 **Implementations:** HumanoidUnit, MonsterUnit
 **Used By:** All unit-related components, rendering, combat logic
 
@@ -131,28 +137,58 @@ react-app/src/
 **Key Methods:** initialize(), buildEnemyApproachMessage()
 **Dependencies:** EnemySpriteSequence, StaggeredSequenceManager, EnemyRegistry
 **Used By:** CombatView during enemy-deployment phase
-**Transitions To:** battle phase
+**Transitions To:** action-timer phase
 
-#### `BattlePhaseHandler.ts`
-**Purpose:** Turn-based combat phase (STUB IMPLEMENTATION)
-**Exports:** `BattlePhaseHandler`, `BattleInfoPanelContent`
-**Key Methods:** getTopPanelRenderer(), getInfoPanelContent(), handleMapClick(), handleMouseMove(), updatePhase()
+#### `ActionTimerPhaseHandler.ts`
+**Purpose:** Active Time Battle (ATB) system - calculates and animates turn order
+**Exports:** `ActionTimerPhaseHandler`, `ActionTimerInfoPanelContent`
+**Key Methods:** getTopPanelRenderer(), getInfoPanelContent(), handleMapClick(), handleMouseMove(), updatePhase(), startAnimation()
 **Current Functionality:**
-- Displays battlefield (map + units)
-- Shows turn order by Speed (highest first) in top panel
-- Placeholder info panel with "Battle Phase" text
+- Calculates which unit reaches 100 action timer first based on speed
+- Animates all units' action timers to final state over 1 second
+- Shows turn order sorted by predicted turn order (who acts next) in top panel
+- Displays current action timer (AT) values below unit sprites
+- Dynamically re-sorts units during animation as relative positions change
+- Placeholder info panel with "Action Timer Phase" text
 - Mouse event logging
-- Victory/defeat condition checking (stubbed)
+- Victory/defeat condition checking
+**Key Constants:**
+- ACTION_TIMER_MULTIPLIER: 1 (controls combat pacing)
+- animationDuration: 1.0 second (AT value animation time)
+**Animation Pattern:**
+- Uses WeakMap<CombatUnit, number> for per-unit start/target AT values
+- Avoids duplicate name issues (multiple "Goblin" units work correctly)
+- Linear interpolation from current AT to final AT over 1 second
+- Turn order updates every frame based on timeToReady calculation
 **Future Functionality:**
-- Turn management system
-- Action menu (Attack, Ability, Move, Wait, etc.)
+- Speed modifiers from status effects
+- Time stop effects
+- Timer overflow handling (carry over to next turn)
+- Configurable ACTION_TIMER_MULTIPLIER
+**Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter, CombatUnit (for WeakMap keys)
+**Used By:** CombatView during action-timer phase
+**Transitions To:** unit-turn phase (when first unit reaches 100)
+
+#### `UnitTurnPhaseHandler.ts`
+**Purpose:** Individual unit's turn - action selection and execution (STUB IMPLEMENTATION)
+**Exports:** `UnitTurnPhaseHandler`
+**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent()
+**Current Functionality:**
+- Identifies ready unit (first in turn order with AT >= 100)
+- Logs "{Unit Name} is ready to act." to console
+- Displays turn order in top panel (same as action-timer phase)
+- Stays in phase indefinitely (waits for action implementation)
+**Future Functionality:**
+- Action menu (Attack, Ability, Move, Wait, End Turn)
 - Movement/attack range display
 - Action targeting and execution
-- Status effects
-- AI enemy turns
+- Action outcome animation
+- Status effect processing
+- AI enemy turn logic
+- Return to action-timer phase after action completes
 **Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter
-**Used By:** CombatView during battle phase
-**Transitions To:** victory phase, defeat phase (when implemented)
+**Used By:** CombatView during unit-turn phase
+**Transitions To:** action-timer phase (when implemented - after unit completes action)
 
 ---
 
@@ -219,11 +255,23 @@ react-app/src/
 **Used By:** TopPanelManager
 
 #### `managers/renderers/TurnOrderRenderer.ts`
-**Purpose:** Renders initiative order with clickable unit portraits
+**Purpose:** Renders turn order with unit sprites, action timer values, and title
 **Exports:** `TurnOrderRenderer`
-**Key Methods:** render(), handleClick()
+**Key Methods:** render(), handleClick(), setUnits(), setClickHandler()
+**Rendering Features:**
+- "Action Timers" title in orange (7px-04b03 font) at top of panel
+- Units centered horizontally and aligned to bottom of panel
+- Unit sprites with 12px spacing between them
+- Action timer (AT) values displayed below each sprite in white
+- Supports dual font rendering (15px-dungeonslant and 7px-04b03)
+- Clickable unit portraits for selection
+**Layout:**
+- Title: centered at top, no padding
+- Sprites: bottom-aligned with 3px downward shift, centered as group
+- AT values: centered below each sprite
+- Limited to 10 units for display
 **Dependencies:** CombatUnit, SpriteRenderer, FontAtlasRenderer
-**Used By:** TopPanelManager during battle phase
+**Used By:** TopPanelManager during action-timer and unit-turn phases
 
 #### `managers/renderers/DeploymentHeaderRenderer.ts`
 **Purpose:** Simple text header for deployment/enemy-deployment phases
@@ -751,11 +799,11 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 53+ Core Files
+## File Count: 54+ Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
-**Phase Handlers:** 5 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, BattlePhaseHandler, PhaseBase, CombatPhaseHandler)
+**Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Rendering:** 2 files
 **Layout & UI:** 13 files
 **Deployment:** 4 files
