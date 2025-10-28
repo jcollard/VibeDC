@@ -30,6 +30,28 @@ const ACTION_TIMER_MULTIPLIER = 1;
 const TICK_SIZE = 1;
 
 /**
+ * Time (in seconds) to display each discrete tick during animation
+ * Default: 0.5s per tick (2 ticks per second)
+ */
+const TICK_DISPLAY_DURATION = 0.5;
+
+/**
+ * Time (in seconds) for units to slide to new positions when order changes
+ * This value is configured in TurnOrderRenderer.slideAnimationDuration
+ * Should be less than TICK_DISPLAY_DURATION for smooth transitions
+ * Default: 0.25s (half of tick duration)
+ */
+
+/**
+ * Snapshot of unit timers and turn order at a specific tick
+ */
+interface TickSnapshot {
+  tickNumber: number;                      // Absolute tick number (from CombatState.tickCount)
+  unitTimers: Map<CombatUnit, number>;    // Unit -> AT value at this tick
+  turnOrder: CombatUnit[];                // Sorted turn order at this tick
+}
+
+/**
  * Placeholder info panel content for action timer phase
  *
  * STUB: Will be replaced with:
@@ -116,17 +138,11 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   // Flag to track if we've already calculated the turn
   private turnCalculated: boolean = false;
 
-  // Animation state
-  private animationStartTime: number = 0;
-  private animationDuration: number = 1.0; // 1 second animation
-  private startTimers: WeakMap<CombatUnit, number> = new WeakMap(); // unit instance -> starting AT value
-  private targetTimers: WeakMap<CombatUnit, number> = new WeakMap(); // unit instance -> target AT value
+  // Animation state - tick snapshots
+  private tickSnapshots: TickSnapshot[] = []; // All ticks from start to target
+  private currentTickIndex: number = 0;       // Index into tickSnapshots array
+  private animationElapsedTime: number = 0;   // Total elapsed time during animation
   private isAnimating: boolean = false;
-
-  // Tick counter - number of discrete ticks simulated to reach ready unit
-  private tickCount: number = 0;
-  private startTickCount: number = 0; // Tick count at start of animation
-  private targetTickCount: number = 0; // Tick count at end of animation
 
   constructor() {
     super();
@@ -199,45 +215,65 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       this.turnCalculated = true;
     }
 
-    // Animate the timers
+    // Animate through discrete ticks
     if (this.isAnimating) {
-      this.animationStartTime += deltaTime;
-      const progress = Math.min(this.animationStartTime / this.animationDuration, 1.0);
+      this.animationElapsedTime += deltaTime;
 
-      // Animate tick count
-      this.tickCount = Math.floor(this.startTickCount + (this.targetTickCount - this.startTickCount) * progress);
+      // Calculate which tick we should be displaying
+      const targetTickIndex = Math.floor(this.animationElapsedTime / TICK_DISPLAY_DURATION);
 
-      // Update all units' timers based on animation progress
-      const allUnits = state.unitManifest.getAllUnits();
-      for (const placement of allUnits) {
-        const unit = placement.unit;
-        const startValue = this.startTimers.get(unit) || 0;
-        const targetValue = this.targetTimers.get(unit) || 0;
-        const currentValue = startValue + (targetValue - startValue) * progress;
+      // If we've moved to a new tick
+      if (targetTickIndex > this.currentTickIndex && targetTickIndex < this.tickSnapshots.length) {
+        this.currentTickIndex = targetTickIndex;
+        const snapshot = this.tickSnapshots[this.currentTickIndex];
 
-        // Direct mutation of private field
-        (unit as any)._actionTimer = currentValue;
+        // Update all unit AT values (discrete update, no interpolation)
+        for (const [unit, timerValue] of snapshot.unitTimers.entries()) {
+          (unit as any)._actionTimer = timerValue;
+        }
+
+        // Check if turn order changed
+        if (this.turnOrderChanged(snapshot.turnOrder)) {
+          // Trigger slide animation in TurnOrderRenderer (Task 5)
+          this.startPositionSlideAnimation(snapshot.turnOrder);
+        }
+
+        // Update displayed turn order
+        if (this.turnOrderRenderer) {
+          this.turnOrderRenderer.updateUnits(snapshot.turnOrder);
+        }
       }
 
-      // Check if animation is complete
-      if (progress >= 1.0) {
-        this.isAnimating = false;
-        // Ensure tick count is set to final value
-        this.tickCount = this.targetTickCount;
+      // Check if animation complete
+      if (this.currentTickIndex >= this.tickSnapshots.length - 1) {
+        // Final tick reached - check if slide animation is still playing
+        const slideInProgress = this.turnOrderRenderer?.updateSlideAnimation(deltaTime);
 
-        // Find the ready unit
-        const readyUnit = this.getReadyUnit(state.unitManifest);
+        if (!slideInProgress) {
+          // Slide complete (or no slide) - transition to unit-turn phase
+          this.isAnimating = false;
 
-        if (readyUnit) {
-          console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
+          // Apply final tick values
+          const finalSnapshot = this.tickSnapshots[this.tickSnapshots.length - 1];
+          for (const [unit, timerValue] of finalSnapshot.unitTimers.entries()) {
+            (unit as any)._actionTimer = timerValue;
+          }
 
-          // Transition to unit-turn phase, passing tick count in state
-          return {
-            ...state,
-            phase: 'unit-turn',
-            tickCount: this.tickCount
-          };
+          // Find the ready unit
+          const readyUnit = this.getReadyUnit(state.unitManifest);
+
+          if (readyUnit) {
+            console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
+
+            // Transition to unit-turn phase
+            return {
+              ...state,
+              phase: 'unit-turn',
+              tickCount: finalSnapshot.tickNumber
+            };
+          }
         }
+        // If slide still in progress, stay in this phase and continue animating
       }
     }
 
@@ -247,7 +283,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
   /**
    * Start the animation by simulating discrete ticks until a unit reaches 100
-   * Stores start/target values for animation
+   * Creates tick snapshots for each discrete tick with AT values and turn order
    * Only simulates ticks if no units are already ready (AT >= 100)
    * @param manifest Current unit manifest
    * @param currentTickCount Current tick count from CombatState
@@ -258,31 +294,33 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   ): void {
     const allUnits = manifest.getAllUnits();
 
-    // Store starting tick count for animation (from CombatState)
-    this.startTickCount = currentTickCount;
-    this.tickCount = currentTickCount;
-
-    // Store starting values
-    for (const placement of allUnits) {
-      const unit = placement.unit;
-      this.startTimers.set(unit, unit.actionTimer);
-    }
+    // Clear previous animation state
+    this.tickSnapshots = [];
+    this.currentTickIndex = 0;
+    this.animationElapsedTime = 0;
 
     // Check if any unit is already ready (AT >= 100)
     const alreadyReady = allUnits.some(p => p.unit.actionTimer >= 100);
 
-    // If someone is already ready, don't simulate any ticks
+    // If someone is already ready, create single snapshot with current state
     if (alreadyReady) {
       console.log('[ActionTimerPhaseHandler] Unit already ready (AT >= 100), skipping tick simulation');
-      // Target values are same as start values (no change)
-      for (const placement of allUnits) {
-        const unit = placement.unit;
-        this.targetTimers.set(unit, unit.actionTimer);
-      }
-      this.targetTickCount = this.startTickCount; // No ticks simulated
 
-      // Start animation (instant completion since progress will be 1.0 immediately)
-      this.animationStartTime = 0;
+      // Create single snapshot with current values
+      const unitTimers = new Map<CombatUnit, number>();
+      for (const placement of allUnits) {
+        unitTimers.set(placement.unit, placement.unit.actionTimer);
+      }
+
+      const turnOrder = this.calculateTurnOrder(allUnits.map(p => p.unit), unitTimers);
+
+      this.tickSnapshots.push({
+        tickNumber: currentTickCount,
+        unitTimers,
+        turnOrder
+      });
+
+      // Start animation (will complete instantly)
       this.isAnimating = true;
       return;
     }
@@ -297,6 +335,14 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     for (const placement of allUnits) {
       workingTimers.set(placement.unit, placement.unit.actionTimer);
     }
+
+    // Create initial snapshot (tick 0)
+    const initialTurnOrder = this.calculateTurnOrder(allUnits.map(p => p.unit), workingTimers);
+    this.tickSnapshots.push({
+      tickNumber: currentTickCount,
+      unitTimers: new Map(workingTimers),
+      turnOrder: initialTurnOrder
+    });
 
     // Tick until someone reaches 100
     while (!foundReadyUnit && tickCount < maxTicks) {
@@ -315,6 +361,14 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
           foundReadyUnit = true;
         }
       }
+
+      // Create snapshot for this tick
+      const turnOrder = this.calculateTurnOrder(allUnits.map(p => p.unit), workingTimers);
+      this.tickSnapshots.push({
+        tickNumber: currentTickCount + tickCount,
+        unitTimers: new Map(workingTimers),
+        turnOrder
+      });
     }
 
     if (!foundReadyUnit) {
@@ -322,21 +376,68 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       return;
     }
 
-    // Store target values from simulation
-    for (const placement of allUnits) {
-      const unit = placement.unit;
-      const targetValue = workingTimers.get(unit) || unit.actionTimer;
-      this.targetTimers.set(unit, targetValue);
-    }
-
-    // Store target tick count for animation
-    this.targetTickCount = this.startTickCount + tickCount;
-
-    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks to reach first ready unit (${this.startTickCount} -> ${this.targetTickCount})`);
+    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks, created ${this.tickSnapshots.length} snapshots (${currentTickCount} -> ${currentTickCount + tickCount})`);
 
     // Start animation
-    this.animationStartTime = 0;
     this.isAnimating = true;
+  }
+
+  /**
+   * Calculate turn order based on time to reach 100 AT
+   * Sorts by time to ready (ascending), then alphabetically by name
+   * @param units All units in combat
+   * @param timerValues Map of unit to current AT value
+   * @returns Sorted array of units in turn order
+   */
+  private calculateTurnOrder(units: CombatUnit[], timerValues: Map<CombatUnit, number>): CombatUnit[] {
+    const unitsWithTime = units.map(unit => {
+      const currentTimer = timerValues.get(unit) || unit.actionTimer;
+      const timeToReady = unit.speed > 0
+        ? (100 - currentTimer) / unit.speed
+        : Infinity;
+
+      return { unit, timeToReady };
+    });
+
+    // Sort by time to ready (ascending - soonest first), then alphabetically
+    unitsWithTime.sort((a, b) => {
+      if (a.timeToReady !== b.timeToReady) {
+        return a.timeToReady - b.timeToReady;
+      }
+      return a.unit.name.localeCompare(b.unit.name);
+    });
+
+    return unitsWithTime.map(item => item.unit);
+  }
+
+  /**
+   * Check if turn order changed compared to previous tick
+   * @param newOrder New turn order to compare
+   * @returns True if order changed, false otherwise
+   */
+  private turnOrderChanged(newOrder: CombatUnit[]): boolean {
+    if (this.currentTickIndex === 0) return false; // First tick, no previous order
+    const previousSnapshot = this.tickSnapshots[this.currentTickIndex - 1];
+    const previousOrder = previousSnapshot.turnOrder;
+
+    // Compare arrays
+    if (previousOrder.length !== newOrder.length) return true;
+    for (let i = 0; i < previousOrder.length; i++) {
+      if (previousOrder[i] !== newOrder[i]) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Start position slide animation when turn order changes
+   * Delegates to TurnOrderRenderer (Task 5)
+   * @param newOrder New turn order after change
+   */
+  private startPositionSlideAnimation(newOrder: CombatUnit[]): void {
+    if (this.turnOrderRenderer) {
+      // Region will be cached by TurnOrderRenderer from last render call
+      this.turnOrderRenderer.startSlideAnimation(newOrder);
+    }
   }
 
   /**
@@ -372,39 +473,39 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
    * Get turn order renderer for top panel
    * Shows units sorted by predicted turn order (who will reach 100 first)
    * Caches renderer instance to maintain scroll state
+   * Uses turn order from current tick snapshot if available
    */
   getTopPanelRenderer(state: CombatState, _encounter: CombatEncounter): TopPanelRenderer {
-    // Get all units
-    const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
+    // Determine which turn order to use
+    let sortedUnits: CombatUnit[];
+    let currentTickNumber: number;
 
-    // Calculate time until each unit reaches 100 action timer
-    const unitsWithTime = units.map(unit => {
-      const timeToReady = unit.speed > 0
-        ? (100 - unit.actionTimer) / unit.speed
-        : Infinity;
-
-      return { unit, timeToReady };
-    });
-
-    // Sort by time to ready (ascending - soonest first), then alphabetically
-    unitsWithTime.sort((a, b) => {
-      if (a.timeToReady !== b.timeToReady) {
-        return a.timeToReady - b.timeToReady;
+    if (this.tickSnapshots.length > 0 && this.currentTickIndex < this.tickSnapshots.length) {
+      // Use turn order from current snapshot
+      const snapshot = this.tickSnapshots[this.currentTickIndex];
+      sortedUnits = snapshot.turnOrder;
+      currentTickNumber = snapshot.tickNumber;
+    } else {
+      // No snapshots yet, calculate turn order manually
+      const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
+      const unitTimers = new Map<CombatUnit, number>();
+      for (const unit of units) {
+        unitTimers.set(unit, unit.actionTimer);
       }
-      return a.unit.name.localeCompare(b.unit.name);
-    });
-
-    // Extract sorted units
-    const sortedUnits = unitsWithTime.map(item => item.unit);
+      sortedUnits = this.calculateTurnOrder(units, unitTimers);
+      currentTickNumber = state.tickCount || 0;
+    }
 
     // Create or update cached renderer (maintains scroll state)
     if (!this.turnOrderRenderer) {
-      this.turnOrderRenderer = new TurnOrderRenderer(sortedUnits, state.tickCount || this.tickCount || 0);
+      this.turnOrderRenderer = new TurnOrderRenderer(sortedUnits, currentTickNumber);
     } else {
       // Update units in existing renderer (preserves scroll offset)
+      // Note: updateUnits is called in updatePhase when tick changes
+      // This ensures the renderer is always up to date
       this.turnOrderRenderer.updateUnits(sortedUnits);
-      // Update tick count for animation
-      this.turnOrderRenderer.updateTickCount(state.tickCount || this.tickCount || 0);
+      // Update tick count (Task 7)
+      this.turnOrderRenderer.updateTickCount(currentTickNumber);
     }
 
     return this.turnOrderRenderer;

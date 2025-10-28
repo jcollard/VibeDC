@@ -27,6 +27,14 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   private scrollRepeatDirection: 'left' | 'right' | null = null;
   private readonly scrollRepeatInterval: number = 200; // ms between repeats
 
+  // Position slide animation state
+  private slideAnimationActive: boolean = false;
+  private slideAnimationElapsedTime: number = 0;
+  private readonly slideAnimationDuration: number = 0.25; // seconds (configurable)
+  private previousPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
+  private targetPositions: WeakMap<CombatUnit, number> = new WeakMap(); // Unit -> X coordinate
+  private cachedRegion: PanelRegion | null = null; // Cached from last render
+
   constructor(units: CombatUnit[], onUnitClickOrTickCount?: ((unit: CombatUnit) => void) | number, tickCount: number = 0) {
     this.units = units;
 
@@ -79,6 +87,79 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     this.onUnitClick = handler;
   }
 
+  /**
+   * Start a slide animation for units that changed positions
+   * Called by ActionTimerPhaseHandler when turn order changes
+   */
+  startSlideAnimation(newOrder: CombatUnit[]): void {
+    if (!this.cachedRegion) {
+      console.warn('[TurnOrderRenderer] Cannot start slide animation: region not cached');
+      return;
+    }
+
+    // Reset scroll to show first 8 units during animation (per user requirement)
+    this.scrollOffset = 0;
+
+    // Calculate current X positions based on current units array
+    const currentXPositions = this.calculateUnitXPositions(this.units, this.cachedRegion);
+    for (let i = 0; i < this.units.length; i++) {
+      this.previousPositions.set(this.units[i], currentXPositions[i]);
+    }
+
+    // Calculate target X positions based on new order
+    const targetXPositions = this.calculateUnitXPositions(newOrder, this.cachedRegion);
+    for (let i = 0; i < newOrder.length; i++) {
+      this.targetPositions.set(newOrder[i], targetXPositions[i]);
+    }
+
+    // Update units array to new order
+    this.units = newOrder;
+
+    // Start animation
+    this.slideAnimationActive = true;
+    this.slideAnimationElapsedTime = 0;
+  }
+
+  /**
+   * Update slide animation progress
+   * Called each frame during animation
+   * @returns True if animation is still in progress, false if complete
+   */
+  updateSlideAnimation(deltaTime: number): boolean {
+    if (!this.slideAnimationActive) return false;
+
+    this.slideAnimationElapsedTime += deltaTime;
+    const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
+
+    if (progress >= 1.0) {
+      this.slideAnimationActive = false;
+      return false; // Animation complete
+    }
+
+    return true; // Animation still in progress
+  }
+
+  /**
+   * Calculate X positions for an array of units
+   * @param units Units to position
+   * @param region Panel region
+   * @returns Array of X positions corresponding to units array
+   */
+  private calculateUnitXPositions(units: CombatUnit[], region: PanelRegion): number[] {
+    const visibleUnits = units.slice(this.scrollOffset, this.scrollOffset + this.maxVisibleUnits);
+    const totalVisibleUnits = visibleUnits.length;
+    const totalWidth = totalVisibleUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
+    const startX = region.x + (region.width - totalWidth) / 2;
+
+    const positions: number[] = [];
+    let currentX = startX;
+    for (let i = 0; i < visibleUnits.length; i++) {
+      positions.push(currentX);
+      currentX += this.spriteSize + this.spriteSpacing;
+    }
+    return positions;
+  }
+
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
@@ -88,6 +169,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     spriteSize: number,
     smallFontAtlasImage?: HTMLImageElement | null
   ): void {
+    // Cache region at start of render (for slide animation)
+    this.cachedRegion = region;
     // Render "Action Timers" title at the top in yellow/orange using small font
     if (smallFontAtlasImage) {
       const titleX = region.x + region.width / 2;
@@ -163,65 +246,101 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, this.units.length);
     const visibleUnits = this.units.slice(startIndex, endIndex);
 
-    // Calculate total width for visible units
-    const totalVisibleUnits = visibleUnits.length;
-    const totalWidth = totalVisibleUnits * (this.spriteSize + this.spriteSpacing) - this.spriteSpacing;
-
-    // Calculate starting X to center the units
-    const startX = region.x + (region.width - totalWidth) / 2;
-
     // Position sprites at the bottom of the panel
     // Leave room for sprite (12px) + timer text (7px), shifted down 3px total (2px + 1px for sprite)
     const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
 
-    let currentX = startX;
+    // If slide animation active, interpolate positions
+    if (this.slideAnimationActive) {
+      const progress = Math.min(this.slideAnimationElapsedTime / this.slideAnimationDuration, 1.0);
 
-    for (const unit of visibleUnits) {
-      // Check if we've exceeded the region width
-      if (currentX + this.spriteSize > region.x + region.width) {
-        break; // Stop rendering if we run out of space
+      for (const unit of visibleUnits) {
+        const previousX = this.previousPositions.get(unit);
+        const targetX = this.targetPositions.get(unit);
+
+        let currentX: number;
+        if (previousX !== undefined && targetX !== undefined) {
+          // Linear interpolation
+          currentX = previousX + (targetX - previousX) * progress;
+        } else {
+          // Unit wasn't in previous order or isn't in target order
+          // Just render at target position (calculate it)
+          const targetXPositions = this.calculateUnitXPositions(this.units, region);
+          const index = visibleUnits.indexOf(unit);
+          if (index >= 0 && index < targetXPositions.length) {
+            currentX = targetXPositions[index];
+          } else {
+            continue; // Skip unit if can't determine position
+          }
+        }
+
+        // Render the unit at interpolated position
+        this.renderUnitAtPosition(ctx, unit, currentX, spriteY, spriteImages, spriteSize, smallFontAtlasImage);
       }
-
-      // Render the unit sprite
-      SpriteRenderer.renderSpriteById(
-        ctx,
-        unit.spriteId,
-        spriteImages,
-        spriteSize,
-        currentX,
-        spriteY,
-        this.spriteSize,
-        this.spriteSize
-      );
-
-      // Render action timer (AT) value below sprite
-      if (smallFontAtlasImage) {
-        const timerValue = Math.floor(unit.actionTimer); // Round down for display
-        const timerText = timerValue.toString();
-        const textX = currentX + this.spriteSize / 2; // Center under sprite
-        // Text Y position adjusted to stay in same place (sprite moved down 1px, so subtract 1px from offset)
-        const textY = spriteY + this.spriteSize;
-
-        // Use 7px-04b03 font for small, readable numbers
-        FontAtlasRenderer.renderText(
-          ctx,
-          timerText,
-          textX,
-          textY,
-          '7px-04b03',
-          smallFontAtlasImage,
-          1, // Normal scale
-          'center', // alignment
-          '#ffffff' // color
-        );
+    } else {
+      // No animation, render at static positions
+      const positions = this.calculateUnitXPositions(this.units, region);
+      for (let i = 0; i < visibleUnits.length; i++) {
+        if (i >= positions.length) break;
+        this.renderUnitAtPosition(ctx, visibleUnits[i], positions[i], spriteY, spriteImages, spriteSize, smallFontAtlasImage);
       }
-
-      // Move to next position
-      currentX += this.spriteSize + this.spriteSpacing;
     }
 
     // Render scroll arrows if needed
     this.renderScrollArrows(ctx, region, spriteImages, spriteSize);
+  }
+
+  /**
+   * Helper method to render a unit at a specific X position
+   * @param ctx Canvas context
+   * @param unit Unit to render
+   * @param x X coordinate for sprite
+   * @param y Y coordinate for sprite
+   * @param spriteImages Sprite image map
+   * @param spriteSize Base sprite size
+   * @param smallFontAtlasImage Small font atlas for AT values
+   */
+  private renderUnitAtPosition(
+    ctx: CanvasRenderingContext2D,
+    unit: CombatUnit,
+    x: number,
+    y: number,
+    spriteImages: Map<string, HTMLImageElement>,
+    spriteSize: number,
+    smallFontAtlasImage: HTMLImageElement | null | undefined
+  ): void {
+    // Render the unit sprite
+    SpriteRenderer.renderSpriteById(
+      ctx,
+      unit.spriteId,
+      spriteImages,
+      spriteSize,
+      x,
+      y,
+      this.spriteSize,
+      this.spriteSize
+    );
+
+    // Render action timer (AT) value below sprite
+    if (smallFontAtlasImage) {
+      const timerValue = Math.floor(unit.actionTimer); // Round down for display
+      const timerText = timerValue.toString();
+      const textX = x + this.spriteSize / 2; // Center under sprite
+      const textY = y + this.spriteSize;
+
+      // Use 7px-04b03 font for small, readable numbers
+      FontAtlasRenderer.renderText(
+        ctx,
+        timerText,
+        textX,
+        textY,
+        '7px-04b03',
+        smallFontAtlasImage,
+        1, // Normal scale
+        'center', // alignment
+        '#ffffff' // color
+      );
+    }
   }
 
   /**
