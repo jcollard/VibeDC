@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.6
-**Last Updated:** Tue, Oct 28, 2025, 12:48 PM (main branch - Fixed animation loop performance bug + added FPS indicator)
+**Version:** 1.7
+**Last Updated:** Wed, Oct 29, 2025 (ability-equipment-panel branch - Added ability/equipment detail panels with hover-based panel swapping)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -396,7 +396,7 @@ react-app/src/
 #### `layouts/CombatLayoutManager.ts`
 **Purpose:** Main UI layout coordinator (panels, combat log, turn order, scroll arrows)
 **Exports:** `CombatLayoutManager`
-**Key Methods:** renderLayout(), getMapViewport(), get[Panel]Region(), handleMapScrollClick()
+**Key Methods:** renderLayout(), getMapViewport(), get[Panel]Region(), handleMapScrollClick(), handleTopPanelHover(), handleTopInfoPanelClick()
 **Panel Content Logic:**
 - Deployment phase: PartyMembersContent (bottom panel)
 - Enemy-deployment phase: EmptyContent (bottom panel)
@@ -405,6 +405,12 @@ react-app/src/
 **Button State Management:**
 - Calls `setButtonsDisabled(false)` on ActionsMenuContent when entering unit-turn phase
 - Ensures buttons are clickable after previous turn's action completed
+**Detail Panel Hover System:**
+- Monitors hover events on top info panel (UnitInfoContent abilities view)
+- Temporarily swaps bottom panel content to show ability/equipment details
+- Caches detail panel instances (cachedAbilityPanel, cachedEquipmentPanel)
+- Restores original bottom panel content when hover exits
+- State flags: detailPanelActive, originalBottomPanelContent
 **Phase Detection:** Uses flags (isDeploymentPhase, isEnemyDeploymentPhase) and currentUnit presence
 **Dependencies:** HorizontalVerticalLayout, InfoPanelManager, panel content implementations, CombatConstants
 **Used By:** CombatView for all UI rendering
@@ -531,9 +537,9 @@ react-app/src/
 **Used By:** InfoPanelManager
 
 #### `managers/panels/UnitInfoContent.ts`
-**Purpose:** Comprehensive unit information display with sprite, stats grid, and action timer
+**Purpose:** Comprehensive unit information display with sprite, stats grid, action timer, and abilities view
 **Exports:** `UnitInfoContent`, `UnitInfoConfig`
-**Key Methods:** render(), updateUnit(unit, title?, titleColor?)
+**Key Methods:** render(), updateUnit(unit, title?, titleColor?), handleHover()
 **Current Functionality:**
 - **Header Section:**
   - 12×12px unit sprite (top-left corner)
@@ -541,13 +547,25 @@ react-app/src/
   - Primary/Secondary class line (format: "Fighter/Mage" or just "Fighter" if no secondary)
   - Action Timer in top-right corner (adaptive: "ACTION TIMER" or "AT" + clock icon based on space)
   - Action Timer value in orange (#ffa500), right-aligned, format: "XX/100"
-- **Stats Grid (Two Columns with 8px gap, 4px spacing after classes):**
+- **View Toggle:** "View Abilities" / "Back" button switches between stats view and abilities view
+- **Stats View (Two Columns with 8px gap, 4px spacing after classes):**
   - Left column (5 stats): HP, P.Pow, M.Pow, Move, Courage
   - Right column (5 stats): MP, P.Evd, M.Evd, Speed, Attunement
   - Each column: 67px width (50% of available space minus 4px for gap)
   - Labels left-aligned at column start, values right-aligned at column end
   - HP/MP show current/max format (e.g., "45/50")
   - All other stats show single value (e.g., "12")
+- **Abilities View:**
+  - Shows Primary/Secondary class abilities (up to 8 slots total)
+  - Shows equipment slots: Weapon (2), Offhand (2), Headgear (2), Body (2), Accessory (2)
+  - Empty slots display as "-"
+  - Hovering over filled ability/equipment slots triggers detail panel in bottom panel
+- **Detail Panel Integration:**
+  - Hover over ability → shows AbilityInfoContent in bottom panel
+  - Hover over equipment → shows EquipmentInfoContent in bottom panel
+  - Original bottom panel content temporarily replaced during hover
+  - Content restored when mouse leaves hovered item
+  - Hover result format: `{ type: 'ability-detail' | 'equipment-detail', item: CombatAbility | Equipment }`
 - **Layout Details:**
   - Panel size: 144px × 108px (12 tiles × 9 tiles)
   - Uses 7px-04b03 font with 8px line spacing
@@ -558,31 +576,80 @@ react-app/src/
 - updateUnit() preserves instance, updates displayed unit
 - Supports hover interactions for stat tooltips
 - Caches region dimensions for accurate hit detection and bounds checking
+- View state: currentView ('stats' | 'abilities')
+- Button bounds tracking for toggle button hover/click
 **Hover Feature:**
 - Yellow highlighting (HOVERED_TEXT #ffff00) for hovered stats and Action Timer
 - Helper text displayed below stats grid on hover with 2px spacing
 - Automatic text wrapping to fit panel width
-- Covers all 10 stats + Action Timer with descriptive tooltips
+- Covers all 10 stats + Action Timer + toggle button with descriptive tooltips
 - Helper text color: #888888 (HELPER_TEXT constant from colors.ts)
 - Clears hover state when mouse exits panel bounds
 **Stat Helper Text:**
-- HP: "Unit's health, if reduced to 0 the unit is knocked out"
+- HP: "If HP is reduced to 0 the unit is knocked out"
 - MP: "Unit's mana, required for magic based abilities"
 - P.Pow: "Physical Power is used to calculate physical damage"
 - P.Evd: "Evasion rate vs. Physical Attacks"
 - M.Evd: "Evasion rate vs. Magical Attacks"
 - M.Pow: "Magic Power is used to calculate magic damage"
 - Move: "The number of tiles this unit can move"
-- Speed: "Unit's action timer increases by speed each turn"
-- Courage: "Used to determine success rate of some abilities"
-- Attunement: "Used to determine success rate of some abilities"
-- Action Timer: "Action Timer increases by Speed each turn. Unit acts when reaching 100."
+- Speed: "Action Timer increases by Speed each turn. Units act when reaching 100."
+- Courage: "Courage determines if some abilities succeed"
+- Attunement: "Attunement determines if some abilities succeed"
+- Action Timer: "Action Timer increases by Speed each turn. Units act when reaching 100."
+- View Abilities: "Click to view unit's abilities and equipment"
+- Back: "Click to return to stats view"
 **Bounds Checking:**
 - Validates mouse coordinates are within panel bounds before processing hover
 - Prevents highlighting when hovering outside panel region (left, right, top, bottom)
 - Clears hover state when mouse exits panel
-**Dependencies:** CombatUnit, FontAtlasRenderer, SpriteRenderer, FontRegistry, colors.ts (HELPER_TEXT, HOVERED_TEXT)
-**Used By:** InfoPanelManager for unit info panels (top and bottom panels during unit-turn phase)
+**Dependencies:** CombatUnit, CombatAbility, Equipment, FontAtlasRenderer, SpriteRenderer, FontRegistry, colors.ts (HELPER_TEXT, HOVERED_TEXT, ITEM_NAME_COLOR)
+**Used By:** InfoPanelManager for unit info panels (top and bottom panels during unit-turn phase), CombatLayoutManager (handleTopPanelHover for detail panel integration)
+
+#### `managers/panels/AbilityInfoContent.ts`
+**Purpose:** Detail panel for ability information (triggered by hover in UnitInfoContent abilities view)
+**Exports:** `AbilityInfoContent`
+**Key Methods:** render(), setAbility()
+**Current Functionality:**
+- Shows centered ability name in orange (#FFA500 / ITEM_NAME_COLOR)
+- Displays wrapped ability description in white
+- Ephemeral panel (no persistent state)
+- Updated via setAbility() when hovering different abilities
+- Text wrapping: Breaks on word boundaries to fit panel width
+**Layout:**
+- Panel size: 144px × 108px (12 tiles × 9 tiles)
+- Padding: 1px around edges
+- Line spacing: 8px (7px-04b03 font)
+- Name: Centered horizontally at top
+- Description: 2px spacing after name, wrapped to fit width
+**Dependencies:** CombatAbility, FontAtlasRenderer, FontRegistry, colors.ts (ITEM_NAME_COLOR)
+**Used By:** CombatLayoutManager (handleTopPanelHover)
+
+#### `managers/panels/EquipmentInfoContent.ts`
+**Purpose:** Detail panel for equipment information (triggered by hover in UnitInfoContent abilities view)
+**Exports:** `EquipmentInfoContent`
+**Key Methods:** render(), setEquipment()
+**Current Functionality:**
+- Shows centered equipment name in orange (#FFA500 / ITEM_NAME_COLOR)
+- Displays two-column stat modifiers grid (only non-zero modifiers and non-1.0 multipliers)
+- Format: "+5" for positive modifiers, "-3" for negative, "x1.2" for multipliers
+- Future: Wrapped description (Equipment class doesn't have description yet)
+- Ephemeral panel (no persistent state)
+- Updated via setEquipment() when hovering different equipment
+**Stat Display:**
+- Shows HP, MP, P.Pow, M.Pow, Speed, Move, P.Evd, M.Evd, Courage, Attunement
+- Only displays stats with non-zero modifiers or non-1.0 multipliers
+- Two-column layout (same as UnitInfoContent stats grid)
+- Labels left-aligned, values right-aligned within columns
+**Layout:**
+- Panel size: 144px × 108px (12 tiles × 9 tiles)
+- Padding: 1px around edges
+- Line spacing: 8px (7px-04b03 font)
+- Name: Centered horizontally at top
+- Stats grid: 2px spacing after name, same two-column layout as UnitInfoContent
+- Column gap: 8px between columns
+**Dependencies:** Equipment, FontAtlasRenderer, FontRegistry, colors.ts (ITEM_NAME_COLOR)
+**Used By:** CombatLayoutManager (handleTopPanelHover)
 
 #### `managers/panels/PartyMembersContent.ts`
 **Purpose:** Grid of party member portraits with Enter Combat button
@@ -668,13 +735,14 @@ react-app/src/
 - `HOVERED_TEXT` - #ffff00 (yellow) - Hovered buttons
 - `DISABLED_TEXT` - #888888 (grey) - Disabled buttons
 - `ACTIVE_COLOR` - #00ff00 (green) - Active/selected buttons (e.g., Move in move mode)
+- `ITEM_NAME_COLOR` - #FFA500 (orange) - Item names (abilities, equipment) in detail panels
 **Usage Pattern:** Import and use constants instead of hardcoding colors
-**Used By:** ActionsMenuContent, UnitInfoContent, future panel implementations
+**Used By:** ActionsMenuContent, UnitInfoContent, AbilityInfoContent, EquipmentInfoContent, future panel implementations
 **Rationale:** Ensures consistent colors across panels, easy to modify globally
 
 #### `managers/panels/index.ts`
 **Purpose:** Re-exports all panel content implementations
-**Exports:** All panel content classes
+**Exports:** All panel content classes (UnitInfoContent, PartyMembersContent, ActionsMenuContent, EmptyContent, AbilityInfoContent, EquipmentInfoContent)
 **Used By:** Import convenience for consumers
 
 #### `CombatLogManager.ts`
@@ -1229,14 +1297,14 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 58 Core Files
+## File Count: 60 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
 **Rendering:** 2 files
-**Layout & UI:** 15 files (ActionsMenuContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
+**Layout & UI:** 17 files (ActionsMenuContent, AbilityInfoContent, EquipmentInfoContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
 **Cinematics:** 8 files
 **Unit System:** 7 files
