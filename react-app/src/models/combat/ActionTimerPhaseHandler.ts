@@ -248,8 +248,14 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     // Only calculate once when entering this phase (normal flow without pending slide)
     if (!this.turnCalculated) {
       console.log('[ActionTimerPhaseHandler] First entry to phase, pendingSlideAnimation:', state.pendingSlideAnimation, 'animationMode:', this.animationMode);
-      this.startAnimation(state.unitManifest, state.tickCount ?? 0);
+      const finalTickCount = this.startAnimation(state.unitManifest, state.tickCount ?? 0);
       this.turnCalculated = true;
+
+      // Update state with final tick count immediately
+      state = {
+        ...state,
+        tickCount: finalTickCount
+      };
     }
 
     // Handle immediate slide mode
@@ -259,9 +265,15 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       if (!slideInProgress) {
         // Slide complete, transition to discrete ticks mode
         console.log('[ActionTimerPhaseHandler] Immediate slide complete, starting discrete tick animation');
-        this.startAnimation(state.unitManifest, state.tickCount ?? 0);
+        const finalTickCount = this.startAnimation(state.unitManifest, state.tickCount ?? 0);
         this.animationMode = 'discrete-ticks';
         this.isAnimating = true; // Start discrete tick animation
+
+        // Update state with final tick count
+        state = {
+          ...state,
+          tickCount: finalTickCount
+        };
       }
 
       return state; // Stay in action-timer phase during slide
@@ -326,10 +338,10 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
             console.log('[ActionTimerPhaseHandler] Reset turnCalculated and animationMode for next entry');
 
             // Transition to unit-turn phase
+            // Note: tickCount is already set in state from startAnimation()
             return {
               ...state,
-              phase: 'unit-turn',
-              tickCount: finalSnapshot.tickNumber
+              phase: 'unit-turn'
             };
           }
         }
@@ -347,11 +359,12 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
    * Only simulates ticks if no units are already ready (AT >= 100)
    * @param manifest Current unit manifest
    * @param currentTickCount Current tick count from CombatState
+   * @returns The final tick count after simulation
    */
   private startAnimation(
     manifest: import('./CombatUnitManifest').CombatUnitManifest,
     currentTickCount: number
-  ): void {
+  ): number {
     const allUnits = manifest.getAllUnits();
 
     // Clear previous animation state
@@ -383,7 +396,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       // Start animation (will complete instantly)
       this.isAnimating = true;
       this.animationMode = 'discrete-ticks';
-      return;
+      return currentTickCount; // No tick progression when unit already ready
     }
 
     // Simulate discrete ticks until a unit reaches 100
@@ -434,14 +447,17 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
     if (!foundReadyUnit) {
       console.warn('[ActionTimerPhaseHandler] No unit reached 100 after maximum ticks');
-      return;
+      return currentTickCount; // Return unchanged if simulation failed
     }
 
-    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks, created ${this.tickSnapshots.length} snapshots (${currentTickCount} -> ${currentTickCount + tickCount})`);
+    const finalTickCount = currentTickCount + tickCount;
+    console.log(`[ActionTimerPhaseHandler] Simulated ${tickCount} discrete ticks, created ${this.tickSnapshots.length} snapshots (${currentTickCount} -> ${finalTickCount})`);
 
     // Start animation in discrete-ticks mode
     this.isAnimating = true;
     this.animationMode = 'discrete-ticks';
+
+    return finalTickCount; // Return the final tick count
   }
 
   /**
@@ -668,7 +684,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
         console.log('[ActionTimerPhaseHandler] Skipping updateUnits - pending deferred slide animation');
       }
 
-      // Update tick count (Task 7)
+      // Update tick count
       this.turnOrderRenderer.updateTickCount(currentTickNumber);
     }
 

@@ -19,7 +19,8 @@
       "Bash(npm run build:font-tool)",
       "Bash(git log)",
       "Bash(grep -n \"^#### \\`UnitTurnPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
-      "Bash(grep -n \"^#### \\`managers/panels/ActionsMenuContent\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)"
+      "Bash(grep -n \"^#### \\`managers/panels/ActionsMenuContent\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
+      "Bash(grep -n \"^#### \\`ActionTimerPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)"
     ],
     "deny": [
       "Bash(npm run dev)"
