@@ -129,6 +129,38 @@ export class AttackMenuContent implements PanelContent {
     // Blank line
     currentY += this.config.lineSpacing;
 
+    // Target Selection Section - "Target: " in white, name in orange/grey
+    FontAtlasRenderer.renderText(
+      ctx,
+      'Target: ',
+      region.x + this.config.padding,
+      currentY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      ENABLED_TEXT
+    );
+    // Measure "Target: " to position the name after it
+    const targetLabelWidth = FontAtlasRenderer.measureTextByFontId('Target: ', fontId);
+    const targetName = this.selectedTarget ? this.selectedTarget.name : 'Select a Target';
+    const targetColor = this.selectedTarget ? ITEM_NAME_COLOR : HELPER_TEXT;
+    FontAtlasRenderer.renderText(
+      ctx,
+      targetName,
+      region.x + this.config.padding + targetLabelWidth,
+      currentY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      targetColor
+    );
+    currentY += this.config.lineSpacing;
+
+    // 2px spacing before weapon section
+    currentY += 2;
+
     // Weapon Info Section
     const humanoidUnit = this.currentUnit as HumanoidUnit | null;
     const weapons = humanoidUnit?.getEquippedWeapons?.() ?? [];
@@ -160,38 +192,6 @@ export class AttackMenuContent implements PanelContent {
       const rightY = this.renderWeaponInfo(ctx, region, fontId, fontAtlasImage, weapons[1], rightX, currentY);
       currentY = Math.max(leftY, rightY);
     }
-
-    // 2px spacing before target section
-    currentY += 2;
-
-    // Target Selection Section - "Target: " in white, name in orange/grey
-    FontAtlasRenderer.renderText(
-      ctx,
-      'Target: ',
-      region.x + this.config.padding,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      ENABLED_TEXT
-    );
-    // Measure "Target: " to position the name after it
-    const targetLabelWidth = FontAtlasRenderer.measureTextByFontId('Target: ', fontId);
-    const targetName = this.selectedTarget ? this.selectedTarget.name : 'Select a Target';
-    const targetColor = this.selectedTarget ? ITEM_NAME_COLOR : HELPER_TEXT;
-    FontAtlasRenderer.renderText(
-      ctx,
-      targetName,
-      region.x + this.config.padding + targetLabelWidth,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      targetColor
-    );
-    currentY += this.config.lineSpacing;
 
     // Perform Attack button (only visible when target selected, centered)
     if (this.selectedTarget) {
