@@ -279,16 +279,16 @@ describe('DataLoader', () => {
   });
 
   describe('loadAllGameData', () => {
-    it('should load all data types', () => {
-      loadAllGameData();
+    it('should load all data types', async () => {
+      await loadAllGameData();
 
       expect(CombatAbility.getAll().length).toBeGreaterThan(0);
       expect(Equipment.getAll().length).toBeGreaterThan(0);
       expect(UnitClass.getAll().length).toBeGreaterThan(0);
     });
 
-    it('should load data in correct order', () => {
-      loadAllGameData();
+    it('should load data in correct order', async () => {
+      await loadAllGameData();
 
       // Verify abilities are loaded (needed for classes)
       const abilities = CombatAbility.getAll();
@@ -305,8 +305,8 @@ describe('DataLoader', () => {
       });
     });
 
-    it('should create a complete game database', () => {
-      loadAllGameData();
+    it('should create a complete game database', async () => {
+      await loadAllGameData();
 
       // Verify we have enough data for a working game
       expect(CombatAbility.getAll().length).toBeGreaterThanOrEqual(30);
@@ -314,15 +314,15 @@ describe('DataLoader', () => {
       expect(UnitClass.getAll().length).toBeGreaterThan(0);
     });
 
-    it('should allow multiple loads without errors', () => {
+    it('should allow multiple loads without errors', async () => {
       // First load
-      loadAllGameData();
+      await loadAllGameData();
       const firstAbilityCount = CombatAbility.getAll().length;
       const firstEquipmentCount = Equipment.getAll().length;
       const firstClassCount = UnitClass.getAll().length;
 
       // Second load (should replace registries)
-      loadAllGameData();
+      await loadAllGameData();
       expect(CombatAbility.getAll().length).toBe(firstAbilityCount);
       expect(Equipment.getAll().length).toBe(firstEquipmentCount);
       expect(UnitClass.getAll().length).toBe(firstClassCount);
@@ -330,8 +330,8 @@ describe('DataLoader', () => {
   });
 
   describe('Data Integrity', () => {
-    beforeEach(() => {
-      loadAllGameData();
+    beforeEach(async () => {
+      await loadAllGameData();
     });
 
     it('should have all class abilities available in ability database', () => {
@@ -420,8 +420,8 @@ describe('DataLoader', () => {
   });
 
   describe('Specific Database Entries', () => {
-    beforeEach(() => {
-      loadAllGameData();
+    beforeEach(async () => {
+      await loadAllGameData();
     });
 
     it('should load Fighter class correctly', () => {

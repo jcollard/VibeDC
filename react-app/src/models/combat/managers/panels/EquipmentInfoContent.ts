@@ -1,6 +1,7 @@
 import type { Equipment } from '../../Equipment';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
+import { EquipmentTagRegistry } from '../../../../utils/EquipmentTagRegistry';
 import type { PanelContent, PanelRegion } from './PanelContent';
 import { ITEM_NAME_COLOR } from './colors';
 
@@ -53,6 +54,30 @@ export class EquipmentInfoContent implements PanelContent {
     );
 
     y += this.lineSpacing + 2; // Spacing after name
+
+    // Render type tags if they exist (convert to display-friendly text)
+    if (this.equipment.typeTags && this.equipment.typeTags.length > 0) {
+      const displayTags = this.equipment.typeTags
+        .filter(tag => !EquipmentTagRegistry.isHidden(tag))
+        .map(tag => this.formatTagForDisplay(tag))
+        .join(' ');
+
+      // Only render if there are visible tags
+      if (displayTags.length > 0) {
+        FontAtlasRenderer.renderText(
+          ctx,
+          displayTags,
+          region.x + this.padding,
+          y,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#aaaaaa'
+        );
+        y += this.lineSpacing;
+      }
+    }
 
     // Render weapon information if this is a weapon
     if (this.equipment.isWeapon()) {
@@ -270,5 +295,13 @@ export class EquipmentInfoContent implements PanelContent {
    */
   private formatMultiplier(value: number): string {
     return `x${value.toFixed(1)}`;
+  }
+
+  /**
+   * Format equipment type tag for player-friendly display
+   * Converts tags like "heavy-weapon" to "Heavy" using the registry
+   */
+  private formatTagForDisplay(tag: string): string {
+    return EquipmentTagRegistry.getDisplayName(tag);
   }
 }

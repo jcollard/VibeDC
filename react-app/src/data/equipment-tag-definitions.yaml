@@ -1,0 +1,58 @@
+# Equipment Tag Definitions
+# Defines display names and metadata for equipment type tags
+
+tags:
+  # Weapon Weight/Size
+  - id: "light-weapon"
+    displayName: "Light"
+    category: "weapon"
+    description: "Small, quick weapons"
+
+  - id: "medium-weapon"
+    displayName: "Medium"
+    category: "weapon"
+    description: "Balanced weapons"
+
+  - id: "heavy-weapon"
+    displayName: "Heavy"
+    category: "weapon"
+    description: "Large, powerful weapons"
+
+  # Weapon Type
+  - id: "magical-weapon"
+    displayName: "Magical"
+    category: "weapon"
+    description: "Weapons imbued with magic"
+
+  - id: "ranged-weapon"
+    displayName: "Ranged"
+    category: "weapon"
+    description: "Weapons that attack from a distance"
+
+  # Armor Weight
+  - id: "light-armor"
+    displayName: "Light"
+    category: "armor"
+    description: "Flexible, low-weight armor"
+
+  - id: "medium-armor"
+    displayName: "Medium"
+    category: "armor"
+    description: "Balanced protection and mobility"
+
+  - id: "heavy-armor"
+    displayName: "Heavy"
+    category: "armor"
+    description: "Maximum protection, reduced mobility"
+
+  # Special Categories
+  - id: "shield"
+    displayName: "Shield"
+    category: "defense"
+    description: "Defensive equipment"
+
+  - id: "all-classes"
+    displayName: "Common"
+    category: "special"
+    description: "Usable by all classes"
+    hidden: true

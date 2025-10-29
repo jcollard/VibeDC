@@ -16,6 +16,8 @@ import { TilesetRegistry } from '../utils/TilesetRegistry';
 import type { TilesetDefinitionJSON } from '../utils/TilesetRegistry';
 import { FontRegistry } from '../utils/FontRegistry';
 import { loadFontFromYAML } from '../utils/FontLoader';
+import { EquipmentTagRegistry } from '../utils/EquipmentTagRegistry';
+import type { EquipmentTagDefinitionJSON } from '../utils/EquipmentTagRegistry';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
@@ -25,6 +27,7 @@ import spriteYaml from './sprite-definitions.yaml?raw';
 import enemyYaml from './enemy-definitions.yaml?raw';
 import partyYaml from './party-definitions.yaml?raw';
 import equipmentYaml from './equipment-definitions.yaml?raw';
+import equipmentTagYaml from './equipment-tag-definitions.yaml?raw';
 import tilesetYaml from './tileset-database.yaml?raw';
 import font7px04b03Yaml from './fonts/7px-04b03.yaml?raw';
 import font7px5x7tinyj2Yaml from './fonts/7px-5x7tinyj2.yaml?raw';
@@ -239,6 +242,19 @@ export function loadPartyMembers(): void {
 }
 
 /**
+ * Load all equipment tag definitions from the YAML database
+ */
+export function loadEquipmentTags(): void {
+  const data = yaml.load(equipmentTagYaml) as { tags: EquipmentTagDefinitionJSON[] };
+
+  for (const tagData of data.tags) {
+    EquipmentTagRegistry.register(tagData);
+  }
+
+  console.log(`Loaded ${data.tags.length} equipment tag definitions`);
+}
+
+/**
  * Load all font definitions from the YAML database
  */
 export async function loadFonts(): Promise<void> {
@@ -277,12 +293,14 @@ export async function loadAllGameData(): Promise<void> {
   // Order matters:
   // - Sprites should be loaded first (referenced by enemies and party members)
   // - Fonts should be loaded early (referenced by UI components)
+  // - Equipment tags should be loaded early (referenced by UI)
   // - Abilities must be loaded before classes and encounters
   // - Equipment must be loaded before party members (they reference equipment)
   // - Enemies and party members should be loaded after classes (they reference unit classes)
   // - Tilesets must be loaded before encounters (encounters reference tilesets)
   loadSprites();
   await loadFonts();
+  loadEquipmentTags();
   loadAbilities();
   loadEquipment();
   loadClasses();
