@@ -1,5 +1,48 @@
 # VibeDC Development Guidelines
 
+## How AI Agents Should Use This Document
+
+**⚠️ Token-Efficient Usage:**
+
+This document contains detailed patterns and examples (~20,000 tokens). Use selectively:
+
+### When to Read Full Document:
+- ✅ Implementing new combat features (worth the token cost)
+- ✅ Pre-merge code review
+- ✅ Major refactoring work
+- ✅ Learning project patterns (first session)
+
+### When to Read Sections Only:
+- **Canvas rendering issues** → Read "Rendering Rules" section only
+- **State bugs** → Read "State Management" section only
+- **Event handling** → Read "Event Handling" section only
+- **Performance** → Read "Performance Patterns" section only
+- **Common errors** → Read "Common Pitfalls" section only
+
+### When to Skip Entirely:
+- Non-combat code changes
+- Trivial fixes (typos, formatting)
+- Research/exploration tasks
+- Quick questions about specific functions
+
+### Section Index (use Ctrl+F):
+- `## Rendering Rules` - Canvas operations, SpriteRenderer, FontAtlasRenderer
+- `## State Management` - WeakMap patterns, state preservation
+- `## Event Handling` - Mouse events, coordinate systems
+- `## Performance Patterns` - Caching, object pooling
+- `## Common Pitfalls` - Real bugs to avoid
+
+### Recommended Workflow:
+1. **Start with** [CombatHierarchy.md](./CombatHierarchy.md) Quick Reference (~200 tokens)
+2. **Read specific sections** from this file as needed (~2,000-5,000 tokens)
+3. **Only read full file** for major features or code reviews (~20,000 tokens)
+
+### For Human Users:
+When providing this file to an AI agent, you can say:
+> "Use GeneralGuidelines.md as a reference. Read only the sections relevant to [your task]. For combat architecture questions, start with CombatHierarchy.md Quick Reference first."
+
+---
+
 ## Rendering Rules
 
 ### Always Use Specialized Renderers

@@ -1,12 +1,111 @@
 # Combat System Hierarchy
 
-**Version:** 1.7
-**Last Updated:** Wed, Oct 29, 2025 (ability-equipment-panel branch - Added ability/equipment detail panels with hover-based panel swapping)
+**Version:** 1.8
+**Last Updated:** Wed, Oct 29, 2025 (Added AI agent usage instructions and navigation index)
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
 
 This document provides a token-efficient reference for AI agents to quickly understand the combat system architecture. Organized by both directory structure and functionality.
+
+## How AI Agents Should Use This Document
+
+**⚠️ IMPORTANT: Do NOT read this entire file upfront.**
+
+This document is 1,300+ lines and designed as a **reference**, not a preamble. Reading it completely wastes tokens.
+
+### Recommended Usage Pattern:
+
+#### 1. **Start with Quick Reference** (below)
+Read ONLY the Quick Reference section first. It maps common tasks to relevant files.
+
+#### 2. **Read Targeted Sections**
+Use the Navigation Index to find the specific section you need. Examples:
+- Adding a phase → Read `### 2. Phase Handlers` only
+- UI panel work → Read `### 4. Layout & UI Management` only
+- Movement logic → Read `#### MovementPathfinder.ts` entry only
+
+#### 3. **Use Search (Ctrl+F)**
+Search for specific file names (e.g., "ActionsMenuContent") or keywords (e.g., "hover", "animation")
+
+#### 4. **Read Data Flow ONLY if confused**
+If unclear how pieces connect, read `## Data Flow Summary` section
+
+#### 5. **For Large Features**
+Read multiple targeted sections, NOT the whole file
+
+### What NOT to Do:
+- ❌ Don't read all 1,300 lines before starting work
+- ❌ Don't include entire file in every conversation
+- ❌ Don't read sections unrelated to current task
+- ❌ Don't treat this as documentation to memorize - it's a quick reference map
+
+### Token Budget Guidance:
+- **Quick lookup**: Read Quick Reference only (~200 tokens)
+- **Single file work**: Quick Reference + 1 section (~2,000 tokens)
+- **Feature work**: Quick Reference + 2-3 sections (~4,000 tokens)
+- **Architecture change**: Quick Reference + Data Flow + relevant sections (~6,000 tokens)
+- **Only as last resort**: Read entire file (~17,000 tokens)
+
+### Example Workflow:
+```
+Task: "Add Reset Move button to actions menu"
+
+Step 1: Read Quick Reference
+  → Found: "Add info panel content → Implement PanelContent interface"
+
+Step 2: Search for "ActionsMenuContent"
+  → Jump to that section, read it only
+
+Step 3: If unclear, search for "PanelContent"
+  → Jump to interface definition, read it
+
+Total tokens used: ~1,500 instead of 17,000
+```
+
+### For Human Users:
+When providing this file to an AI agent, you can say:
+> "Use CombatHierarchy.md as a reference. Start with the Quick Reference section, then read only the sections relevant to [your task]. Do NOT read the entire file."
+
+---
+
+## Navigation Index
+
+### By Task Type:
+- **Canvas rendering** → `#### CombatRenderer.ts`, `### 4. Rendering System`
+- **Panel content** → `### 4. Layout & UI Management` → `managers/panels/`
+- **Phase handler** → `### 2. Phase Handlers`
+- **Turn order display** → `#### TurnOrderRenderer.ts`
+- **Unit movement** → `#### UnitMovementSequence.ts`, `#### MovementPathfinder.ts`
+- **Save/load** → `### 9. Serialization System`
+- **Hover interactions** → `#### UnitInfoContent.ts`, search "handleTopPanelHover"
+- **Detail panels** → `#### AbilityInfoContent.ts`, `#### EquipmentInfoContent.ts`
+- **Button states** → `#### ActionsMenuContent.ts`
+- **Animation** → `### 6. Cinematics & Animation`
+- **Pathfinding** → `### 8. Utilities & Predicates`
+
+### By Component Type:
+- **Phase Handlers** → `### 2. Phase Handlers`
+- **Panel Content** → `### 4. Layout & UI Management` → `managers/panels/`
+- **Renderers** → `### 4. Rendering System`, `managers/renderers/`
+- **Turn Strategies** → `### 3. Turn Strategies`
+- **Animations** → `### 6. Cinematics & Animation`
+- **Utilities** → `### 8. Utilities & Predicates`
+
+### Major Sections (use Ctrl+F):
+- `### 1. Core State & Data` - CombatState, CombatUnit, CombatMap, etc.
+- `### 2. Phase Handlers` - Deployment, ActionTimer, UnitTurn phases
+- `### 3. Turn Strategies` - Player vs AI behavior
+- `### 4. Rendering System` - Map and unit rendering
+- `### 4. Layout & UI Management` - All panels, buttons, managers (17 files)
+- `### 5. Deployment System` - Deployment zones and UI
+- `### 6. Cinematics & Animation` - Sequences and effects
+- `### 7. Unit System` - HumanoidUnit, MonsterUnit, classes
+- `### 8. Utilities & Predicates` - Pathfinding, movement calculation
+- `### 9. Serialization System` - Save/load functionality
+- `## Data Flow Summary` - How components connect
+- `## Event Handling Architecture` - Mouse events and coordinates
+- `## Performance Patterns` - Caching and optimization
 
 ---
 
