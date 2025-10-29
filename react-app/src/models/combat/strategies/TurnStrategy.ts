@@ -10,7 +10,8 @@ import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler'
 export type TurnAction =
   | { type: 'delay' }             // Set actionTimer to 50
   | { type: 'end-turn' }          // Set actionTimer to 0
-  | { type: 'move'; destination: Position }; // Move to destination
+  | { type: 'move'; destination: Position } // Move to destination
+  | { type: 'reset-move' };       // Reset to original position
 
 /**
  * Strategy pattern for handling unit turns

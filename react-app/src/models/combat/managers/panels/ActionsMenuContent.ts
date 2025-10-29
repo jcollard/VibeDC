@@ -77,14 +77,15 @@ export class ActionsMenuContent implements PanelContent {
    * @param unit - The combat unit whose turn it is
    * @param hasMoved - Whether the unit has moved this turn
    * @param activeAction - The currently active action (for highlighting)
+   * @param canResetMove - Whether the move can be reset
    */
-  updateUnit(unit: CombatUnit, hasMoved: boolean = false, activeAction: string | null = null): void {
+  updateUnit(unit: CombatUnit, hasMoved: boolean = false, activeAction: string | null = null, canResetMove: boolean = false): void {
     // Store current unit reference
     this.currentUnit = unit;
     this.activeButtonId = activeAction;
 
     // Rebuild button list with current state
-    this.buttons = this.buildButtonList(unit, hasMoved);
+    this.buttons = this.buildButtonList(unit, hasMoved, canResetMove);
 
     // Validate hover index is still valid
     if (this.hoveredButtonIndex !== null &&
@@ -100,17 +101,29 @@ export class ActionsMenuContent implements PanelContent {
    * Build dynamic button list based on unit's stats, classes, and state
    * @param unit - The combat unit
    * @param hasMoved - Whether the unit has moved this turn
+   * @param canResetMove - Whether the move can be reset
    */
-  private buildButtonList(unit: CombatUnit, hasMoved: boolean = false): ActionButton[] {
+  private buildButtonList(unit: CombatUnit, hasMoved: boolean = false, canResetMove: boolean = false): ActionButton[] {
     const buttons: ActionButton[] = [];
 
-    // Move button (disabled if already moved)
-    buttons.push({
-      id: 'move',
-      label: 'Move',
-      enabled: !hasMoved,
-      helperText: `Move this unit up to ${unit.movement} tiles`
-    });
+    // Move or Reset Move button
+    if (canResetMove) {
+      // Show "Reset Move" if move can be reset
+      buttons.push({
+        id: 'reset-move',
+        label: 'Reset Move',
+        enabled: true,
+        helperText: 'Return to original position'
+      });
+    } else {
+      // Show "Move" button (disabled if already moved)
+      buttons.push({
+        id: 'move',
+        label: 'Move',
+        enabled: !hasMoved,
+        helperText: `Move this unit up to ${unit.movement} tiles`
+      });
+    }
 
     // Attack button
     buttons.push({

@@ -77,6 +77,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
   // Movement tracking (resets when new unit's turn starts)
   private unitHasMoved: boolean = false;
+  private originalPosition: Position | null = null; // Position before move (for reset)
+  private canResetMove: boolean = false; // True after move completes, false after any action
 
   // Movement animation
   private movementSequence: UnitMovementSequence | null = null;
@@ -360,6 +362,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
       // Reset movement tracking for new unit
       this.unitHasMoved = false;
+      this.originalPosition = null;
+      this.canResetMove = false;
 
       // Initialize appropriate strategy based on unit control
       this.currentStrategy = this.activeUnit.isPlayerControlled
@@ -414,6 +418,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         if (action.type === 'move') {
           // Start movement animation
           return this.startMoveAnimation(action.destination, state);
+        } else if (action.type === 'reset-move') {
+          // Reset move - teleport back to original position
+          return this.executeResetMove(state);
         } else {
           // Execute other actions (delay, end-turn)
           const newState = this.executeAction(action, state);
@@ -502,6 +509,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return state;
     }
 
+    // Store original position for potential reset
+    this.originalPosition = { ...this.activeUnitPosition };
+
     // Calculate path from current position to destination
     const path = MovementPathfinder.calculatePath({
       start: this.activeUnitPosition,
@@ -571,11 +581,47 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Mark unit as having moved
     this.unitHasMoved = true;
+    this.canResetMove = true; // Enable reset move option
 
     // Notify strategy that unit has moved (clears movement range)
     if (this.currentStrategy && 'onUnitMoved' in this.currentStrategy) {
       (this.currentStrategy as any).onUnitMoved();
     }
+
+    return state;
+  }
+
+  /**
+   * Execute reset move - teleport unit back to original position
+   */
+  private executeResetMove(state: CombatState): CombatState {
+    if (!this.activeUnit || !this.originalPosition) {
+      console.warn('[UnitTurnPhaseHandler] Cannot reset move - no original position stored');
+      return state;
+    }
+
+    // Teleport unit back to original position
+    state.unitManifest.moveUnit(this.activeUnit, this.originalPosition);
+
+    // Update cached active position
+    this.activeUnitPosition = { ...this.originalPosition };
+
+    // Reset movement flags
+    this.unitHasMoved = false;
+    this.canResetMove = false;
+
+    // Clear original position
+    this.originalPosition = null;
+
+    // Notify strategy to restore movement range
+    if (this.currentStrategy && 'onMoveReset' in this.currentStrategy) {
+      (this.currentStrategy as any).onMoveReset(this.activeUnit, this.activeUnitPosition, state);
+    }
+
+    // Add log message
+    const nameColor = this.getUnitNameColor();
+    const logMessage = `[color=${nameColor}]${this.activeUnit.name}[/color] resets movement.`;
+    this.pendingLogMessages.push(logMessage);
 
     return state;
   }
@@ -700,6 +746,13 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
    */
   hasUnitMoved(): boolean {
     return this.unitHasMoved;
+  }
+
+  /**
+   * Check if the move can be reset
+   */
+  getCanResetMove(): boolean {
+    return this.canResetMove;
   }
 
   /**

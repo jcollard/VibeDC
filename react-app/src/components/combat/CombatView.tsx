@@ -549,9 +549,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         // Get dynamic state from phase handler using proper getter methods
         const activeAction = typeof handler.getActiveAction === 'function' ? handler.getActiveAction() : null;
         const unitHasMoved = typeof handler.hasUnitMoved === 'function' ? handler.hasUnitMoved() : false;
+        const canResetMove = typeof handler.getCanResetMove === 'function' ? handler.getCanResetMove() : false;
 
         // Update the existing content with dynamic state (preserves hover state)
-        (existingContent as any).updateUnit(currentUnitToDisplay, unitHasMoved, activeAction);
+        (existingContent as any).updateUnit(currentUnitToDisplay, unitHasMoved, activeAction, canResetMove);
       }
     }
 

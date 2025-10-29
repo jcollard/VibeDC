@@ -243,6 +243,12 @@ export class PlayerTurnStrategy implements TurnStrategy {
       return;
     }
 
+    // Handle reset-move
+    if (actionId === 'reset-move') {
+      this.pendingAction = { type: 'reset-move' };
+      return;
+    }
+
     // Other actions cancel move mode
     if (this.mode === 'moveSelection') {
       this.exitMoveMode();
@@ -383,6 +389,27 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.hasMoved = true;
     this.movementRange = [];
     this.exitMoveMode();
+  }
+
+  /**
+   * Notify that the move has been reset - restore movement range
+   */
+  onMoveReset(unit: CombatUnit, position: Position, state: CombatState): void {
+    this.hasMoved = false;
+    this.activePosition = position;
+
+    // Recalculate movement range
+    this.movementRange = MovementRangeCalculator.calculateReachableTiles({
+      startPosition: position,
+      movement: unit.movement,
+      map: state.map,
+      unitManifest: state.unitManifest,
+      activeUnit: unit
+    });
+
+    // Select the unit at new position
+    this.targetedUnit = unit;
+    this.targetedPosition = position;
   }
 
   /**
