@@ -51,6 +51,21 @@ tags:
     category: "defense"
     description: "Defensive equipment"
 
+  - id: "accessory"
+    displayName: "Accessory"
+    category: "equipment"
+    description: "Rings, amulets, and other accessories"
+
+  - id: "held"
+    displayName: "Held"
+    category: "equipment"
+    description: "Items held in the hand"
+
+  - id: "magical-item"
+    displayName: "Magical"
+    category: "special"
+    description: "Items imbued with magic"
+
   - id: "all-classes"
     displayName: "Common"
     category: "special"
