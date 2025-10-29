@@ -94,7 +94,7 @@ export class AttackMenuContent implements PanelContent {
 
     let currentY = region.y + this.config.padding;
 
-    // Render title: "ATTACK" in dark red
+    // Render title: "ATTACK" in dark red on left, "Cancel" button on right
     FontAtlasRenderer.renderText(
       ctx,
       'ATTACK',
@@ -105,6 +105,21 @@ export class AttackMenuContent implements PanelContent {
       1,
       'left',
       this.config.titleColor
+    );
+
+    // Cancel button on the same line, right-aligned
+    const isCancelHovered = this.hoveredButtonIndex === 0;
+    const cancelColor = this.buttonsDisabled ? HELPER_TEXT : (isCancelHovered ? HOVERED_TEXT : ENABLED_TEXT);
+    FontAtlasRenderer.renderText(
+      ctx,
+      'Cancel',
+      region.x + region.width - this.config.padding,
+      currentY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'right',
+      cancelColor
     );
     currentY += this.config.lineSpacing;
 
@@ -146,10 +161,10 @@ export class AttackMenuContent implements PanelContent {
     // 2px spacing before target section
     currentY += 2;
 
-    // Target Selection Section
+    // Target Selection Section - "Target: " in white, name in orange/grey
     FontAtlasRenderer.renderText(
       ctx,
-      'Target:',
+      'Target: ',
       region.x + this.config.padding,
       currentY,
       fontId,
@@ -158,14 +173,14 @@ export class AttackMenuContent implements PanelContent {
       'left',
       ENABLED_TEXT
     );
-    currentY += this.config.lineSpacing;
-
-    const targetText = this.selectedTarget ? this.selectedTarget.name : 'Select a Target';
+    // Measure "Target: " to position the name after it
+    const targetLabelWidth = FontAtlasRenderer.measureTextByFontId('Target: ', fontId);
+    const targetName = this.selectedTarget ? this.selectedTarget.name : 'Select a Target';
     const targetColor = this.selectedTarget ? ITEM_NAME_COLOR : HELPER_TEXT;
     FontAtlasRenderer.renderText(
       ctx,
-      targetText,
-      region.x + this.config.padding,
+      targetName,
+      region.x + this.config.padding + targetLabelWidth,
       currentY,
       fontId,
       fontAtlasImage,
@@ -191,35 +206,10 @@ export class AttackMenuContent implements PanelContent {
           currentY
         );
       } else if (weapons.length === 2) {
-        // Dual wielding prediction - two columns
+        // Dual wielding prediction - two columns (no labels)
         const columnWidth = Math.floor((region.width - this.config.padding * 2 - 8) / 2);
         const leftX = region.x + this.config.padding;
         const rightX = leftX + columnWidth + 8;
-
-        // "Attack 1" and "Attack 2" labels
-        FontAtlasRenderer.renderText(
-          ctx,
-          'Attack 1',
-          leftX,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          HELPER_TEXT
-        );
-        FontAtlasRenderer.renderText(
-          ctx,
-          'Attack 2',
-          rightX,
-          currentY,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          HELPER_TEXT
-        );
-        currentY += this.config.lineSpacing;
 
         const leftY = this.renderAttackPrediction(ctx, region, fontId, fontAtlasImage, weapons[0], leftX, currentY);
         const rightY = this.renderAttackPrediction(ctx, region, fontId, fontAtlasImage, weapons[1], rightX, currentY);
@@ -227,35 +217,15 @@ export class AttackMenuContent implements PanelContent {
       }
     }
 
-    // Spacing before buttons
-    currentY += this.config.lineSpacing;
-
-    // Cancel Attack button (always visible)
-    const isCancelHovered = this.hoveredButtonIndex === 0;
-    const cancelColor = this.buttonsDisabled ? HELPER_TEXT : (isCancelHovered ? HOVERED_TEXT : ENABLED_TEXT);
-
-    // Calculate center X for buttons
-    const buttonCenterX = region.x + (region.width / 2);
-
-    FontAtlasRenderer.renderText(
-      ctx,
-      'Cancel Attack',
-      buttonCenterX,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'center',
-      cancelColor
-    );
-    currentY += this.config.lineSpacing;
-
-    // Perform Attack button (only visible when target selected)
+    // Perform Attack button (only visible when target selected, centered)
     if (this.selectedTarget) {
-      currentY += 16; // 16px gap to prevent accidental clicks
+      currentY += this.config.lineSpacing; // Spacing before button
 
       const isPerformHovered = this.hoveredButtonIndex === 1;
       const performColor = this.buttonsDisabled ? HELPER_TEXT : (isPerformHovered ? HOVERED_TEXT : ENABLED_TEXT);
+
+      // Calculate center X for button
+      const buttonCenterX = region.x + (region.width / 2);
 
       FontAtlasRenderer.renderText(
         ctx,
@@ -296,23 +266,6 @@ export class AttackMenuContent implements PanelContent {
       1,
       'left',
       ITEM_NAME_COLOR
-    );
-    currentY += this.config.lineSpacing;
-
-    // Range
-    const minRange = weapon.minRange ?? 1;
-    const maxRange = weapon.maxRange ?? 1;
-    const rangeText = minRange === maxRange ? `Range: ${minRange}` : `Range: ${minRange}-${maxRange}`;
-    FontAtlasRenderer.renderText(
-      ctx,
-      rangeText,
-      x,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      ENABLED_TEXT
     );
     currentY += this.config.lineSpacing;
 
@@ -497,43 +450,39 @@ export class AttackMenuContent implements PanelContent {
    * Determine which button (if any) is at the given panel-relative coordinates
    * Returns 0 for cancel button, 1 for perform attack, null otherwise
    *
-   * Note: Button positions are calculated dynamically based on weapon count and target selection
+   * Note: Cancel button is on the title line, Perform Attack button is below prediction section
    */
   private getButtonIndexAt(_relativeX: number, relativeY: number): number | null {
-    // This is a simplified calculation - in reality we'd need to track exact Y positions
-    // For now, we'll use approximate layout:
-    // - Cancel button is always present
-    // - Perform Attack button appears 16px below cancel when target selected
-
-    // Approximate calculation (this would be better with tracked Y positions)
     const humanoidUnit = this.currentUnit as HumanoidUnit | null;
     const weapons = humanoidUnit?.getEquippedWeapons?.() ?? [];
 
-    // Base layout height calculation
-    let lineCount = 0;
-    lineCount += 1; // Title
-    lineCount += 1; // Blank
-    lineCount += (weapons.length === 0 ? 1 : 4); // Weapon info (4 lines per weapon)
-    lineCount += 1; // Target label
-    lineCount += 1; // Target value
-
-    if (this.selectedTarget && weapons.length > 0) {
-      lineCount += 2; // Attack prediction (2 lines)
-    }
-
-    lineCount += 1; // Spacing
-
-    const cancelButtonY = this.config.padding + (lineCount * this.config.lineSpacing);
-    const performButtonY = cancelButtonY + this.config.lineSpacing + 16;
-
-    // Check if click is on cancel button line
+    // Cancel button is on line 0 (title line)
+    const cancelButtonY = this.config.padding;
     if (relativeY >= cancelButtonY && relativeY < cancelButtonY + this.config.lineSpacing) {
       return 0; // Cancel button
     }
 
-    // Check if click is on perform attack button line (only if target selected)
-    if (this.selectedTarget && relativeY >= performButtonY && relativeY < performButtonY + this.config.lineSpacing) {
-      return 1; // Perform Attack button
+    // Perform Attack button calculation
+    if (this.selectedTarget) {
+      // Base layout height calculation
+      let lineCount = 0;
+      lineCount += 1; // Title (with Cancel)
+      lineCount += 1; // Blank
+      lineCount += (weapons.length === 0 ? 1 : 3); // Weapon info (3 lines per weapon: name, hit%, dmg)
+      lineCount += 1; // Target line
+
+      if (weapons.length > 0) {
+        lineCount += 2; // Attack prediction (2 lines: hit%, dmg)
+      }
+
+      lineCount += 1; // Spacing before button
+
+      const performButtonY = this.config.padding + (lineCount * this.config.lineSpacing);
+
+      // Check if click is on perform attack button line
+      if (relativeY >= performButtonY && relativeY < performButtonY + this.config.lineSpacing) {
+        return 1; // Perform Attack button
+      }
     }
 
     return null;
