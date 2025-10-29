@@ -2,7 +2,7 @@
 
 **Purpose:** Token-efficient reference for AI agents working on Attack Action implementation
 
-**Last Updated:** 2025-10-29
+**Last Updated:** 2025-10-29 (Step 3 Complete)
 
 ---
 
@@ -102,21 +102,52 @@ Alpha: 0.33 (semi-transparent)
 
 ---
 
-### 🚧 Step 3: Target Selection (Planned)
-**Status:** Not started
+### ✅ Step 3: Target Selection and Attack Info Display
+**File:** [03-AttackActionTargetInfo.md](./03-AttackActionTargetInfo.md)
+**Code Review:** [03-AttackActionTargetInfo-CodeReview.md](./03-AttackActionTargetInfo-CodeReview.md)
+**Branch:** `attack-action-03-show-info`
+**Status:** Complete, approved for merge
 
-**Goals:**
-- Click yellow/orange tiles to select target
-- Selected tile turns green
-- Update AttackMenuContent to show selected target name
-- Display hit% and damage prediction for selected target
-- Show "Perform Attack" button when target selected
+**What Was Done:**
+- Implemented target selection (click yellow/orange tiles)
+- Selected targets turn green (highest priority color)
+- Attack menu displays selected target name in orange
+- Weapon info section shows name, range, hit%, damage for each weapon
+- Dual wielding support (two-column layout with 8px gap)
+- Hit% and damage calculations (stub formulas: 100% hit, 1 damage)
+- "Perform Attack" button appears when target selected
+- Position data flows from CombatView through layout system to attack menu
 
-**Key Work:**
-- Update `PlayerTurnStrategy.handleMapClick()` to handle target selection
-- Add `selectedTarget` state tracking
-- Update `AttackMenuContent` to show weapon stats, hit%, damage
-- Implement stub damage calculation (`CombatCalculations.ts`)
+**Key Files Created:**
+- `utils/CombatCalculations.ts` - Stub hit chance and damage calculations
+
+**Key Files Modified:**
+- `AttackMenuContent.ts` - Major rewrite to fully functional attack info panel
+- `PlayerTurnStrategy.ts` - Target selection click handling, `getSelectedAttackTarget()` method
+- `CombatView.tsx` - Position data retrieval and flow
+- `UnitTurnPhaseHandler.ts` - Green highlight rendering for selected target
+- `CombatLayoutManager.ts` - Position data passing to attack menu
+- `TurnStrategy.ts` - Optional `getSelectedAttackTarget()` interface method
+- `PanelContent.ts` - Added 'perform-attack' click result type
+
+**Technical Highlights:**
+- **Stub calculation system:** Clean interface for future formula implementation
+- **Position data flow:** Queries at source, passes through context, no coupling
+- **Dual wielding layout:** Mathematical column width calculation, synchronized rendering
+- **Button positioning:** Y positions tracked during render for accurate hit detection
+- **State cleanup:** Selected target cleared in 5 transition points
+- **100% GeneralGuidelines.md compliance** (see code review)
+
+**Color System (Updated):**
+```typescript
+Priority (highest to lowest):
+1. Green (#00ff00) - Selected target ← NEW
+2. Orange (#ffa500) - Hovered target
+3. Yellow (#ffff00) - Valid target
+4. White (#ffffff) - Blocked (wall/no LOS)
+5. Red (#ff0000) - Base range
+Alpha: 0.33 (semi-transparent)
+```
 
 ---
 
@@ -150,18 +181,22 @@ Alpha: 0.33 (semi-transparent)
 - [x] Range visualization (color-coded tiles)
 - [x] Position tracking and recalculation
 - [x] Hover detection for targets
+- [x] Target selection (click to select)
+- [x] Weapon stats display in panel
+- [x] Hit% and damage prediction (stub formulas)
+- [x] Dual wielding UI support (two columns)
+- [x] "Perform Attack" button (ready for execution)
 
 ### In Progress 🚧
-- [ ] Target selection (click to select)
-- [ ] Weapon stats display in panel
-- [ ] Hit% and damage prediction
+- None (Step 3 complete, ready for Step 4)
 
 ### Not Started 📋
 - [ ] Attack execution (damage application)
 - [ ] Attack animations (flicker, floating numbers)
-- [ ] Dual wielding support (two attacks)
+- [ ] Dual wielding execution (two attacks sequentially)
 - [ ] Knockout detection
 - [ ] Victory/defeat condition checks
+- [ ] Real combat formulas (replace stubs)
 - [ ] Enemy AI attack evaluation (stub)
 
 ---
@@ -176,7 +211,7 @@ Alpha: 0.33 (semi-transparent)
 ### Utilities
 - **`AttackRangeCalculator.ts`** - Manhattan distance, tile categorization
 - **`LineOfSightCalculator.ts`** - Bresenham's algorithm, blocking checks
-- **`CombatCalculations.ts`** - (Future) Hit chance, damage formulas
+- **`CombatCalculations.ts`** - Hit chance and damage calculations (stub formulas, ready for real implementation)
 
 ### Constants
 - **`CombatConstants.ts`** - Color constants (6 attack colors + alpha)
@@ -250,38 +285,43 @@ Bresenham's line algorithm:
 
 ## Next Steps
 
-### Immediate (Step 3: Target Selection)
-1. Add `selectedTarget: Position | null` to PlayerTurnStrategy
-2. Update `handleMapClick()` to detect clicks on `validTargets[]`
-3. Add `getSelectedTarget()` method to strategy interface
-4. Update UnitTurnPhaseHandler rendering to show green highlight
-5. Update AttackMenuContent to display:
-   - Selected target name in orange
-   - Weapon stats (name, range)
-   - Placeholder hit%/damage (stubs)
-   - "Perform Attack" button (visible when target selected)
-
-### Short-term (Step 4: Attack Execution)
-1. Create `utils/CombatCalculations.ts` with stub methods:
-   - `getChanceToHit()` → returns 1.0 (100% hit)
-   - `calculateAttackDamage()` → returns 1 (1 damage)
+### Immediate (Step 4: Attack Execution)
+1. Handle "perform-attack" click result in `UnitTurnPhaseHandler`
 2. Create `AttackAnimationSequence.ts` for animations:
    - Red flicker (200ms, 50ms intervals)
    - Floating text (2s, moves up 12px)
    - "Miss" text (white) or damage number (red)
-3. Update phase handler to execute attack:
-   - Roll hit/miss using stub
+3. Implement attack execution flow in phase handler:
+   - Roll hit/miss using `CombatCalculations.getChanceToHit()`
+   - Calculate damage using `CombatCalculations.calculateAttackDamage()`
    - Apply damage to target unit
    - Create animation sequence
-   - Add combat log messages
+   - Add combat log messages (hit/miss/damage/knockout)
    - Set `canAct = false` after completion
+   - Exit attack mode
+4. Handle dual wielding:
+   - Execute two sequential attacks (one per weapon)
+   - Independent hit rolls
+   - 4.4s total animation time (2.2s per attack)
+5. Add knockout detection:
+   - Check if target HP reaches 0
+   - Set `isKnockedOut = true`
+   - Visual indicator
+   - Remove from turn order
+   - Check victory/defeat conditions
 
-### Long-term
-1. Implement real damage formulas (P.Pow, M.Pow, defenses)
-2. Dual wielding support (two sequential attacks)
-3. Knockout visual indicators
-4. Enemy AI attack evaluation
-5. Critical hits, status effects (future enhancements)
+### Long-term (Step 5+)
+1. Replace stub formulas with real combat calculations:
+   - Hit chance: Attacker accuracy vs defender P.Evd/M.Evd
+   - Damage: Weapon power + attacker P.Pow/M.Pow - defender defenses
+   - Distance modifiers (accuracy penalty, damage falloff)
+   - Critical hits (weapon crit chance)
+2. Implement damage types:
+   - Physical vs Magical attacks
+   - Elemental affinities and resistances
+   - Armor vs magic defense
+3. Enemy AI attack evaluation
+4. Status effects, special abilities (future enhancements)
 
 ---
 
@@ -290,7 +330,9 @@ Bresenham's line algorithm:
 - **[AttackActionOverview.md](../AttackActionOverview.md)** - Full specification (579 lines)
 - **[01-AddAttackMenu.md](./01-AddAttackMenu.md)** - Step 1 implementation summary
 - **[02-AddRangePreview.md](./02-AddRangePreview.md)** - Step 2 implementation summary
-- **[02-AddRangePreview-CodeReview.md](./02-AddRangePreview-CodeReview.md)** - Code quality review
+- **[02-AddRangePreview-CodeReview.md](./02-AddRangePreview-CodeReview.md)** - Step 2 code quality review
+- **[03-AttackActionTargetInfo.md](./03-AttackActionTargetInfo.md)** - Step 3 implementation summary
+- **[03-AttackActionTargetInfo-CodeReview.md](./03-AttackActionTargetInfo-CodeReview.md)** - Step 3 code quality review
 - **[CombatHierarchy.md](../CombatHierarchy.md)** - Overall combat system architecture
 - **[GeneralGuidelines.md](../GeneralGuidelines.md)** - Coding standards and patterns
 
