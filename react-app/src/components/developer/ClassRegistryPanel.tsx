@@ -1024,9 +1024,9 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                         >
                           {EquipmentTagRegistry.getAllCategories().map(category => {
                             const tagsInCategory = EquipmentTagRegistry.getByCategory(category);
-                            const visibleTags = tagsInCategory.filter(tag => !tag.hidden);
+                            const restrictionTags = tagsInCategory.filter(tag => !tag.hidden && tag.isRestriction);
 
-                            if (visibleTags.length === 0) return null;
+                            if (restrictionTags.length === 0) return null;
 
                             return (
                               <div key={category} style={{ marginBottom: '8px' }}>
@@ -1034,7 +1034,7 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                                   {category}:
                                 </div>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
-                                  {visibleTags.map(tag => {
+                                  {restrictionTags.map(tag => {
                                     const isSelected = editedClass?.allowedEquipmentTypes?.includes(tag.id) ?? false;
                                     return (
                                       <label
@@ -1095,7 +1095,7 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                           {displayClass.allowedEquipmentTypes && displayClass.allowedEquipmentTypes.length > 0
                             ? displayClass.allowedEquipmentTypes
                                 .filter(tag => !EquipmentTagRegistry.isHidden(tag))
-                                .map(tag => EquipmentTagRegistry.getDisplayName(tag))
+                                .map(tag => `${EquipmentTagRegistry.getDisplayName(tag)} (${tag})`)
                                 .join(', ')
                             : 'All equipment types allowed (no restrictions)'}
                         </div>

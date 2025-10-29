@@ -26,6 +26,14 @@ classes:
       physicalPower: 2
     multipliers:
       health: 1.25
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "heavy-weapon"
+      - "light-armor"
+      - "medium-armor"
+      - "heavy-armor"
+      - "shield"
 
   - id: "rogue"
     name: "Rogue"
@@ -54,6 +62,11 @@ classes:
       movement: 1
       physicalEvade: 10
       magicEvade: 10
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "light-armor"
+      - "medium-armor"
 
   - id: "apprentice"
     name: "Apprentice"
@@ -82,6 +95,10 @@ classes:
       magicPower: 2
     multipliers:
       mana: 1.25
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "light-armor"
 
   - id: "monster"
     name: "Monster"

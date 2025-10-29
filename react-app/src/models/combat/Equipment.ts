@@ -1,4 +1,5 @@
 import { CombatUnitModifiers } from './CombatUnitModifiers';
+import { EquipmentTagRegistry } from '../../utils/EquipmentTagRegistry';
 
 /**
  * Equipment slot types
@@ -151,14 +152,23 @@ export class Equipment {
     }
 
     // Equipment has type tags - check if class allows them
+    // Only check restriction tags (e.g., "light-weapon", "heavy-armor")
+    // Ignore non-restriction tags (e.g., "magical-weapon", "accessory")
+    const restrictionTags = this.typeTags.filter(tag => EquipmentTagRegistry.isRestriction(tag));
+
+    // If equipment has no restriction tags, it can be equipped by anyone
+    if (restrictionTags.length === 0) {
+      return true;
+    }
+
     if (!unitClass.allowedEquipmentTypes || unitClass.allowedEquipmentTypes.length === 0) {
-      // Class has no restrictions, but equipment does have tags
-      // Check if equipment explicitly allows all classes
+      // Class has no restrictions, but equipment does have restriction tags
+      // Cannot equip unless equipment explicitly allows all classes
       return this.typeTags.includes("all-classes");
     }
 
-    // Check if any equipment tag is in the class's allowed list
-    return this.typeTags.some(tag =>
+    // Check if any restriction tag is in the class's allowed list
+    return restrictionTags.some(tag =>
       unitClass.allowedEquipmentTypes.includes(tag)
     );
   }

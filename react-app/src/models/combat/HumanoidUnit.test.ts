@@ -510,7 +510,6 @@ describe('HumanoidUnit Serialization', () => {
     let oneHandedDagger: Equipment;
     let shield: Equipment;
     let torch: Equipment;
-    let longbow: Equipment;
 
     beforeEach(() => {
       // Create weapon equipment with ranges
@@ -545,17 +544,6 @@ describe('HumanoidUnit Serialization', () => {
         'dagger-test',
         1, // minRange
         1  // maxRange
-      );
-
-      longbow = new Equipment(
-        'Longbow',
-        'TwoHandedWeapon',
-        { physicalPower: 15 },
-        {},
-        new Set(),
-        'longbow-test',
-        2, // minRange (ranged weapon)
-        3  // maxRange
       );
 
       shield = new Equipment(

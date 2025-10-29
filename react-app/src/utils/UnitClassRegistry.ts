@@ -35,6 +35,7 @@ export interface UnitClassDefinition {
     attunement?: number;
   };
   requirements?: { [classId: string]: number };
+  allowedEquipmentTypes?: string[];
 }
 
 /**
@@ -72,7 +73,8 @@ export class UnitClassRegistry {
       definition.modifiers,
       definition.multipliers,
       requirements,
-      definition.id
+      definition.id,
+      definition.allowedEquipmentTypes
     );
   }
 
@@ -125,7 +127,8 @@ export class UnitClassRegistry {
             attunement: c.modifiers.attunementMultiplier,
           },
           new Map(c.requirements),
-          c.id
+          c.id,
+          [...c.allowedEquipmentTypes]
         );
       }
     });
@@ -221,6 +224,11 @@ export class UnitClassRegistry {
       for (const [classId, xp] of unitClass.requirements) {
         definition.requirements[classId] = xp;
       }
+    }
+
+    // Add allowed equipment types if any exist
+    if (unitClass.allowedEquipmentTypes.length > 0) {
+      definition.allowedEquipmentTypes = [...unitClass.allowedEquipmentTypes];
     }
 
     return definition;

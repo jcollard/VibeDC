@@ -7,6 +7,7 @@ export interface EquipmentTagDefinition {
   category: string;
   description?: string;
   hidden?: boolean;
+  isRestriction?: boolean;
 }
 
 /**
@@ -18,6 +19,7 @@ export interface EquipmentTagDefinitionJSON {
   category: string;
   description?: string;
   hidden?: boolean;
+  isRestriction?: boolean;
 }
 
 /**
@@ -70,6 +72,16 @@ export class EquipmentTagRegistry {
   static isHidden(id: string): boolean {
     const definition = this.registry.get(id);
     return definition?.hidden ?? false;
+  }
+
+  /**
+   * Check if a tag is used for class restrictions
+   * @param id The tag ID to check
+   * @returns true if the tag is a restriction tag, false otherwise
+   */
+  static isRestriction(id: string): boolean {
+    const definition = this.registry.get(id);
+    return definition?.isRestriction ?? false;
   }
 
   /**

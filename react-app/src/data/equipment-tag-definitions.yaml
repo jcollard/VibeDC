@@ -7,67 +7,80 @@ tags:
     displayName: "Light"
     category: "weapon"
     description: "Small, quick weapons"
+    isRestriction: true
 
   - id: "medium-weapon"
     displayName: "Medium"
     category: "weapon"
     description: "Balanced weapons"
+    isRestriction: true
 
   - id: "heavy-weapon"
     displayName: "Heavy"
     category: "weapon"
     description: "Large, powerful weapons"
+    isRestriction: true
 
   # Weapon Type
   - id: "magical-weapon"
     displayName: "Magical"
     category: "weapon"
     description: "Weapons imbued with magic"
+    isRestriction: false
 
   - id: "ranged-weapon"
     displayName: "Ranged"
     category: "weapon"
     description: "Weapons that attack from a distance"
+    isRestriction: false
 
   # Armor Weight
   - id: "light-armor"
     displayName: "Light"
     category: "armor"
     description: "Flexible, low-weight armor"
+    isRestriction: true
 
   - id: "medium-armor"
     displayName: "Medium"
     category: "armor"
     description: "Balanced protection and mobility"
+    isRestriction: true
 
   - id: "heavy-armor"
     displayName: "Heavy"
     category: "armor"
     description: "Maximum protection, reduced mobility"
+    isRestriction: true
 
   # Special Categories
   - id: "shield"
     displayName: "Shield"
     category: "defense"
     description: "Defensive equipment"
+    isRestriction: true
 
   - id: "accessory"
     displayName: "Accessory"
     category: "equipment"
     description: "Rings, amulets, and other accessories"
+    isRestriction: false
 
   - id: "held"
     displayName: "Held"
     category: "equipment"
     description: "Items held in the hand"
+    isRestriction: false
 
   - id: "magical-item"
     displayName: "Magical"
     category: "special"
     description: "Items imbued with magic"
+    isRestriction: false
 
   - id: "all-classes"
     displayName: "Common"
     category: "special"
     description: "Usable by all classes"
     hidden: true
+    isRestriction: false
