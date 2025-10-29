@@ -2,20 +2,20 @@
 
 **Purpose:** Track all files created/modified during Attack Action implementation
 
-**Last Updated:** 2025-10-29
+**Last Updated:** 2025-10-29 (Step 3 Complete)
 
 ---
 
 ## Summary Statistics
 
-- **Files Created:** 5
-- **Files Modified:** 8
-- **Total Changed:** 13 files
-- **Branches:** `attack-action`, `attack-action-preview-range`
+- **Files Created:** 8
+- **Files Modified:** 14
+- **Total Changed:** 22 files
+- **Branches:** `attack-action`, `attack-action-preview-range`, `attack-action-03-show-info`
 
 ---
 
-## Files Created (5)
+## Files Created (8)
 
 ### Step 1: Attack Menu Panel
 
@@ -114,7 +114,73 @@
 
 ---
 
-## Files Modified (8)
+### Step 3: Target Selection and Attack Info Display
+
+#### 6. `react-app/src/models/combat/utils/CombatCalculations.ts`
+**Lines:** ~54
+**Purpose:** Combat calculation utilities (stub implementations)
+**Created in:** `attack-action-03-show-info` branch
+**Features:**
+- `getChanceToHit()` - Returns 1.0 (100% hit rate) as stub
+- `calculateAttackDamage()` - Returns 1 (1 damage) as stub
+- Properly typed parameters (attacker, defender, weapon, distance, damage type)
+- Clear JSDoc comments marking methods as `@stub` with `@future` implementation notes
+- Static utility class (no state)
+
+**Key Methods:**
+```typescript
+static getChanceToHit(
+  attacker: CombatUnit,
+  defender: CombatUnit,
+  distance: number,
+  damageType: 'physical' | 'magical'
+): number // Returns 0.0-1.0
+
+static calculateAttackDamage(
+  attacker: CombatUnit,
+  weapon: Equipment,
+  defender: CombatUnit,
+  distance: number,
+  damageType: 'physical' | 'magical'
+): number // Returns integer damage
+```
+
+**Purpose:** Provides clean interface for future formula implementation without changing UI code
+
+---
+
+### Documentation Files (Step 3)
+
+#### 7. `AttackActionImpl/03-AttackActionTargetInfo.md`
+**Lines:** ~421
+**Purpose:** Implementation summary for Step 3 (Target Selection)
+**Created in:** `attack-action-03-show-info` branch
+**Contents:**
+- Overview of target selection feature
+- New files created (1) and modified files (9)
+- Features implemented (target selection, attack info display, dual wielding)
+- Technical details (color system, data flow, layout)
+- User experience flow (before/after target selection)
+- Design decisions (5 key architectural choices)
+- Code review summary section
+
+---
+
+#### 8. `AttackActionImpl/03-AttackActionTargetInfo-CodeReview.md`
+**Lines:** ~639
+**Purpose:** Comprehensive code review against GeneralGuidelines.md
+**Created in:** Documentation phase
+**Contents:**
+- Executive summary (APPROVED FOR MERGE - 100% compliance)
+- Detailed review by category (6 guideline sections)
+- Code excerpts with line numbers and analysis
+- New feature analysis (stub system, position flow, dual wielding)
+- Performance analysis (memory impact, runtime performance)
+- Minor observations (2 optional enhancements, non-blocking)
+
+---
+
+## Files Modified (14)
 
 ### Step 1: Attack Menu Panel
 
@@ -334,18 +400,221 @@ for (const [key, color] of tileColors.entries()) {
 
 ---
 
+### Step 3: Target Selection and Attack Info Display
+
+#### 9. `react-app/src/components/combat/CombatView.tsx`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Added position data retrieval for current unit and target unit
+- Queries `unitManifest.getUnitPosition()` for both units
+- Passes `currentUnitPosition` and `targetUnitPosition` through render context
+- Clears target when strategy has no targeted unit (prevents stale data)
+- Ensures position data flows to layout system for distance calculations
+
+**Lines Modified:** ~12 added
+
+**Key Code:**
+```typescript
+if (currentUnitToDisplay) {
+  currentUnitPosition = combatState.unitManifest.getUnitPosition(currentUnitToDisplay) ?? null;
+}
+// ...
+if (targeted) {
+  targetUnitToDisplay = targeted;
+  targetUnitPosition = combatState.unitManifest.getUnitPosition(targeted) ?? null;
+} else {
+  // Clear target if strategy has no targeted unit
+  targetUnitToDisplay = null;
+  targetUnitPosition = null;
+}
+```
+
+---
+
+#### 10. `react-app/src/models/combat/UnitTurnPhaseHandler.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Added retrieval of `selectedAttackTarget` from strategy
+- Updated attack range color priority system to 5 levels (was 4):
+  1. Green (selected target) - highest priority ← NEW
+  2. Orange (hovered target)
+  3. Yellow (valid target)
+  4. Grey/White (blocked)
+  5. Red (base range) - lowest priority
+- Renders selected target with green highlight on map
+
+**Lines Modified:** ~10 added, ~7 modified
+
+**Key Addition:**
+```typescript
+const selectedAttackTarget = this.currentStrategy?.getSelectedAttackTarget?.() ?? null;
+
+// ...priority system...
+
+// Override with green for selected target (highest priority)
+if (selectedAttackTarget) {
+  tileColors.set(posKey(selectedAttackTarget), CombatConstants.UNIT_TURN.ATTACK_TARGET_SELECTED_COLOR);
+}
+```
+
+---
+
+#### 11. `react-app/src/models/combat/layouts/CombatLayoutManager.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Extracts `currentUnitPosition` and `targetUnitPosition` from render context
+- Passes position to `AttackMenuContent.updateUnit(unit, position)`
+- Calls `AttackMenuContent.updateSelectedTarget(target, position)` with both target and position
+- Ensures attack menu has access to position data for distance calculations
+
+**Lines Modified:** ~3 added, ~5 modified
+
+**Key Code:**
+```typescript
+const { currentUnit, currentUnitPosition, targetUnit, targetUnitPosition, /* ... */ } = context;
+
+// Update with current unit and position
+this.cachedAttackMenuContent.updateUnit(currentUnit, currentUnitPosition ?? undefined);
+
+// Update selected target (if any)
+this.cachedAttackMenuContent.updateSelectedTarget(targetUnit ?? null, targetUnitPosition ?? null);
+```
+
+---
+
+#### 12. `react-app/src/models/combat/layouts/CombatLayoutRenderer.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Added `currentUnitPosition?: Position | null` to `LayoutRenderContext` interface
+- Added `targetUnitPosition?: Position | null` to `LayoutRenderContext` interface
+- Allows position data to flow from view layer to layout manager
+
+**Lines Modified:** ~2 added (interface extension)
+
+---
+
+#### 13. `react-app/src/models/combat/managers/panels/AttackMenuContent.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:** **Major rewrite** - Transformed from placeholder to fully functional attack info panel
+
+**New State Variables:**
+- `currentUnitPosition: Position | null` - For distance calculations
+- `selectedTarget: CombatUnit | null` - Currently selected target
+- `selectedTargetPosition: Position | null` - Target position
+- `cancelButtonY: number` - Button Y position for hit detection
+- `performButtonY: number` - Button Y position for hit detection
+
+**Updated Methods:**
+- `updateUnit(unit, position?)` - Now accepts optional position parameter
+- `updateSelectedTarget(target, position)` - NEW - Updates selected target and position
+
+**New Panel Layout:**
+- Title line: "ATTACK" (left) + "Cancel" button (right)
+- Target line: "Target: " + target name (orange) or "Select a Target" (grey)
+- Weapon info section: Single column or dual columns (dual wielding)
+- Per-weapon display: Name, range, hit%, damage
+- "Perform Attack" button: Centered, only visible when target selected
+
+**New Private Method:**
+- `renderWeaponInfo(ctx, region, fontId, fontAtlasImage, weapon, x, y)` - Renders weapon stats
+- Returns new Y position (functional style)
+- Calculates distance, hit chance, damage when target selected
+- Shows "??" placeholders when no target
+
+**Dual Wielding Support:**
+- Two side-by-side columns with 8px gap
+- Column width: `(width - padding*2 - gap) / 2`
+- Uses `Math.max(leftY, rightY)` for synchronized positioning
+
+**Lines Modified:** ~239 added, ~52 removed (net +187)
+
+---
+
+#### 14. `react-app/src/models/combat/managers/panels/PanelContent.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Added `{ type: 'perform-attack' }` to `PanelClickResult` union
+- Updated `isPanelClickResult()` type guard to include 'perform-attack'
+
+**Lines Modified:** ~2 added, ~1 modified
+
+---
+
+#### 15. `react-app/src/models/combat/strategies/PlayerTurnStrategy.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Added `selectedAttackTarget: Position | null` state variable
+- Updated `onTurnStart()` to clear selected target
+- Updated `onTurnEnd()` to clear selected target
+- Updated `enterAttackMode()` to clear selected target
+- Updated `exitAttackMode()` to clear selected target and hoveredTarget
+- Updated `recalculateAttackRange()` to clear selected target (may no longer be valid)
+- Updated `handleMapClick()` to delegate to `handleAttackClick()` in attack mode
+- Added `handleAttackClick(position, state)` - NEW method:
+  - Validates clicked position is in `validTargets[]`
+  - Sets `selectedAttackTarget = position`
+  - Updates `targetedUnit` for top panel display
+- Added `getSelectedAttackTarget()` - NEW getter method
+
+**Lines Modified:** ~44 added, ~10 modified
+
+**Key Method:**
+```typescript
+private handleAttackClick(position: Position, state: CombatState): PhaseEventResult {
+  if (!this.attackRange) return { handled: true };
+
+  const isValidTarget = this.attackRange.validTargets.some(
+    target => target.x === position.x && target.y === position.y
+  );
+
+  if (isValidTarget) {
+    this.selectedAttackTarget = position;
+    const targetUnit = state.unitManifest.getUnitAtPosition(position);
+    if (targetUnit) {
+      this.targetedUnit = targetUnit;
+      this.targetedPosition = position;
+    }
+    return { handled: true };
+  }
+
+  return { handled: true };
+}
+```
+
+---
+
+#### 16. `react-app/src/models/combat/strategies/TurnStrategy.ts`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Added optional method `getSelectedAttackTarget?(): Position | null`
+- JSDoc comment documents that it returns null if no target selected
+
+**Lines Modified:** ~5 added (interface extension)
+
+---
+
+#### 17. `AttackActionImpl/AttackActionImplTemplate.md`
+**Branch:** `attack-action-03-show-info`
+**Changes:**
+- Updated to reference Quick Reference document
+- Minor formatting improvements
+
+**Lines Modified:** ~2 added, ~3 modified
+
+---
+
 ## Minor Data File Changes (Not Implementation)
 
 ### Test Data Updates
 
-#### 9. `react-app/src/data/equipment-definitions.yaml`
+#### 18. `react-app/src/data/equipment-definitions.yaml`
 **Branch:** `attack-action-preview-range`
 **Changes:** Equipment reordering (no functional changes)
 **Purpose:** Cleanup/organization
 
 ---
 
-#### 10. `react-app/src/data/party-definitions.yaml`
+#### 19. `react-app/src/data/party-definitions.yaml`
 **Branch:** `attack-action-preview-range`
 **Changes:** Updated party member equipment for testing attack ranges
 **Equipment Changes:**
@@ -386,6 +655,23 @@ Modified:
 - data/party-definitions.yaml (test data)
 ```
 
+### Branch `attack-action-03-show-info` - Step 3: Target Selection
+```
+Created:
+- utils/CombatCalculations.ts
+
+Modified:
+- components/combat/CombatView.tsx
+- models/combat/UnitTurnPhaseHandler.ts
+- models/combat/layouts/CombatLayoutManager.ts
+- models/combat/layouts/CombatLayoutRenderer.ts
+- models/combat/managers/panels/AttackMenuContent.ts (major rewrite)
+- models/combat/managers/panels/PanelContent.ts
+- models/combat/strategies/PlayerTurnStrategy.ts
+- models/combat/strategies/TurnStrategy.ts
+- AttackActionImpl/AttackActionImplTemplate.md (minor)
+```
+
 ---
 
 ## File Categories
@@ -403,6 +689,7 @@ Modified:
 ### Utilities
 - `utils/AttackRangeCalculator.ts` - Range calculation
 - `utils/LineOfSightCalculator.ts` - Line of sight checks
+- `utils/CombatCalculations.ts` - Hit chance and damage calculations (stubs)
 
 ### Layout & View
 - `managers/CombatLayoutManager.ts` - Panel switching
@@ -429,28 +716,36 @@ Modified:
 - **Modified:** ~220 lines across 5 files
 - **Total:** ~450 lines
 
-### Grand Total
-- **New Code:** ~775 lines
-- **Documentation:** ~733 lines (implementation docs + code review)
-- **Overall:** ~1,508 lines for Attack Action (Steps 1-2)
+### Step 3: Target Selection and Attack Info
+- **Created:** ~54 lines (CombatCalculations.ts)
+- **Modified:** ~319 lines across 9 files (includes AttackMenuContent major rewrite)
+- **Total:** ~373 lines
+
+### Grand Total (Steps 1-3)
+- **New Code:** ~1,202 lines
+- **Documentation:** ~1,793 lines (implementation docs + code reviews)
+- **Overall:** ~2,995 lines for Attack Action (Steps 1-3)
 
 ---
 
 ## Impact Analysis
 
 ### High Impact (Core Logic)
-- `PlayerTurnStrategy.ts` - Major state additions (~200 lines total)
-- `UnitTurnPhaseHandler.ts` - Rendering and delegation (~90 lines total)
+- `PlayerTurnStrategy.ts` - Major state additions (~290 lines total across all steps)
+- `UnitTurnPhaseHandler.ts` - Rendering and delegation (~107 lines total across all steps)
+- `AttackMenuContent.ts` - New panel component, major rewrite in Step 3 (~417 lines total)
 
 ### Medium Impact (Infrastructure)
-- `AttackMenuContent.ts` - New panel component (~230 lines)
 - `AttackRangeCalculator.ts` - New utility (~115 lines)
 - `LineOfSightCalculator.ts` - New utility (~115 lines)
+- `CombatCalculations.ts` - New stub system (~54 lines)
+- `CombatView.tsx` - Position data flow (~17 lines total)
 
 ### Low Impact (Glue Code)
-- `CombatLayoutManager.ts` - Panel switching (~10 lines)
-- `CombatView.tsx` - Event handling (~5 lines)
-- `TurnStrategy.ts` - Interface extension (~3 lines)
+- `CombatLayoutManager.ts` - Panel switching and position passing (~13 lines)
+- `TurnStrategy.ts` - Interface extensions (~8 lines)
+- `CombatLayoutRenderer.ts` - Interface extension (~2 lines)
+- `PanelContent.ts` - Type union extension (~3 lines)
 - `CombatConstants.ts` - Color constants (~7 lines)
 
 ### No Impact (Test Data)
@@ -463,6 +758,16 @@ Modified:
 
 ```
 CombatView.tsx
+    ↓ (provides position data)
+LayoutRenderContext
+    ↓
+CombatLayoutManager.ts
+    ↓ (passes positions)
+AttackMenuContent.ts
+    ↓ (uses for calculations)
+CombatCalculations.ts
+
+CombatView.tsx
     ↓
 UnitTurnPhaseHandler.ts
     ↓
@@ -472,10 +777,6 @@ AttackRangeCalculator.ts
     ↓ (uses)
 LineOfSightCalculator.ts
 
-CombatLayoutManager.ts
-    ↓ (renders)
-AttackMenuContent.ts
-
 UnitTurnPhaseHandler.ts
     ↓ (reads)
 CombatConstants.ts
@@ -483,13 +784,15 @@ CombatConstants.ts
 
 ---
 
-## Next Files to Modify (Step 3: Target Selection)
+## Next Files to Modify (Step 4: Attack Execution)
 
 ### Expected Changes
-- `PlayerTurnStrategy.ts` - Add `selectedTarget` state, click handling
-- `UnitTurnPhaseHandler.ts` - Render green highlight for selected target
-- `AttackMenuContent.ts` - Display selected target, weapon stats, hit%, damage
-- `utils/CombatCalculations.ts` (NEW) - Hit chance and damage stubs
+- `UnitTurnPhaseHandler.ts` - Handle `'perform-attack'` click result, execute attack
+- `AttackAnimationSequence.ts` (NEW) - Flicker and floating text animations
+- `CombatCalculations.ts` - Use existing stub methods for hit/damage rolls
+- `PlayerTurnStrategy.ts` - Exit attack mode after attack completes
+- `CombatUnit.ts` or `HumanoidUnit.ts` - Apply damage, handle knockout
+- `CombatLogManager.ts` - Add attack log messages (hit/miss/damage/knockout)
 
 ---
 
