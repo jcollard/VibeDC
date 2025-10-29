@@ -57,6 +57,7 @@ interface EquipmentData {
   allowedClasses?: string[];
   minRange?: number;
   maxRange?: number;
+  typeTags?: string[];
 }
 
 /**
@@ -71,6 +72,7 @@ interface ClassData {
   modifiers?: Record<string, number>;
   multipliers?: Record<string, number>;
   requirements?: Record<string, number>;
+  allowedEquipmentTypes?: string[];
 }
 
 /**
@@ -112,7 +114,8 @@ export function loadEquipment(): void {
       allowedClasses,
       equipData.id,
       equipData.minRange,
-      equipData.maxRange
+      equipData.maxRange,
+      equipData.typeTags
     );
   }
 
@@ -151,7 +154,8 @@ export function loadClasses(): void {
       classData.modifiers,
       classData.multipliers,
       requirements,
-      classData.id
+      classData.id,
+      classData.allowedEquipmentTypes
     );
   }
 

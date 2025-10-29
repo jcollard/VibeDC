@@ -33,8 +33,15 @@ export class Equipment {
   /**
    * Set of class IDs that can equip this item
    * Empty set means all classes can equip
+   * @deprecated Use typeTags and class allowedEquipmentTypes instead
    */
   public readonly allowedClasses: ReadonlySet<string>;
+
+  /**
+   * Type tags for equipment restrictions (e.g., "heavy-weapon", "light-armor")
+   * Empty array or undefined means no type restrictions
+   */
+  public readonly typeTags: readonly string[];
 
   /**
    * Minimum attack range for weapons (undefined for non-weapons)
@@ -76,7 +83,8 @@ export class Equipment {
     allowedClasses: Set<string> = new Set(),
     id?: string,
     minRange?: number,
-    maxRange?: number
+    maxRange?: number,
+    typeTags?: string[]
   ) {
     this.id = id ?? crypto.randomUUID();
     this.name = name;
@@ -85,6 +93,7 @@ export class Equipment {
     this.allowedClasses = allowedClasses;
     this.minRange = minRange;
     this.maxRange = maxRange;
+    this.typeTags = typeTags ?? [];
 
     // Register this equipment in the registry
     Equipment.registry.set(this.id, this);
@@ -116,28 +125,56 @@ export class Equipment {
 
   /**
    * Check if a unit with the given class can equip this item
-   * @param classId The ID of the unit's class
+   * Uses type tags system if available, falls back to allowedClasses for backward compatibility
+   * @param unitClass The UnitClass to check, or class ID string for legacy support
    * @returns true if the class can equip this item, false otherwise
    */
-  canBeEquippedBy(classId: string): boolean {
-    // Empty set means all classes can equip
-    if (this.allowedClasses.size === 0) {
+  canBeEquippedBy(unitClass: import('./UnitClass').UnitClass | string): boolean {
+    // Handle legacy string-based class ID check
+    if (typeof unitClass === 'string') {
+      // Backward compatibility: check old allowedClasses system
+      if (this.allowedClasses.size === 0) {
+        return true;
+      }
+      return this.allowedClasses.has(unitClass);
+    }
+
+    // New type tags system
+    // If equipment has no type tags, check old system or allow all
+    if (!this.typeTags || this.typeTags.length === 0) {
+      // Fall back to old system if it has restrictions
+      if (this.allowedClasses.size > 0) {
+        return this.allowedClasses.has(unitClass.id);
+      }
+      // No restrictions at all
       return true;
     }
-    return this.allowedClasses.has(classId);
+
+    // Equipment has type tags - check if class allows them
+    if (!unitClass.allowedEquipmentTypes || unitClass.allowedEquipmentTypes.length === 0) {
+      // Class has no restrictions, but equipment does have tags
+      // Check if equipment explicitly allows all classes
+      return this.typeTags.includes("all-classes");
+    }
+
+    // Check if any equipment tag is in the class's allowed list
+    return this.typeTags.some(tag =>
+      unitClass.allowedEquipmentTypes.includes(tag)
+    );
   }
 
   /**
    * Check if any of the given classes can equip this item
    * @param classIds Array of class IDs to check
    * @returns true if at least one class can equip, false otherwise
+   * @deprecated This method only works with legacy string IDs, prefer canBeEquippedBy with UnitClass objects
    */
   canBeEquippedByAny(classIds: string[]): boolean {
-    // Empty set means all classes can equip
-    if (this.allowedClasses.size === 0) {
+    // Backward compatibility: check old allowedClasses system
+    if (this.allowedClasses.size === 0 && (!this.typeTags || this.typeTags.length === 0)) {
       return true;
     }
-    return classIds.some(classId => this.allowedClasses.has(classId));
+    return classIds.some(classId => this.canBeEquippedBy(classId));
   }
 
   /**

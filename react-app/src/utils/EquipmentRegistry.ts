@@ -34,6 +34,7 @@ export interface EquipmentDefinition {
   allowedClasses?: string[];
   minRange?: number;
   maxRange?: number;
+  typeTags?: string[];
 }
 
 /**
@@ -61,7 +62,8 @@ export class EquipmentRegistry {
       new Set(definition.allowedClasses || []),
       definition.id,
       definition.minRange,
-      definition.maxRange
+      definition.maxRange,
+      definition.typeTags
     );
   }
 
@@ -111,7 +113,8 @@ export class EquipmentRegistry {
           new Set(e.allowedClasses),
           e.id,
           e.minRange,
-          e.maxRange
+          e.maxRange,
+          Array.from(e.typeTags)
         );
       }
     });
@@ -202,6 +205,11 @@ export class EquipmentRegistry {
     }
     if (equipment.maxRange !== undefined) {
       definition.maxRange = equipment.maxRange;
+    }
+
+    // Add type tags if any exist
+    if (equipment.typeTags && equipment.typeTags.length > 0) {
+      definition.typeTags = Array.from(equipment.typeTags);
     }
 
     return definition;

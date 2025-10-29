@@ -147,6 +147,7 @@ equipment:
       physicalPower: 1.1
     minRange: 1
     maxRange: 1
+    typeTags: ["medium-weapon", "magical-weapon"]
 
   - id: "iron-sword-001"
     name: "Iron Sword"
@@ -156,6 +157,7 @@ equipment:
       speed: 2
     minRange: 1
     maxRange: 1
+    typeTags: ["medium-weapon"]
 
   - id: "steel-dagger-001"
     name: "Steel Dagger"
@@ -167,6 +169,7 @@ equipment:
       - "rogue-001"
     minRange: 1
     maxRange: 1
+    typeTags: ["light-weapon"]
 
 
   # Shield

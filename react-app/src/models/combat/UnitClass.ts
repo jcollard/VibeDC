@@ -32,6 +32,13 @@ export class UnitClass {
    */
   public readonly requirements: ReadonlyMap<string, number>;
 
+  /**
+   * List of equipment type tags this class is allowed to use
+   * Empty array or undefined means no equipment restrictions
+   * Examples: ["heavy-weapon", "heavy-armor", "shield"]
+   */
+  public readonly allowedEquipmentTypes: readonly string[];
+
   constructor(
     name: string,
     description: string,
@@ -62,7 +69,8 @@ export class UnitClass {
       attunement: number;
     }>,
     requirements: Map<string, number> = new Map(),
-    id?: string
+    id?: string,
+    allowedEquipmentTypes?: string[]
   ) {
     this.id = id ?? crypto.randomUUID();
     this.name = name;
@@ -71,6 +79,7 @@ export class UnitClass {
     this.learnableAbilities = learnableAbilities;
     this.modifiers = new CombatUnitModifiers(modifiers, multipliers);
     this.requirements = requirements;
+    this.allowedEquipmentTypes = allowedEquipmentTypes ?? [];
 
     // Register this class in the registry
     UnitClass.registry.set(this.id, this);
