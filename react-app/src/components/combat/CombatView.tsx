@@ -512,6 +512,12 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     const topPanelFontAtlas = fontLoader.get('15px-dungeonslant') || null;
     const topPanelSmallFontAtlas = fontLoader.get('7px-04b03') || null;
 
+    // Get active action for panel switching (attack mode, move mode, etc.)
+    const handler = phaseHandlerRef.current as any;
+    const activeAction = (combatState.phase === 'unit-turn' && typeof handler.getActiveAction === 'function')
+      ? handler.getActiveAction()
+      : null;
+
     layoutRenderer.renderLayout({
       ctx,
       canvasWidth: CANVAS_WIDTH,
@@ -537,17 +543,16 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       currentUnitPanelManager: bottomInfoPanelManager,
       targetUnitPanelManager: topInfoPanelManager,
       topPanelManager,
+      activeAction, // Pass active action for panel switching
     });
 
     // Update panel content with dynamic state from phase handler (preserves hover state)
     if (combatState.phase === 'unit-turn') {
-      const handler = phaseHandlerRef.current as any;
       const existingContent = bottomInfoPanelManager.getContent();
 
       // Only update if the layout manager has already set ActionsMenuContent
       if (existingContent && 'updateUnit' in existingContent) {
         // Get dynamic state from phase handler using proper getter methods
-        const activeAction = typeof handler.getActiveAction === 'function' ? handler.getActiveAction() : null;
         const unitHasMoved = typeof handler.hasUnitMoved === 'function' ? handler.hasUnitMoved() : false;
         const canResetMove = typeof handler.getCanResetMove === 'function' ? handler.getCanResetMove() : false;
 
@@ -917,6 +922,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               if ('handleActionSelected' in phaseHandlerRef.current) {
                 const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
                 unitTurnHandler.handleActionSelected(clickResult.actionId);
+                return; // Click was handled
+              }
+            }
+            break;
+
+          case 'cancel-attack':
+            // Handle cancel attack from AttackMenuContent
+            if (combatState.phase === 'unit-turn') {
+              if ('handleCancelAttack' in phaseHandlerRef.current) {
+                const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
+                unitTurnHandler.handleCancelAttack();
                 return; // Click was handled
               }
             }

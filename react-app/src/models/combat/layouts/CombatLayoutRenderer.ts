@@ -29,6 +29,7 @@ export interface LayoutRenderContext {
   currentUnitPanelManager?: InfoPanelManager;
   targetUnitPanelManager?: InfoPanelManager;
   topPanelManager?: TopPanelManager;
+  activeAction?: string | null; // Current active action mode ('attack', 'move', or null)
 }
 
 /**

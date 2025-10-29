@@ -14,3 +14,5 @@ export { PanelButton } from './PanelButton';
 export type { PanelButtonConfig } from './PanelButton';
 export { AbilityInfoContent } from './AbilityInfoContent';
 export { EquipmentInfoContent } from './EquipmentInfoContent';
+export { AttackMenuContent } from './AttackMenuContent';
+export type { AttackMenuConfig } from './AttackMenuContent';

@@ -11,7 +11,7 @@ import { CombatConstants } from '../CombatConstants';
 /**
  * Strategy mode - defines what the player is currently doing
  */
-type StrategyMode = 'normal' | 'moveSelection';
+type StrategyMode = 'normal' | 'moveSelection' | 'attackSelection';
 
 /**
  * Player turn strategy - waits for player input to decide actions
@@ -243,15 +243,23 @@ export class PlayerTurnStrategy implements TurnStrategy {
       return;
     }
 
+    if (actionId === 'attack') {
+      this.toggleAttackMode();
+      return;
+    }
+
     // Handle reset-move
     if (actionId === 'reset-move') {
       this.pendingAction = { type: 'reset-move' };
       return;
     }
 
-    // Other actions cancel move mode
+    // Other actions cancel move mode and attack mode
     if (this.mode === 'moveSelection') {
       this.exitMoveMode();
+    }
+    if (this.mode === 'attackSelection') {
+      this.exitAttackMode();
     }
 
     // Convert actionId to TurnAction
@@ -417,5 +425,47 @@ export class PlayerTurnStrategy implements TurnStrategy {
    */
   private positionKey(position: Position): string {
     return `${position.x},${position.y}`;
+  }
+
+  /**
+   * Toggle attack mode on/off
+   */
+  private toggleAttackMode(): void {
+    if (this.mode === 'attackSelection') {
+      this.exitAttackMode();
+    } else {
+      this.enterAttackMode();
+    }
+  }
+
+  /**
+   * Enter attack selection mode
+   */
+  private enterAttackMode(): void {
+    if (!this.activeUnit || !this.activePosition || !this.currentState) {
+      console.warn('[PlayerTurnStrategy] Cannot enter attack mode - missing active unit');
+      return;
+    }
+
+    // Exit move mode if active
+    if (this.mode === 'moveSelection') {
+      this.exitMoveMode();
+    }
+
+    this.mode = 'attackSelection';
+  }
+
+  /**
+   * Exit attack selection mode
+   */
+  private exitAttackMode(): void {
+    this.mode = 'normal';
+  }
+
+  /**
+   * Handle cancel attack action
+   */
+  handleCancelAttack(): void {
+    this.exitAttackMode();
   }
 }

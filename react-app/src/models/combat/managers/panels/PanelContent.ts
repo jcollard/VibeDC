@@ -20,6 +20,7 @@ export type PanelClickResult =
   | { type: 'target-selected'; targetIndex: number }
   | { type: 'view-toggled'; view: 'stats' | 'abilities' }
   | { type: 'combat-log-message'; message: string }
+  | { type: 'cancel-attack' }
   | null;
 
 /**
@@ -31,7 +32,7 @@ export function isPanelClickResult(value: unknown): value is PanelClickResult {
   if (!('type' in value)) return false;
 
   const result = value as { type: string };
-  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected', 'view-toggled', 'combat-log-message'].includes(result.type);
+  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected', 'view-toggled', 'combat-log-message', 'cancel-attack'].includes(result.type);
 }
 
 /**

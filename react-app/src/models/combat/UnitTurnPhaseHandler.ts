@@ -734,11 +734,17 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   /**
-   * Get the current active action for the actions menu (e.g., 'move' when in move selection mode)
+   * Get the current active action for the actions menu (e.g., 'move' when in move selection mode, 'attack' when in attack mode)
    */
   getActiveAction(): string | null {
     const strategyMode = this.currentStrategy?.getMode() ?? 'normal';
-    return strategyMode === 'moveSelection' ? 'move' : null;
+    if (strategyMode === 'moveSelection') {
+      return 'move';
+    }
+    if (strategyMode === 'attackSelection') {
+      return 'attack';
+    }
+    return null;
   }
 
   /**
@@ -846,5 +852,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
    */
   setHasMoved(value: boolean): void {
     this.unitHasMoved = value;
+  }
+
+  /**
+   * Handle cancel attack action
+   */
+  handleCancelAttack(): void {
+    if (this.currentStrategy && 'handleCancelAttack' in this.currentStrategy) {
+      (this.currentStrategy as any).handleCancelAttack();
+    }
   }
 }
