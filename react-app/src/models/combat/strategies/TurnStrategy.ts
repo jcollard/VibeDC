@@ -141,4 +141,10 @@ export interface TurnStrategy {
    * Returns null if not hovering over a valid target
    */
   getHoveredAttackTarget?(): Position | null;
+
+  /**
+   * Get selected attack target position (only valid in attack mode)
+   * Returns null if no target is selected
+   */
+  getSelectedAttackTarget?(): Position | null;
 }

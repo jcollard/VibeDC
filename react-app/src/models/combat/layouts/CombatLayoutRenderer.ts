@@ -2,6 +2,7 @@ import type { CombatUnit } from '../CombatUnit';
 import type { CombatLogManager } from '../CombatLogManager';
 import type { InfoPanelManager } from '../managers/InfoPanelManager';
 import type { TopPanelManager } from '../managers/TopPanelManager';
+import type { Position } from '../../../types';
 
 /**
  * Rendering context passed to layout renderers
@@ -17,7 +18,9 @@ export interface LayoutRenderContext {
   topPanelSmallFontAtlasImage?: HTMLImageElement | null; // Font atlas for small text in top panel (7px-04b03)
   spriteImages: Map<string, HTMLImageElement>;
   currentUnit: CombatUnit | null; // Passed to InfoPanelManager during combat
+  currentUnitPosition?: Position | null; // Position of current unit
   targetUnit: CombatUnit | null; // Passed to InfoPanelManager
+  targetUnitPosition?: Position | null; // Position of target unit
   partyUnits?: CombatUnit[]; // Passed to InfoPanelManager during deployment
   isDeploymentPhase?: boolean; // Flag to determine which content to show
   isEnemyDeploymentPhase?: boolean; // Flag for enemy-deployment phase (hides info panels)

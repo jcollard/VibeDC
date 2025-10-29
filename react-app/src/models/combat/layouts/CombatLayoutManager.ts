@@ -574,7 +574,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     width: number,
     height: number
   ): void {
-    const { ctx, currentUnit, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, isEnemyDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex, deployedUnitCount, totalDeploymentZones, onEnterCombat, activeAction } = context;
+    const { ctx, currentUnit, currentUnitPosition, targetUnit, targetUnitPosition, fontId, fontAtlasImage, currentUnitPanelManager, isDeploymentPhase, isEnemyDeploymentPhase, partyUnits, spriteImages, spriteSize, hoveredPartyMemberIndex, deployedUnitCount, totalDeploymentZones, onEnterCombat, activeAction } = context;
     if (!currentUnitPanelManager) return;
 
     // Detect phase transition and clear cache
@@ -646,9 +646,11 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
             currentUnit
           );
         } else {
-          // Update with current unit
-          this.cachedAttackMenuContent.updateUnit(currentUnit);
+          // Update with current unit and position
+          this.cachedAttackMenuContent.updateUnit(currentUnit, currentUnitPosition ?? undefined);
         }
+        // Update selected target (if any)
+        this.cachedAttackMenuContent.updateSelectedTarget(targetUnit ?? null, targetUnitPosition ?? null);
         // Re-enable buttons
         this.cachedAttackMenuContent.setButtonsDisabled(false);
         currentUnitPanelManager.setContent(this.cachedAttackMenuContent);

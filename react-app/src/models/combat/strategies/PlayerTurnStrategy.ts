@@ -67,6 +67,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Attack range state (cached when entering attack mode)
   private attackRange: AttackRangeTiles | null = null;
   private hoveredAttackTarget: Position | null = null;
+  private selectedAttackTarget: Position | null = null;
   private attackRangeCachedPosition: Position | null = null; // Position used to calculate attack range
 
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
@@ -81,6 +82,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.hasMoved = false;
     this.attackRange = null;
     this.hoveredAttackTarget = null;
+    this.selectedAttackTarget = null;
     this.attackRangeCachedPosition = null;
 
     // Calculate movement range for this unit
@@ -113,6 +115,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.hoveredMovePath = null;
     this.attackRange = null;
     this.hoveredAttackTarget = null;
+    this.selectedAttackTarget = null;
     this.attackRangeCachedPosition = null;
   }
 
@@ -161,6 +164,11 @@ export class PlayerTurnStrategy implements TurnStrategy {
       }
       // Otherwise, try to move to the clicked tile
       return this.handleMoveClick(clickedPosition);
+    }
+
+    // Handle attack mode clicks
+    if (this.mode === 'attackSelection') {
+      return this.handleAttackClick(clickedPosition, state);
     }
 
     // Normal mode: unit selection
@@ -524,6 +532,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
   private exitAttackMode(): void {
     this.mode = 'normal';
     this.attackRange = null;
+    this.hoveredAttackTarget = null;
+    this.selectedAttackTarget = null;
 
     // Re-select the active unit to restore its info display
     if (this.activeUnit && this.activePosition && this.currentState) {
@@ -628,5 +638,46 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
     // Clear hovered target (may no longer be valid)
     this.hoveredAttackTarget = null;
+
+    // Clear selected target (may no longer be valid)
+    this.selectedAttackTarget = null;
+  }
+
+  /**
+   * Handle click during attack mode
+   */
+  private handleAttackClick(position: Position, state: CombatState): PhaseEventResult {
+    if (!this.attackRange) {
+      return { handled: true };
+    }
+
+    // Check if this position is a valid target
+    const isValidTarget = this.attackRange.validTargets.some(
+      target => target.x === position.x && target.y === position.y
+    );
+
+    if (isValidTarget) {
+      // Select this target
+      this.selectedAttackTarget = position;
+
+      // Update targeted unit to show in top panel
+      const targetUnit = state.unitManifest.getUnitAtPosition(position);
+      if (targetUnit) {
+        this.targetedUnit = targetUnit;
+        this.targetedPosition = position;
+      }
+
+      return { handled: true };
+    }
+
+    // Clicked invalid tile - do nothing
+    return { handled: true };
+  }
+
+  /**
+   * Get selected attack target position (only valid in attack mode)
+   */
+  getSelectedAttackTarget(): Position | null {
+    return this.selectedAttackTarget;
   }
 }

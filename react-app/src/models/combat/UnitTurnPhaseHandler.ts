@@ -322,13 +322,15 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Get attack range from strategy (only in attack mode)
     const attackRange = this.currentStrategy?.getAttackRange?.() ?? null;
     const hoveredAttackTarget = this.currentStrategy?.getHoveredAttackTarget?.() ?? null;
+    const selectedAttackTarget = this.currentStrategy?.getSelectedAttackTarget?.() ?? null;
 
     // Render attack range highlights - rendered AFTER units (on top)
     // Each tile gets exactly ONE color based on priority:
-    // 1. Orange (hovered target) - highest priority
-    // 2. Yellow (valid target)
-    // 3. Grey (blocked)
-    // 4. Red (base range) - lowest priority
+    // 1. Green (selected target) - highest priority
+    // 2. Orange (hovered target)
+    // 3. Yellow (valid target)
+    // 4. Grey (blocked)
+    // 5. Red (base range) - lowest priority
     if (attackRange) {
       // Build a map of position -> color to determine which color each tile should have
       const tileColors = new Map<string, string>();
@@ -351,9 +353,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         tileColors.set(posKey(position), CombatConstants.UNIT_TURN.ATTACK_TARGET_VALID_COLOR);
       }
 
-      // Override with orange for hovered target (highest priority)
+      // Override with orange for hovered target (very high priority)
       if (hoveredAttackTarget) {
         tileColors.set(posKey(hoveredAttackTarget), CombatConstants.UNIT_TURN.ATTACK_TARGET_HOVER_COLOR);
+      }
+
+      // Override with green for selected target (highest priority)
+      if (selectedAttackTarget) {
+        tileColors.set(posKey(selectedAttackTarget), CombatConstants.UNIT_TURN.ATTACK_TARGET_SELECTED_COLOR);
       }
 
       // Now render each tile exactly once with its final color
