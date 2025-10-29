@@ -262,34 +262,25 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
       const topContent = topPanelManager.content;
       if (topContent && 'handleHover' in topContent) {
         const hoverResult = topContent.handleHover(relativeX, relativeY);
-        console.log('[CombatLayoutManager] handleTopPanelHover - hoverResult:', hoverResult);
 
         // Check if result is detail info
         if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult) {
-          console.log('[CombatLayoutManager] Detail panel detected:', hoverResult.type);
           if (hoverResult.type === 'ability-detail') {
-            console.log('[CombatLayoutManager] detailPanelActive:', this.detailPanelActive, 'bottomPanelManager:', bottomPanelManager);
-
             // Cache original bottom panel content if not already cached
             if (!this.detailPanelActive && bottomPanelManager.content) {
               this.originalBottomPanelContent = bottomPanelManager.content;
-              console.log('[CombatLayoutManager] Cached original panel:', this.originalBottomPanelContent?.constructor.name);
             }
 
             // Create or reuse cached ability panel
             if (!this.cachedAbilityPanel) {
               this.cachedAbilityPanel = new AbilityInfoContent(hoverResult.item);
-              console.log('[CombatLayoutManager] Created new AbilityInfoContent');
             } else {
               // Update existing panel with new ability
               this.cachedAbilityPanel.setAbility(hoverResult.item);
-              console.log('[CombatLayoutManager] Reused AbilityInfoContent');
             }
 
-            console.log('[CombatLayoutManager] Calling setContent with:', this.cachedAbilityPanel);
             bottomPanelManager.setContent(this.cachedAbilityPanel);
             this.detailPanelActive = true;
-            console.log('[CombatLayoutManager] After setContent, panel is now:', bottomPanelManager.content?.constructor.name);
           } else if (hoverResult.type === 'equipment-detail') {
             // Cache original bottom panel content if not already cached
             if (!this.detailPanelActive && bottomPanelManager.content) {
@@ -307,8 +298,8 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
             bottomPanelManager.setContent(this.cachedEquipmentPanel);
             this.detailPanelActive = true;
           }
-        } else if (hoverResult && typeof hoverResult === 'object' && 'statId' in hoverResult && hoverResult.statId === null) {
-          // Restore original bottom panel content
+        } else {
+          // Not hovering detail item (result is null or non-detail object) - restore panel
           if (this.detailPanelActive && this.originalBottomPanelContent) {
             bottomPanelManager.setContent(this.originalBottomPanelContent);
             this.detailPanelActive = false;
