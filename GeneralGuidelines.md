@@ -1183,6 +1183,55 @@ SystemDebugger.getCanvasInfo()          // Show canvas details
 SystemDebugger.help()                   // Show all commands
 ```
 
+### Animation Speed Control for Debugging
+
+For complex animations that are difficult to debug at full speed (60 FPS), provide FPS throttling:
+
+**✅ DO**: Provide FPS throttling via settings
+```typescript
+// In UISettings or similar config class
+class UISettings {
+  private static maxFPS: number = 0; // 0 = unlimited
+
+  static setMaxFPS(fps: number): void {
+    this.maxFPS = Math.max(0, Math.floor(fps));
+  }
+
+  static getMaxFPS(): number {
+    return this.maxFPS;
+  }
+}
+
+// In animation loop
+const maxFPS = UISettings.getMaxFPS();
+const minFrameTime = maxFPS > 0 ? 1000 / maxFPS : 0;
+const now = performance.now();
+const elapsed = now - lastFrameTime;
+
+if (elapsed >= minFrameTime) {
+  // Render frame
+  renderFrame();
+  lastFrameTime = now;
+}
+```
+
+**Example Usage (Browser Console):**
+```javascript
+UISettings.setMaxFPS(5);  // Slow to 5 FPS for debugging
+// ... observe state transitions, read console logs ...
+UISettings.setMaxFPS(0);  // Reset to normal speed
+```
+
+**When to Use:**
+- Debugging complex state machines
+- Reading rapid console output
+- Observing frame-by-frame animation
+- Testing timing-dependent bugs
+
+**Why**: Easier than adding breakpoints, doesn't pause execution, allows smooth slow-motion playback.
+
+**Real-world example**: Used to debug unit movement sequence timing and path interpolation in the unit-turn phase.
+
 ## Performance Considerations
 
 - **Don't recreate heavy objects every frame** (sprites, fonts, buffers)
@@ -2091,6 +2140,113 @@ protected updatePhase(state: CombatState, ...): CombatState | null {
 - Never mutate state objects directly
 - Use TypeScript `readonly` modifiers on state properties
 - Enable ESLint rule `no-param-reassign` for state objects
+
+### Reversible Action Pattern
+
+When implementing actions that modify state but can be undone (movement, item usage, spell targeting):
+
+**✅ DO**: Track original state and provide reset mechanism
+```typescript
+class ActionPhaseHandler {
+  private actionCompleted: boolean = false;
+  private originalState: State | null = null;
+  private canReset: boolean = false;
+
+  executeAction(action: Action, state: State): State {
+    // Store original state before modification
+    this.originalState = { ...state };
+
+    // Apply changes
+    const newState = applyAction(action, state);
+
+    // Enable reset after completion
+    this.actionCompleted = true;
+    this.canReset = true;
+
+    return newState;
+  }
+
+  resetAction(state: State): State {
+    if (!this.canReset || !this.originalState) {
+      return state;
+    }
+
+    // Restore original state
+    const restoredState = { ...this.originalState };
+
+    // Clear reset flags
+    this.actionCompleted = false;
+    this.canReset = false;
+    this.originalState = null;
+
+    return restoredState;
+  }
+}
+```
+
+**❌ DON'T**: Allow reset after other actions
+```typescript
+// BAD: Can reset move after attacking (breaks game balance)
+if (this.unitHasMoved) {
+  // Always allow reset - allows exploits!
+}
+
+// GOOD: Disable reset after other actions
+if (this.canReset && !this.hasAttacked && !this.hasUsedAbility) {
+  // Only allow reset if no other actions taken
+}
+```
+
+**When to Use:**
+- Movement actions (undo accidental moves)
+- Item usage (undo before confirming)
+- Spell targeting (reselect targets)
+- Any action with significant consequences
+
+**When NOT to Use:**
+- Attacks (should not be reversible after execution)
+- Turn-ending actions (Delay/End Turn)
+- Actions that affect other units (heal, buff)
+
+**Real-world example**: UnitTurnPhaseHandler's reset move feature allows players to undo movement but disables after any other action is taken.
+
+### Animation-Time State Masking
+
+When animating objects that should not appear in their "normal" position during animation:
+
+**✅ DO**: Temporarily move to off-screen coordinates
+```typescript
+// In CombatConstants or similar
+const OFFSCREEN_POSITION = { x: -999, y: -999 };
+
+// Start animation - hide unit at normal position
+state.unitManifest.moveUnit(unit, OFFSCREEN_POSITION);
+this.animationSequence = new UnitMovementSequence(unit, startPos, path);
+
+// Render animated unit manually
+if (this.animationSequence) {
+  const renderPos = this.animationSequence.getUnitRenderPosition();
+  SpriteRenderer.renderSpriteById(ctx, unit.spriteId, renderPos.x, renderPos.y);
+}
+
+// Animation complete - restore to final position
+state.unitManifest.moveUnit(unit, finalPosition);
+this.animationSequence = null;
+```
+
+**❌ DON'T**: Add flags to skip rendering
+```typescript
+// BAD: Requires checking flag in every render loop
+if (unit.isAnimating) {
+  continue; // Skip rendering - adds state to domain object
+}
+```
+
+**Why**: Off-screen displacement is simpler and avoids adding state to domain objects. The unit is still in the manifest, just at coordinates that won't be rendered.
+
+**Performance**: No overhead - position update is O(1), same as any position change.
+
+**Real-world example**: UnitMovementSequence uses this pattern to prevent double-rendering during unit movement animation.
 
 ### Updating These Guidelines
 - Keep guidelines concise and actionable

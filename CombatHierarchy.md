@@ -15,6 +15,7 @@ This document provides a token-efficient reference for AI agents to quickly unde
 - **Add a new combat phase** → Implement `CombatPhaseHandler`, update `CombatView` phase switching
 - **Modify rendering** → `CombatRenderer` (maps/units), `CombatLayoutManager` (UI layout)
 - **Add movement/pathfinding logic** → `MovementRangeCalculator` utility, phase handler integration
+- **Modify unit movement logic** → `MovementPathfinder` utility, `UnitMovementSequence` animation, `PlayerTurnStrategy` mode management
 - **Add deployment zone logic** → `DeploymentPhaseHandler`, `DeploymentZoneRenderer`
 - **Change turn order display** → `TurnOrderRenderer`, `TopPanelManager`
 - **Modify turn order scrolling** → `TurnOrderRenderer` (scroll arrows, hold-to-scroll), cached by phase handlers
@@ -113,6 +114,10 @@ react-app/src/
 **UNIT_TURN Section:**
 - Cursor colors and sprite IDs (active unit, target unit)
 - Movement range highlight settings (color, alpha, sprite)
+- Movement animation speed: `MOVEMENT_SPEED_PER_TILE = 0.2` (seconds per tile)
+- Movement range colors:
+  - `MOVEMENT_RANGE_COLOR_NORMAL = '#ffff00'` (yellow, default)
+  - `MOVEMENT_RANGE_COLOR_ACTIVE = '#00ff00'` (green, move mode)
 - Ready message colors (player green, enemy red)
 - Cursor blink rate (0.5 seconds)
 **Used By:** All combat files for consistent values
@@ -227,7 +232,7 @@ react-app/src/
 #### `UnitTurnPhaseHandler.ts`
 **Purpose:** Individual unit's turn - delegates behavior to strategy pattern (player vs enemy)
 **Exports:** `UnitTurnPhaseHandler`
-**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick(), executeAction()
+**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick(), executeAction(), **startMoveAnimation()**, **completeMoveAnimation()**, **executeResetMove()**
 **Architecture:** Uses Strategy Pattern to separate player input from AI decision-making
 - Creates PlayerTurnStrategy for player-controlled units
 - Creates EnemyTurnStrategy for AI-controlled units
@@ -241,18 +246,31 @@ react-app/src/
 - Shows red target cursor only when targeting different unit (not on active unit)
 - Initializes appropriate strategy based on unit.isPlayerControlled
 - Delegates all turn behavior to strategy.update()
-- Gets movement range, target info from strategy
-- **Executes Delay and End Turn actions from action menu**
-- **Transitions back to action-timer phase with slide animation**
+- Gets movement range, target info, and path preview from strategy
+- **Executes Move action with animation**
+- **Executes Reset Move action (teleport back to original position)**
+- Executes Delay and End Turn actions from action menu
+- Transitions back to action-timer phase with slide animation
 **UI Panels:**
 - Top panel: Shows unit name as title (green for players, red for enemies)
-- Bottom panel: Shows "ACTIONS" menu with Delay and End Turn buttons
+- Bottom panel: Shows "ACTIONS" menu with Move, Attack, Delay, End Turn, and conditional Reset Move
 **Rendering:**
 - Uses dual-method rendering pattern (render() and renderUI())
-- render(): Movement range highlights (yellow tiles) - BEFORE units
-- renderUI(): Active unit cursor (green, blinking), target cursor (red, only on different units) - AFTER units
+- render(): Movement range highlights (green in move mode, yellow otherwise), path preview (yellow) - BEFORE units
+- renderUI(): Animated unit during movement, active unit cursor (green, blinking), target cursor (red) - AFTER units
 - Cached tinting buffer for color tinting (avoids GC pressure)
-- Queries strategy for movement range and target position each frame
+- Queries strategy for movement range, color override, and path preview each frame
+**Movement Animation:**
+- Temporarily moves unit to (-999, -999) during animation
+- Renders animated unit manually in `renderUI()` at interpolated position
+- Updates manifest to final position when animation completes
+- Sets `unitHasMoved = true`, `canResetMove = true`
+- Clears movement range from strategy
+**Reset Move:**
+- Stores `originalPosition` before move starts
+- Teleports unit back to original position
+- Resets `unitHasMoved = false`, `canResetMove = false`
+- Restores movement range via `onMoveReset()` callback
 **Delay/End Turn Execution Pattern:**
 - Captures previousTurnOrder (unit instances) BEFORE mutation
 - Defers actionTimer mutation using pendingActionTimerMutation field in CombatState
@@ -260,6 +278,11 @@ react-app/src/
 - Returns new state with phase='action-timer'
 - ActionTimerPhaseHandler applies mutation at start of updatePhase() and triggers slide animation
 - Prevents one-frame flash of final state before animation
+**State Tracking:**
+- unitHasMoved: boolean (prevents second move)
+- originalPosition: Position | null (for reset)
+- canResetMove: boolean (enables reset button)
+- movementSequence: UnitMovementSequence | null (active animation)
 **Turn Order Logic:**
 - Calculates timeToReady = (100 - actionTimer) / speed for each unit
 - Sorts ascending (soonest first), then alphabetically by name
@@ -270,12 +293,11 @@ react-app/src/
 - Caches tinting buffer canvas to avoid per-frame allocations
 - Caches strategy instance for duration of turn
 **Future Functionality:**
-- Execute Move action with pathfinding
 - Execute Attack action with damage calculation
 - Execute Ability action with ability system integration
-**Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy
+**Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy, **UnitMovementSequence**, **MovementPathfinder**
 **Used By:** CombatView during unit-turn phase
-**Transitions To:** action-timer phase (when Delay/End Turn executed)
+**Transitions To:** action-timer phase (when Delay/End Turn/Move completes)
 
 ---
 
@@ -298,23 +320,27 @@ react-app/src/
 **Exports:** `PlayerTurnStrategy`
 **Implements:** TurnStrategy
 **Current Functionality:**
-- Auto-selects active unit on turn start (shows in top panel, displays movement range)
-- Calculates movement range on turn start using MovementRangeCalculator
-- Handles map clicks to select units
-- Shows selected unit info in panel with unit name as title (green for players)
-- Recalculates movement range for selected unit
-- Returns null from update() (waits for player action menu in future)
-**Future Functionality:**
-- Show action menu when clicking active unit
-- Return appropriate TurnAction when player confirms action
-- Handle ability selection and targeting
-- Show valid target indicators on hover
+- Auto-selects active unit on turn start
+- Calculates movement range using MovementRangeCalculator
+- **Move mode**: Click Move button → range turns green, hover shows yellow path
+- **Path preview**: Pre-calculates all paths on mode entry, instant hover updates
+- **Movement execution**: Returns `{ type: 'move', destination }` action
+- **Reset move**: Returns `{ type: 'reset-move' }` action to undo movement
+- Handles unit selection and info panel updates
 **State Tracking:**
+- mode: 'normal' | 'moveSelection'
+- moveModePaths: Map<string, Position[]> (pre-calculated paths)
+- hoveredMovePath: Position[] | null (for yellow preview)
+- hasMoved: boolean (cleared after reset)
 - activeUnit, activePosition: The unit whose turn it is
 - targetedUnit, targetedPosition: Currently selected unit (for inspection)
-- movementRange: Yellow highlight tiles showing where unit can move
+- movementRange: Movement highlight tiles
 - currentState: Reference to CombatState for calculations
-**Dependencies:** MovementRangeCalculator
+**Path Caching:**
+- Calculates all valid paths on `enterMoveMode()`
+- Hover updates instant (no recalculation)
+- Cache cleared on `exitMoveMode()`
+**Dependencies:** MovementRangeCalculator, MovementPathfinder
 **Used By:** UnitTurnPhaseHandler for player-controlled units
 
 #### `strategies/EnemyTurnStrategy.ts`
@@ -571,19 +597,20 @@ react-app/src/
 **Key Methods:** render(), handleClick(), handleHover(), setButtonsDisabled(), updateUnit(), buildButtonList()
 **Current Functionality:**
 - Shows "ACTIONS" title in orange (#ffa500)
-- Dynamically generates buttons based on unit's stats and classes
+- Dynamically generates buttons based on unit's stats, classes, and state
 - Action buttons (in order):
-  1. Move - "Move this unit up to {X} tiles" (shows unit.movement)
+  1. Move - "Move this unit up to {X} tiles" (disabled if hasMoved)
   2. Attack - "Perform a basic attack with this unit's weapon"
   3. {Primary Class} - "Perform a {Primary Class} action" (shows unit.unitClass.name)
   4. {Secondary Class} - "Perform a {Secondary Class} action" (conditional, only if unit.secondaryClass exists)
-  5. Delay - "Take no moves or actions and sets Action Timer to 50"
-  6. End Turn - "Ends your turn and sets Action Timer to 0"
-- Button states: White (enabled), Grey (disabled), Yellow (hovered)
+  5. **Reset Move** - "Undo your movement and return to original position" (conditional - only if canResetMove)
+  6. Delay - "Take no moves or actions and sets Action Timer to 50" (disabled if hasMoved)
+  7. End Turn - "Ends your turn and sets Action Timer to 0"
+- Button states: White (enabled), Grey (disabled), Yellow (hovered), **Green (active mode)**
 - Helper text displays at bottom of panel on hover with automatic text wrapping
 - Disables buttons after click to prevent double-actions
 - Re-enabled on phase entry by CombatLayoutManager
-- Returns PanelClickResult with `{ type: 'action-selected', actionId: 'move' | 'attack' | 'primary-class' | 'secondary-class' | 'delay' | 'end-turn' }`
+- Returns PanelClickResult with `{ type: 'action-selected', actionId: 'move' | 'attack' | 'primary-class' | 'secondary-class' | 'reset-move' | 'delay' | 'end-turn' }`
 **State Management Pattern:**
 - `updateUnit(unit)` method refreshes button list without losing hover state
 - Cached in CombatLayoutManager (per GeneralGuidelines.md)
@@ -634,14 +661,15 @@ react-app/src/
 
 #### `managers/panels/colors.ts`
 **Purpose:** Centralized color constants for panel UI elements
-**Exports:** Color constants (all strings with hex color values)
+**Exports:** Color constants (all hex strings)
 **Constants:**
 - `HELPER_TEXT` - #888888 (grey) - Helper text in panels
 - `ENABLED_TEXT` - #ffffff (white) - Enabled buttons and primary text
 - `HOVERED_TEXT` - #ffff00 (yellow) - Hovered buttons
 - `DISABLED_TEXT` - #888888 (grey) - Disabled buttons
+- `ACTIVE_COLOR` - #00ff00 (green) - Active/selected buttons (e.g., Move in move mode)
 **Usage Pattern:** Import and use constants instead of hardcoding colors
-**Used By:** ActionsMenuContent, future panel implementations
+**Used By:** ActionsMenuContent, UnitInfoContent, future panel implementations
 **Rationale:** Ensures consistent colors across panels, easy to modify globally
 
 #### `managers/panels/index.ts`
@@ -746,6 +774,24 @@ react-app/src/
 **Dependencies:** SpriteRenderer, dither patterns
 **Used By:** EnemyDeploymentPhaseHandler
 
+#### `UnitMovementSequence.ts`
+**Purpose:** Animates unit moving along a path tile-by-tile
+**Exports:** `UnitMovementSequence` class
+**Key Methods:** update(deltaTime), getUnitRenderPosition(), getDestination(), getUnit()
+**Animation Behavior:**
+- Linear interpolation between path positions
+- Speed: Configurable (default 0.2s per tile from CombatConstants)
+- Stops automatically when reaching final destination
+- Does NOT update manifest (caller applies final position)
+**Integration Pattern:**
+- Phase handler creates sequence at animation start
+- Calls `update()` each frame to advance animation
+- Renders unit at `getUnitRenderPosition()` in `renderUI()`
+- Applies final position when `update()` returns `true`
+**Dependencies:** CombatUnit, Position, CombatConstants
+**Used By:** UnitTurnPhaseHandler during move action
+**Note:** Does NOT implement CinematicSequence (simpler standalone interface)
+
 ---
 
 ### 7. Unit System
@@ -812,12 +858,41 @@ react-app/src/
 **Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
 **Used By:** UnitTurnPhaseHandler for movement range display
 
+#### `utils/MovementPathfinder.ts`
+**Purpose:** Calculates shortest orthogonal paths for unit movement
+**Exports:** `MovementPathfinder`, `PathfindingOptions`
+**Key Methods:** calculatePath() (static)
+**Algorithm:** BFS for shortest path with collision detection
+**Pathfinding Rules:**
+- Checks terrain walkability via CombatMap.isWalkable()
+- Can path THROUGH friendly units (same isPlayerControlled value)
+- Cannot END movement on occupied tiles (any unit)
+- Cannot path through enemy units
+- Returns path excluding start, including destination
+**Performance:** O(tiles × movement) - negligible for 32×18 maps
+**Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
+**Used By:** UnitTurnPhaseHandler for movement animation, PlayerTurnStrategy for path preview
+
 #### `CombatPredicate.ts`
 **Purpose:** Victory/defeat condition evaluation
 **Exports:** `CombatPredicate`, `CombatPredicateFactory`
 **Key Methods:** evaluate(), toJSON(), fromJSON()
 **Implementations:** AllEnemiesDefeated, AllAlliesDefeated
 **Used By:** CombatEncounter for win/loss checks
+
+#### `config/UISettings.ts`
+**Purpose:** UI configuration for display and rendering behavior
+**Exports:** `UISettings`, `UISettingsConfig`
+**Key Methods:** setIntegerScaling(), setManualScale(), **setMaxFPS()**, resetToDefaults()
+**FPS Throttling:** (Debugging feature)
+- `setMaxFPS(fps)` - Limit frame rate (0 = unlimited, 1-60 = throttled)
+- **Use case**: Slow animation to 1-5 FPS to read console logs and debug state transitions
+- **Access**: Browser console: `UISettings.setMaxFPS(5)`
+- **Impact**: Zero overhead when set to 0 (default)
+**Other Settings:**
+- Integer scaling for crisp pixel art
+- Manual scale override (1x-5x)
+**Used By:** CombatView animation loop, canvas scaling logic
 
 ---
 
@@ -1020,6 +1095,24 @@ IDLE → (isLoading=true) → FADE_TO_LOADING
 5. **State change** → triggers useEffect, creates new phase handler for the new phase
 
 **Common Bug:** Forgetting to capture and apply the update() return value prevents phase transitions. See GeneralGuidelines.md "Common Pitfalls" section.
+
+### Movement Action Flow
+1. **User clicks Move button** → `handleActionSelected('move')`
+2. **PlayerTurnStrategy** → `enterMoveMode()`, pre-calculates all paths
+3. **Range color changes** → `getMovementRangeColor()` returns green (#00ff00)
+4. **User hovers tile** → `updateHoveredPath()`, sets `hoveredMovePath`
+5. **Phase handler renders** → Yellow path overlay on green range
+6. **User clicks valid tile** → `handleMoveClick(position)`
+7. **Strategy sets action** → `pendingAction = { type: 'move', destination }`
+8. **Phase handler starts animation** → Creates `UnitMovementSequence`
+9. **Unit hidden** → Moved to (-999, -999) in manifest
+10. **Each frame** → `movementSequence.update(deltaTime)`, interpolates position
+11. **renderUI()** → Renders unit at `getUnitRenderPosition()`
+12. **Animation complete** → `completeMoveAnimation()`
+13. **Manifest updated** → Unit moved to final position
+14. **State flags set** → `hasMoved = true`, `canResetMove = true`
+15. **Menu updated** → Move/Delay disabled, Reset Move enabled
+16. **Stays in phase** → No auto-advance, waits for next action
 
 ### Loading Transition Flow
 1. **User action** → triggers load (Import button or Load from LocalStorage button)

@@ -87,6 +87,7 @@ export const CombatConstants = {
     MOVEMENT_SPEED_PER_TILE: 0.2,      // Seconds per tile during movement animation
     MOVEMENT_RANGE_COLOR_NORMAL: '#ffff00',  // Yellow (normal selection)
     MOVEMENT_RANGE_COLOR_ACTIVE: '#00ff00',  // Green (during move mode)
+    OFFSCREEN_POSITION: { x: -999, y: -999 } as const, // Off-screen position for hiding units during animation
   },
 
   // Combat Log

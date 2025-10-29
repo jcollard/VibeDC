@@ -536,7 +536,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Temporarily move unit off-screen in manifest to hide it during animation
     // (we render it manually at the animated position in renderUI)
-    state.unitManifest.moveUnit(this.activeUnit, { x: -999, y: -999 });
+    state.unitManifest.moveUnit(this.activeUnit, CombatConstants.UNIT_TURN.OFFSCREEN_POSITION);
 
     // Add log message
     const nameColor = this.getUnitNameColor();
