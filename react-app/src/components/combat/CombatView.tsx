@@ -785,6 +785,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       return; // Click was handled, don't process other handlers
     }
 
+    // Check if clicking on top info panel (target unit info, top-right)
+    const topInfoClickResult = layoutRenderer.handleTopInfoPanelClick(canvasX, canvasY, topInfoPanelManager);
+    if (topInfoClickResult !== null) {
+      switch (topInfoClickResult.type) {
+        case 'view-toggled':
+          renderFrame(); // Re-render to show new view
+          return;
+
+        case 'combat-log-message':
+          combatLogManager.addMessage(topInfoClickResult.message);
+          renderFrame(); // Re-render after adding log message
+          return;
+      }
+    }
+
     // Check if clicking on combat log scroll buttons
     const combatLogScrollDirection = layoutRenderer.handleCombatLogClick(canvasX, canvasY, combatLogManager);
     if (combatLogScrollDirection === 'up') {
@@ -846,6 +861,15 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           case 'button':
             renderFrame(); // Re-render after button click
             return; // Button click handled by onEnterCombat callback
+
+          case 'view-toggled':
+            renderFrame(); // Re-render to show new view
+            return;
+
+          case 'combat-log-message':
+            combatLogManager.addMessage(clickResult.message);
+            renderFrame(); // Re-render after adding log message
+            return;
 
           case 'party-member':
             if (combatState.phase === 'deployment') {
@@ -943,9 +967,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       // Handle button click via handleClick (which calls handleMouseUp internally)
       const clickResult: PanelClickResult = bottomInfoPanelManager.handleClick(canvasX, canvasY, panelRegion);
 
-      if (clickResult !== null && clickResult.type === 'button') {
-        renderFrame(); // Re-render after button click
-        return; // Button click handled
+      if (clickResult !== null) {
+        switch (clickResult.type) {
+          case 'button':
+            renderFrame(); // Re-render after button click
+            return; // Button click handled
+
+          case 'view-toggled':
+            renderFrame(); // Re-render to show new view
+            return;
+
+          case 'combat-log-message':
+            combatLogManager.addMessage(clickResult.message);
+            renderFrame(); // Re-render after adding log message
+            return;
+        }
       }
     }
 

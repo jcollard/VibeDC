@@ -187,6 +187,17 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   }
 
   /**
+   * Handle click events on the top info panel (target unit info, top-right).
+   * Returns the click result from the panel content.
+   */
+  handleTopInfoPanelClick(x: number, y: number, topInfoPanelManager: any): any {
+    if (!topInfoPanelManager) return null;
+
+    const region = this.getTopInfoPanelRegion();
+    return topInfoPanelManager.handleClick(x, y, region);
+  }
+
+  /**
    * Handle mouse down events on the top panel (turn order).
    * Returns true if the event was handled, false otherwise.
    */

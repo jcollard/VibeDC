@@ -29,6 +29,7 @@ export class UnitInfoContent implements PanelContent {
   // View state management
   private currentView: 'stats' | 'abilities' = 'stats';
   private buttonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private isButtonHovered: boolean = false;
 
   // Helper text state
   private currentHelperTextFull: string | null = null;
@@ -46,7 +47,9 @@ export class UnitInfoContent implements PanelContent {
     'Speed': "Action Timer increases by Speed each turn. Units act when reaching 100.",
     'Courage': 'Courage determines if some abilities succeed',
     'Attunement': 'Attunement determines if some abilities succeed',
-    'Action Timer': 'Action Timer increases by Speed each turn. Units act when reaching 100.'
+    'Action Timer': 'Action Timer increases by Speed each turn. Units act when reaching 100.',
+    'View Abilities': "Click to view unit's abilities and equipment",
+    'Back': 'Click to return to stats view'
   };
 
   constructor(config: UnitInfoConfig, unit: CombatUnit) {
@@ -356,7 +359,9 @@ export class UnitInfoContent implements PanelContent {
     const textWidth = FontAtlasRenderer.measureText(buttonText, font);
     const textX = region.x + Math.floor((region.width - textWidth) / 2);
 
-    FontAtlasRenderer.renderText(ctx, buttonText, textX, y, fontId, fontAtlasImage, 1, 'left', '#ffffff');
+    // Use hover color when button is hovered
+    const buttonColor = this.isButtonHovered ? HOVERED_TEXT : '#ffffff';
+    FontAtlasRenderer.renderText(ctx, buttonText, textX, y, fontId, fontAtlasImage, 1, 'left', buttonColor);
 
     this.buttonBounds = {
       x: textX - region.x,
@@ -580,15 +585,34 @@ export class UnitInfoContent implements PanelContent {
         relativeX >= this.lastRegionWidth ||
         relativeY >= this.lastRegionHeight) {
       // Clear hover state if mouse is outside panel
-      if (this.hoveredStatId !== null) {
-        this.hoveredStatId = null;
-        return { statId: null };
+      const hadHover = this.hoveredStatId !== null || this.isButtonHovered;
+      this.hoveredStatId = null;
+      this.isButtonHovered = false;
+      return hadHover ? { statId: null } : null;
+    }
+
+    // Check if hovering over button
+    const wasButtonHovered = this.isButtonHovered;
+    if (this.buttonBounds) {
+      const { x, y, width, height } = this.buttonBounds;
+      this.isButtonHovered = relativeX >= x && relativeX <= x + width &&
+                             relativeY >= y && relativeY <= y + height;
+    } else {
+      this.isButtonHovered = false;
+    }
+
+    // If hovering button, set button text as "hovered stat" for helper text
+    if (this.isButtonHovered) {
+      const buttonText = this.currentView === 'stats' ? 'View Abilities' : 'Back';
+      if (this.hoveredStatId !== buttonText || wasButtonHovered !== this.isButtonHovered) {
+        this.hoveredStatId = buttonText;
+        return { statId: buttonText, buttonHovered: true };
       }
       return null;
     }
 
+    // Check for stat/ability hover
     let statId: string | null = null;
-
     if (this.currentView === 'stats') {
       statId = this.getStatIdAt(relativeX, relativeY);
     } else {
@@ -596,7 +620,7 @@ export class UnitInfoContent implements PanelContent {
     }
 
     // Update hover state if changed
-    if (statId !== this.hoveredStatId) {
+    if (statId !== this.hoveredStatId || wasButtonHovered) {
       this.hoveredStatId = statId;
       return { statId }; // Signal that hover state changed
     }
