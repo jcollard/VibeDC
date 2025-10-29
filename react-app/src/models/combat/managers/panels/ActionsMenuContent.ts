@@ -168,13 +168,11 @@ export class ActionsMenuContent implements PanelContent {
 
   /**
    * Enable or disable all buttons (used to prevent double-clicks)
+   * Note: This only affects the buttonsDisabled flag, not individual button states.
+   * Individual button enabled states are managed by buildButtonList based on game logic.
    */
   setButtonsDisabled(disabled: boolean): void {
     this.buttonsDisabled = disabled;
-    // Update all button states
-    for (const button of this.buttons) {
-      button.enabled = !disabled;
-    }
   }
 
   render(
@@ -213,9 +211,9 @@ export class ActionsMenuContent implements PanelContent {
       const isActive = button.id === this.activeButtonId;
       const isHovered = !isActive && this.hoveredButtonIndex === i; // Don't hover if active
 
-      // Determine button color based on state (priority: disabled > active > hovered > enabled)
+      // Determine button color based on state (priority: globally disabled > individually disabled > active > hovered > enabled)
       let color: string;
-      if (!button.enabled) {
+      if (this.buttonsDisabled || !button.enabled) {
         color = DISABLED_TEXT;
       } else if (isActive) {
         color = ACTIVE_COLOR; // Green for active button (overrides hover)
@@ -336,10 +334,19 @@ export class ActionsMenuContent implements PanelContent {
 
     const buttonIndex = this.getButtonIndexAt(relativeX, relativeY);
 
+    // Don't hover over disabled buttons
+    let finalButtonIndex = buttonIndex;
+    if (buttonIndex !== null) {
+      const button = this.buttons[buttonIndex];
+      if (!button.enabled) {
+        finalButtonIndex = null; // Clear hover for disabled buttons
+      }
+    }
+
     // Update hover state if changed
-    if (buttonIndex !== this.hoveredButtonIndex) {
-      this.hoveredButtonIndex = buttonIndex;
-      return { buttonIndex }; // Signal that hover state changed
+    if (finalButtonIndex !== this.hoveredButtonIndex) {
+      this.hoveredButtonIndex = finalButtonIndex;
+      return { buttonIndex: finalButtonIndex }; // Signal that hover state changed
     }
 
     return null;
