@@ -32,6 +32,8 @@ export interface EquipmentDefinition {
     attunement?: number;
   };
   allowedClasses?: string[];
+  minRange?: number;
+  maxRange?: number;
 }
 
 /**
@@ -57,7 +59,9 @@ export class EquipmentRegistry {
       definition.modifiers,
       definition.multipliers,
       new Set(definition.allowedClasses || []),
-      definition.id
+      definition.id,
+      definition.minRange,
+      definition.maxRange
     );
   }
 
@@ -105,7 +109,9 @@ export class EquipmentRegistry {
             attunement: e.modifiers.attunementMultiplier,
           },
           new Set(e.allowedClasses),
-          e.id
+          e.id,
+          e.minRange,
+          e.maxRange
         );
       }
     });
@@ -188,6 +194,14 @@ export class EquipmentRegistry {
     // Add allowed classes if any exist
     if (equipment.allowedClasses.size > 0) {
       definition.allowedClasses = Array.from(equipment.allowedClasses);
+    }
+
+    // Add weapon range if it exists
+    if (equipment.minRange !== undefined) {
+      definition.minRange = equipment.minRange;
+    }
+    if (equipment.maxRange !== undefined) {
+      definition.maxRange = equipment.maxRange;
     }
 
     return definition;

@@ -20,7 +20,8 @@
       "Bash(git log)",
       "Bash(grep -n \"^#### \\`UnitTurnPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
       "Bash(grep -n \"^#### \\`managers/panels/ActionsMenuContent\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
-      "Bash(grep -n \"^#### \\`ActionTimerPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)"
+      "Bash(grep -n \"^#### \\`ActionTimerPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
+      "Bash(npm test -- HumanoidUnit.test.ts)"
     ],
     "deny": [
       "Bash(npm run dev)"

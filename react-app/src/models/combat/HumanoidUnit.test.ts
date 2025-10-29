@@ -503,4 +503,280 @@ describe('HumanoidUnit Serialization', () => {
       expect(testUnit.hasAbility(dashAbility)).toBe(false);
     });
   });
+
+  describe('Weapon Equipment Validation', () => {
+    let twoHandedSword: Equipment;
+    let oneHandedSword: Equipment;
+    let oneHandedDagger: Equipment;
+    let shield: Equipment;
+    let torch: Equipment;
+    let longbow: Equipment;
+
+    beforeEach(() => {
+      // Create weapon equipment with ranges
+      twoHandedSword = new Equipment(
+        'Two-Handed Sword',
+        'TwoHandedWeapon',
+        { physicalPower: 20 },
+        {},
+        new Set(),
+        'two-handed-sword-test',
+        1, // minRange
+        1  // maxRange
+      );
+
+      oneHandedSword = new Equipment(
+        'One-Handed Sword',
+        'OneHandedWeapon',
+        { physicalPower: 10 },
+        {},
+        new Set(),
+        'one-handed-sword-test',
+        1, // minRange
+        1  // maxRange
+      );
+
+      oneHandedDagger = new Equipment(
+        'Dagger',
+        'OneHandedWeapon',
+        { physicalPower: 8 },
+        {},
+        new Set(),
+        'dagger-test',
+        1, // minRange
+        1  // maxRange
+      );
+
+      longbow = new Equipment(
+        'Longbow',
+        'TwoHandedWeapon',
+        { physicalPower: 15 },
+        {},
+        new Set(),
+        'longbow-test',
+        2, // minRange (ranged weapon)
+        3  // maxRange
+      );
+
+      shield = new Equipment(
+        'Wooden Shield',
+        'Shield',
+        { health: 10 },
+        {},
+        new Set(),
+        'shield-test'
+        // No range for shields
+      );
+
+      torch = new Equipment(
+        'Torch',
+        'Held',
+        { magicPower: 3 },
+        {},
+        new Set(),
+        'torch-test'
+        // No range for held items
+      );
+    });
+
+    describe('TwoHandedWeapon Validation', () => {
+      it('should allow equipping two-handed weapon when both hands are empty', () => {
+        const result = testUnit.equipLeftHand(twoHandedSword);
+        expect(result).toBe(true);
+        expect(testUnit.leftHand).toBe(twoHandedSword);
+      });
+
+      it('should prevent equipping two-handed weapon when right hand has equipment', () => {
+        testUnit.equipRightHand(shield);
+        const result = testUnit.equipLeftHand(twoHandedSword);
+        expect(result).toBe(false);
+        expect(testUnit.leftHand).toBeNull();
+      });
+
+      it('should prevent equipping two-handed weapon when left hand has equipment', () => {
+        testUnit.equipLeftHand(torch);
+        const result = testUnit.equipRightHand(twoHandedSword);
+        expect(result).toBe(false);
+        expect(testUnit.rightHand).toBeNull();
+      });
+
+      it('should prevent equipping anything in right hand when left has two-handed weapon', () => {
+        testUnit.equipLeftHand(twoHandedSword);
+        const result = testUnit.equipRightHand(shield);
+        expect(result).toBe(false);
+        expect(testUnit.rightHand).toBeNull();
+      });
+
+      it('should prevent equipping anything in left hand when right has two-handed weapon', () => {
+        testUnit.equipRightHand(twoHandedSword);
+        const result = testUnit.equipLeftHand(shield);
+        expect(result).toBe(false);
+        expect(testUnit.leftHand).toBeNull();
+      });
+    });
+
+    describe('Dual-Wield Disabled (default)', () => {
+      it('should prevent equipping second weapon when canDualWield is false', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const result = testUnit.equipRightHand(oneHandedDagger);
+        expect(result).toBe(false);
+        expect(testUnit.rightHand).toBeNull();
+      });
+
+      it('should allow equipping weapon + shield when canDualWield is false', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const result = testUnit.equipRightHand(shield);
+        expect(result).toBe(true);
+        expect(testUnit.rightHand).toBe(shield);
+      });
+
+      it('should allow equipping weapon + held item when canDualWield is false', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const result = testUnit.equipRightHand(torch);
+        expect(result).toBe(true);
+        expect(testUnit.rightHand).toBe(torch);
+      });
+
+      it('should allow equipping shield + held item when canDualWield is false', () => {
+        testUnit.equipLeftHand(shield);
+        const result = testUnit.equipRightHand(torch);
+        expect(result).toBe(true);
+        expect(testUnit.rightHand).toBe(torch);
+      });
+    });
+
+    describe('Dual-Wield Enabled', () => {
+      beforeEach(() => {
+        testUnit.setCanDualWield(true);
+      });
+
+      it('should allow equipping two weapons with matching ranges', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const result = testUnit.equipRightHand(oneHandedDagger);
+        expect(result).toBe(true);
+        expect(testUnit.rightHand).toBe(oneHandedDagger);
+      });
+
+      it('should prevent equipping two weapons with mismatched minRange', () => {
+        const shortSword = new Equipment(
+          'Short Sword',
+          'OneHandedWeapon',
+          {},
+          {},
+          new Set(),
+          'short-sword-test',
+          1, // minRange
+          1  // maxRange
+        );
+
+        const javelin = new Equipment(
+          'Javelin',
+          'OneHandedWeapon',
+          {},
+          {},
+          new Set(),
+          'javelin-test',
+          2, // minRange (different!)
+          1  // maxRange
+        );
+
+        testUnit.equipLeftHand(shortSword);
+        const result = testUnit.equipRightHand(javelin);
+        expect(result).toBe(false);
+        expect(testUnit.rightHand).toBeNull();
+      });
+
+      it('should prevent equipping two weapons with mismatched maxRange', () => {
+        const shortSword = new Equipment(
+          'Short Sword',
+          'OneHandedWeapon',
+          {},
+          {},
+          new Set(),
+          'short-sword-test',
+          1, // minRange
+          1  // maxRange
+        );
+
+        const whip = new Equipment(
+          'Whip',
+          'OneHandedWeapon',
+          {},
+          {},
+          new Set(),
+          'whip-test',
+          1, // minRange
+          2  // maxRange (different!)
+        );
+
+        testUnit.equipLeftHand(shortSword);
+        const result = testUnit.equipRightHand(whip);
+        expect(result).toBe(false);
+        expect(testUnit.rightHand).toBeNull();
+      });
+
+      it('should allow equipping weapon + non-weapon even when dual-wield enabled', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const result = testUnit.equipRightHand(shield);
+        expect(result).toBe(true);
+        expect(testUnit.rightHand).toBe(shield);
+      });
+    });
+
+    describe('getEquippedWeapons Helper', () => {
+      it('should return empty array when no weapons equipped', () => {
+        const weapons = testUnit.getEquippedWeapons();
+        expect(weapons).toEqual([]);
+      });
+
+      it('should return one weapon when only one hand has weapon', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const weapons = testUnit.getEquippedWeapons();
+        expect(weapons.length).toBe(1);
+        expect(weapons[0]).toBe(oneHandedSword);
+      });
+
+      it('should return two weapons when dual-wielding', () => {
+        testUnit.setCanDualWield(true);
+        testUnit.equipLeftHand(oneHandedSword);
+        testUnit.equipRightHand(oneHandedDagger);
+        const weapons = testUnit.getEquippedWeapons();
+        expect(weapons.length).toBe(2);
+        expect(weapons).toContain(oneHandedSword);
+        expect(weapons).toContain(oneHandedDagger);
+      });
+
+      it('should not include shield in equipped weapons', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        testUnit.equipRightHand(shield);
+        const weapons = testUnit.getEquippedWeapons();
+        expect(weapons.length).toBe(1);
+        expect(weapons[0]).toBe(oneHandedSword);
+      });
+
+      it('should return two-handed weapon', () => {
+        testUnit.equipLeftHand(twoHandedSword);
+        const weapons = testUnit.getEquippedWeapons();
+        expect(weapons.length).toBe(1);
+        expect(weapons[0]).toBe(twoHandedSword);
+      });
+    });
+
+    describe('Equipment Unequipping', () => {
+      it('should allow unequipping by passing null', () => {
+        testUnit.equipLeftHand(oneHandedSword);
+        const result = testUnit.equipLeftHand(null);
+        expect(result).toBe(true);
+        expect(testUnit.leftHand).toBeNull();
+      });
+
+      it('should allow equipping weapon after unequipping two-handed weapon', () => {
+        testUnit.equipLeftHand(twoHandedSword);
+        testUnit.equipLeftHand(null);
+        const result = testUnit.equipRightHand(shield);
+        expect(result).toBe(true);
+        expect(testUnit.rightHand).toBe(shield);
+      });
+    });
+  });
 });

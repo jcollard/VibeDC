@@ -37,6 +37,7 @@ export interface HumanoidUnitJSON {
   accessoryId: string | null;
   spriteId: string;
   isPlayerControlled: boolean;
+  canDualWield: boolean;
 }
 
 /**
@@ -80,6 +81,7 @@ export class HumanoidUnit implements CombatUnit {
 
   private _spriteId: string;
   private _isPlayerControlled: boolean = false;
+  private _canDualWield: boolean = false;
 
   constructor(
     name: string,
@@ -225,6 +227,14 @@ export class HumanoidUnit implements CombatUnit {
     this._isPlayerControlled = value;
   }
 
+  get canDualWield(): boolean {
+    return this._canDualWield;
+  }
+
+  setCanDualWield(value: boolean): void {
+    this._canDualWield = value;
+  }
+
   // Equipment slot getters
   get leftHand(): Equipment | null {
     return this._leftHand;
@@ -247,12 +257,80 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   // Equipment management methods
-  equipLeftHand(equipment: Equipment | null): void {
+  equipLeftHand(equipment: Equipment | null): boolean {
+    // Allow unequipping
+    if (equipment === null) {
+      this._leftHand = null;
+      return true;
+    }
+
+    // Validate against TwoHandedWeapon in right hand
+    if (this._rightHand !== null && this._rightHand.type === 'TwoHandedWeapon') {
+      return false; // Cannot equip anything when right hand has two-handed weapon
+    }
+
+    // Validate TwoHandedWeapon: right hand must be empty
+    if (equipment.type === 'TwoHandedWeapon') {
+      if (this._rightHand !== null) {
+        return false; // Cannot equip two-handed weapon with something in right hand
+      }
+    }
+
+    // Validate OneHandedWeapon dual-wield rules
+    if (equipment.type === 'OneHandedWeapon') {
+      if (this._rightHand !== null && this._rightHand.isWeapon()) {
+        // Right hand has a weapon
+        if (!this._canDualWield) {
+          return false; // Cannot dual-wield
+        }
+        // Can dual-wield, check range compatibility
+        if (equipment.minRange !== this._rightHand.minRange ||
+            equipment.maxRange !== this._rightHand.maxRange) {
+          return false; // Ranges must match
+        }
+      }
+    }
+
     this._leftHand = equipment;
+    return true;
   }
 
-  equipRightHand(equipment: Equipment | null): void {
+  equipRightHand(equipment: Equipment | null): boolean {
+    // Allow unequipping
+    if (equipment === null) {
+      this._rightHand = null;
+      return true;
+    }
+
+    // Validate against TwoHandedWeapon in left hand
+    if (this._leftHand !== null && this._leftHand.type === 'TwoHandedWeapon') {
+      return false; // Cannot equip anything when left hand has two-handed weapon
+    }
+
+    // Validate TwoHandedWeapon: left hand must be empty
+    if (equipment.type === 'TwoHandedWeapon') {
+      if (this._leftHand !== null) {
+        return false; // Cannot equip two-handed weapon with something in left hand
+      }
+    }
+
+    // Validate OneHandedWeapon dual-wield rules
+    if (equipment.type === 'OneHandedWeapon') {
+      if (this._leftHand !== null && this._leftHand.isWeapon()) {
+        // Left hand has a weapon
+        if (!this._canDualWield) {
+          return false; // Cannot dual-wield
+        }
+        // Can dual-wield, check range compatibility
+        if (equipment.minRange !== this._leftHand.minRange ||
+            equipment.maxRange !== this._leftHand.maxRange) {
+          return false; // Ranges must match
+        }
+      }
+    }
+
     this._rightHand = equipment;
+    return true;
   }
 
   equipHead(equipment: Equipment | null): void {
@@ -295,6 +373,21 @@ export class HumanoidUnit implements CombatUnit {
     const item = this._accessory;
     this._accessory = null;
     return item;
+  }
+
+  /**
+   * Get all weapons currently equipped in hand slots
+   * @returns Array of equipped weapons (0-2 items)
+   */
+  getEquippedWeapons(): Equipment[] {
+    const weapons: Equipment[] = [];
+    if (this._leftHand?.isWeapon()) {
+      weapons.push(this._leftHand);
+    }
+    if (this._rightHand?.isWeapon()) {
+      weapons.push(this._rightHand);
+    }
+    return weapons;
   }
 
   // Experience management methods
@@ -579,6 +672,7 @@ export class HumanoidUnit implements CombatUnit {
       accessoryId: this._accessory?.id ?? null,
       spriteId: this._spriteId,
       isPlayerControlled: this._isPlayerControlled,
+      canDualWield: this._canDualWield,
     };
   }
 
@@ -716,6 +810,9 @@ export class HumanoidUnit implements CombatUnit {
         console.warn(`Accessory equipment with id ${json.accessoryId} not found`);
       }
     }
+
+    // Restore dual-wield capability
+    unit._canDualWield = json.canDualWield ?? false;
 
     return unit;
   }

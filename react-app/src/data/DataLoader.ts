@@ -55,6 +55,8 @@ interface EquipmentData {
   modifiers?: Record<string, number>;
   multipliers?: Record<string, number>;
   allowedClasses?: string[];
+  minRange?: number;
+  maxRange?: number;
 }
 
 /**
@@ -108,7 +110,9 @@ export function loadEquipment(): void {
       equipData.modifiers,
       equipData.multipliers,
       allowedClasses,
-      equipData.id
+      equipData.id,
+      equipData.minRange,
+      equipData.maxRange
     );
   }
 

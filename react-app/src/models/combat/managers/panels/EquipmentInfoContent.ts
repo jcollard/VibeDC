@@ -54,6 +54,38 @@ export class EquipmentInfoContent implements PanelContent {
 
     y += this.lineSpacing + 2; // Spacing after name
 
+    // Render weapon information if this is a weapon
+    if (this.equipment.isWeapon()) {
+      // Type: Weapon
+      FontAtlasRenderer.renderText(
+        ctx,
+        'Type: Weapon',
+        region.x + this.padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+      y += this.lineSpacing;
+
+      // Range: min-max
+      const rangeText = `Range: ${this.equipment.minRange ?? '?'}-${this.equipment.maxRange ?? '?'}`;
+      FontAtlasRenderer.renderText(
+        ctx,
+        rangeText,
+        region.x + this.padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        '#ffffff'
+      );
+      y += this.lineSpacing + 2; // Extra spacing before stats
+    }
+
     // Get non-zero modifiers and non-1.0 multipliers
     const displayStats = this.getDisplayStats();
 

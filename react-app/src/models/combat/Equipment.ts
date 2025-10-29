@@ -36,6 +36,16 @@ export class Equipment {
    */
   public readonly allowedClasses: ReadonlySet<string>;
 
+  /**
+   * Minimum attack range for weapons (undefined for non-weapons)
+   */
+  public readonly minRange?: number;
+
+  /**
+   * Maximum attack range for weapons (undefined for non-weapons)
+   */
+  public readonly maxRange?: number;
+
   constructor(
     name: string,
     type: EquipmentType,
@@ -64,13 +74,17 @@ export class Equipment {
       attunement: number;
     }>,
     allowedClasses: Set<string> = new Set(),
-    id?: string
+    id?: string,
+    minRange?: number,
+    maxRange?: number
   ) {
     this.id = id ?? crypto.randomUUID();
     this.name = name;
     this.type = type;
     this.modifiers = new CombatUnitModifiers(modifiers, multipliers);
     this.allowedClasses = allowedClasses;
+    this.minRange = minRange;
+    this.maxRange = maxRange;
 
     // Register this equipment in the registry
     Equipment.registry.set(this.id, this);
@@ -124,5 +138,13 @@ export class Equipment {
       return true;
     }
     return classIds.some(classId => this.allowedClasses.has(classId));
+  }
+
+  /**
+   * Check if this equipment is a weapon
+   * @returns true if this is a OneHandedWeapon or TwoHandedWeapon, false otherwise
+   */
+  isWeapon(): boolean {
+    return this.type === 'OneHandedWeapon' || this.type === 'TwoHandedWeapon';
   }
 }
