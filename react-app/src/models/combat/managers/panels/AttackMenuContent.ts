@@ -37,6 +37,8 @@ export class AttackMenuContent implements PanelContent {
   private lastRegionHeight: number = 0;
   private hoveredButtonIndex: number | null = null; // 0 = cancel, 1 = perform attack
   private buttonsDisabled: boolean = false;
+  private cancelButtonY: number = 0; // Tracked during render
+  private performButtonY: number = 0; // Tracked during render
 
   constructor(config: AttackMenuConfig, unit?: CombatUnit) {
     this.config = config;
@@ -110,6 +112,7 @@ export class AttackMenuContent implements PanelContent {
     // Cancel button on the same line, right-aligned
     const isCancelHovered = this.hoveredButtonIndex === 0;
     const cancelColor = this.buttonsDisabled ? HELPER_TEXT : (isCancelHovered ? HOVERED_TEXT : ENABLED_TEXT);
+    this.cancelButtonY = currentY - region.y; // Store relative Y for hit detection
     FontAtlasRenderer.renderText(
       ctx,
       'Cancel',
@@ -227,6 +230,7 @@ export class AttackMenuContent implements PanelContent {
       // Calculate center X for button
       const buttonCenterX = region.x + (region.width / 2);
 
+      this.performButtonY = currentY - region.y; // Store relative Y for hit detection
       FontAtlasRenderer.renderText(
         ctx,
         'Perform Attack',
@@ -450,39 +454,17 @@ export class AttackMenuContent implements PanelContent {
    * Determine which button (if any) is at the given panel-relative coordinates
    * Returns 0 for cancel button, 1 for perform attack, null otherwise
    *
-   * Note: Cancel button is on the title line, Perform Attack button is below prediction section
+   * Note: Button positions are tracked during render for accurate hit detection
    */
   private getButtonIndexAt(_relativeX: number, relativeY: number): number | null {
-    const humanoidUnit = this.currentUnit as HumanoidUnit | null;
-    const weapons = humanoidUnit?.getEquippedWeapons?.() ?? [];
-
-    // Cancel button is on line 0 (title line)
-    const cancelButtonY = this.config.padding;
-    if (relativeY >= cancelButtonY && relativeY < cancelButtonY + this.config.lineSpacing) {
+    // Check if click is on cancel button line (tracked during render)
+    if (relativeY >= this.cancelButtonY && relativeY < this.cancelButtonY + this.config.lineSpacing) {
       return 0; // Cancel button
     }
 
-    // Perform Attack button calculation
-    if (this.selectedTarget) {
-      // Base layout height calculation
-      let lineCount = 0;
-      lineCount += 1; // Title (with Cancel)
-      lineCount += 1; // Blank
-      lineCount += (weapons.length === 0 ? 1 : 3); // Weapon info (3 lines per weapon: name, hit%, dmg)
-      lineCount += 1; // Target line
-
-      if (weapons.length > 0) {
-        lineCount += 2; // Attack prediction (2 lines: hit%, dmg)
-      }
-
-      lineCount += 1; // Spacing before button
-
-      const performButtonY = this.config.padding + (lineCount * this.config.lineSpacing);
-
-      // Check if click is on perform attack button line
-      if (relativeY >= performButtonY && relativeY < performButtonY + this.config.lineSpacing) {
-        return 1; // Perform Attack button
-      }
+    // Check if click is on perform attack button line (tracked during render)
+    if (this.selectedTarget && relativeY >= this.performButtonY && relativeY < this.performButtonY + this.config.lineSpacing) {
+      return 1; // Perform Attack button
     }
 
     return null;
