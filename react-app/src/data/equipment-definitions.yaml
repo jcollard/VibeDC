@@ -235,3 +235,67 @@ equipment:
     minRange: 1
     maxRange: 1
 
+  # Bows (TwoHandedWeapon)
+  - id: "short-bow-001"
+    name: "Short Bow"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 12
+      speed: 3
+    minRange: 2
+    maxRange: 5
+
+  - id: "long-bow-001"
+    name: "Long Bow"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 18
+      speed: -2
+    multipliers:
+      physicalPower: 1.1
+    minRange: 2
+    maxRange: 5
+
+  - id: "war-bow-001"
+    name: "War Bow"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 22
+      speed: -4
+    multipliers:
+      physicalPower: 1.2
+    minRange: 2
+    maxRange: 5
+
+  # Crossbows (OneHandedWeapon)
+  - id: "light-crossbow-001"
+    name: "Light Crossbow"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 14
+      speed: -1
+    minRange: 2
+    maxRange: 3
+
+  - id: "heavy-crossbow-001"
+    name: "Heavy Crossbow"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 20
+      speed: -3
+    multipliers:
+      physicalPower: 1.15
+    minRange: 2
+    maxRange: 3
+
+  - id: "repeating-crossbow-001"
+    name: "Repeating Crossbow"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 16
+      speed: 2
+    multipliers:
+      speed: 1.1
+    minRange: 2
+    maxRange: 3
+
