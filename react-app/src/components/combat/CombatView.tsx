@@ -507,6 +507,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         if (targeted) {
           targetUnitToDisplay = targeted;
           targetUnitPosition = combatState.unitManifest.getUnitPosition(targeted) ?? null;
+        } else {
+          // Clear target if strategy has no targeted unit (e.g., when entering attack mode)
+          targetUnitToDisplay = null;
+          targetUnitPosition = null;
         }
       }
     }

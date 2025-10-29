@@ -486,9 +486,10 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
     this.mode = 'attackSelection';
 
-    // Deselect all units
+    // Deselect all units and clear any previously selected target
     this.targetedUnit = null;
     this.targetedPosition = null;
+    this.selectedAttackTarget = null;
 
     // Get current position from manifest (in case unit has moved)
     const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
