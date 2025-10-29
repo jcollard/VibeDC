@@ -113,21 +113,25 @@ export class AttackRangeCalculator {
   /**
    * Calculates all tiles within weapon range using Manhattan distance.
    * Does NOT check line of sight - that's done separately.
+   * Respects both minRange and maxRange (e.g., bows can't attack adjacent tiles).
    */
   static calculateAttackRange(options: AttackRangeOptions): Position[] {
     const { attackerPosition, weapon, map } = options;
-    const range = weapon.range; // Assuming Equipment has a range property
+    const minRange = weapon.minRange ?? 1; // Equipment already has minRange
+    const maxRange = weapon.maxRange ?? 1; // Equipment already has maxRange
     const tiles: Position[] = [];
 
     // Iterate through all tiles within Manhattan distance
-    for (let dx = -range; dx <= range; dx++) {
-      for (let dy = -range; dy <= range; dy++) {
+    for (let dx = -maxRange; dx <= maxRange; dx++) {
+      for (let dy = -maxRange; dy <= maxRange; dy++) {
         // Skip attacker's own position
         if (dx === 0 && dy === 0) continue;
 
         // Check Manhattan distance (orthogonal movement only)
         const manhattanDist = Math.abs(dx) + Math.abs(dy);
-        if (manhattanDist > range) continue;
+
+        // Must be within range bounds (inclusive)
+        if (manhattanDist < minRange || manhattanDist > maxRange) continue;
 
         const targetPos: Position = {
           x: attackerPosition.x + dx,
@@ -147,15 +151,16 @@ export class AttackRangeCalculator {
 }
 ```
 
-**Rationale:** Similar structure to MovementRangeCalculator, uses Manhattan distance for orthogonal range calculation.
+**Rationale:** Similar structure to MovementRangeCalculator, uses Manhattan distance for orthogonal range calculation. Respects both minRange and maxRange to support ranged weapons that can't attack adjacent tiles (e.g., bows, crossbows).
 
 **Guidelines Compliance:**
 - ✅ Static method for utility function
 - ✅ Clear interface for options
 - ✅ No object allocations in loop (reuses Position objects)
 - ✅ Follows existing utility pattern
+- ✅ Uses existing Equipment.minRange and Equipment.maxRange properties
 
-**Performance:** O(range²) - for range 3, checks 49 tiles. Negligible for small ranges.
+**Performance:** O(maxRange²) - for maxRange 3, checks 49 tiles. Negligible for small ranges.
 
 ---
 
@@ -1384,27 +1389,14 @@ export type TurnAction =
 
 ---
 
-### Task 12: Add Equipment.range Property (Data Model)
-**Files:**
-- `react-app/src/models/unit-system/Equipment.ts`
+### Task 12: ~~Add Equipment.range Property~~ (Not Needed)
+**Status:** ✅ **COMPLETED** - Equipment already has `minRange` and `maxRange` properties
 
-**Changes:**
-```typescript
-export class Equipment {
-  // Existing fields...
+**Note:** Equipment class at `react-app/src/models/combat/Equipment.ts` already includes:
+- `minRange?: number` (line 50) - Minimum attack range for weapons
+- `maxRange?: number` (line 55) - Maximum attack range for weapons
 
-  range: number; // Add this field
-
-  constructor(/* ... */) {
-    // Initialize range from data
-    this.range = data.range ?? 1; // Default to melee range
-  }
-}
-```
-
-**Rationale:** Weapons need a range property for attack range calculation.
-
-**Note:** Update EquipmentRegistry data files to include range values for all weapons.
+These properties are already used by AttackRangeCalculator. No changes needed.
 
 ---
 
