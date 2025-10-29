@@ -699,10 +699,13 @@ export class UnitInfoContent implements PanelContent {
     const padding = this.config.padding;
     const lineSpacing = this.config.lineSpacing;
 
-    // Calculate header height (sprite + name + class = 3 lines)
-    const headerHeight = padding + (lineSpacing * 3);
+    // Calculate header height - must match renderHeader's return value
+    // renderHeader returns: classY + lineSpacing
+    // where classY = nameY + lineSpacing = (spriteY) + lineSpacing = (padding) + lineSpacing
+    // So: padding + lineSpacing + lineSpacing = padding + (2 * lineSpacing)
+    const headerHeight = padding + (lineSpacing * 2);
 
-    // Calculate abilities start Y
+    // Calculate abilities start Y (must match renderAbilitiesView)
     const abilitiesStartY = headerHeight + 4; // 4px spacing
 
     // Check if Y is below header

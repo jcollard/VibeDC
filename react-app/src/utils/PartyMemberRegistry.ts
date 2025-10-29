@@ -266,24 +266,34 @@ export class PartyMemberRegistry {
     }
 
     // Assign abilities to slots
+    // Note: Abilities must be learned before they can be assigned to slots
     if (definition.reactionAbilityId) {
       const ability = CombatAbility.getById(definition.reactionAbilityId);
       if (ability) {
+        unit.addLearnedAbility(ability); // Ensure ability is learned
         unit.assignReactionAbility(ability);
+      } else {
+        console.warn(`Reaction ability '${definition.reactionAbilityId}' not found for party member '${id}'`);
       }
     }
 
     if (definition.passiveAbilityId) {
       const ability = CombatAbility.getById(definition.passiveAbilityId);
       if (ability) {
+        unit.addLearnedAbility(ability); // Ensure ability is learned
         unit.assignPassiveAbility(ability);
+      } else {
+        console.warn(`Passive ability '${definition.passiveAbilityId}' not found for party member '${id}'`);
       }
     }
 
     if (definition.movementAbilityId) {
       const ability = CombatAbility.getById(definition.movementAbilityId);
       if (ability) {
+        unit.addLearnedAbility(ability); // Ensure ability is learned
         unit.assignMovementAbility(ability);
+      } else {
+        console.warn(`Movement ability '${definition.movementAbilityId}' not found for party member '${id}'`);
       }
     }
 
