@@ -572,6 +572,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Mark unit as having moved
     this.unitHasMoved = true;
 
+    // Notify strategy that unit has moved (clears movement range)
+    if (this.currentStrategy && 'onUnitMoved' in this.currentStrategy) {
+      (this.currentStrategy as any).onUnitMoved();
+    }
+
     return state;
   }
 

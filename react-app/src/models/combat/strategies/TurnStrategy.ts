@@ -121,4 +121,10 @@ export interface TurnStrategy {
    * Returns null for default color (yellow), or color string for override (green)
    */
   getMovementRangeColor(): string | null;
+
+  /**
+   * Notify the strategy that the unit has completed a move
+   * Strategy should clear movement range display
+   */
+  onUnitMoved?(): void;
 }

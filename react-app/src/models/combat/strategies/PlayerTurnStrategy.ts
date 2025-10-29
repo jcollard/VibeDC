@@ -58,6 +58,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Pending message to display in combat log (consumed by phase handler)
   private pendingMessage: string | null = null;
 
+  // Track if the active unit has moved this turn
+  private hasMoved: boolean = false;
+
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
     this.activeUnit = unit;
     this.activePosition = position;
@@ -67,6 +70,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.mode = 'normal';
     this.moveModePaths.clear();
     this.hoveredMovePath = null;
+    this.hasMoved = false;
 
     // Calculate movement range for this unit
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
@@ -195,14 +199,20 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.targetedUnit = unit;
     this.targetedPosition = position;
 
-    // Calculate movement range for the selected unit
-    this.movementRange = MovementRangeCalculator.calculateReachableTiles({
-      startPosition: position,
-      movement: unit.movement,
-      map: state.map,
-      unitManifest: state.unitManifest,
-      activeUnit: unit
-    });
+    // Only calculate movement range if the unit hasn't moved yet
+    // (or if selecting a different unit than the active unit)
+    if (!this.hasMoved || unit !== this.activeUnit) {
+      this.movementRange = MovementRangeCalculator.calculateReachableTiles({
+        startPosition: position,
+        movement: unit.movement,
+        map: state.map,
+        unitManifest: state.unitManifest,
+        activeUnit: unit
+      });
+    } else {
+      // Unit has already moved - don't show movement range
+      this.movementRange = [];
+    }
   }
 
   /**
@@ -212,8 +222,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.targetedUnit = null;
     this.targetedPosition = null;
 
-    // Reset movement range to active unit's range
-    if (this.activeUnit && this.activePosition && this.currentState) {
+    // Reset movement range to active unit's range (only if unit hasn't moved)
+    if (this.activeUnit && this.activePosition && this.currentState && !this.hasMoved) {
       this.movementRange = MovementRangeCalculator.calculateReachableTiles({
         startPosition: this.activePosition,
         movement: this.activeUnit.movement,
@@ -364,6 +374,15 @@ export class PlayerTurnStrategy implements TurnStrategy {
     const message = this.pendingMessage;
     this.pendingMessage = null;
     return message;
+  }
+
+  /**
+   * Notify that the unit has moved - clear movement range
+   */
+  onUnitMoved(): void {
+    this.hasMoved = true;
+    this.movementRange = [];
+    this.exitMoveMode();
   }
 
   /**
