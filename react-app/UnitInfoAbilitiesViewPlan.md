@@ -1,479 +1,704 @@
 # Unit Info Abilities View Implementation Plan
 
+**Date:** 2025-10-28
+**Feature:** Add abilities/equipment view toggle to UnitInfoContent
+**Complexity:** Medium (3-4 hours)
+
+---
+
 ## Overview
-Add ability and equipment viewing functionality to `UnitInfoContent.ts` by introducing a view toggle system. Users can switch between "Stats View" (current) and "Abilities View" (new) using a button.
+
+Add a view toggle system to `UnitInfoContent.ts` that allows users to switch between:
+- **Stats View** (current): Shows unit stats (HP, MP, Speed, etc.)
+- **Abilities View** (new): Shows assigned ability slots and equipment (humanoid only)
+
+Users toggle between views using a centered button positioned between content and helper text.
+
+---
 
 ## Requirements
-- Add "View Abilities" button in Stats View (centered below stats, above helper text)
-- Add "Back" button in Abilities View (same position)
-- Display 3 ability slots: Reaction, Passive, Movement
-- Display 5 equipment slots for humanoid units: L.Hand, R.Hand, Head, Body, Accessory
-- Empty slots show "-" (non-interactive)
-- Hovering over abilities/equipment shows helper text
-- If helper text exceeds available space, show "Click for Detail" and output full text to combat log
-- Equipment helper text includes non-default stat modifiers (e.g., "+5 P.Pow, ×1.5 Crit")
+
+### Visual Specifications
+- **Button**: "View Abilities" in stats view, "Back" in abilities view
+- **Button position**: Centered horizontally, between content and helper text
+- **Button padding**: 2px above and below
+- **Ability slots**: "Reaction", "Passive", "Movement" (left-aligned labels, right-aligned values)
+- **Equipment slots**: "L.Hand", "R.Hand", "Head", "Body", "Accessory" (same alignment)
+- **Empty slots**: Show "-" (non-interactive)
+- **Colors**: White text for all content, yellow (#ffff00) for helper text
+
+### Behavioral Specifications
+- Clicking button toggles between views
+- View state persists per unit (due to caching)
+- Hovering over ability shows description in helper text area
+- Hovering over equipment shows description + stat modifiers in helper text
+- Hovering over "-" does nothing (not interactive)
+- If helper text exceeds available vertical space, show "Click for Detail"
+- Clicking "Click for Detail" outputs full text to combat log
+- Switching views clears helper text
+
+### Technical Requirements
+- Use `FontAtlasRenderer` for ALL text rendering (no `ctx.fillText()`)
+- Use `SpriteRenderer` for ALL sprite rendering (no `ctx.drawImage()` on sprite sheets)
+- Use existing `PanelContent` interface signature
+- Equipment modifiers from `CombatUnitModifiers.getSummary()` method
+- Abilities from `CombatUnit.reactionAbility`, `passiveAbility`, `movementAbility`
+- Equipment from `HumanoidUnit.leftHand`, `rightHand`, `head`, `body`, `accessory`
+- Must follow all GeneralGuidelines.md patterns
+
+---
 
 ## Architecture Alignment
-✅ Follows GeneralGuidelines.md:
-- Single file modification (UnitInfoContent.ts)
-- Stateful cached component pattern
-- No domain model changes
-- Uses existing helper text infrastructure
 
-✅ Follows CombatHierarchy.md:
-- UnitInfoContent is a PanelContentRenderer (cached, stateful)
+✅ **Follows GeneralGuidelines.md:**
+- Uses `FontAtlasRenderer.renderText()` for all text (lines 12-15)
+- Uses `SpriteRenderer.renderSpriteById()` for sprites (lines 6-9)
+- Caches stateful component (UnitInfoContent already cached)
+- No domain model changes
+- Single file modification
+
+✅ **Follows CombatHierarchy.md:**
+- UnitInfoContent is PanelContentRenderer (cached, stateful)
 - Managed by CombatLayoutManager
 - Standard hover interaction pattern
+
+---
 
 ## Implementation Steps
 
 ### Step 1: Add View State Management
 **File**: `react-app/src/models/combat/managers/panels/UnitInfoContent.ts`
 
-Add state to track current view:
+Add instance variables for view state:
 ```typescript
 private currentView: 'stats' | 'abilities' = 'stats';
+private buttonBounds: { x: number; y: number; width: number; height: number } | null = null;
 ```
 
-The view state persists for each unit (due to caching), so switching between units preserves their individual view states.
+**Rationale**: View state persists per unit instance due to caching pattern.
 
-### Step 2: Create View Toggle Method
+---
+
+### Step 2: Add Toggle Method
 Add method to switch between views:
 ```typescript
 private toggleView(): void {
   this.currentView = this.currentView === 'stats' ? 'abilities' : 'stats';
-  this.needsRedraw = true;
+  this.hoveredStatId = null; // Clear hover state
 }
 ```
 
-### Step 3: Refactor render() Method
-Split rendering logic into view-specific methods:
+**Rationale**: Simple state toggle, clears helper text on view change.
+
+---
+
+### Step 3: Refactor render() Method Structure
+Split rendering into view-specific methods (modify existing `render()` method):
 
 ```typescript
-public render(ctx: CanvasRenderingContext2D): void {
-  if (!this.needsRedraw) return;
+public render(
+  ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement | null,
+  spriteImages?: Map<string, HTMLImageElement>,
+  spriteSize?: number
+): void {
+  if (!fontAtlasImage) return;
+  const font = FontRegistry.getById(fontId);
+  if (!font) return;
 
-  // Clear canvas
-  ctx.clearRect(0, 0, this.width, this.height);
+  // Cache region dimensions for hit detection
+  this.lastRegionWidth = region.width;
+  this.lastRegionHeight = region.height;
 
   // Render common header (sprite, name, class, action timer)
-  const headerHeight = this.renderHeader(ctx);
+  let currentY = this.renderHeader(ctx, region, fontId, fontAtlasImage, font, spriteImages, spriteSize);
 
   // Render view-specific content
-  let contentHeight: number;
   if (this.currentView === 'stats') {
-    contentHeight = this.renderStatsView(ctx, headerHeight);
+    currentY = this.renderStatsView(ctx, region, fontId, fontAtlasImage, font, currentY);
   } else {
-    contentHeight = this.renderAbilitiesView(ctx, headerHeight);
+    currentY = this.renderAbilitiesView(ctx, region, fontId, fontAtlasImage, font, currentY);
   }
 
-  // Render toggle button (centered, with 2px padding above/below)
-  const buttonY = contentHeight + 2;
-  const buttonHeight = this.renderToggleButton(ctx, buttonY);
+  // Render toggle button (centered, with 2px padding)
+  currentY += 2; // Padding above button
+  currentY = this.renderToggleButton(ctx, region, fontId, fontAtlasImage, font, currentY);
+  currentY += 2; // Padding below button
 
-  // Render helper text below button
-  const helperTextY = buttonY + buttonHeight + 2;
-  this.renderHelperText(ctx, helperTextY);
-
-  this.needsRedraw = false;
+  // Render helper text (if any)
+  this.renderHelperText(ctx, region, fontId, fontAtlasImage, font, currentY);
 }
 ```
+
+**Rationale**: Structured flow - header → content → button → helper text. Each section returns its consumed height.
+
+---
 
 ### Step 4: Extract Header Rendering
-Move existing header rendering into separate method:
+Move existing header code into separate method:
 ```typescript
-private renderHeader(ctx: CanvasRenderingContext2D): number {
-  const padding = 1;
-  const lineHeight = 8;
-  let y = padding;
+private renderHeader(
+  ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
+  spriteImages?: Map<string, HTMLImageElement>,
+  spriteSize?: number
+): number {
+  // Copy existing header rendering logic (lines 66-202)
+  // Sprite, name, class, action timer
+  // Return: classY + this.config.lineSpacing (Y position after header)
 
-  // Sprite (left side, 16×16px)
-  const sprite = this.unit.getSprite();
-  ctx.drawImage(sprite, padding, y, 16, 16);
+  const spriteX = region.x + this.config.padding;
+  const spriteY = region.y + this.config.padding;
 
-  // Name (right of sprite)
-  ctx.fillStyle = 'white';
-  ctx.font = '8px "Press Start 2P"';
-  ctx.fillText(this.unit.name, padding + 18, y + 6);
-  y += lineHeight;
+  // Sprite rendering (existing code)
+  if (spriteImages && spriteSize) {
+    SpriteRenderer.renderSpriteById(ctx, this.unit.spriteId, spriteImages, spriteSize, spriteX, spriteY, 12, 12);
+  }
 
-  // Class
-  ctx.fillText(`Class: ${this.unit.className}`, padding, y + 6);
-  y += lineHeight;
+  // Name rendering (existing code)
+  const nameX = spriteX + 12 + 2;
+  const nameY = spriteY;
+  const nameColor = this.unit.isPlayerControlled ? '#00ff00' : '#ff0000';
+  FontAtlasRenderer.renderText(ctx, this.unit.name, nameX, nameY, fontId, fontAtlasImage, 1, 'left', nameColor);
 
-  // Action Timer
-  const at = this.unit.actionTimer.toFixed(1);
-  ctx.fillText(`AT: ${at}`, padding, y + 6);
-  y += lineHeight;
+  // Class rendering (existing code)
+  const classY = nameY + this.config.lineSpacing;
+  let classText = this.unit.unitClass.name;
+  if (this.unit.secondaryClass) {
+    classText += `/${this.unit.secondaryClass.name}`;
+  }
+  FontAtlasRenderer.renderText(ctx, classText, nameX, classY, fontId, fontAtlasImage, 1, 'left', '#ffffff');
 
-  return y; // Return height consumed by header
+  // Action Timer rendering (existing code, lines 121-201)
+  // ... (keep existing logic) ...
+
+  return classY + this.config.lineSpacing;
 }
 ```
+
+**Rationale**: Reuses existing header rendering unchanged. Returns Y position for next section.
+
+---
 
 ### Step 5: Refactor Stats View Rendering
-Move existing stats rendering into separate method:
+Move existing stats grid into separate method:
 ```typescript
-private renderStatsView(ctx: CanvasRenderingContext2D, startY: number): number {
-  const padding = 1;
-  const lineHeight = 8;
-  let y = startY;
+private renderStatsView(
+  ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
+  startY: number
+): number {
+  // Copy existing stats grid rendering (lines 203-310)
+  // Two-column layout with left/right aligned values
+  // Return: final statsY position after all stats rendered
 
-  // Existing stats rendering logic (HP, Speed, P.Pow, etc.)
-  // ... copy existing implementation from current render() method ...
+  const leftColumnStats = [
+    { label: 'HP', value: `${this.unit.health}/${this.unit.maxHealth}` },
+    { label: 'P.Pow', value: `${this.unit.physicalPower}` },
+    { label: 'M.Pow', value: `${this.unit.magicPower}` },
+    { label: 'Move', value: `${this.unit.movement}` },
+    { label: 'Courage', value: `${this.unit.courage}` }
+  ];
 
-  return y; // Return height consumed by stats
+  const rightColumnStats = [
+    { label: 'MP', value: `${this.unit.mana}/${this.unit.maxMana}` },
+    { label: 'P.Evd', value: `${this.unit.physicalEvade}` },
+    { label: 'M.Evd', value: `${this.unit.magicEvade}` },
+    { label: 'Speed', value: `${this.unit.speed}` },
+    { label: 'Attunement', value: `${this.unit.attunement}` }
+  ];
+
+  const statsAreaWidth = region.width - (this.config.padding * 2);
+  const columnGap = 8;
+  const columnWidth = (statsAreaWidth - columnGap) / 2;
+  const leftColumnX = region.x + this.config.padding;
+  const rightColumnX = leftColumnX + columnWidth + columnGap;
+  let statsY = startY + 4; // 4px spacing before stats
+
+  // Render left column (existing logic, lines 236-270)
+  for (const stat of leftColumnStats) {
+    const isHovered = this.hoveredStatId === stat.label;
+    const color = isHovered ? HOVERED_TEXT : '#ffffff';
+
+    FontAtlasRenderer.renderText(ctx, stat.label, leftColumnX, statsY, fontId, fontAtlasImage, 1, 'left', color);
+
+    const valueWidth = FontAtlasRenderer.measureText(stat.value, font);
+    const valueX = leftColumnX + columnWidth - valueWidth;
+    FontAtlasRenderer.renderText(ctx, stat.value, valueX, statsY, fontId, fontAtlasImage, 1, 'left', color);
+
+    statsY += this.config.lineSpacing;
+  }
+
+  // Render right column (existing logic, lines 272-310)
+  statsY = startY + 4; // Reset for parallel rendering
+  for (const stat of rightColumnStats) {
+    const isHovered = this.hoveredStatId === stat.label;
+    const color = isHovered ? HOVERED_TEXT : '#ffffff';
+
+    FontAtlasRenderer.renderText(ctx, stat.label, rightColumnX, statsY, fontId, fontAtlasImage, 1, 'left', color);
+
+    const valueWidth = FontAtlasRenderer.measureText(stat.value, font);
+    const valueX = rightColumnX + columnWidth - valueWidth;
+    FontAtlasRenderer.renderText(ctx, stat.value, valueX, statsY, fontId, fontAtlasImage, 1, 'left', color);
+
+    statsY += this.config.lineSpacing;
+  }
+
+  return statsY; // Return Y position after last stat row
 }
 ```
 
-### Step 6: Implement Abilities View Rendering
-Create new method to render abilities and equipment:
-```typescript
-private renderAbilitiesView(ctx: CanvasRenderingContext2D, startY: number): number {
-  const padding = 1;
-  const lineHeight = 8;
-  let y = startY;
+**Rationale**: Minimal changes - just extracted existing code into method.
 
-  ctx.fillStyle = 'white';
-  ctx.font = '8px "Press Start 2P"';
+---
+
+### Step 6: Implement Abilities View Rendering
+Create new method for abilities/equipment view:
+```typescript
+private renderAbilitiesView(
+  ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
+  startY: number
+): number {
+  const padding = this.config.padding;
+  const lineSpacing = this.config.lineSpacing;
+  let y = startY + 4; // 4px spacing before abilities
 
   // Render ability slots
-  y = this.renderAbilitySlot(ctx, 'Reaction', this.unit.reactionAbility, y);
-  y = this.renderAbilitySlot(ctx, 'Passive', this.unit.passiveAbility, y);
-  y = this.renderAbilitySlot(ctx, 'Movement', this.unit.movementAbility, y);
+  y = this.renderAbilitySlot(ctx, region, 'Reaction', this.unit.reactionAbility, fontId, fontAtlasImage, font, y);
+  y = this.renderAbilitySlot(ctx, region, 'Passive', this.unit.passiveAbility, fontId, fontAtlasImage, font, y);
+  y = this.renderAbilitySlot(ctx, region, 'Movement', this.unit.movementAbility, fontId, fontAtlasImage, font, y);
 
   // Render equipment slots (only for humanoid units)
-  if (this.unit instanceof HumanoidUnit) {
-    y = this.renderEquipmentSlot(ctx, 'L.Hand', this.unit.leftHand, y);
-    y = this.renderEquipmentSlot(ctx, 'R.Hand', this.unit.rightHand, y);
-    y = this.renderEquipmentSlot(ctx, 'Head', this.unit.head, y);
-    y = this.renderEquipmentSlot(ctx, 'Body', this.unit.body, y);
-    y = this.renderEquipmentSlot(ctx, 'Accessory', this.unit.accessory, y);
+  if ('leftHand' in this.unit) {
+    const humanoid = this.unit as any; // Type assertion for equipment access
+    y = this.renderEquipmentSlot(ctx, region, 'L.Hand', humanoid.leftHand, fontId, fontAtlasImage, font, y);
+    y = this.renderEquipmentSlot(ctx, region, 'R.Hand', humanoid.rightHand, fontId, fontAtlasImage, font, y);
+    y = this.renderEquipmentSlot(ctx, region, 'Head', humanoid.head, fontId, fontAtlasImage, font, y);
+    y = this.renderEquipmentSlot(ctx, region, 'Body', humanoid.body, fontId, fontAtlasImage, font, y);
+    y = this.renderEquipmentSlot(ctx, region, 'Accessory', humanoid.accessory, fontId, fontAtlasImage, font, y);
   }
 
   return y;
 }
 ```
 
+**Rationale**: Checks for equipment properties at runtime (humanoid vs monster). Returns Y position after all slots.
+
+---
+
 ### Step 7: Implement Ability Slot Rendering
 ```typescript
 private renderAbilitySlot(
   ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
   label: string,
-  ability: Ability | null,
+  ability: CombatAbility | null,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
   y: number
 ): number {
-  const padding = 1;
-  const lineHeight = 8;
+  const padding = this.config.padding;
+  const lineSpacing = this.config.lineSpacing;
 
-  // Label (left-aligned)
-  ctx.fillText(label, padding, y + 6);
+  // Determine color based on hover
+  const isHovered = this.hoveredStatId === label;
+  const color = isHovered ? HOVERED_TEXT : '#ffffff';
 
-  // Ability name (right-aligned) or "-" if empty
+  // Render label (left-aligned)
+  const labelX = region.x + padding;
+  FontAtlasRenderer.renderText(ctx, label, labelX, y, fontId, fontAtlasImage, 1, 'left', color);
+
+  // Render ability name or "-" (right-aligned)
   const abilityName = ability ? ability.name : '-';
-  const textWidth = ctx.measureText(abilityName).width;
-  ctx.fillText(abilityName, this.width - padding - textWidth, y + 6);
+  const valueWidth = FontAtlasRenderer.measureText(abilityName, font);
+  const valueX = region.x + region.width - padding - valueWidth;
+  FontAtlasRenderer.renderText(ctx, abilityName, valueX, y, fontId, fontAtlasImage, 1, 'left', color);
 
-  return y + lineHeight;
+  return y + lineSpacing;
 }
 ```
+
+**Rationale**: Same layout pattern as stats (label left, value right). Uses `hoveredStatId` for consistency.
+
+---
 
 ### Step 8: Implement Equipment Slot Rendering
 ```typescript
 private renderEquipmentSlot(
   ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
   label: string,
-  equipment: Equipment | null,
+  equipment: any, // Equipment | null
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
   y: number
 ): number {
-  const padding = 1;
-  const lineHeight = 8;
+  const padding = this.config.padding;
+  const lineSpacing = this.config.lineSpacing;
 
-  // Label (left-aligned)
-  ctx.fillText(label, padding, y + 6);
+  // Determine color based on hover
+  const isHovered = this.hoveredStatId === label;
+  const color = isHovered ? HOVERED_TEXT : '#ffffff';
 
-  // Equipment name (right-aligned) or "-" if empty
+  // Render label (left-aligned)
+  const labelX = region.x + padding;
+  FontAtlasRenderer.renderText(ctx, label, labelX, y, fontId, fontAtlasImage, 1, 'left', color);
+
+  // Render equipment name or "-" (right-aligned)
   const equipmentName = equipment ? equipment.name : '-';
-  const textWidth = ctx.measureText(equipmentName).width;
-  ctx.fillText(equipmentName, this.width - padding - textWidth, y + 6);
+  const valueWidth = FontAtlasRenderer.measureText(equipmentName, font);
+  const valueX = region.x + region.width - padding - valueWidth;
+  FontAtlasRenderer.renderText(ctx, equipmentName, valueX, y, fontId, fontAtlasImage, 1, 'left', color);
 
-  return y + lineHeight;
+  return y + lineSpacing;
 }
 ```
+
+**Rationale**: Identical to ability slot rendering. Same hover pattern.
+
+---
 
 ### Step 9: Implement Toggle Button Rendering
 ```typescript
-private renderToggleButton(ctx: CanvasRenderingContext2D, y: number): number {
-  const lineHeight = 8;
+private renderToggleButton(
+  ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
+  y: number
+): number {
+  const lineSpacing = this.config.lineSpacing;
   const buttonText = this.currentView === 'stats' ? 'View Abilities' : 'Back';
 
-  ctx.fillStyle = 'white';
-  ctx.font = '8px "Press Start 2P"';
+  // Measure text width for centering
+  const textWidth = FontAtlasRenderer.measureText(buttonText, font);
+  const textX = region.x + Math.floor((region.width - textWidth) / 2);
 
-  // Center the button text
-  const textWidth = ctx.measureText(buttonText).width;
-  const x = (this.width - textWidth) / 2;
-
-  ctx.fillText(buttonText, x, y + 6);
+  // Render button text (centered)
+  FontAtlasRenderer.renderText(ctx, buttonText, textX, y, fontId, fontAtlasImage, 1, 'left', '#ffffff');
 
   // Store button bounds for click detection
   this.buttonBounds = {
-    x: x,
-    y: y,
+    x: textX - region.x, // Panel-relative X
+    y: y - region.y,     // Panel-relative Y
     width: textWidth,
-    height: lineHeight
+    height: lineSpacing
   };
 
-  return lineHeight;
+  return y + lineSpacing;
 }
 ```
 
-Add button bounds property:
-```typescript
-private buttonBounds: { x: number; y: number; width: number; height: number } | null = null;
-```
+**Rationale**: Centered text, stores bounds for click detection. Returns Y position after button.
 
-### Step 10: Update Helper Text Logic
-Refactor helper text to support abilities and equipment:
+---
+
+### Step 10: Update Helper Text Rendering
+Modify existing `renderHelperText()` to support "Click for Detail" pattern:
 
 ```typescript
-private currentHelperText: string | null = null;
-private currentHelperTextFull: string | null = null; // Store full text for "Click for Detail"
+private currentHelperTextFull: string | null = null;
 private isHelperTextTruncated: boolean = false;
 
-private renderHelperText(ctx: CanvasRenderingContext2D, startY: number): void {
-  if (!this.currentHelperText) return;
+private renderHelperText(
+  ctx: CanvasRenderingContext2D,
+  region: PanelRegion,
+  fontId: string,
+  fontAtlasImage: HTMLImageElement,
+  font: any,
+  startY: number
+): void {
+  // Get helper text from appropriate source
+  let helperText: string | null = null;
 
-  const padding = 1;
-  const lineHeight = 8;
-  const availableHeight = this.height - startY - padding;
+  if (this.hoveredStatId !== null) {
+    if (this.currentView === 'stats') {
+      // Stats view - use existing helper text
+      helperText = this.statHelperText[this.hoveredStatId] || null;
+    } else {
+      // Abilities view - get from ability/equipment
+      helperText = this.getAbilityEquipmentHelperText(this.hoveredStatId);
+    }
+  }
 
-  ctx.fillStyle = 'yellow';
-  ctx.font = '8px "Press Start 2P"';
+  if (!helperText) {
+    this.currentHelperTextFull = null;
+    this.isHelperTextTruncated = false;
+    return;
+  }
 
-  // Check if text fits in available space
-  const textLines = this.wrapText(ctx, this.currentHelperText, this.width - 2 * padding);
-  const requiredHeight = textLines.length * lineHeight;
+  const padding = this.config.padding;
+  const lineSpacing = this.config.lineSpacing;
+  const availableHeight = region.height - (startY - region.y) - padding;
+
+  // Wrap text
+  const wrappedLines = this.wrapText(helperText, region.width - (padding * 2), fontId);
+  const requiredHeight = wrappedLines.length * lineSpacing;
 
   if (requiredHeight > availableHeight) {
     // Text doesn't fit - show "Click for Detail"
     this.isHelperTextTruncated = true;
-    this.currentHelperTextFull = this.currentHelperText;
-    ctx.fillText('Click for Detail', padding, startY + 6);
+    this.currentHelperTextFull = helperText;
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      'Click for Detail',
+      region.x + padding,
+      startY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      HELPER_TEXT
+    );
   } else {
     // Text fits - render normally
     this.isHelperTextTruncated = false;
+    this.currentHelperTextFull = null;
+
     let y = startY;
-    for (const line of textLines) {
-      ctx.fillText(line, padding, y + 6);
-      y += lineHeight;
+    for (const line of wrappedLines) {
+      FontAtlasRenderer.renderText(
+        ctx,
+        line,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        HELPER_TEXT
+      );
+      y += lineSpacing;
     }
   }
-}
-
-private wrapText(ctx: CanvasRenderingContext2D, text: string, maxWidth: number): string[] {
-  // Simple word-wrapping logic (implement as needed)
-  const words = text.split(' ');
-  const lines: string[] = [];
-  let currentLine = '';
-
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const width = ctx.measureText(testLine).width;
-
-    if (width > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
-    }
-  }
-
-  if (currentLine) {
-    lines.push(currentLine);
-  }
-
-  return lines;
 }
 ```
 
-### Step 11: Update Hover Handling
-Modify `handleHover()` to detect abilities/equipment:
+**Rationale**: Extends existing helper text logic with overflow handling. Stores full text for click handler.
 
+---
+
+### Step 11: Implement Helper Text Retrieval
 ```typescript
-public handleHover(x: number, y: number): boolean {
-  if (this.currentView === 'stats') {
-    // Existing stats hover logic (unchanged)
-    return this.handleStatsHover(x, y);
-  } else {
-    // New abilities/equipment hover logic
-    return this.handleAbilitiesHover(x, y);
-  }
-}
-
-private handleAbilitiesHover(x: number, y: number): boolean {
-  const padding = 1;
-  const lineHeight = 8;
-  const headerHeight = 3 * lineHeight + padding; // Header takes 3 lines
-
-  // Calculate which line is being hovered
-  const relativeY = y - headerHeight;
-  const lineIndex = Math.floor(relativeY / lineHeight);
-
-  // Map line index to ability/equipment
-  const abilitySlots = [
-    { label: 'Reaction', item: this.unit.reactionAbility },
-    { label: 'Passive', item: this.unit.passiveAbility },
-    { label: 'Movement', item: this.unit.movementAbility }
-  ];
-
-  let currentIndex = 0;
-
+private getAbilityEquipmentHelperText(slotLabel: string): string | null {
   // Check ability slots
-  if (lineIndex < abilitySlots.length) {
-    const slot = abilitySlots[lineIndex];
-    if (slot.item) {
-      this.currentHelperText = slot.item.description;
-      this.needsRedraw = true;
-      return true;
-    }
+  if (slotLabel === 'Reaction' && this.unit.reactionAbility) {
+    return this.unit.reactionAbility.description;
   }
-
-  currentIndex = abilitySlots.length;
+  if (slotLabel === 'Passive' && this.unit.passiveAbility) {
+    return this.unit.passiveAbility.description;
+  }
+  if (slotLabel === 'Movement' && this.unit.movementAbility) {
+    return this.unit.movementAbility.description;
+  }
 
   // Check equipment slots (only for humanoid units)
-  if (this.unit instanceof HumanoidUnit) {
-    const equipmentSlots = [
-      { label: 'L.Hand', item: this.unit.leftHand },
-      { label: 'R.Hand', item: this.unit.rightHand },
-      { label: 'Head', item: this.unit.head },
-      { label: 'Body', item: this.unit.body },
-      { label: 'Accessory', item: this.unit.accessory }
-    ];
+  if ('leftHand' in this.unit) {
+    const humanoid = this.unit as any;
 
-    const equipmentIndex = lineIndex - currentIndex;
-    if (equipmentIndex >= 0 && equipmentIndex < equipmentSlots.length) {
-      const slot = equipmentSlots[equipmentIndex];
-      if (slot.item) {
-        this.currentHelperText = this.formatEquipmentHelperText(slot.item);
-        this.needsRedraw = true;
-        return true;
-      }
+    if (slotLabel === 'L.Hand' && humanoid.leftHand) {
+      return this.formatEquipmentHelperText(humanoid.leftHand);
+    }
+    if (slotLabel === 'R.Hand' && humanoid.rightHand) {
+      return this.formatEquipmentHelperText(humanoid.rightHand);
+    }
+    if (slotLabel === 'Head' && humanoid.head) {
+      return this.formatEquipmentHelperText(humanoid.head);
+    }
+    if (slotLabel === 'Body' && humanoid.body) {
+      return this.formatEquipmentHelperText(humanoid.body);
+    }
+    if (slotLabel === 'Accessory' && humanoid.accessory) {
+      return this.formatEquipmentHelperText(humanoid.accessory);
     }
   }
 
-  // No hover detected
-  if (this.currentHelperText) {
-    this.currentHelperText = null;
-    this.needsRedraw = true;
-  }
-  return false;
+  return null;
 }
 
-private formatEquipmentHelperText(equipment: Equipment): string {
-  let text = equipment.description;
+private formatEquipmentHelperText(equipment: any): string {
+  // Equipment doesn't have description property, so we use the modifier summary
+  // Format: "Equipment Name\nStat modifiers"
+  const modifierSummary = equipment.modifiers.getSummary();
 
-  // Add non-default modifiers
-  const modifiers: string[] = [];
-
-  // Assuming Equipment has properties like: hpMod, speedMod, pPowMod, etc.
-  // Check each modifier and add to list if non-zero
-  if (equipment.hpMod && equipment.hpMod !== 0) {
-    modifiers.push(`${equipment.hpMod > 0 ? '+' : ''}${equipment.hpMod} HP`);
-  }
-  if (equipment.speedMod && equipment.speedMod !== 0) {
-    modifiers.push(`${equipment.speedMod > 0 ? '+' : ''}${equipment.speedMod} Speed`);
-  }
-  if (equipment.pPowMod && equipment.pPowMod !== 0) {
-    modifiers.push(`${equipment.pPowMod > 0 ? '+' : ''}${equipment.pPowMod} P.Pow`);
-  }
-  // ... add other modifiers as needed ...
-
-  // Check multipliers (only if non-1.0)
-  if (equipment.speedMult && equipment.speedMult !== 1.0) {
-    modifiers.push(`×${equipment.speedMult} Speed`);
-  }
-  // ... add other multipliers as needed ...
-
-  if (modifiers.length > 0) {
-    text += '\n' + modifiers.join(', ');
+  if (modifierSummary === 'No modifiers') {
+    return equipment.name;
   }
 
-  return text;
+  return `${equipment.name}\n${modifierSummary}`;
 }
 ```
 
-### Step 12: Update Click Handling
-Modify `handleClick()` to handle button clicks and "Click for Detail":
+**Rationale**: Uses existing `CombatUnitModifiers.getSummary()` method. Returns formatted string with modifiers.
+
+---
+
+### Step 12: Update Hover Handling
+Modify existing `handleHover()` to support abilities view:
 
 ```typescript
-public handleClick(x: number, y: number): boolean {
+public handleHover(relativeX: number, relativeY: number): unknown {
+  // Check if mouse is outside panel bounds (existing logic)
+  if (relativeX < 0 || relativeY < 0 ||
+      relativeX >= this.lastRegionWidth ||
+      relativeY >= this.lastRegionHeight) {
+    if (this.hoveredStatId !== null) {
+      this.hoveredStatId = null;
+      return { statId: null };
+    }
+    return null;
+  }
+
+  let statId: string | null = null;
+
+  if (this.currentView === 'stats') {
+    // Use existing getStatIdAt logic
+    statId = this.getStatIdAt(relativeX, relativeY);
+  } else {
+    // New abilities view logic
+    statId = this.getAbilityEquipmentIdAt(relativeX, relativeY);
+  }
+
+  // Update hover state if changed
+  if (statId !== this.hoveredStatId) {
+    this.hoveredStatId = statId;
+    return { statId };
+  }
+
+  return null;
+}
+```
+
+**Rationale**: Reuses existing hover logic for stats, adds new method for abilities.
+
+---
+
+### Step 13: Implement Abilities Hover Detection
+```typescript
+private getAbilityEquipmentIdAt(relativeX: number, relativeY: number): string | null {
+  const padding = this.config.padding;
+  const lineSpacing = this.config.lineSpacing;
+
+  // Calculate header height (sprite + name + class = 3 lines)
+  const headerHeight = padding + (lineSpacing * 3);
+
+  // Calculate abilities start Y
+  const abilitiesStartY = headerHeight + 4; // 4px spacing
+
+  // Check if Y is below header
+  if (relativeY < abilitiesStartY) {
+    return null;
+  }
+
+  // Calculate row index
+  const rowY = relativeY - abilitiesStartY;
+  const rowIndex = Math.floor(rowY / lineSpacing);
+
+  // Ability slots (rows 0-2)
+  const abilitySlots = ['Reaction', 'Passive', 'Movement'];
+  if (rowIndex >= 0 && rowIndex < abilitySlots.length) {
+    const label = abilitySlots[rowIndex];
+
+    // Check if slot is empty (show "-")
+    if (label === 'Reaction' && !this.unit.reactionAbility) return null;
+    if (label === 'Passive' && !this.unit.passiveAbility) return null;
+    if (label === 'Movement' && !this.unit.movementAbility) return null;
+
+    return label;
+  }
+
+  // Equipment slots (rows 3-7, only for humanoid units)
+  if ('leftHand' in this.unit) {
+    const equipmentSlots = ['L.Hand', 'R.Hand', 'Head', 'Body', 'Accessory'];
+    const equipmentRowIndex = rowIndex - abilitySlots.length;
+
+    if (equipmentRowIndex >= 0 && equipmentRowIndex < equipmentSlots.length) {
+      const label = equipmentSlots[equipmentRowIndex];
+      const humanoid = this.unit as any;
+
+      // Check if slot is empty (show "-")
+      if (label === 'L.Hand' && !humanoid.leftHand) return null;
+      if (label === 'R.Hand' && !humanoid.rightHand) return null;
+      if (label === 'Head' && !humanoid.head) return null;
+      if (label === 'Body' && !humanoid.body) return null;
+      if (label === 'Accessory' && !humanoid.accessory) return null;
+
+      return label;
+    }
+  }
+
+  return null;
+}
+```
+
+**Rationale**: Similar structure to `getStatIdAt()`. Returns null for empty slots (non-interactive "-").
+
+---
+
+### Step 14: Update Click Handling
+Add new `handleClick()` method for button and "Click for Detail":
+
+```typescript
+public handleClick(relativeX: number, relativeY: number): unknown {
   // Check if button was clicked
   if (this.buttonBounds) {
-    const { x: bx, y: by, width: bw, height: bh } = this.buttonBounds;
-    if (x >= bx && x <= bx + bw && y >= by && y <= by + bh) {
+    const { x, y, width, height } = this.buttonBounds;
+    if (relativeX >= x && relativeX <= x + width &&
+        relativeY >= y && relativeY <= y + height) {
       this.toggleView();
-      this.currentHelperText = null; // Clear helper text on view switch
-      return true;
+      return { type: 'view-toggled', view: this.currentView };
     }
   }
 
   // Check if truncated helper text was clicked
   if (this.isHelperTextTruncated && this.currentHelperTextFull) {
-    // Calculate helper text bounds (simplified - assumes single line "Click for Detail")
+    // Helper text region starts after button + 2px padding
     const helperTextY = this.buttonBounds ? this.buttonBounds.y + this.buttonBounds.height + 2 : 0;
-    const helperTextHeight = 8;
+    const helperTextHeight = this.config.lineSpacing;
 
-    if (y >= helperTextY && y <= helperTextY + helperTextHeight) {
-      // Output full text to combat log
-      this.outputToCombatLog(this.currentHelperTextFull);
-      return true;
+    if (relativeY >= helperTextY && relativeY <= helperTextY + helperTextHeight) {
+      return {
+        type: 'combat-log-message',
+        message: this.currentHelperTextFull
+      };
     }
   }
 
-  return false;
-}
-
-private outputToCombatLog(text: string): void {
-  // Get combat log from CombatLayoutManager and add message
-  // Assuming we have access to the combat manager or log renderer
-  // This will need to be passed in constructor or accessed via singleton pattern
-
-  // Example (adjust based on actual architecture):
-  const combatLog = this.combatManager.getCombatLog();
-  combatLog.addMessage(text);
+  return null;
 }
 ```
 
-**Note**: The `outputToCombatLog()` method will need access to the combat log. This may require:
-- Passing CombatLayoutManager reference in constructor
-- Using a singleton pattern for CombatLog
-- Adding a callback method
+**Rationale**: Returns discriminated union for different click types. Combat log output handled by caller.
 
-### Step 13: Update Constructor
-If needed, update constructor to accept combat log reference:
+---
+
+### Step 15: Add Type Imports
+Add necessary imports at top of file:
 
 ```typescript
-constructor(
-  unit: CombatUnit,
-  width: number,
-  height: number,
-  private combatLog: CombatLog // Add if needed for "Click for Detail"
-) {
-  super(width, height);
-  this.unit = unit;
-}
+import type { CombatAbility } from '../../CombatAbility';
+// HumanoidUnit import not needed - we use duck typing ('leftHand' in this.unit)
 ```
 
-Update instantiation in CombatLayoutManager accordingly.
+**Rationale**: Minimal imports. Duck typing avoids circular dependency with HumanoidUnit.
 
-### Step 14: Add Type Imports
-Ensure necessary types are imported:
-
-```typescript
-import { HumanoidUnit } from '../../HumanoidUnit';
-import { Ability } from '../../abilities/Ability';
-import { Equipment } from '../../equipment/Equipment';
-```
+---
 
 ## Testing Checklist
 
@@ -481,79 +706,121 @@ import { Equipment } from '../../equipment/Equipment';
 - [ ] Stats view displays correctly (existing functionality)
 - [ ] "View Abilities" button appears centered below stats
 - [ ] Button has 2px padding above and below
-- [ ] Abilities view shows all 3 ability slots with correct labels
+- [ ] Button position stable when helper text changes
+- [ ] Abilities view shows 3 ability slots with correct labels
+- [ ] Ability names right-aligned, labels left-aligned
 - [ ] Equipment slots appear only for humanoid units
-- [ ] Empty slots show "-" (non-interactive)
+- [ ] Equipment names right-aligned, labels left-aligned
+- [ ] Empty slots show "-" (not interactive)
 - [ ] "Back" button appears in same position as "View Abilities"
-- [ ] Helper text appears below button
-- [ ] Button position doesn't move when helper text changes
+- [ ] Helper text appears below button in yellow
 
 ### Interaction Tests
 - [ ] Clicking "View Abilities" switches to abilities view
 - [ ] Clicking "Back" returns to stats view
 - [ ] View state persists when switching between units
-- [ ] Hovering over ability shows description in helper text
-- [ ] Hovering over equipment shows description + stat modifiers
+- [ ] Hovering over ability shows description
+- [ ] Hovering over equipment shows name + modifiers
 - [ ] Hovering over "-" (empty slot) does nothing
-- [ ] Helper text wraps correctly for long descriptions
-- [ ] "Click for Detail" appears when helper text exceeds space
-- [ ] Clicking "Click for Detail" outputs to combat log
-- [ ] Combat log displays full text correctly
+- [ ] Helper text wraps correctly
+- [ ] "Click for Detail" appears when helper text too long
+- [ ] Clicking "Click for Detail" triggers combat log output
+- [ ] Switching views clears helper text
 
 ### Edge Cases
-- [ ] Monster units (non-humanoid) show no equipment section
+- [ ] Monster units show no equipment section
 - [ ] Units with all empty ability slots display correctly
-- [ ] Equipment with no stat modifiers shows description only
-- [ ] Equipment with multiple modifiers formats correctly (e.g., "+5 P.Pow, ×1.5 Crit")
+- [ ] Equipment with no modifiers shows name only
+- [ ] Equipment with multiple modifiers formats correctly
 - [ ] Very long ability descriptions trigger "Click for Detail"
-- [ ] Switching views clears helper text appropriately
+- [ ] Panel works at minimum size (144×108px)
 
 ### Unit Type Coverage
 - [ ] Test with player HumanoidUnit (has equipment)
 - [ ] Test with enemy HumanoidUnit (has equipment)
 - [ ] Test with MonsterUnit (no equipment)
-- [ ] Test with units having various ability combinations
+- [ ] Test with units having various ability slot combinations
+
+---
 
 ## Potential Issues & Solutions
 
-### Issue 1: Equipment Property Names Unknown
-**Problem**: Equipment class properties for stat modifiers are not confirmed
-**Solution**: Review Equipment.ts to identify exact property names (hpMod, speedMod, etc.)
+### Issue 1: Combat Log Access
+**Problem**: UnitInfoContent doesn't have direct access to combat log for "Click for Detail"
+**Solution**: Return `{ type: 'combat-log-message', message: string }` from `handleClick()`. Let parent (phase handler or layout manager) output to combat log.
 
-### Issue 2: Combat Log Access
-**Problem**: UnitInfoContent may not have direct access to combat log
-**Solution**: Pass CombatLog reference through constructor or use event system
+### Issue 2: Equipment Has No Description Property
+**Problem**: Equipment class doesn't have `description` property
+**Solution**: Use equipment `name` + `modifiers.getSummary()` as helper text. This shows stat bonuses which is what users need.
 
-### Issue 3: Text Wrapping Complexity
-**Problem**: Word wrapping for helper text may be more complex than anticipated
-**Solution**: Can use existing text rendering utilities if available, or implement simple character-based wrapping
+### Issue 3: Type Safety for HumanoidUnit Equipment
+**Problem**: CombatUnit interface doesn't include equipment properties
+**Solution**: Use duck typing with `'leftHand' in this.unit` check. Cast to `any` when accessing equipment. This avoids import cycles.
 
-### Issue 4: Button Click Detection
-**Problem**: Click coordinates may need transformation if panel is positioned/scaled
-**Solution**: Ensure click coordinates are panel-relative before detection
+### Issue 4: Helper Text Area Calculation
+**Problem**: Need to calculate available vertical space for helper text
+**Solution**: Track Y position throughout render. Available space = `region.height - (currentY - region.y) - padding`
+
+---
 
 ## Files Modified
-1. `react-app/src/models/combat/managers/panels/UnitInfoContent.ts` (primary changes)
-2. `react-app/src/models/combat/managers/CombatLayoutManager.ts` (if constructor signature changes)
 
-## Files to Review
+1. `react-app/src/models/combat/managers/panels/UnitInfoContent.ts` (primary changes)
+
+---
+
+## Files to Review (for reference)
+
 1. `react-app/src/models/combat/CombatUnit.ts` (ability properties)
 2. `react-app/src/models/combat/HumanoidUnit.ts` (equipment properties)
-3. `react-app/src/models/combat/equipment/Equipment.ts` (stat modifier properties)
-4. `react-app/src/models/combat/abilities/Ability.ts` (description property)
+3. `react-app/src/models/combat/Equipment.ts` (modifiers)
+4. `react-app/src/models/combat/CombatUnitModifiers.ts` (getSummary method)
+5. `react-app/src/models/combat/CombatAbility.ts` (description property)
 
-## Estimated Complexity
-**Medium** - 3-4 hours of focused work
-- Refactoring: 1 hour (split render() into methods)
-- New rendering: 1.5 hours (abilities view, button, helper text)
-- Interaction: 1 hour (click handling, hover detection)
-- Testing: 0.5-1 hour (visual and interaction tests)
+---
+
+## Implementation Order
+
+1. Add state variables (Step 1)
+2. Add toggle method (Step 2)
+3. Refactor existing render() - extract header, stats (Steps 3-5)
+4. Implement abilities view rendering (Steps 6-8)
+5. Implement button rendering (Step 9)
+6. Update helper text logic (Steps 10-11)
+7. Update hover handling (Steps 12-13)
+8. Add click handling (Step 14)
+9. Add imports (Step 15)
+10. Test thoroughly (use checklist)
+
+---
 
 ## Success Criteria
+
 ✅ Users can toggle between stats and abilities views
-✅ Abilities and equipment display correctly with proper formatting
+✅ Abilities and equipment display with correct formatting
 ✅ Helper text shows ability/equipment details on hover
-✅ Long descriptions use "Click for Detail" → combat log pattern
-✅ View state persists per unit (due to caching)
+✅ Long descriptions use "Click for Detail" pattern
+✅ View state persists per unit
 ✅ No visual glitches or layout issues
-✅ All interaction patterns work smoothly
+✅ All rendering uses FontAtlasRenderer and SpriteRenderer
+✅ No violations of GeneralGuidelines.md
+✅ All tests pass
+
+---
+
+## Guidelines Compliance Checklist
+
+✅ Uses `FontAtlasRenderer.renderText()` for ALL text (no `ctx.fillText()`)
+✅ Uses `SpriteRenderer.renderSpriteById()` for ALL sprites (no direct `ctx.drawImage()`)
+✅ Caches stateful component (UnitInfoContent already cached)
+✅ Uses existing `PanelContent` interface
+✅ No domain model changes
+✅ Single file modification (UnitInfoContent.ts)
+✅ Returns Y position from each render section (structured layout)
+✅ Immutable state updates (toggle creates new state)
+✅ Hover detection uses panel-relative coordinates
+✅ Click handling returns discriminated union
+
+---
+
+**End of Implementation Plan**
