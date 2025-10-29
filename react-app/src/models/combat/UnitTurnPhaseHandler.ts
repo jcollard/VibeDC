@@ -324,53 +324,42 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     const hoveredAttackTarget = this.currentStrategy?.getHoveredAttackTarget?.() ?? null;
 
     // Render attack range highlights - rendered AFTER units (on top)
+    // Each tile gets exactly ONE color based on priority:
+    // 1. Orange (hovered target) - highest priority
+    // 2. Yellow (valid target)
+    // 3. Grey (blocked)
+    // 4. Red (base range) - lowest priority
     if (attackRange) {
-      // Render base range tiles (red) - tiles within weapon range
+      // Build a map of position -> color to determine which color each tile should have
+      const tileColors = new Map<string, string>();
+
+      // Helper to create position key
+      const posKey = (pos: Position) => `${pos.x},${pos.y}`;
+
+      // Start with red for all base range tiles (lowest priority)
       for (const position of attackRange.inRange) {
-        const x = Math.floor(offsetX + (position.x * tileSize));
-        const y = Math.floor(offsetY + (position.y * tileSize));
-
-        this.renderTintedSprite(
-          ctx,
-          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
-          spriteImages,
-          spriteSize,
-          x,
-          y,
-          tileSize,
-          tileSize,
-          CombatConstants.UNIT_TURN.ATTACK_RANGE_BASE_COLOR,  // Red
-          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
-        );
+        tileColors.set(posKey(position), CombatConstants.UNIT_TURN.ATTACK_RANGE_BASE_COLOR);
       }
 
-      // Render blocked tiles (grey) - no line of sight
+      // Override with grey for blocked tiles (higher priority)
       for (const position of attackRange.blocked) {
-        const x = Math.floor(offsetX + (position.x * tileSize));
-        const y = Math.floor(offsetY + (position.y * tileSize));
-
-        this.renderTintedSprite(
-          ctx,
-          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
-          spriteImages,
-          spriteSize,
-          x,
-          y,
-          tileSize,
-          tileSize,
-          CombatConstants.UNIT_TURN.ATTACK_RANGE_BLOCKED_COLOR,  // Grey
-          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
-        );
+        tileColors.set(posKey(position), CombatConstants.UNIT_TURN.ATTACK_RANGE_BLOCKED_COLOR);
       }
 
-      // Render valid target highlights (yellow) - on top of red/grey
+      // Override with yellow for valid targets (even higher priority)
       for (const position of attackRange.validTargets) {
-        // Skip hovered target (will render with orange below)
-        if (hoveredAttackTarget &&
-            position.x === hoveredAttackTarget.x &&
-            position.y === hoveredAttackTarget.y) {
-          continue;
-        }
+        tileColors.set(posKey(position), CombatConstants.UNIT_TURN.ATTACK_TARGET_VALID_COLOR);
+      }
+
+      // Override with orange for hovered target (highest priority)
+      if (hoveredAttackTarget) {
+        tileColors.set(posKey(hoveredAttackTarget), CombatConstants.UNIT_TURN.ATTACK_TARGET_HOVER_COLOR);
+      }
+
+      // Now render each tile exactly once with its final color
+      for (const [key, color] of tileColors.entries()) {
+        const [xStr, yStr] = key.split(',');
+        const position = { x: parseInt(xStr), y: parseInt(yStr) };
 
         const x = Math.floor(offsetX + (position.x * tileSize));
         const y = Math.floor(offsetY + (position.y * tileSize));
@@ -384,26 +373,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
           y,
           tileSize,
           tileSize,
-          CombatConstants.UNIT_TURN.ATTACK_TARGET_VALID_COLOR,  // Yellow
-          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
-        );
-      }
-
-      // Render hovered attack target (orange) - on top of yellow
-      if (hoveredAttackTarget) {
-        const x = Math.floor(offsetX + (hoveredAttackTarget.x * tileSize));
-        const y = Math.floor(offsetY + (hoveredAttackTarget.y * tileSize));
-
-        this.renderTintedSprite(
-          ctx,
-          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
-          spriteImages,
-          spriteSize,
-          x,
-          y,
-          tileSize,
-          tileSize,
-          CombatConstants.UNIT_TURN.ATTACK_TARGET_HOVER_COLOR,  // Orange
+          color,
           CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
         );
       }

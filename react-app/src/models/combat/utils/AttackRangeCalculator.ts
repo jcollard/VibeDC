@@ -1,7 +1,6 @@
 import type { Position } from '../../../types';
 import type { CombatMap } from '../CombatMap';
 import type { CombatUnitManifest } from '../CombatUnitManifest';
-import type { CombatUnit } from '../CombatUnit';
 import { LineOfSightCalculator } from './LineOfSightCalculator';
 
 export interface AttackRangeOptions {
@@ -44,6 +43,12 @@ export class AttackRangeCalculator {
     for (const tile of tilesInRange) {
       inRange.push(tile);
 
+      // Check if tile is a wall (non-walkable terrain)
+      if (!map.isWalkable(tile)) {
+        blocked.push(tile);
+        continue;
+      }
+
       // Check line of sight
       const hasLoS = LineOfSightCalculator.hasLineOfSight({
         from: attackerPosition,
@@ -57,14 +62,10 @@ export class AttackRangeCalculator {
         continue;
       }
 
-      // Check if there's an enemy unit at this position
+      // Check if there's any unit at this position (friendly fire allowed)
       const unitAtPosition = unitManifest.getUnitAtPosition(tile);
       if (unitAtPosition) {
-        // Get the attacking unit to check if target is an enemy
-        const attacker = unitManifest.getUnitAtPosition(attackerPosition);
-        if (attacker && this.isEnemy(attacker, unitAtPosition)) {
-          validTargets.push(tile);
-        }
+        validTargets.push(tile);
       }
     }
 
@@ -109,12 +110,5 @@ export class AttackRangeCalculator {
     }
 
     return tiles;
-  }
-
-  /**
-   * Check if two units are enemies (different teams)
-   */
-  private static isEnemy(unit1: CombatUnit, unit2: CombatUnit): boolean {
-    return unit1.isPlayerControlled !== unit2.isPlayerControlled;
   }
 }

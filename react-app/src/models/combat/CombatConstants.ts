@@ -91,7 +91,7 @@ export const CombatConstants = {
 
     // Attack range highlights
     ATTACK_RANGE_BASE_COLOR: '#ff0000',      // Red (base attack range)
-    ATTACK_RANGE_BLOCKED_COLOR: '#808080',   // Grey (blocked tiles - no line of sight)
+    ATTACK_RANGE_BLOCKED_COLOR: '#ffffff',   // White (blocked tiles - no line of sight)
     ATTACK_TARGET_VALID_COLOR: '#ffff00',    // Yellow (valid enemy targets)
     ATTACK_TARGET_HOVER_COLOR: '#ffa500',    // Orange (hovered target)
     ATTACK_TARGET_SELECTED_COLOR: '#00ff00', // Green (selected target)
