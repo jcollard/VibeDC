@@ -747,6 +747,68 @@ export const EquipmentRegistryPanel: React.FC<EquipmentRegistryPanelProps> = ({ 
                 </div>
               </div>
 
+              {/* Weapon Range Section */}
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: '#9c27b0' }}>
+                  Weapon Range
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11px' }}>
+                  {/* Min Range */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Min Range:</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedEquipment?.minRange ?? ''}
+                        onChange={(e) => handleFieldChange('minRange', e.target.value ? Number(e.target.value) : undefined)}
+                        placeholder="—"
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ color: selectedEquipment.minRange !== undefined ? '#9c27b0' : '#666' }}>
+                        {selectedEquipment.minRange ?? '—'}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Max Range */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Max Range:</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedEquipment?.maxRange ?? ''}
+                        onChange={(e) => handleFieldChange('maxRange', e.target.value ? Number(e.target.value) : undefined)}
+                        placeholder="—"
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ color: selectedEquipment.maxRange !== undefined ? '#9c27b0' : '#666' }}>
+                        {selectedEquipment.maxRange ?? '—'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
               {/* Modifiers Section */}
               <div style={{ marginTop: '12px' }}>
                 <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: '#4caf50' }}>
@@ -919,7 +981,7 @@ export const EquipmentRegistryPanel: React.FC<EquipmentRegistryPanelProps> = ({ 
                     {selectedEquipment.typeTags && selectedEquipment.typeTags.length > 0
                       ? selectedEquipment.typeTags
                           .filter(tag => !EquipmentTagRegistry.isHidden(tag))
-                          .map(tag => EquipmentTagRegistry.getDisplayName(tag))
+                          .map(tag => `${EquipmentTagRegistry.getDisplayName(tag)} (${tag})`)
                           .join(', ')
                       : 'No tags'}
                   </div>
