@@ -585,22 +585,15 @@ export class UnitInfoContent implements PanelContent {
       // Abilities view
       statId = this.getAbilityEquipmentIdAt(relativeX, relativeY);
 
-      // If hovering over ability/equipment slot, get detail info
+      // If hovering over ability/equipment, return detail info
       if (statId !== null) {
         const detailInfo = this.getDetailInfo(statId);
         if (detailInfo) {
-          // Has item - update hover state and return detail info
+          // Update hover state if changed
           if (statId !== this.hoveredStatId) {
             this.hoveredStatId = statId;
           }
           return detailInfo; // { type: 'ability-detail' | 'equipment-detail', item: ... }
-        } else {
-          // Empty slot - restore original panel
-          if (this.hoveredStatId !== null) {
-            this.hoveredStatId = null;
-            return { statId: null };
-          }
-          return null;
         }
       }
 
