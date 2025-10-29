@@ -558,16 +558,25 @@ export class UnitInfoContent implements PanelContent {
     }
 
     // Check if truncated helper text was clicked
+    // Allow clicking either on the "Click for Detail" text OR on the item itself
     if (this.isHelperTextTruncated && this.currentHelperTextFull) {
       const helperTextY = this.buttonBounds ? this.buttonBounds.y + this.buttonBounds.height + 2 : 0;
       const helperTextHeight = this.config.lineSpacing;
 
+      // Check if clicking on "Click for Detail" text
       if (relativeY >= helperTextY && relativeY <= helperTextY + helperTextHeight) {
         return {
           type: 'combat-log-message',
           message: this.currentHelperTextFull
         };
       }
+
+      // Also allow clicking anywhere on the panel when helper text is truncated
+      // This makes it easier to trigger - click the item name or anywhere
+      return {
+        type: 'combat-log-message',
+        message: this.currentHelperTextFull
+      };
     }
 
     return null;
