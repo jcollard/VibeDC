@@ -22,6 +22,18 @@ tags:
     isRestriction: true
 
   # Weapon Type
+  - id: "weapon"
+    displayName: "Weapon"
+    category: "weapon"
+    description: "Any weapon"
+    isRestriction: false
+
+  - id: "two-handed"
+    displayName: "Two-Handed"
+    category: "weapon"
+    description: "Weapons that require both hands"
+    isRestriction: false
+
   - id: "magical-weapon"
     displayName: "Magical"
     category: "weapon"

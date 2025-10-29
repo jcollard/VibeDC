@@ -161,7 +161,7 @@ equipment:
       physicalPower: 1.1
     minRange: 1
     maxRange: 1
-    typeTags: ["medium-weapon", "magical-weapon"]
+    typeTags: ["weapon", "medium-weapon", "magical-weapon"]
 
   - id: "iron-sword-001"
     name: "Iron Sword"
@@ -171,7 +171,7 @@ equipment:
       speed: 2
     minRange: 1
     maxRange: 1
-    typeTags: ["medium-weapon"]
+    typeTags: ["weapon", "medium-weapon"]
 
   - id: "steel-dagger-001"
     name: "Steel Dagger"
@@ -183,7 +183,7 @@ equipment:
       - "rogue-001"
     minRange: 1
     maxRange: 1
-    typeTags: ["light-weapon"]
+    typeTags: ["weapon", "light-weapon"]
 
 
   # Shield
@@ -228,7 +228,7 @@ equipment:
       physicalPower: 1.2
     minRange: 1
     maxRange: 1
-    typeTags: ["heavy-weapon"]
+    typeTags: ["weapon", "two-handed", "heavy-weapon"]
 
   - id: "magic-staff-001"
     name: "Magic Staff"
@@ -242,7 +242,7 @@ equipment:
       - "apprentice-001"
     minRange: 1
     maxRange: 1
-    typeTags: ["medium-weapon", "magical-weapon"]
+    typeTags: ["weapon", "two-handed", "medium-weapon", "magical-weapon"]
 
   - id: "war-hammer-001"
     name: "War Hammer"
@@ -256,7 +256,7 @@ equipment:
       - "fighter-001"
     minRange: 1
     maxRange: 1
-    typeTags: ["heavy-weapon"]
+    typeTags: ["weapon", "two-handed", "heavy-weapon"]
 
   # Bows (TwoHandedWeapon)
   - id: "short-bow-001"
@@ -267,7 +267,7 @@ equipment:
       speed: 3
     minRange: 2
     maxRange: 5
-    typeTags: ["light-weapon", "ranged-weapon"]
+    typeTags: ["weapon", "two-handed", "light-weapon", "ranged-weapon"]
 
   - id: "long-bow-001"
     name: "Long Bow"
@@ -279,7 +279,7 @@ equipment:
       physicalPower: 1.1
     minRange: 2
     maxRange: 5
-    typeTags: ["medium-weapon", "ranged-weapon"]
+    typeTags: ["weapon", "two-handed", "medium-weapon", "ranged-weapon"]
 
   - id: "war-bow-001"
     name: "War Bow"
@@ -291,7 +291,7 @@ equipment:
       physicalPower: 1.2
     minRange: 2
     maxRange: 5
-    typeTags: ["heavy-weapon", "ranged-weapon"]
+    typeTags: ["weapon", "two-handed", "heavy-weapon", "ranged-weapon"]
 
   # Crossbows (OneHandedWeapon)
   - id: "light-crossbow-001"
@@ -302,7 +302,7 @@ equipment:
       speed: -1
     minRange: 2
     maxRange: 3
-    typeTags: ["light-weapon", "ranged-weapon"]
+    typeTags: ["weapon", "light-weapon", "ranged-weapon"]
 
   - id: "heavy-crossbow-001"
     name: "Heavy Crossbow"
@@ -314,7 +314,7 @@ equipment:
       physicalPower: 1.15
     minRange: 2
     maxRange: 3
-    typeTags: ["medium-weapon", "ranged-weapon"]
+    typeTags: ["weapon", "medium-weapon", "ranged-weapon"]
 
   - id: "repeating-crossbow-001"
     name: "Repeating Crossbow"
@@ -326,5 +326,5 @@ equipment:
       speed: 1.1
     minRange: 2
     maxRange: 3
-    typeTags: ["medium-weapon", "ranged-weapon"]
+    typeTags: ["weapon", "medium-weapon", "ranged-weapon"]
 
