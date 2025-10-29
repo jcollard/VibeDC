@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { UnitClassRegistry, type UnitClassDefinition } from '../../utils/UnitClassRegistry';
 import { UnitClass } from '../../models/combat/UnitClass';
 import { CombatAbility } from '../../models/combat/CombatAbility';
+import { EquipmentTagRegistry } from '../../utils/EquipmentTagRegistry';
 
 interface ClassRegistryPanelProps {
   onClose?: () => void;
@@ -194,6 +195,13 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
         });
       }
 
+      if (unitClass.allowedEquipmentTypes && unitClass.allowedEquipmentTypes.length > 0) {
+        yaml += '    allowedEquipmentTypes:\n';
+        unitClass.allowedEquipmentTypes.forEach(tag => {
+          yaml += `      - "${tag}"\n`;
+        });
+      }
+
       yaml += '\n';
     });
 
@@ -350,6 +358,16 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
     const requirements = { ...(editedClass.requirements || {}) };
     requirements[classId] = xp;
     setEditedClass({ ...editedClass, requirements });
+  };
+
+  // Handle toggling equipment type tags
+  const handleEquipmentTypeToggle = (tagId: string) => {
+    if (!editedClass) return;
+    const currentTypes = editedClass.allowedEquipmentTypes || [];
+    const newTypes = currentTypes.includes(tagId)
+      ? currentTypes.filter(t => t !== tagId)
+      : [...currentTypes, tagId];
+    setEditedClass({ ...editedClass, allowedEquipmentTypes: newTypes.length > 0 ? newTypes : undefined });
   };
 
   const displayClass = isEditing ? editedClass : selectedClass;
@@ -888,7 +906,7 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                     </div>
 
                     {/* Requirements */}
-                    <div>
+                    <div style={{ marginBottom: '12px' }}>
                       <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>Requirements:</div>
                       <div
                         style={{
@@ -988,6 +1006,100 @@ export function ClassRegistryPanel({ onClose }: ClassRegistryPanelProps) {
                           </div>
                         )}
                       </div>
+                    </div>
+
+                    {/* Allowed Equipment Types */}
+                    <div>
+                      <div style={{ fontSize: '11px', marginBottom: '4px', color: '#aaa' }}>
+                        Allowed Equipment Types:
+                      </div>
+                      {isEditing ? (
+                        <div
+                          style={{
+                            background: 'rgba(255, 152, 0, 0.1)',
+                            border: '1px solid rgba(255, 152, 0, 0.3)',
+                            borderRadius: '4px',
+                            padding: '8px',
+                          }}
+                        >
+                          {EquipmentTagRegistry.getAllCategories().map(category => {
+                            const tagsInCategory = EquipmentTagRegistry.getByCategory(category);
+                            const visibleTags = tagsInCategory.filter(tag => !tag.hidden);
+
+                            if (visibleTags.length === 0) return null;
+
+                            return (
+                              <div key={category} style={{ marginBottom: '8px' }}>
+                                <div style={{ fontSize: '10px', color: '#ff9800', marginBottom: '4px', textTransform: 'capitalize' }}>
+                                  {category}:
+                                </div>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px' }}>
+                                  {visibleTags.map(tag => {
+                                    const isSelected = editedClass?.allowedEquipmentTypes?.includes(tag.id) ?? false;
+                                    return (
+                                      <label
+                                        key={tag.id}
+                                        style={{
+                                          display: 'flex',
+                                          alignItems: 'center',
+                                          gap: '4px',
+                                          padding: '3px 6px',
+                                          background: isSelected ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                                          border: isSelected ? '1px solid rgba(255, 152, 0, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                          borderRadius: '3px',
+                                          fontSize: '9px',
+                                          cursor: 'pointer',
+                                          transition: 'all 0.2s',
+                                          userSelect: 'none',
+                                        }}
+                                        onMouseEnter={(e) => {
+                                          if (!isSelected) {
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                                          }
+                                        }}
+                                        onMouseLeave={(e) => {
+                                          if (!isSelected) {
+                                            e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                            e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                          }
+                                        }}
+                                        title={tag.description}
+                                      >
+                                        <input
+                                          type="checkbox"
+                                          checked={isSelected}
+                                          onChange={() => handleEquipmentTypeToggle(tag.id)}
+                                          style={{ cursor: 'pointer' }}
+                                        />
+                                        <span>{tag.displayName}</span>
+                                      </label>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div
+                          style={{
+                            background: 'rgba(255, 152, 0, 0.1)',
+                            border: '1px solid rgba(255, 152, 0, 0.3)',
+                            borderRadius: '4px',
+                            padding: '8px',
+                            fontSize: '10px',
+                            minHeight: '40px',
+                          }}
+                        >
+                          {displayClass.allowedEquipmentTypes && displayClass.allowedEquipmentTypes.length > 0
+                            ? displayClass.allowedEquipmentTypes
+                                .filter(tag => !EquipmentTagRegistry.isHidden(tag))
+                                .map(tag => EquipmentTagRegistry.getDisplayName(tag))
+                                .join(', ')
+                            : 'All equipment types allowed (no restrictions)'}
+                        </div>
+                      )}
                     </div>
                   </div>
 
