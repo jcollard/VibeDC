@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { EquipmentRegistry, type EquipmentDefinition } from '../../utils/EquipmentRegistry';
 import type { EquipmentType } from '../../models/combat/Equipment';
+import { EquipmentTagRegistry } from '../../utils/EquipmentTagRegistry';
 
 interface EquipmentRegistryPanelProps {
   onClose?: () => void;
@@ -171,6 +172,19 @@ export const EquipmentRegistryPanel: React.FC<EquipmentRegistryPanelProps> = ({ 
         });
       }
 
+      // Add weapon range if they exist
+      if (equip.minRange !== undefined) {
+        yaml += `    minRange: ${equip.minRange}\n`;
+      }
+      if (equip.maxRange !== undefined) {
+        yaml += `    maxRange: ${equip.maxRange}\n`;
+      }
+
+      // Add type tags if they exist
+      if (equip.typeTags && equip.typeTags.length > 0) {
+        yaml += `    typeTags: [${equip.typeTags.map(tag => `"${tag}"`).join(', ')}]\n`;
+      }
+
       yaml += '\n';
     }
 
@@ -251,6 +265,16 @@ export const EquipmentRegistryPanel: React.FC<EquipmentRegistryPanelProps> = ({ 
       (multipliers as any)[stat] = value;
     }
     setEditedEquipment({ ...editedEquipment, multipliers: Object.keys(multipliers).length > 0 ? multipliers : undefined });
+  };
+
+  // Handle tag toggle
+  const handleTagToggle = (tagId: string) => {
+    if (!editedEquipment) return;
+    const currentTags = editedEquipment.typeTags || [];
+    const newTags = currentTags.includes(tagId)
+      ? currentTags.filter(t => t !== tagId)
+      : [...currentTags, tagId];
+    setEditedEquipment({ ...editedEquipment, typeTags: newTags.length > 0 ? newTags : undefined });
   };
 
   return (
@@ -822,6 +846,84 @@ export const EquipmentRegistryPanel: React.FC<EquipmentRegistryPanelProps> = ({ 
                     ? (isEditing ? editedEquipment?.allowedClasses : selectedEquipment.allowedClasses)?.join(', ')
                     : 'All classes (empty means no restrictions)'}
                 </div>
+              </div>
+
+              {/* Type Tags Section */}
+              <div style={{ marginTop: '12px' }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px', color: '#ff9800' }}>
+                  Type Tags
+                </div>
+                {isEditing ? (
+                  <div>
+                    {EquipmentTagRegistry.getAllCategories().map(category => {
+                      const tagsInCategory = EquipmentTagRegistry.getByCategory(category);
+                      const visibleTags = tagsInCategory.filter(tag => !tag.hidden);
+
+                      if (visibleTags.length === 0) return null;
+
+                      return (
+                        <div key={category} style={{ marginBottom: '12px' }}>
+                          <div style={{ fontSize: '11px', color: '#ff9800', marginBottom: '6px', textTransform: 'capitalize' }}>
+                            {category}:
+                          </div>
+                          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                            {visibleTags.map(tag => {
+                              const isSelected = editedEquipment?.typeTags?.includes(tag.id) ?? false;
+                              return (
+                                <label
+                                  key={tag.id}
+                                  style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px',
+                                    padding: '4px 8px',
+                                    background: isSelected ? 'rgba(255, 152, 0, 0.3)' : 'rgba(255, 255, 255, 0.05)',
+                                    border: isSelected ? '1px solid rgba(255, 152, 0, 0.6)' : '1px solid rgba(255, 255, 255, 0.1)',
+                                    borderRadius: '3px',
+                                    fontSize: '10px',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.2s',
+                                    userSelect: 'none',
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.1)';
+                                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.2)';
+                                    }
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    if (!isSelected) {
+                                      e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                                      e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                                    }
+                                  }}
+                                  title={tag.description}
+                                >
+                                  <input
+                                    type="checkbox"
+                                    checked={isSelected}
+                                    onChange={() => handleTagToggle(tag.id)}
+                                    style={{ cursor: 'pointer' }}
+                                  />
+                                  <span>{tag.displayName}</span>
+                                </label>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div style={{ fontSize: '11px', color: '#aaa' }}>
+                    {selectedEquipment.typeTags && selectedEquipment.typeTags.length > 0
+                      ? selectedEquipment.typeTags
+                          .filter(tag => !EquipmentTagRegistry.isHidden(tag))
+                          .map(tag => EquipmentTagRegistry.getDisplayName(tag))
+                          .join(', ')
+                      : 'No tags'}
+                  </div>
+                )}
               </div>
             </div>
           )}
