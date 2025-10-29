@@ -78,14 +78,15 @@ export class ActionsMenuContent implements PanelContent {
    * @param hasMoved - Whether the unit has moved this turn
    * @param activeAction - The currently active action (for highlighting)
    * @param canResetMove - Whether the move can be reset
+   * @param canAct - Whether the unit can still perform actions this turn
    */
-  updateUnit(unit: CombatUnit, hasMoved: boolean = false, activeAction: string | null = null, canResetMove: boolean = false): void {
+  updateUnit(unit: CombatUnit, hasMoved: boolean = false, activeAction: string | null = null, canResetMove: boolean = false, canAct: boolean = true): void {
     // Store current unit reference
     this.currentUnit = unit;
     this.activeButtonId = activeAction;
 
     // Rebuild button list with current state
-    this.buttons = this.buildButtonList(unit, hasMoved, canResetMove);
+    this.buttons = this.buildButtonList(unit, hasMoved, canResetMove, canAct);
 
     // Validate hover index is still valid
     if (this.hoveredButtonIndex !== null &&
@@ -102,8 +103,9 @@ export class ActionsMenuContent implements PanelContent {
    * @param unit - The combat unit
    * @param hasMoved - Whether the unit has moved this turn
    * @param canResetMove - Whether the move can be reset
+   * @param canAct - Whether the unit can still perform actions this turn
    */
-  private buildButtonList(unit: CombatUnit, hasMoved: boolean = false, canResetMove: boolean = false): ActionButton[] {
+  private buildButtonList(unit: CombatUnit, hasMoved: boolean = false, canResetMove: boolean = false, canAct: boolean = true): ActionButton[] {
     const buttons: ActionButton[] = [];
 
     // Move or Reset Move button
@@ -125,39 +127,39 @@ export class ActionsMenuContent implements PanelContent {
       });
     }
 
-    // Attack button
+    // Attack button (disabled if canAct is false)
     buttons.push({
       id: 'attack',
       label: 'Attack',
-      enabled: true,
+      enabled: canAct,
       helperText: 'Perform a basic attack with this unit\'s weapon'
     });
 
-    // Primary class button
+    // Primary class button (disabled if canAct is false)
     const primaryClassName = unit.unitClass.name;
     buttons.push({
       id: 'primary-class',
       label: primaryClassName,
-      enabled: true,
+      enabled: canAct,
       helperText: `Perform a ${primaryClassName} action`
     });
 
-    // Secondary class button (conditional)
+    // Secondary class button (conditional, disabled if canAct is false)
     if (unit.secondaryClass) {
       const secondaryClassName = unit.secondaryClass.name;
       buttons.push({
         id: 'secondary-class',
         label: secondaryClassName,
-        enabled: true,
+        enabled: canAct,
         helperText: `Perform a ${secondaryClassName} action`
       });
     }
 
-    // Delay button (disabled if already moved)
+    // Delay button (disabled if already moved OR canAct is false)
     buttons.push({
       id: 'delay',
       label: 'Delay',
-      enabled: !hasMoved,
+      enabled: !hasMoved && canAct,
       helperText: 'Take no moves or actions and sets Action Timer to 50'
     });
 

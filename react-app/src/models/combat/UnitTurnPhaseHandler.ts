@@ -22,6 +22,9 @@ import { PlayerTurnStrategy } from './strategies/PlayerTurnStrategy';
 import { EnemyTurnStrategy } from './strategies/EnemyTurnStrategy';
 import { UnitMovementSequence } from './UnitMovementSequence';
 import { MovementPathfinder } from './utils/MovementPathfinder';
+import { AttackAnimationSequence } from './AttackAnimationSequence';
+import { CombatCalculations } from './utils/CombatCalculations';
+import type { Equipment } from './Equipment';
 
 /**
  * Unit turn phase handler - manages individual unit turns using strategy pattern
@@ -82,6 +85,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
   // Movement animation
   private movementSequence: UnitMovementSequence | null = null;
+
+  // Attack animation state
+  private attackAnimations: AttackAnimationSequence[] = []; // Can have multiple (dual wielding)
+  private attackAnimationIndex: number = 0; // Which animation is currently playing
+  private canAct: boolean = true; // Whether unit can still perform actions this turn
 
   constructor() {
     super();
@@ -244,7 +252,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   renderUI(_state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
-    const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages } = context;
+    const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages, fontAtlasImages } = context;
+    const fontAtlasImage = fontAtlasImages?.get('7px-04b03') || null;
 
     // Render animated unit during movement (rendered AFTER normal units to override)
     if (this.movementSequence) {
@@ -385,6 +394,18 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         );
       }
     }
+
+    // Render attack animations (if any)
+    if (this.attackAnimations.length > 0 && this.attackAnimationIndex < this.attackAnimations.length && fontAtlasImage) {
+      const currentAnimation = this.attackAnimations[this.attackAnimationIndex];
+      currentAnimation.render(
+        ctx,
+        tileSize,
+        offsetX,
+        offsetY,
+        fontAtlasImage
+      );
+    }
   }
 
   protected updatePhase(
@@ -394,6 +415,26 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   ): CombatState | null {
     // Store state reference for click handlers
     this.currentState = state;
+
+    // Handle attack animations if in progress
+    if (this.attackAnimations.length > 0 && this.attackAnimationIndex < this.attackAnimations.length) {
+      const currentAnimation = this.attackAnimations[this.attackAnimationIndex];
+      const isComplete = currentAnimation.update(deltaTime);
+
+      if (isComplete) {
+        // Move to next animation (if dual wielding)
+        this.attackAnimationIndex++;
+
+        // Check if all animations are complete
+        if (this.attackAnimationIndex >= this.attackAnimations.length) {
+          // All attack animations complete - finalize attack
+          return this.completeAttack(state);
+        }
+      }
+
+      // Animation still playing - stay in phase, don't process other updates
+      return state;
+    }
 
     // Handle movement animation if in progress
     if (this.movementSequence) {
@@ -431,6 +472,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.unitHasMoved = false;
       this.originalPosition = null;
       this.canResetMove = false;
+
+      // Reset action tracking
+      this.canAct = true;
+      this.attackAnimations = [];
+      this.attackAnimationIndex = 0;
 
       // Initialize appropriate strategy based on unit control
       this.currentStrategy = this.activeUnit.isPlayerControlled
@@ -902,9 +948,42 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
    * @param actionId - The ID of the selected action ('delay', 'end-turn', etc.)
    */
   handleActionSelected(actionId: string): void {
+    // Handle perform-attack action directly in phase handler
+    if (actionId === 'perform-attack') {
+      this.handlePerformAttack();
+      return;
+    }
+
     if (this.currentStrategy) {
       this.currentStrategy.handleActionSelected(actionId);
     }
+  }
+
+  /**
+   * Handle perform attack action - execute the attack
+   */
+  private handlePerformAttack(): void {
+    if (!this.activeUnit || !this.activeUnitPosition || !this.currentState) {
+      console.warn('[UnitTurnPhaseHandler] Cannot perform attack - missing active unit or state');
+      return;
+    }
+
+    // Get selected target from strategy
+    const selectedTarget = this.currentStrategy?.getSelectedAttackTarget?.() ?? null;
+    if (!selectedTarget) {
+      console.warn('[UnitTurnPhaseHandler] Cannot perform attack - no target selected');
+      return;
+    }
+
+    // Get target unit
+    const targetUnit = this.currentState.unitManifest.getUnitAtPosition(selectedTarget);
+    if (!targetUnit) {
+      console.warn('[UnitTurnPhaseHandler] Cannot perform attack - no unit at target position');
+      return;
+    }
+
+    // Execute attack
+    this.executeAttack(this.activeUnit, this.activeUnitPosition, targetUnit, selectedTarget);
   }
 
   /**
@@ -919,6 +998,190 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
    */
   setHasMoved(value: boolean): void {
     this.unitHasMoved = value;
+  }
+
+  /**
+   * Execute attack on target unit
+   */
+  private executeAttack(
+    attacker: CombatUnit,
+    attackerPosition: Position,
+    target: CombatUnit,
+    targetPosition: Position
+  ): void {
+    // Calculate Manhattan distance for range calculations
+    const distance = Math.abs(attackerPosition.x - targetPosition.x) +
+                     Math.abs(attackerPosition.y - targetPosition.y);
+
+    // Get equipped weapons
+    const weapons: Equipment[] = [];
+    if ('leftHand' in attacker && attacker.leftHand) {
+      const leftHand = attacker.leftHand as Equipment;
+      if (leftHand.type === 'OneHandedWeapon' || leftHand.type === 'TwoHandedWeapon') {
+        weapons.push(leftHand);
+      }
+    }
+    if ('rightHand' in attacker && attacker.rightHand) {
+      const rightHand = attacker.rightHand as Equipment;
+      if (rightHand.type === 'OneHandedWeapon' || rightHand.type === 'TwoHandedWeapon') {
+        weapons.push(rightHand);
+      }
+    }
+
+    // If no weapons equipped, cannot attack (should not happen, but safety check)
+    if (weapons.length === 0) {
+      console.warn('[UnitTurnPhaseHandler] Cannot attack - no weapons equipped');
+      return;
+    }
+
+    // Clear attack range highlights immediately (per spec)
+    if (this.currentStrategy && 'exitAttackMode' in this.currentStrategy) {
+      (this.currentStrategy as any).exitAttackMode();
+    }
+
+    // Get attacker name color for combat log
+    const attackerNameColor = attacker.isPlayerControlled
+      ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+      : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+    const targetNameColor = target.isPlayerControlled
+      ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+      : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+
+    // Single weapon or dual wielding
+    if (weapons.length === 1) {
+      // Single weapon attack
+      const weapon = weapons[0];
+
+      // Add initial combat log message
+      const logMessage = `[color=${attackerNameColor}]${attacker.name}[/color] attacks [color=${targetNameColor}]${target.name}[/color]...`;
+      this.pendingLogMessages.push(logMessage);
+
+      // Roll hit/miss
+      const hitChance = CombatCalculations.getChanceToHit(attacker, target, distance, 'physical');
+      const hitRoll = Math.random();
+      const isHit = hitRoll < hitChance;
+
+      if (isHit) {
+        // Calculate damage
+        const damage = CombatCalculations.calculateAttackDamage(attacker, weapon, target, distance, 'physical');
+
+        // Apply damage to target
+        this.applyDamage(target, damage);
+
+        // Add combat log message
+        const damageMessage = `[color=${attackerNameColor}]${attacker.name}[/color] hits [color=${targetNameColor}]${target.name}[/color] for ${damage} damage.`;
+        this.pendingLogMessages.push(damageMessage);
+
+        // Create hit animation
+        this.attackAnimations = [new AttackAnimationSequence(targetPosition, true, damage)];
+      } else {
+        // Miss
+        const missMessage = `[color=${attackerNameColor}]${attacker.name}[/color] attacks [color=${targetNameColor}]${target.name}[/color] but misses.`;
+        this.pendingLogMessages.push(missMessage);
+
+        // Create miss animation
+        this.attackAnimations = [new AttackAnimationSequence(targetPosition, false, 0)];
+      }
+    } else {
+      // Dual wielding - two sequential attacks
+      const logMessage = `[color=${attackerNameColor}]${attacker.name}[/color] attacks [color=${targetNameColor}]${target.name}[/color] with both weapons...`;
+      this.pendingLogMessages.push(logMessage);
+
+      const animations: AttackAnimationSequence[] = [];
+
+      for (let i = 0; i < weapons.length; i++) {
+        const weapon = weapons[i];
+        const attackLabel = i === 0 ? 'First' : 'Second';
+
+        // Roll hit/miss for this weapon
+        const hitChance = CombatCalculations.getChanceToHit(attacker, target, distance, 'physical');
+        const hitRoll = Math.random();
+        const isHit = hitRoll < hitChance;
+
+        if (isHit) {
+          // Calculate damage
+          const damage = CombatCalculations.calculateAttackDamage(attacker, weapon, target, distance, 'physical');
+
+          // Apply damage to target
+          this.applyDamage(target, damage);
+
+          // Add combat log message
+          const damageMessage = `${attackLabel} strike hits for ${damage} damage.`;
+          this.pendingLogMessages.push(damageMessage);
+
+          // Create hit animation
+          animations.push(new AttackAnimationSequence(targetPosition, true, damage));
+        } else {
+          // Miss
+          const missMessage = `${attackLabel} strike misses.`;
+          this.pendingLogMessages.push(missMessage);
+
+          // Create miss animation
+          animations.push(new AttackAnimationSequence(targetPosition, false, 0));
+        }
+      }
+
+      this.attackAnimations = animations;
+    }
+
+    // Start attack animation sequence
+    this.attackAnimationIndex = 0;
+  }
+
+  /**
+   * Apply damage to a unit and check for knockout
+   */
+  private applyDamage(target: CombatUnit, damage: number): void {
+    // Reduce target's wounds (increases HP loss)
+    const newWounds = target.wounds + damage;
+
+    // Update wounds (cap at max health)
+    if ('setWounds' in target && typeof (target as any).setWounds === 'function') {
+      (target as any).setWounds(Math.min(newWounds, target.health));
+    } else {
+      // Fallback: directly mutate wounds (not ideal, but necessary for MonsterUnit)
+      (target as any)._wounds = Math.min(newWounds, target.health);
+    }
+
+    // Check if unit was knocked out
+    if (target.wounds >= target.health) {
+      const targetNameColor = target.isPlayerControlled
+        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
+        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
+
+      const knockoutMessage = `[color=${targetNameColor}]${target.name}[/color] was knocked out.`;
+      this.pendingLogMessages.push(knockoutMessage);
+    }
+  }
+
+  /**
+   * Complete attack sequence - set canAct=false, check victory/defeat
+   */
+  private completeAttack(state: CombatState): CombatState {
+    // Clear attack animations
+    this.attackAnimations = [];
+    this.attackAnimationIndex = 0;
+
+    // Set canAct to false (unit has performed an action)
+    this.canAct = false;
+
+    // canResetMove should become false after attacking
+    this.canResetMove = false;
+
+    // Exit attack mode and close attack panel
+    if (this.currentStrategy && 'exitAttackMode' in this.currentStrategy) {
+      (this.currentStrategy as any).exitAttackMode();
+    }
+
+    // Stay in unit-turn phase (don't auto-advance)
+    return state;
+  }
+
+  /**
+   * Get whether the unit can still act this turn
+   */
+  getCanAct(): boolean {
+    return this.canAct;
   }
 
   /**

@@ -567,9 +567,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         // Get dynamic state from phase handler using proper getter methods
         const unitHasMoved = typeof handler.hasUnitMoved === 'function' ? handler.hasUnitMoved() : false;
         const canResetMove = typeof handler.getCanResetMove === 'function' ? handler.getCanResetMove() : false;
+        const canAct = typeof handler.getCanAct === 'function' ? handler.getCanAct() : true;
 
         // Update the existing content with dynamic state (preserves hover state)
-        (existingContent as any).updateUnit(currentUnitToDisplay, unitHasMoved, activeAction, canResetMove);
+        (existingContent as any).updateUnit(currentUnitToDisplay, unitHasMoved, activeAction, canResetMove, canAct);
       }
     }
 
@@ -934,6 +935,17 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
               if ('handleActionSelected' in phaseHandlerRef.current) {
                 const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
                 unitTurnHandler.handleActionSelected(clickResult.actionId);
+                return; // Click was handled
+              }
+            }
+            break;
+
+          case 'perform-attack':
+            // Handle perform attack from AttackMenuContent
+            if (combatState.phase === 'unit-turn') {
+              if ('handleActionSelected' in phaseHandlerRef.current) {
+                const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
+                unitTurnHandler.handleActionSelected('perform-attack');
                 return; // Click was handled
               }
             }
