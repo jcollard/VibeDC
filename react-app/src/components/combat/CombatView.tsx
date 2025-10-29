@@ -1052,6 +1052,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       topPanelRegion
     );
 
+    // Handle hover for ability/equipment detail panels
+    // This checks if hovering over abilities in top panel and swaps bottom panel to show details
+    layoutRenderer.handleTopPanelHover(canvasX, canvasY, topInfoPanelManager, bottomInfoPanelManager);
+
     // Check if hovering over bottom info panel
     // The panel manager will delegate to the panel content (party members, unit info, etc.)
     const partyPanelRegion = layoutRenderer.getBottomInfoPanelRegion();

@@ -587,15 +587,10 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     const currentPhase = isEnemyDeploymentPhase ? 'enemy-deployment' : (isDeploymentPhase ? 'deployment' : (currentUnit ? 'unit-turn' : 'battle'));
     if (this.previousPhase !== null && this.previousPhase !== currentPhase) {
       this.cachedBottomPanelContent = null;
-      // Also clear detail panel state on phase transition
-      this.detailPanelActive = false;
-      this.originalBottomPanelContent = null;
     }
     this.previousPhase = currentPhase;
 
-    // Skip setting content if detail panel is active (hover showing ability/equipment details)
-    if (!this.detailPanelActive) {
-      // Create or update appropriate content based on phase
+    // Create or update appropriate content based on phase
     if (isEnemyDeploymentPhase) {
       // During enemy-deployment, show empty panel
       if (!(this.cachedBottomPanelContent instanceof EmptyContent)) {
@@ -672,7 +667,6 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
         });
       }
       currentUnitPanelManager.setContent(this.cachedBottomPanelContent);
-    }
     }
 
     currentUnitPanelManager.render(

@@ -1,4 +1,6 @@
 import type { CombatUnit } from '../../CombatUnit';
+import type { CombatAbility } from '../../CombatAbility';
+import type { Equipment } from '../../Equipment';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
@@ -390,7 +392,8 @@ export class UnitInfoContent implements PanelContent {
       if (this.currentView === 'stats') {
         helperText = this.statHelperText[this.hoveredStatId] || null;
       } else {
-        helperText = this.getAbilityEquipmentHelperText(this.hoveredStatId);
+        // Abilities view - no helper text (details shown in bottom panel instead)
+        helperText = null;
       }
     }
 
@@ -422,58 +425,6 @@ export class UnitInfoContent implements PanelContent {
         y += lineSpacing;
       }
     }
-  }
-
-  /**
-   * Get helper text for ability or equipment slot
-   */
-  private getAbilityEquipmentHelperText(slotLabel: string): string | null {
-    // Check ability slots
-    if (slotLabel === 'Reaction' && this.unit.reactionAbility) {
-      return this.unit.reactionAbility.description;
-    }
-    if (slotLabel === 'Passive' && this.unit.passiveAbility) {
-      return this.unit.passiveAbility.description;
-    }
-    if (slotLabel === 'Movement' && this.unit.movementAbility) {
-      return this.unit.movementAbility.description;
-    }
-
-    // Check equipment slots
-    if ('leftHand' in this.unit) {
-      const humanoid = this.unit as any;
-
-      if (slotLabel === 'L.Hand' && humanoid.leftHand) {
-        return this.formatEquipmentHelperText(humanoid.leftHand);
-      }
-      if (slotLabel === 'R.Hand' && humanoid.rightHand) {
-        return this.formatEquipmentHelperText(humanoid.rightHand);
-      }
-      if (slotLabel === 'Head' && humanoid.head) {
-        return this.formatEquipmentHelperText(humanoid.head);
-      }
-      if (slotLabel === 'Body' && humanoid.body) {
-        return this.formatEquipmentHelperText(humanoid.body);
-      }
-      if (slotLabel === 'Accessory' && humanoid.accessory) {
-        return this.formatEquipmentHelperText(humanoid.accessory);
-      }
-    }
-
-    return null;
-  }
-
-  /**
-   * Format equipment helper text with modifiers
-   */
-  private formatEquipmentHelperText(equipment: any): string {
-    const modifierSummary = equipment.modifiers.getSummary();
-
-    if (modifierSummary === 'No modifiers') {
-      return equipment.name;
-    }
-
-    return `${equipment.name}\n${modifierSummary}`;
   }
 
   /**
@@ -624,14 +575,33 @@ export class UnitInfoContent implements PanelContent {
     let statId: string | null = null;
     if (this.currentView === 'stats') {
       statId = this.getStatIdAt(relativeX, relativeY);
-    } else {
-      statId = this.getAbilityEquipmentIdAt(relativeX, relativeY);
-    }
 
-    // Update hover state if changed
-    if (statId !== this.hoveredStatId || wasButtonHovered) {
-      this.hoveredStatId = statId;
-      return { statId }; // Signal that hover state changed
+      // Update hover state if changed
+      if (statId !== this.hoveredStatId || wasButtonHovered) {
+        this.hoveredStatId = statId;
+        return { statId }; // Signal that hover state changed
+      }
+    } else {
+      // Abilities view
+      statId = this.getAbilityEquipmentIdAt(relativeX, relativeY);
+
+      // If hovering over ability/equipment, return detail info
+      if (statId !== null) {
+        const detailInfo = this.getDetailInfo(statId);
+        if (detailInfo) {
+          // Update hover state if changed
+          if (statId !== this.hoveredStatId) {
+            this.hoveredStatId = statId;
+          }
+          return detailInfo; // { type: 'ability-detail' | 'equipment-detail', item: ... }
+        }
+      }
+
+      // If statId changed to null (moved off item)
+      if (statId !== this.hoveredStatId) {
+        this.hoveredStatId = statId;
+        return { statId }; // Signal that hover state changed (to null)
+      }
     }
 
     return null;
@@ -756,6 +726,46 @@ export class UnitInfoContent implements PanelContent {
         if (label === 'Accessory' && !humanoid.accessory) return null;
 
         return label;
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Get detail info for ability or equipment slot
+   * Returns object with type and item for rendering in bottom panel
+   */
+  private getDetailInfo(slotLabel: string): { type: string; item: CombatAbility | Equipment } | null {
+    // Check ability slots
+    if (slotLabel === 'Reaction' && this.unit.reactionAbility) {
+      return { type: 'ability-detail', item: this.unit.reactionAbility };
+    }
+    if (slotLabel === 'Passive' && this.unit.passiveAbility) {
+      return { type: 'ability-detail', item: this.unit.passiveAbility };
+    }
+    if (slotLabel === 'Movement' && this.unit.movementAbility) {
+      return { type: 'ability-detail', item: this.unit.movementAbility };
+    }
+
+    // Check equipment slots (only for humanoid units)
+    if ('leftHand' in this.unit) {
+      const humanoid = this.unit as any;
+
+      if (slotLabel === 'L.Hand' && humanoid.leftHand) {
+        return { type: 'equipment-detail', item: humanoid.leftHand };
+      }
+      if (slotLabel === 'R.Hand' && humanoid.rightHand) {
+        return { type: 'equipment-detail', item: humanoid.rightHand };
+      }
+      if (slotLabel === 'Head' && humanoid.head) {
+        return { type: 'equipment-detail', item: humanoid.head };
+      }
+      if (slotLabel === 'Body' && humanoid.body) {
+        return { type: 'equipment-detail', item: humanoid.body };
+      }
+      if (slotLabel === 'Accessory' && humanoid.accessory) {
+        return { type: 'equipment-detail', item: humanoid.accessory };
       }
     }
 

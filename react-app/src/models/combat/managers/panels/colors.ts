@@ -16,3 +16,6 @@ export const DISABLED_TEXT = '#888888';
 
 /** Color for active/selected buttons (green) */
 export const ACTIVE_COLOR = '#00ff00';
+
+/** Color for item names (abilities, equipment) - orange */
+export const ITEM_NAME_COLOR = '#FFA500';

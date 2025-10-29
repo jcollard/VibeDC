@@ -12,3 +12,5 @@ export { ActionsMenuContent } from './ActionsMenuContent';
 export type { ActionsMenuConfig } from './ActionsMenuContent';
 export { PanelButton } from './PanelButton';
 export type { PanelButtonConfig } from './PanelButton';
+export { AbilityInfoContent } from './AbilityInfoContent';
+export { EquipmentInfoContent } from './EquipmentInfoContent';
