@@ -193,33 +193,6 @@ export class AttackMenuContent implements PanelContent {
     );
     currentY += this.config.lineSpacing;
 
-    // Attack Prediction Section (only if target selected)
-    if (this.selectedTarget && this.selectedTargetPosition && this.currentUnit) {
-      currentY += 2; // 2px spacing
-
-      if (weapons.length === 1) {
-        // Single weapon prediction
-        currentY = this.renderAttackPrediction(
-          ctx,
-          region,
-          fontId,
-          fontAtlasImage,
-          weapons[0],
-          region.x + this.config.padding,
-          currentY
-        );
-      } else if (weapons.length === 2) {
-        // Dual wielding prediction - two columns (no labels)
-        const columnWidth = Math.floor((region.width - this.config.padding * 2 - 8) / 2);
-        const leftX = region.x + this.config.padding;
-        const rightX = leftX + columnWidth + 8;
-
-        const leftY = this.renderAttackPrediction(ctx, region, fontId, fontAtlasImage, weapons[0], leftX, currentY);
-        const rightY = this.renderAttackPrediction(ctx, region, fontId, fontAtlasImage, weapons[1], rightX, currentY);
-        currentY = Math.max(leftY, rightY);
-      }
-    }
-
     // Perform Attack button (only visible when target selected, centered)
     if (this.selectedTarget) {
       currentY += this.config.lineSpacing; // Spacing before button
@@ -273,10 +246,13 @@ export class AttackMenuContent implements PanelContent {
     );
     currentY += this.config.lineSpacing;
 
-    // Hit% (stub - always 100%)
+    // Range
+    const minRange = weapon.minRange ?? 1;
+    const maxRange = weapon.maxRange ?? 1;
+    const rangeText = minRange === maxRange ? `Range: ${minRange}` : `Range: ${minRange}-${maxRange}`;
     FontAtlasRenderer.renderText(
       ctx,
-      'Hit: 100%',
+      rangeText,
       x,
       currentY,
       fontId,
@@ -287,90 +263,85 @@ export class AttackMenuContent implements PanelContent {
     );
     currentY += this.config.lineSpacing;
 
-    // Dmg (stub - always 1)
-    FontAtlasRenderer.renderText(
-      ctx,
-      'Dmg: 1',
-      x,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      ENABLED_TEXT
-    );
-    currentY += this.config.lineSpacing;
+    // Hit% and Dmg - show ?? if no target selected, otherwise show calculated values
+    if (this.selectedTarget && this.selectedTargetPosition && this.currentUnit && this.currentUnitPosition) {
+      // Calculate distance (Manhattan)
+      const distance = Math.abs(this.currentUnitPosition.x - this.selectedTargetPosition.x) +
+                       Math.abs(this.currentUnitPosition.y - this.selectedTargetPosition.y);
 
-    return currentY;
-  }
+      // Get hit chance (stub returns 1.0)
+      const hitChance = CombatCalculations.getChanceToHit(
+        this.currentUnit,
+        this.selectedTarget,
+        distance,
+        'physical'
+      );
+      const hitPercent = Math.round(hitChance * 100);
 
-  /**
-   * Render attack prediction (hit%, damage)
-   */
-  private renderAttackPrediction(
-    ctx: CanvasRenderingContext2D,
-    _region: PanelRegion,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement,
-    weapon: Equipment,
-    x: number,
-    y: number
-  ): number {
-    if (!this.currentUnit || !this.selectedTarget || !this.selectedTargetPosition || !this.currentUnitPosition) {
-      return y;
+      // Get damage (stub returns 1)
+      const damage = CombatCalculations.calculateAttackDamage(
+        this.currentUnit,
+        weapon,
+        this.selectedTarget,
+        distance,
+        'physical'
+      );
+
+      // Hit%
+      FontAtlasRenderer.renderText(
+        ctx,
+        `Hit: ${hitPercent}%`,
+        x,
+        currentY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        ENABLED_TEXT
+      );
+      currentY += this.config.lineSpacing;
+
+      // Dmg
+      FontAtlasRenderer.renderText(
+        ctx,
+        `Dmg: ${damage}`,
+        x,
+        currentY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        ENABLED_TEXT
+      );
+      currentY += this.config.lineSpacing;
+    } else {
+      // No target selected - show ??
+      FontAtlasRenderer.renderText(
+        ctx,
+        'Hit: ??%',
+        x,
+        currentY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        ENABLED_TEXT
+      );
+      currentY += this.config.lineSpacing;
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        'Dmg: ??',
+        x,
+        currentY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        ENABLED_TEXT
+      );
+      currentY += this.config.lineSpacing;
     }
-
-    let currentY = y;
-
-    // Calculate distance (Manhattan)
-    const distance = Math.abs(this.currentUnitPosition.x - this.selectedTargetPosition.x) +
-                     Math.abs(this.currentUnitPosition.y - this.selectedTargetPosition.y);
-
-    // Get hit chance (stub returns 1.0)
-    const hitChance = CombatCalculations.getChanceToHit(
-      this.currentUnit,
-      this.selectedTarget,
-      distance,
-      'physical'
-    );
-    const hitPercent = Math.round(hitChance * 100);
-
-    // Get damage (stub returns 1)
-    const damage = CombatCalculations.calculateAttackDamage(
-      this.currentUnit,
-      weapon,
-      this.selectedTarget,
-      distance,
-      'physical'
-    );
-
-    // Hit%
-    FontAtlasRenderer.renderText(
-      ctx,
-      `Hit: ${hitPercent}%`,
-      x,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      ENABLED_TEXT
-    );
-    currentY += this.config.lineSpacing;
-
-    // Dmg
-    FontAtlasRenderer.renderText(
-      ctx,
-      `Dmg: ${damage}`,
-      x,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      ENABLED_TEXT
-    );
-    currentY += this.config.lineSpacing;
 
     return currentY;
   }
