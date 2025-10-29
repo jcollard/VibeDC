@@ -3,6 +3,7 @@ import type { CombatEncounter } from '../CombatEncounter';
 import type { CombatUnit } from '../CombatUnit';
 import type { Position } from '../../../types';
 import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler';
+import type { AttackRangeTiles } from '../utils/AttackRangeCalculator';
 
 /**
  * Turn action that can be performed by a unit
@@ -128,4 +129,16 @@ export interface TurnStrategy {
    * Strategy should clear movement range display
    */
   onUnitMoved?(): void;
+
+  /**
+   * Get attack range tiles (only valid in attack mode)
+   * Returns null if not in attack mode
+   */
+  getAttackRange?(): AttackRangeTiles | null;
+
+  /**
+   * Get hovered attack target position (only valid in attack mode)
+   * Returns null if not hovering over a valid target
+   */
+  getHoveredAttackTarget?(): Position | null;
 }

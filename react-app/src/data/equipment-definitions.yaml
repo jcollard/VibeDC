@@ -160,8 +160,20 @@ equipment:
     multipliers:
       physicalPower: 1.1
     minRange: 1
-    maxRange: 1
+    maxRange: 2
     typeTags: ["weapon", "medium-weapon", "magical-weapon"]
+
+  - id: "heavy-crossbow-001"
+    name: "Heavy Crossbow"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 20
+      speed: -3
+    multipliers:
+      physicalPower: 1.15
+    minRange: 2
+    maxRange: 3
+    typeTags: ["weapon", "medium-weapon", "ranged-weapon"]
 
   - id: "iron-sword-001"
     name: "Iron Sword"
@@ -172,6 +184,28 @@ equipment:
     minRange: 1
     maxRange: 1
     typeTags: ["weapon", "medium-weapon"]
+
+  - id: "light-crossbow-001"
+    name: "Light Crossbow"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 14
+      speed: -1
+    minRange: 2
+    maxRange: 3
+    typeTags: ["weapon", "light-weapon", "ranged-weapon"]
+
+  - id: "repeating-crossbow-001"
+    name: "Repeating Crossbow"
+    type: "OneHandedWeapon"
+    modifiers:
+      physicalPower: 16
+      speed: 2
+    multipliers:
+      speed: 1.1
+    minRange: 2
+    maxRange: 3
+    typeTags: ["weapon", "medium-weapon", "ranged-weapon"]
 
   - id: "steel-dagger-001"
     name: "Steel Dagger"
@@ -230,6 +264,18 @@ equipment:
     maxRange: 1
     typeTags: ["weapon", "two-handed", "heavy-weapon"]
 
+  - id: "long-bow-001"
+    name: "Long Bow"
+    type: "TwoHandedWeapon"
+    modifiers:
+      physicalPower: 18
+      speed: -2
+    multipliers:
+      physicalPower: 1.1
+    minRange: 2
+    maxRange: 5
+    typeTags: ["weapon", "two-handed", "medium-weapon", "ranged-weapon"]
+
   - id: "magic-staff-001"
     name: "Magic Staff"
     type: "TwoHandedWeapon"
@@ -244,21 +290,6 @@ equipment:
     maxRange: 1
     typeTags: ["weapon", "two-handed", "medium-weapon", "magical-weapon"]
 
-  - id: "war-hammer-001"
-    name: "War Hammer"
-    type: "TwoHandedWeapon"
-    modifiers:
-      physicalPower: 30
-      speed: -5
-    multipliers:
-      physicalPower: 1.15
-    allowedClasses:
-      - "fighter-001"
-    minRange: 1
-    maxRange: 1
-    typeTags: ["weapon", "two-handed", "heavy-weapon"]
-
-  # Bows (TwoHandedWeapon)
   - id: "short-bow-001"
     name: "Short Bow"
     type: "TwoHandedWeapon"
@@ -268,18 +299,6 @@ equipment:
     minRange: 2
     maxRange: 5
     typeTags: ["weapon", "two-handed", "light-weapon", "ranged-weapon"]
-
-  - id: "long-bow-001"
-    name: "Long Bow"
-    type: "TwoHandedWeapon"
-    modifiers:
-      physicalPower: 18
-      speed: -2
-    multipliers:
-      physicalPower: 1.1
-    minRange: 2
-    maxRange: 5
-    typeTags: ["weapon", "two-handed", "medium-weapon", "ranged-weapon"]
 
   - id: "war-bow-001"
     name: "War Bow"
@@ -293,38 +312,17 @@ equipment:
     maxRange: 5
     typeTags: ["weapon", "two-handed", "heavy-weapon", "ranged-weapon"]
 
-  # Crossbows (OneHandedWeapon)
-  - id: "light-crossbow-001"
-    name: "Light Crossbow"
-    type: "OneHandedWeapon"
+  - id: "war-hammer-001"
+    name: "War Hammer"
+    type: "TwoHandedWeapon"
     modifiers:
-      physicalPower: 14
-      speed: -1
-    minRange: 2
-    maxRange: 3
-    typeTags: ["weapon", "light-weapon", "ranged-weapon"]
-
-  - id: "heavy-crossbow-001"
-    name: "Heavy Crossbow"
-    type: "OneHandedWeapon"
-    modifiers:
-      physicalPower: 20
-      speed: -3
+      physicalPower: 30
+      speed: -5
     multipliers:
       physicalPower: 1.15
-    minRange: 2
-    maxRange: 3
-    typeTags: ["weapon", "medium-weapon", "ranged-weapon"]
-
-  - id: "repeating-crossbow-001"
-    name: "Repeating Crossbow"
-    type: "OneHandedWeapon"
-    modifiers:
-      physicalPower: 16
-      speed: 2
-    multipliers:
-      speed: 1.1
-    minRange: 2
-    maxRange: 3
-    typeTags: ["weapon", "medium-weapon", "ranged-weapon"]
+    allowedClasses:
+      - "fighter-001"
+    minRange: 1
+    maxRange: 1
+    typeTags: ["weapon", "two-handed", "heavy-weapon"]
 

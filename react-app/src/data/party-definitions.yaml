@@ -19,7 +19,7 @@ partyMembers:
     reactionAbilityId: "parry-001"
     passiveAbilityId: "meat-shield-001"
     movementAbilityId: "journeyman-001"
-    leftHandId: "iron-sword-001"
+    leftHandId: "flame-blade-001"
     rightHandId: "tower-shield-001"
     headId: "iron-helmet-001"
     bodyId: "plate-armor-001"
@@ -42,8 +42,7 @@ partyMembers:
     secondaryClassId: "rogue"
     learnedAbilityIds: ["charge-001", "focused-001", "shove-001", "bash-001", "taunt-001", "throw-stone-001", "sneak-001", "cut-001"]
     reactionAbilityId: "parry-001"
-    leftHandId: "iron-sword-001"
-    rightHandId: "wooden-shield-001"
+    leftHandId: "war-bow-001"
     headId: "iron-helmet-001"
     bodyId: "plate-armor-001"
     tags: ["warrior", "tank", "melee"]
@@ -70,7 +69,7 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 20
     spriteId: "crystalwarriors-10"
-    leftHandId: "magic-staff-001"
+    leftHandId: "heavy-crossbow-001"
     headId: "wizards-hat-001"
     bodyId: "wizards-robe-001"
     accessoryId: "mana-amulet-001"

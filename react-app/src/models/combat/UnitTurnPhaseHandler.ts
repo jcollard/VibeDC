@@ -318,6 +318,96 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         );
       }
     }
+
+    // Get attack range from strategy (only in attack mode)
+    const attackRange = this.currentStrategy?.getAttackRange?.() ?? null;
+    const hoveredAttackTarget = this.currentStrategy?.getHoveredAttackTarget?.() ?? null;
+
+    // Render attack range highlights - rendered AFTER units (on top)
+    if (attackRange) {
+      // Render base range tiles (red) - tiles within weapon range
+      for (const position of attackRange.inRange) {
+        const x = Math.floor(offsetX + (position.x * tileSize));
+        const y = Math.floor(offsetY + (position.y * tileSize));
+
+        this.renderTintedSprite(
+          ctx,
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
+          spriteImages,
+          spriteSize,
+          x,
+          y,
+          tileSize,
+          tileSize,
+          CombatConstants.UNIT_TURN.ATTACK_RANGE_BASE_COLOR,  // Red
+          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
+        );
+      }
+
+      // Render blocked tiles (grey) - no line of sight
+      for (const position of attackRange.blocked) {
+        const x = Math.floor(offsetX + (position.x * tileSize));
+        const y = Math.floor(offsetY + (position.y * tileSize));
+
+        this.renderTintedSprite(
+          ctx,
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
+          spriteImages,
+          spriteSize,
+          x,
+          y,
+          tileSize,
+          tileSize,
+          CombatConstants.UNIT_TURN.ATTACK_RANGE_BLOCKED_COLOR,  // Grey
+          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
+        );
+      }
+
+      // Render valid target highlights (yellow) - on top of red/grey
+      for (const position of attackRange.validTargets) {
+        // Skip hovered target (will render with orange below)
+        if (hoveredAttackTarget &&
+            position.x === hoveredAttackTarget.x &&
+            position.y === hoveredAttackTarget.y) {
+          continue;
+        }
+
+        const x = Math.floor(offsetX + (position.x * tileSize));
+        const y = Math.floor(offsetY + (position.y * tileSize));
+
+        this.renderTintedSprite(
+          ctx,
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
+          spriteImages,
+          spriteSize,
+          x,
+          y,
+          tileSize,
+          tileSize,
+          CombatConstants.UNIT_TURN.ATTACK_TARGET_VALID_COLOR,  // Yellow
+          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
+        );
+      }
+
+      // Render hovered attack target (orange) - on top of yellow
+      if (hoveredAttackTarget) {
+        const x = Math.floor(offsetX + (hoveredAttackTarget.x * tileSize));
+        const y = Math.floor(offsetY + (hoveredAttackTarget.y * tileSize));
+
+        this.renderTintedSprite(
+          ctx,
+          CombatConstants.UNIT_TURN.MOVEMENT_HIGHLIGHT_SPRITE,
+          spriteImages,
+          spriteSize,
+          x,
+          y,
+          tileSize,
+          tileSize,
+          CombatConstants.UNIT_TURN.ATTACK_TARGET_HOVER_COLOR,  // Orange
+          CombatConstants.UNIT_TURN.ATTACK_RANGE_ALPHA
+        );
+      }
+    }
   }
 
   protected updatePhase(

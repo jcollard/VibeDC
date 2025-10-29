@@ -4,8 +4,11 @@ import type { CombatEncounter } from '../CombatEncounter';
 import type { CombatUnit } from '../CombatUnit';
 import type { Position } from '../../../types';
 import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler';
+import type { HumanoidUnit } from '../HumanoidUnit';
 import { MovementRangeCalculator } from '../utils/MovementRangeCalculator';
 import { MovementPathfinder } from '../utils/MovementPathfinder';
+import { AttackRangeCalculator } from '../utils/AttackRangeCalculator';
+import type { AttackRangeTiles } from '../utils/AttackRangeCalculator';
 import { CombatConstants } from '../CombatConstants';
 
 /**
@@ -61,6 +64,11 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Track if the active unit has moved this turn
   private hasMoved: boolean = false;
 
+  // Attack range state (cached when entering attack mode)
+  private attackRange: AttackRangeTiles | null = null;
+  private hoveredAttackTarget: Position | null = null;
+  private attackRangeCachedPosition: Position | null = null; // Position used to calculate attack range
+
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
     this.activeUnit = unit;
     this.activePosition = position;
@@ -71,6 +79,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.moveModePaths.clear();
     this.hoveredMovePath = null;
     this.hasMoved = false;
+    this.attackRange = null;
+    this.hoveredAttackTarget = null;
+    this.attackRangeCachedPosition = null;
 
     // Calculate movement range for this unit
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
@@ -100,6 +111,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.mode = 'normal';
     this.moveModePaths.clear();
     this.hoveredMovePath = null;
+    this.attackRange = null;
+    this.hoveredAttackTarget = null;
+    this.attackRangeCachedPosition = null;
   }
 
   update(
@@ -176,6 +190,12 @@ export class PlayerTurnStrategy implements TurnStrategy {
       return { handled: true };
     }
 
+    // Handle attack mode hover
+    if (this.mode === 'attackSelection') {
+      this.updateHoveredAttackTarget({ x: tileX, y: tileY });
+      return { handled: true };
+    }
+
     return { handled: false };
   }
 
@@ -188,6 +208,10 @@ export class PlayerTurnStrategy implements TurnStrategy {
   }
 
   getMovementRange(): Position[] {
+    // Hide movement range when in attack mode
+    if (this.mode === 'attackSelection') {
+      return [];
+    }
     return this.movementRange;
   }
 
@@ -442,7 +466,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
    * Enter attack selection mode
    */
   private enterAttackMode(): void {
-    if (!this.activeUnit || !this.activePosition || !this.currentState) {
+    if (!this.activeUnit || !this.currentState) {
       console.warn('[PlayerTurnStrategy] Cannot enter attack mode - missing active unit');
       return;
     }
@@ -453,6 +477,45 @@ export class PlayerTurnStrategy implements TurnStrategy {
     }
 
     this.mode = 'attackSelection';
+
+    // Deselect all units
+    this.targetedUnit = null;
+    this.targetedPosition = null;
+
+    // Get current position from manifest (in case unit has moved)
+    const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
+    if (!currentPosition) {
+      console.warn('[PlayerTurnStrategy] Cannot enter attack mode - unit not found in manifest');
+      return;
+    }
+
+    // Get weapon range from equipped weapons
+    const humanoidUnit = this.activeUnit as HumanoidUnit;
+    const weapons = humanoidUnit.getEquippedWeapons?.();
+
+    if (!weapons || weapons.length === 0) {
+      console.warn('[PlayerTurnStrategy] Cannot enter attack mode - no weapons equipped');
+      this.attackRange = { inRange: [], blocked: [], validTargets: [] };
+      this.attackRangeCachedPosition = currentPosition;
+      return;
+    }
+
+    // Use first weapon's range (if dual-wielding, ranges should match per equipment rules)
+    const weapon = weapons[0];
+    const minRange = weapon.minRange ?? 1;
+    const maxRange = weapon.maxRange ?? 1;
+
+    // Calculate attack range from current position
+    this.attackRange = AttackRangeCalculator.calculateAttackRange({
+      attackerPosition: currentPosition,
+      minRange,
+      maxRange,
+      map: this.currentState.map,
+      unitManifest: this.currentState.unitManifest
+    });
+
+    // Cache the position used for calculation
+    this.attackRangeCachedPosition = currentPosition;
   }
 
   /**
@@ -460,6 +523,12 @@ export class PlayerTurnStrategy implements TurnStrategy {
    */
   private exitAttackMode(): void {
     this.mode = 'normal';
+    this.attackRange = null;
+
+    // Re-select the active unit to restore its info display
+    if (this.activeUnit && this.activePosition && this.currentState) {
+      this.selectUnit(this.activeUnit, this.activePosition, this.currentState);
+    }
   }
 
   /**
@@ -467,5 +536,97 @@ export class PlayerTurnStrategy implements TurnStrategy {
    */
   handleCancelAttack(): void {
     this.exitAttackMode();
+  }
+
+  /**
+   * Get attack range tiles (only valid in attack mode)
+   */
+  getAttackRange(): AttackRangeTiles | null {
+    if (!this.attackRange || !this.attackRangeCachedPosition) {
+      return null;
+    }
+
+    // Check if position has changed since we cached the attack range
+    if (this.activeUnit && this.currentState) {
+      const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
+      if (currentPosition &&
+          (currentPosition.x !== this.attackRangeCachedPosition.x ||
+           currentPosition.y !== this.attackRangeCachedPosition.y)) {
+        // Position changed - recalculate attack range
+        this.recalculateAttackRange();
+      }
+    }
+
+    return this.attackRange;
+  }
+
+  /**
+   * Get hovered attack target position (only valid in attack mode)
+   */
+  getHoveredAttackTarget(): Position | null {
+    return this.hoveredAttackTarget;
+  }
+
+  /**
+   * Update the hovered attack target (for orange highlight)
+   */
+  private updateHoveredAttackTarget(position: Position): void {
+    if (!this.attackRange) {
+      this.hoveredAttackTarget = null;
+      return;
+    }
+
+    // Check if this position is a valid target
+    const isValidTarget = this.attackRange.validTargets.some(
+      target => target.x === position.x && target.y === position.y
+    );
+
+    this.hoveredAttackTarget = isValidTarget ? position : null;
+  }
+
+  /**
+   * Recalculate attack range from current position
+   * Called when position changes while in attack mode
+   */
+  private recalculateAttackRange(): void {
+    if (!this.activeUnit || !this.currentState) {
+      return;
+    }
+
+    // Get current position from manifest
+    const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
+    if (!currentPosition) {
+      return;
+    }
+
+    // Get weapon range from equipped weapons
+    const humanoidUnit = this.activeUnit as HumanoidUnit;
+    const weapons = humanoidUnit.getEquippedWeapons?.();
+
+    if (!weapons || weapons.length === 0) {
+      this.attackRange = { inRange: [], blocked: [], validTargets: [] };
+      this.attackRangeCachedPosition = currentPosition;
+      return;
+    }
+
+    // Use first weapon's range (if dual-wielding, ranges should match per equipment rules)
+    const weapon = weapons[0];
+    const minRange = weapon.minRange ?? 1;
+    const maxRange = weapon.maxRange ?? 1;
+
+    // Calculate attack range from current position
+    this.attackRange = AttackRangeCalculator.calculateAttackRange({
+      attackerPosition: currentPosition,
+      minRange,
+      maxRange,
+      map: this.currentState.map,
+      unitManifest: this.currentState.unitManifest
+    });
+
+    // Update cached position
+    this.attackRangeCachedPosition = currentPosition;
+
+    // Clear hovered target (may no longer be valid)
+    this.hoveredAttackTarget = null;
   }
 }
