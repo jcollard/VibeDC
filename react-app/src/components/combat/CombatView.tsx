@@ -232,11 +232,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     requestAnimationFrame(updateCanvasStyle);
   }, [windowSize.width, windowSize.height, integerScalingEnabled, manualScale]);
 
-  // Font atlases used for rendering (hardcoded values)
-  const titleAtlasFont = '15px-dungeonslant';
-  const messageAtlasFont = '7px-04b03';
-  const dialogAtlasFont = '7px-04b03';
-  const unitInfoAtlasFont = '7px-04b03';
+  // Font atlases used for rendering (from CombatConstants)
+  const titleAtlasFont = CombatConstants.FONTS.TITLE_FONT_ID;
+  const messageAtlasFont = CombatConstants.FONTS.UI_FONT_ID;
+  const dialogAtlasFont = CombatConstants.FONTS.UI_FONT_ID;
+  const unitInfoAtlasFont = CombatConstants.FONTS.UI_FONT_ID;
 
   // Handle integer scaling toggle
   const handleIntegerScalingToggle = useCallback((enabled: boolean) => {

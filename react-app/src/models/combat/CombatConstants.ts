@@ -26,11 +26,16 @@ export const CombatConstants = {
     },
   },
 
-  // Typography (informational only - actual scaling done at render time)
+  // Typography
   FONTS: {
+    // Font sizes (informational only - actual scaling done at render time)
     TITLE_SIZE: 12,
     MESSAGE_SIZE: 9,
     DIALOG_SIZE: 9,
+
+    // Font IDs from FontRegistry
+    TITLE_FONT_ID: '15px-dungeonslant',  // Large font for titles and headers
+    UI_FONT_ID: '7px-04b03',             // Small font for UI panels, combat log, turn order, etc.
   },
 
   // Animation
