@@ -8,5 +8,6 @@ Known Bugs
 
 General improvments
  - Blinking green around active unit can blend in with unit / tile color. Consider alternating high contrast blink colors
- 
+ - The Developer Settings panel should remove the font dropdowns and highlight color, they are no longer needed
 
+ 

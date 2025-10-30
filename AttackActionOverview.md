@@ -29,8 +29,8 @@ Player clicks the **"Attack"** button in the Actions Menu.
 - Bottom panel displays:
   - **Title:** "ATTACK" in dark red (#8B0000) at top
   - **Weapon Info Section:** Shows equipped weapon(s) with the following layout:
-    - If **single weapon**: One column centered
-    - If **dual wielding**: Two columns side-by-side with 8px gap
+    - If **single weapon** (including two-handed weapons): One column centered
+    - If **dual wielding** (two one-handed weapons): Two columns side-by-side with 8px gap
     - Each weapon column displays (top to bottom, left-aligned):
       - Weapon name in orange (#FFA500)
       - Range: "Range: X" (white text)
@@ -95,13 +95,13 @@ The map displays the attack range using a color-coded tile highlighting system:
 - Selected target's info appears in top panel (see Section 3)
 
 **Color Constants:**
-All colors defined in `colors.ts`:
+All colors defined in `CombatConstants.ts`:
 - `ATTACK_TITLE_COLOR` - #8B0000 (dark red for "ATTACK" title)
-- `ATTACK_RANGE_COLOR` - #FF0000 (red for base attack range)
-- `BLOCKED_LINE_OF_SIGHT_COLOR` - #808080 (grey for blocked tiles)
-- `VALID_TARGET_COLOR` - #FFFF00 (yellow for valid enemy targets)
-- `HOVERED_TARGET_COLOR` - #FFA500 (orange for hovered target)
-- `SELECTED_TARGET_COLOR` - #00FF00 (green for selected target)
+- `ATTACK_RANGE_BASE_COLOR` - #FF0000 (red for base attack range)
+- `ATTACK_RANGE_BLOCKED_COLOR` - #FFFFFF (white for blocked tiles - no line of sight)
+- `ATTACK_TARGET_VALID_COLOR` - #FFFF00 (yellow for valid enemy targets)
+- `ATTACK_TARGET_HOVER_COLOR` - #FFA500 (orange for hovered target)
+- `ATTACK_TARGET_SELECTED_COLOR` - #00FF00 (green for selected target)
 
 **Z-Order (Bottom to Top):**
 1. Map tiles (base layer)
@@ -393,15 +393,15 @@ Player clicks **"Perform Attack"** button.
 - Number disappears after 2 seconds (no fade, just removal)
 
 **Animation Timing (Single Weapon):**
-- Total duration: 2.2 seconds
-  - 0.0s - 0.2s: Red flicker (if hit) OR "Miss" text appears (if miss)
-  - 0.2s - 2.2s: Damage number/miss text floats upward
+- Total duration: 3.0 seconds
+  - 0.0s - 1.0s: Red flicker (if hit, alternates every 150ms) OR "Miss" text begins floating (if miss)
+  - 1.0s - 3.0s: Damage number floats upward (for hit) OR "Miss" continues floating (for miss)
 - After animation completes, control returns to player
 
 **Animation Timing (Dual Wielding):**
-- First attack animation: 2.2 seconds
-- Second attack animation: 2.2 seconds (starts after first completes)
-- Total duration: 4.4 seconds
+- First attack animation: 3.0 seconds
+- Second attack animation: 3.0 seconds (starts after first completes)
+- Total duration: 6.0 seconds
 - If both hit: Two separate damage numbers appear (one after the other)
 - If one hits, one misses: Shows appropriate animation for each
 
