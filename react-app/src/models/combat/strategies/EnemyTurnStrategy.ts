@@ -4,6 +4,8 @@ import type { CombatEncounter } from '../CombatEncounter';
 import type { CombatUnit } from '../CombatUnit';
 import type { Position } from '../../../types';
 import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler';
+import type { AIBehavior, AIDecision, AIContext, AIBehaviorConfig } from '../ai';
+import { AIContextBuilder, BehaviorRegistry, DEFAULT_ENEMY_BEHAVIORS } from '../ai';
 import { MovementRangeCalculator } from '../utils/MovementRangeCalculator';
 
 /**
@@ -29,6 +31,10 @@ import { MovementRangeCalculator } from '../utils/MovementRangeCalculator';
  * 4. Turn ends
  */
 export class EnemyTurnStrategy implements TurnStrategy {
+  // AI behavior system
+  private behaviors: AIBehavior[];
+  private context: AIContext | null = null;
+
   // AI decision state
   private movementRange: Position[] = [];
   private thinkingTimer: number = 0;
@@ -39,8 +45,21 @@ export class EnemyTurnStrategy implements TurnStrategy {
   private targetedUnit: CombatUnit | null = null;
   private targetedPosition: Position | null = null;
 
+  /**
+   * Create enemy turn strategy with optional behavior configuration
+   * @param behaviorConfigs - Optional behavior configuration (uses defaults if not provided)
+   */
+  constructor(behaviorConfigs?: AIBehaviorConfig[]) {
+    // Initialize behaviors (use defaults if none provided)
+    const configs = behaviorConfigs ?? DEFAULT_ENEMY_BEHAVIORS;
+    this.behaviors = BehaviorRegistry.createMany(configs);
+  }
+
   onTurnStart(_unit: CombatUnit, position: Position, state: CombatState): void {
-    // Calculate movement range for this unit
+    // Build AI context
+    this.context = AIContextBuilder.build(_unit, position, state);
+
+    // Calculate movement range for this unit (for backward compatibility with existing code)
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
       startPosition: position,
       movement: _unit.movement,
@@ -60,6 +79,7 @@ export class EnemyTurnStrategy implements TurnStrategy {
 
   onTurnEnd(): void {
     // Clean up strategy state
+    this.context = null;
     this.movementRange = [];
     this.thinkingTimer = 0;
     this.actionDecided = null;
@@ -125,37 +145,71 @@ export class EnemyTurnStrategy implements TurnStrategy {
   }
 
   /**
-   * AI decision logic - determines what action the enemy should take
+   * AI decision logic - evaluates behaviors in priority order
    *
-   * Future implementation:
-   * 1. Scan for player units in attack range → attack best target
-   * 2. Scan for player units in movement + attack range → move + attack
-   * 3. Scan for closest player unit → move toward them
-   * 4. If no valid actions → wait
-   *
-   * For now, just end turn immediately (placeholder)
+   * Evaluates each behavior in priority order (highest first).
+   * First behavior with canExecute() === true gets to decide().
+   * Converts AIDecision to TurnAction format.
    */
   private decideAction(
-    _unit: CombatUnit,
+    unit: CombatUnit,
     _position: Position,
     _state: CombatState,
     _encounter: CombatEncounter
   ): TurnAction {
-    // TODO: Implement actual AI decision logic
-    // For now, enemies just end their turn immediately
+    // Evaluate behaviors in priority order
+    if (!this.context) {
+      console.warn(`[AI] ${unit.name} has no context, ending turn`);
+      return { type: 'end-turn' };
+    }
 
-    // Future:
-    // const targets = this.findPlayerUnits(state);
-    // const attackTarget = this.findBestAttackTarget(targets);
-    // if (attackTarget) {
-    //   return { type: 'attack', target: attackTarget.position };
-    // }
-    //
-    // const moveTarget = this.findBestMovementTarget(targets);
-    // if (moveTarget) {
-    //   return { type: 'move', target: moveTarget };
-    // }
+    let decisionMade = false;
 
+    for (const behavior of this.behaviors) {
+      if (behavior.canExecute(this.context)) {
+        const decision = behavior.decide(this.context);
+
+        if (decision) {
+          const action = this.convertDecisionToAction(decision);
+          decisionMade = true;
+
+          // Debug logging for AI decision-making
+          console.log(`[AI] ${unit.name} chose behavior: ${behavior.type}`);
+          return action;
+        }
+      }
+    }
+
+    // Fallback if no behavior returned valid decision (should never happen with DefaultBehavior)
+    if (!decisionMade) {
+      console.warn(`[AI] ${unit.name} had no valid behaviors, ending turn`);
+      return { type: 'end-turn' };
+    }
+
+    return { type: 'end-turn' };
+  }
+
+  /**
+   * Convert AIDecision to TurnAction format.
+   * Handles decision ordering and action types.
+   */
+  private convertDecisionToAction(decision: AIDecision): TurnAction {
+    // Phase 1: Only handle 'end-turn' and 'delay' actions
+    // Movement and attack will be implemented in Phase 2
+
+    if (decision.action?.type === 'end-turn') {
+      return { type: 'end-turn' };
+    }
+
+    if (decision.action?.type === 'delay') {
+      return { type: 'delay' };
+    }
+
+    // TODO Phase 2: Handle movement and attack
+    // if (decision.movement && decision.action?.type === 'attack') { ... }
+
+    // Fallback
+    console.warn(`[AI] Unhandled decision type, ending turn`, decision);
     return { type: 'end-turn' };
   }
 

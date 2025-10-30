@@ -92,6 +92,7 @@ When providing this file to an AI agent, you can say:
 - **Panel Content** → `### 4. Layout & UI Management` → `managers/panels/`
 - **Renderers** → `### 4. Rendering System`, `managers/renderers/`
 - **Turn Strategies** → `### 3. Turn Strategies`
+- **AI Behaviors** → `### 3.5. AI Behavior System`
 - **Animations** → `### 6. Cinematics & Animation`
 - **Utilities** → `### 8. Utilities & Predicates`
 
@@ -99,6 +100,7 @@ When providing this file to an AI agent, you can say:
 - `### 1. Core State & Data` - CombatState, CombatUnit, CombatMap, etc.
 - `### 2. Phase Handlers` - Deployment, ActionTimer, UnitTurn phases
 - `### 3. Turn Strategies` - Player vs AI behavior
+- `### 3.5. AI Behavior System` - Priority-based enemy AI (Phase 1 complete)
 - `### 4. Rendering System` - Map and unit rendering
 - `### 4. Layout & UI Management` - All panels, buttons, managers (17 files)
 - `### 5. Deployment System` - Deployment zones and UI
@@ -500,32 +502,120 @@ react-app/src/
 **Used By:** UnitTurnPhaseHandler for player-controlled units
 
 #### `strategies/EnemyTurnStrategy.ts`
-**Purpose:** AI turn behavior - automatically decides actions
+**Purpose:** AI turn behavior - automatically decides actions using priority-based behavior system
 **Exports:** `EnemyTurnStrategy`
 **Implements:** TurnStrategy
 **Current Functionality:**
 - Auto-selects active unit on turn start (shows in top panel with red title)
-- Calculates movement range on turn start
+- Builds AIContext with pre-calculated movement range, attack range, and helper methods
+- Evaluates behaviors in priority order (highest first)
+- First behavior with `canExecute() === true` gets to `decide()`
+- Converts AIDecision to TurnAction format
 - Adds thinking delay (1.0 second) for visual feedback
-- Returns `{ type: 'end-turn' }` action after delay (placeholder)
-**Future Functionality:**
-- Scan for player units in attack range → attack best target
-- Scan for player units in movement + attack range → move + attack
-- Move toward closest player unit if no attacks available
-- Use abilities strategically
-**AI Helper Methods (commented, ready for implementation):**
-- `_findPlayerUnits()` - Locates all player-controlled units
-- `_calculateDistance()` - Manhattan distance between positions
-- `_findBestAttackTarget()` - Selects optimal attack target (weakest/closest)
-- `_findBestMovementTarget()` - Selects optimal movement destination
+- Supports optional behavior configuration (uses DEFAULT_ENEMY_BEHAVIORS if not provided)
+**AI Behavior System:**
+- Phase 1 (Current): Infrastructure complete, DefaultBehavior ends turn
+- Phase 2 (Future): Attack behaviors (AttackNearestOpponent, DefeatNearbyOpponent)
+- Phase 3 (Future): Tactical behaviors (AggressiveTowardCasters, AggressiveTowardMelee)
+- Phase 4 (Future): Ability-based behaviors (HealAllies, SupportAllies, DebuffOpponent)
 **State Tracking:**
-- movementRange: Tiles enemy can move to
+- behaviors: AIBehavior[] (sorted by priority, highest first)
+- context: AIContext | null (built on turn start, contains all decision-making data)
+- movementRange: Position[] (backward compatibility with existing code)
 - thinkingTimer, thinkingDuration: Delay before decision (visual feedback)
-- actionDecided: Cached decision once made
+- actionDecided: TurnAction | null (cached decision once made)
 - targetedUnit, targetedPosition: AI's chosen target (for visualization)
 **Input Handling:** Returns `{ handled: false }` - enemies don't respond to player input
-**Dependencies:** MovementRangeCalculator
+**Dependencies:** AIContextBuilder, BehaviorRegistry, DEFAULT_ENEMY_BEHAVIORS, MovementRangeCalculator
 **Used By:** UnitTurnPhaseHandler for enemy-controlled units
+
+---
+
+### 3.5. AI Behavior System (Priority Queue Pattern)
+
+**Design Document:** [EnemyAIBehaviorSystem.md](GDD/EnemyBehaviour/EnemyAIBehaviorSystem.md)
+**Implementation Plan:** [01-CoreInfrastructurePlan.md](GDD/EnemyBehaviour/01-CoreInfrastructurePlan.md)
+
+#### `ai/types/AIBehavior.ts`
+**Purpose:** Core interfaces for AI behavior system
+**Exports:** `AIBehavior`, `AIBehaviorConfig`, `AIDecision`
+**Key Pattern:** Priority Queue - behaviors evaluated in priority order (highest first)
+**Architecture:**
+- Each behavior has `type`, `priority`, optional `config`
+- `canExecute(context)` determines if behavior is valid
+- `decide(context)` returns AIDecision with movement/action plan
+- First valid behavior executes, others skipped
+**AIDecision Structure:**
+- `movement?: { destination, path }` - Optional movement with pre-calculated path
+- `action?: { type, target?, abilityId? }` - Optional action (attack, ability, delay, end-turn)
+- `order` - Execution order ('move-first' | 'act-first' | 'move-only' | 'act-only')
+**Dependencies:** Position type
+**Used By:** All behavior implementations, BehaviorRegistry, EnemyTurnStrategy
+
+#### `ai/types/AIContext.ts`
+**Purpose:** Context object with game state and helper methods for AI decision-making
+**Exports:** `AIContext`, `UnitPlacement`, `AIContextBuilder`
+**Key Methods:** `AIContextBuilder.build()` - creates immutable context
+**Context Contents:**
+- `self`, `selfPosition` - The unit making the decision
+- `alliedUnits`, `enemyUnits` - Partitioned units (excludes self)
+- `map`, `manifest` - Map data and unit positions
+- `movementRange` - Pre-calculated reachable tiles
+- `attackRange` - Pre-calculated attack range (null if no weapon)
+**Helper Methods:**
+- `getUnitsInRange(range, from?)` - Units within Manhattan distance
+- `getUnitsInAttackRange(from?)` - Enemy units in attack range
+- `calculatePath(to)` - Shortest path to destination
+- `calculateAttackRangeFrom(position)` - Attack range from specific position
+- `predictDamage(target, weapon?)` - Damage prediction using CombatCalculations
+- `predictHitChance(target, weapon?)` - Hit chance prediction
+- `canDefeat(target)` - Check if damage >= target's current health
+- `getDistance(from, to)` - Manhattan distance calculation
+**Performance:**
+- Built once per turn in `EnemyTurnStrategy.onTurnStart()`
+- Immutable - all arrays frozen with `Object.freeze()`
+- Avoids per-frame allocations
+**Dependencies:** CombatState, CombatUnit, MovementRangeCalculator, AttackRangeCalculator, MovementPathfinder, CombatCalculations
+**Used By:** EnemyTurnStrategy, all behaviors
+
+#### `ai/behaviors/DefaultBehavior.ts`
+**Purpose:** Fallback behavior that always ends turn
+**Exports:** `DefaultBehavior`
+**Priority:** 0 (lowest) - should be last in behavior list
+**Logic:**
+- `canExecute()` always returns true
+- `decide()` returns `{ action: { type: 'end-turn' }, order: 'act-only' }`
+**Use Case:** Ensures enemy always takes an action even if no other behaviors apply
+**Dependencies:** AIBehavior interface
+**Used By:** All enemy units as fallback via DEFAULT_ENEMY_BEHAVIORS
+
+#### `ai/BehaviorRegistry.ts`
+**Purpose:** Factory for creating behavior instances by type
+**Exports:** `BehaviorRegistry` singleton, `DEFAULT_ENEMY_BEHAVIORS`
+**Key Methods:**
+- `register(type, factory)` - Register behavior type with factory function
+- `create(config)` - Create single behavior instance from config
+- `createMany(configs)` - Create and sort multiple behaviors by priority
+- `getRegisteredTypes()` - List all registered behavior types
+**Default Behaviors:**
+```typescript
+DEFAULT_ENEMY_BEHAVIORS = [
+  { type: 'DefaultBehavior', priority: 0 }
+]
+```
+**Future Behaviors (Phase 2+):**
+- AttackNearestOpponent (priority 80)
+- DefeatNearbyOpponent (priority 100)
+- AggressiveTowardCasters (priority 85-90)
+- HealAllies (priority 95)
+**Error Handling:** Throws clear error if unknown behavior type, includes list of available types
+**Dependencies:** All behavior implementations
+**Used By:** EnemyTurnStrategy for behavior instantiation
+
+#### `ai/index.ts`
+**Purpose:** Barrel export for AI system
+**Exports:** All core types, AIContextBuilder, DefaultBehavior, BehaviorRegistry, DEFAULT_ENEMY_BEHAVIORS
+**Used By:** EnemyTurnStrategy, future behavior implementations
 
 ---
 
@@ -1618,12 +1708,13 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 65 Core Files
+## File Count: 70 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
+**AI Behavior System:** 5 files (AIBehavior.ts, AIContext.ts, DefaultBehavior.ts, BehaviorRegistry.ts, index.ts)
 **Rendering:** 2 files
 **Layout & UI:** 18 files (ActionsMenuContent, AttackMenuContent, AbilityInfoContent, EquipmentInfoContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
