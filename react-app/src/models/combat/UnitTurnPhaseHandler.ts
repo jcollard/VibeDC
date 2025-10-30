@@ -1034,6 +1034,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return;
     }
 
+    // Set canAct to false IMMEDIATELY (before animation starts)
+    // This prevents the player from selecting menu items during the attack animation
+    this.canAct = false;
+    this.canResetMove = false;
+
     // Clear attack range highlights immediately (per spec)
     if (this.currentStrategy && 'exitAttackMode' in this.currentStrategy) {
       (this.currentStrategy as any).exitAttackMode();
@@ -1155,23 +1160,15 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   /**
-   * Complete attack sequence - set canAct=false, check victory/defeat
+   * Complete attack sequence - cleanup after animation finishes
    */
   private completeAttack(state: CombatState): CombatState {
     // Clear attack animations
     this.attackAnimations = [];
     this.attackAnimationIndex = 0;
 
-    // Set canAct to false (unit has performed an action)
-    this.canAct = false;
-
-    // canResetMove should become false after attacking
-    this.canResetMove = false;
-
-    // Exit attack mode and close attack panel
-    if (this.currentStrategy && 'exitAttackMode' in this.currentStrategy) {
-      (this.currentStrategy as any).exitAttackMode();
-    }
+    // Note: canAct and canResetMove were already set to false at the START of executeAttack
+    // This prevents menu interaction during the animation
 
     // Stay in unit-turn phase (don't auto-advance)
     return state;
