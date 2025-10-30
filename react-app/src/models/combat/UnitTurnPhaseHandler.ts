@@ -655,6 +655,18 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     if (path.length === 0) {
       console.warn('[UnitTurnPhaseHandler] Cannot move - no valid path to destination');
+
+      // If this is an AI unit, end turn instead of getting stuck
+      if (!this.activeUnit.isPlayerControlled) {
+        console.warn('[UnitTurnPhaseHandler] AI move failed, ending turn');
+        const newState = this.executeAction({ type: 'end-turn' }, state);
+        if (this.currentStrategy) {
+          this.currentStrategy.onTurnEnd();
+        }
+        return newState;
+      }
+
+      // For player units, just stay in current state (they can try something else)
       return state;
     }
 
