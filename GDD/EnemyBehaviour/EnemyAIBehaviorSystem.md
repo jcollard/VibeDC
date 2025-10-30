@@ -1,8 +1,8 @@
 # Enemy AI Behavior System
 
-**Version:** 1.0
+**Version:** 1.1
 **Last Updated:** Thu, Oct 30, 2025
-**Status:** Design Phase
+**Status:** Phase 1 Complete, Phase 2 In Planning
 
 ## Purpose
 
@@ -376,7 +376,7 @@ decide(context: AIContext): AIDecision | null {
 
   // Check current attack range
   for (const targetPos of context.attackRange?.validTargets ?? []) {
-    const targetUnit = context.manifest.getUnitAt(targetPos);
+    const targetUnit = context.manifest.getUnitAtPosition(targetPos); // Fixed: getUnitAtPosition not getUnitAt
     if (!targetUnit) continue;
 
     const distance = context.getDistance(context.selfPosition, targetPos);
@@ -397,7 +397,7 @@ decide(context: AIContext): AIDecision | null {
     const attackFromMove = context.calculateAttackRangeFrom(movePos);
 
     for (const targetPos of attackFromMove.validTargets) {
-      const targetUnit = context.manifest.getUnitAt(targetPos);
+      const targetUnit = context.manifest.getUnitAtPosition(targetPos); // Fixed: getUnitAtPosition not getUnitAt
       if (!targetUnit) continue;
 
       const distance = context.getDistance(movePos, targetPos);
@@ -964,18 +964,36 @@ behaviors: [
 
 ## Implementation Phases
 
-### Phase 1: Core Infrastructure (MVP)
-- [ ] Define `AIBehavior`, `AIDecision`, `AIContext` interfaces
-- [ ] Implement `AIContextBuilder` class
-- [ ] Create behavior registry system
-- [ ] Update `EnemyTurnStrategy` to use behavior list
-- [ ] Implement `DefaultBehavior` (fallback)
+### Phase 1: Core Infrastructure (MVP) ✅ COMPLETE
+- [x] Define `AIBehavior`, `AIDecision`, `AIContext` interfaces
+- [x] Implement `AIContextBuilder` class
+- [x] Create behavior registry system
+- [x] Update `EnemyTurnStrategy` to use behavior list
+- [x] Implement `DefaultBehavior` (fallback)
+
+**Learnings from Phase 1:**
+1. **Method Name Correction:** CombatUnitManifest uses `getUnitAtPosition()` not `getUnitAt()`
+2. **Damage Type Inference:** Equipment doesn't have `damageType` field - infer from weapon modifiers
+3. **Object.freeze() Pattern:** Used for immutability on alliedUnits, enemyUnits, movementRange arrays
+4. **Constructor Backward Compatibility:** EnemyTurnStrategy constructor has optional parameter with fallback to DEFAULT_ENEMY_BEHAVIORS
+5. **No WeakMap Yet:** Deferred to Phase 2 - standard arrays work fine for Phase 1 scope
 
 ### Phase 2: Basic Attack Behaviors
-- [ ] Implement `AttackNearestOpponent`
-- [ ] Implement `DefeatNearbyOpponent`
-- [ ] Add default behavior list to `MonsterUnit` / `CombatEncounter`
-- [ ] Test with simple encounters
+- [ ] Implement `AttackNearestOpponent` behavior
+- [ ] Implement `DefeatNearbyOpponent` behavior
+- [ ] Add WeakMap unit tracking to AIContextBuilder (avoid duplicate name lookups)
+- [ ] Update `convertDecisionToAction()` in EnemyTurnStrategy to handle movement + attack
+- [ ] Add default behavior list to `MonsterUnit` / `CombatEncounter` configuration
+- [ ] Update DEFAULT_ENEMY_BEHAVIORS to include attack behaviors
+- [ ] Test with simple encounters (1-2 enemies, basic tactics)
+- [ ] Verify attack animations work with AI decisions
+
+**Phase 2 Considerations:**
+1. Use `getUnitAtPosition()` consistently in all behavior implementations
+2. Handle null returns from `calculatePath()` gracefully
+3. Validate that movement paths are within unit's movement range
+4. Test edge cases: blocked paths, no valid targets, enemies out of range
+5. Ensure attack decisions trigger proper combat animations and damage application
 
 ### Phase 3: Tactical Behaviors
 - [ ] Implement `AggressiveTowardCasters`
@@ -988,6 +1006,71 @@ behaviors: [
 - [ ] Implement `DebuffOpponent` (requires ability system)
 - [ ] Implement `HealAllies` (requires ability system)
 - [ ] Add status effect tracking to `AIContext`
+
+---
+
+## Phase 1 Implementation Details
+
+### Files Created (Phase 1)
+
+**Core Types:**
+- `react-app/src/models/combat/ai/types/AIBehavior.ts` (101 lines)
+  - AIBehavior interface with type, priority, config, canExecute(), decide()
+  - AIBehaviorConfig interface for configuration
+  - AIDecision interface with movement, action, order fields
+
+- `react-app/src/models/combat/ai/types/AIContext.ts` (367 lines)
+  - AIContext interface with all helper methods
+  - AIContextBuilder class with static build() method
+  - UnitPlacement interface for unit + position pairing
+  - 10+ helper methods implemented as closures
+
+**Behaviors:**
+- `react-app/src/models/combat/ai/behaviors/DefaultBehavior.ts` (38 lines)
+  - Fallback behavior that always ends turn
+  - Priority 0 (lowest)
+  - Always valid, never returns null
+
+**Registry:**
+- `react-app/src/models/combat/ai/BehaviorRegistry.ts` (82 lines)
+  - Singleton BehaviorRegistryImpl class
+  - Factory pattern for creating behaviors from configs
+  - Priority-based sorting in createMany()
+  - DEFAULT_ENEMY_BEHAVIORS export
+
+**Barrel Export:**
+- `react-app/src/models/combat/ai/index.ts` (26 lines)
+  - Public API surface for AI system
+  - Re-exports all types and classes
+
+### Integration Changes (Phase 1)
+
+**EnemyTurnStrategy.ts:**
+- Added constructor with optional AIBehaviorConfig[] parameter
+- Added behaviors: AIBehavior[] field
+- Added context: AIContext | null field
+- Updated onTurnStart() to build context via AIContextBuilder
+- Updated onTurnEnd() to clean up context
+- Replaced decideAction() with behavior evaluation loop
+- Added convertDecisionToAction() method (Phase 1: end-turn/delay only)
+- Added console.log for AI decision debugging
+
+### Documentation (Phase 1)
+
+- `GDD/EnemyBehaviour/00-AIBehaviorQuickReference.md` (517 lines)
+- `GDD/EnemyBehaviour/01-CoreInfrastructurePlan.md` (1,297 lines)
+- `GDD/EnemyBehaviour/Phase1-CodeReview.md` (946 lines)
+- `CombatHierarchy.md` updated with Section 3.5 (125 lines added)
+
+### Key Design Decisions (Phase 1)
+
+1. **Immutability Enforced:** Used Object.freeze() on all arrays in AIContext
+2. **Performance First:** Context built once per turn, not per frame
+3. **Backward Compatible:** Constructor parameter optional, existing code works unchanged
+4. **Damage Type Heuristic:** Infer from weapon modifiers until Equipment.damageType added
+5. **Method Names Matter:** Discovered getUnitAtPosition() vs getUnitAt() discrepancy
+6. **WeakMap Deferred:** Standard arrays sufficient for Phase 1, will add in Phase 2
+7. **Console Logging:** Added [AI] prefix for easy filtering
 
 ---
 
@@ -1085,6 +1168,25 @@ Each behavior should have:
 - `ai/behaviors/HealAllies.ts` (future)
 - `ai/behaviors/DefaultBehavior.ts`
 - `ai/BehaviorRegistry.ts` - Factory for creating behaviors by type
+
+---
+
+## Reference Documents
+
+### Implementation & Planning
+- **[00-AIBehaviorQuickReference.md](./00-AIBehaviorQuickReference.md)** - Token-efficient reference for AI agents
+- **[01-CoreInfrastructurePlan.md](./01-CoreInfrastructurePlan.md)** - Phase 1 implementation plan (complete)
+- **[Phase1-CodeReview.md](./Phase1-CodeReview.md)** - Code review document (APPROVED)
+- **[ModifiedFilesManifest.md](./ModifiedFilesManifest.md)** - Complete file change tracking
+
+### Architecture & Guidelines
+- **[CombatHierarchy.md](../../CombatHierarchy.md)** - Section 3.5 documents AI system
+- **[GeneralGuidelines.md](../../GeneralGuidelines.md)** - Coding standards (100% compliant)
+
+### Future Phase Plans (To Be Created)
+- **02-AttackBehaviorsPlan.md** - Phase 2 detailed implementation plan
+- **03-TacticalBehaviorsPlan.md** - Phase 3 detailed implementation plan
+- **04-AbilityBehaviorsPlan.md** - Phase 4 detailed implementation plan
 
 ---
 
