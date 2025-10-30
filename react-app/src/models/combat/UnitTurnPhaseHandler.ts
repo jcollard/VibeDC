@@ -719,6 +719,33 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       (this.currentStrategy as any).onUnitMoved();
     }
 
+    // Check for pending AI action after movement (move + attack pattern)
+    if (this.currentStrategy && 'hasPendingAction' in this.currentStrategy) {
+      const hasPending = (this.currentStrategy as any).hasPendingAction();
+      if (hasPending) {
+        console.log('[UnitTurnPhaseHandler] AI has pending action after move');
+        const pendingAction = (this.currentStrategy as any).getPendingAction();
+
+        if (pendingAction?.type === 'attack' && pendingAction.target) {
+          // Execute the pending attack
+          const targetUnit = state.unitManifest.getUnitAtPosition(pendingAction.target);
+          if (targetUnit && this.activeUnit && this.activeUnitPosition) {
+            console.log('[UnitTurnPhaseHandler] Executing pending attack after move');
+            this.executeAttack(this.activeUnit, this.activeUnitPosition, targetUnit, pendingAction.target);
+            // Stay in unit-turn phase (attack animation will play)
+          } else {
+            console.warn('[UnitTurnPhaseHandler] Pending attack target not found, ending turn');
+            // Target disappeared, end turn
+            const newState = this.executeAction({ type: 'end-turn' }, state);
+            if (this.currentStrategy) {
+              this.currentStrategy.onTurnEnd();
+            }
+            return newState;
+          }
+        }
+      }
+    }
+
     return state;
   }
 
