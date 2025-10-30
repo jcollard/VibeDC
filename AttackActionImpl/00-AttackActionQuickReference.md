@@ -2,7 +2,7 @@
 
 **Purpose:** Token-efficient reference for AI agents working on Attack Action implementation
 
-**Last Updated:** 2025-10-30 (Step 4 Complete)
+**Last Updated:** 2025-10-30 (Step 4 Complete + Bug Fixes)
 
 ---
 
@@ -225,6 +225,73 @@ clearAttackOverride()  // Reset to defaults
 
 ---
 
+## Bug Fixes and Improvements (Post-Step 4)
+
+### 🐛 Bug Fix 1: Knockout Detection Logic
+**Branch:** `attack-action-bugs`
+**Issue:** Knockout detection used `target.health` (remaining HP) instead of `target.maxHealth`
+**Files Fixed:**
+- `UnitTurnPhaseHandler.ts` (lines 1157, 1150, 1153)
+- `CombatUnit.ts` (documentation clarified)
+
+**Changes:**
+- Fixed knockout check: `wounds >= maxHealth` (was `wounds >= health`)
+- Fixed wound capping: `Math.min(newWounds, maxHealth)` (was using `health`)
+- Added comprehensive documentation explaining health vs maxHealth semantics
+
+**Impact:** Units are now correctly knocked out when total damage equals or exceeds max health capacity
+
+---
+
+### 🐛 Bug Fix 2: Dual-Wield Knockout Message Timing
+**Branch:** `attack-action-bugs`
+**Issue:** Knockout message appeared between two strike messages instead of after both
+**File Fixed:** `UnitTurnPhaseHandler.ts` (lines 1136-1158, 1080-1084, 1135-1139)
+
+**Root Cause:** `applyDamage()` immediately added knockout message during damage application
+
+**Solution:**
+- Removed knockout detection from `applyDamage()` (now only updates wounds)
+- Added knockout check after single-weapon attack (after damage message)
+- Added knockout check after dual-wield loop (after all strike messages)
+
+**Impact:** Combat log now shows correct message order for dual-wielding knockouts
+
+---
+
+### ✨ Improvement 1: Text Shadow Support
+**Branch:** `attack-action-bugs`
+**File Created:** `FontAtlasRenderer.ts` - `renderTextWithShadow()` method (lines 123-183)
+
+**Features:**
+- Renders text with configurable drop shadow for improved readability
+- Parameters: shadowColor (default black), shadowOffsetX/Y (default 1px)
+- Uses two `renderText()` calls (shadow first, then main text)
+- Works with all alignment options (left/center/right)
+
+**Usage:**
+```typescript
+FontAtlasRenderer.renderTextWithShadow(
+  ctx, text, x, y, fontId, atlasImage,
+  scale, alignment, color, shadowColor, offsetX, offsetY
+);
+```
+
+---
+
+### ✨ Improvement 2: Floating Text Uses Shadows
+**Branch:** `attack-action-bugs`
+**File Modified:** `AttackAnimationSequence.ts` (lines 127-140, 160-172)
+
+**Changes:**
+- Damage numbers now render with black shadow
+- Miss text now renders with black shadow
+- Both use default 1px offset for crisp pixel-art effect
+
+**Impact:** Floating damage/miss text is now readable against any background (tiles, units, terrain)
+
+---
+
 ## Current Status
 
 ### Completed ✅
@@ -242,12 +309,14 @@ clearAttackOverride()  // Reset to defaults
 - [x] Dual wielding UI support (two columns)
 - [x] "Perform Attack" button
 - [x] Attack execution (damage application)
-- [x] Attack animations (red flicker, floating text)
+- [x] Attack animations (red flicker, floating text with shadows)
 - [x] Dual wielding execution (two sequential attacks)
-- [x] Knockout detection (wounds >= health)
-- [x] Combat log messages (hit/miss/damage/knockout)
+- [x] Knockout detection (wounds >= maxHealth) - FIXED
+- [x] Combat log messages (hit/miss/damage/knockout) - FIXED order
 - [x] Button disabling during animations
 - [x] Developer testing functions
+- [x] Text shadow rendering utility
+- [x] Improved floating text readability
 
 ### In Progress 🚧
 - None (Step 4 complete, ready for merge to attack-action branch)
@@ -276,6 +345,7 @@ clearAttackOverride()  // Reset to defaults
 - **`AttackRangeCalculator.ts`** - Manhattan distance, tile categorization
 - **`LineOfSightCalculator.ts`** - Bresenham's algorithm, blocking checks
 - **`CombatCalculations.ts`** - Hit chance and damage calculations (stub formulas + developer overrides)
+- **`FontAtlasRenderer.ts`** - Text rendering with shadow support (readability enhancement)
 
 ### Constants
 - **`CombatConstants.ts`** - Color constants (6 attack colors + alpha)
@@ -423,7 +493,18 @@ A: User feedback during implementation indicated the flicker was too fast at 200
 A: This was a critical bug fix. Initially canAct was set to false after the animation completed, which allowed the player to click menu buttons during the 3-6 second animation, causing race conditions and state bugs. Setting it false immediately prevents all interaction during animation playback.
 
 **Q: How does knockout detection work?**
-A: After applying damage, the system checks if `target.wounds >= target.health`. If true, the unit is knocked out and a combat log message is added. Victory/defeat detection (checking if all enemies/players are knocked out) is planned for Step 5.
+A: After applying damage, the system checks if `target.wounds >= target.maxHealth`. If true, the unit is knocked out and a combat log message is added. Victory/defeat detection (checking if all enemies/players are knocked out) is planned for Step 5.
+
+**IMPORTANT:** This was fixed in the bug fix session - originally incorrectly used `target.health` (remaining HP) instead of `target.maxHealth` (max HP capacity).
+
+**Q: Why was the knockout detection bug hard to catch?**
+A: The naming is confusing: `health` is a getter that returns `maxHealth - wounds` (remaining HP), not the maximum. The bug was `wounds >= health` which compares "damage taken" to "HP remaining" - nonsensical logic. Correct is `wounds >= maxHealth` comparing total damage to max capacity. Documentation was added to prevent this in the future.
+
+**Q: Why does the knockout message appear AFTER all strikes in dual-wielding?**
+A: Originally `applyDamage()` immediately checked for knockout, causing the message to appear between strikes. Fixed by moving knockout detection to the caller after all damage messages are logged. This ensures proper message ordering: "First strike... Second strike... [target] was knocked out."
+
+**Q: Why does floating text have shadows now?**
+A: Damage numbers and "Miss" text can be difficult to read when appearing over same-colored tiles or units. Drop shadows (black, 1px offset) ensure text is readable against any background. The `renderTextWithShadow()` utility method was added to `FontAtlasRenderer` for this purpose.
 
 ---
 

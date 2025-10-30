@@ -2,16 +2,22 @@
 
 **Purpose:** Track all files created/modified during Attack Action implementation
 
-**Last Updated:** 2025-10-30 (Step 4 Complete)
+**Last Updated:** 2025-10-30 (Step 4 Complete + Bug Fixes)
 
 ---
 
 ## Summary Statistics
 
+### Main Implementation (Steps 1-4)
 - **Files Created:** 11
 - **Files Modified:** 17
 - **Total Changed:** 28 files
 - **Branches:** `attack-action`, `attack-action-preview-range`, `attack-action-03-show-info`, `attack-action-04-perform-attack`
+
+### Bug Fixes & Improvements
+- **Files Modified:** 4
+- **Branch:** `attack-action-bugs`
+- **Focus:** Knockout detection fix, combat log message ordering, text readability
 
 ---
 
@@ -870,6 +876,110 @@ private handleAttackClick(position: Position, state: CombatState): PhaseEventRes
 
 ---
 
+### Bug Fixes & Improvements (Post-Step 4)
+
+#### 23. `react-app/src/models/combat/UnitTurnPhaseHandler.ts`
+**Branch:** `attack-action-bugs`
+**Changes:** Fixed knockout detection logic and message ordering
+**Lines Modified:** ~60 modified (3 bug fixes)
+
+**Bug Fix 1: Knockout Detection (Line 1157)**
+- **Before:** `if (target.wounds >= target.health)` ❌
+- **After:** `if (target.wounds >= target.maxHealth)` ✅
+- **Issue:** Used remaining HP instead of max HP capacity
+- **Impact:** Units now correctly knocked out at proper threshold
+
+**Bug Fix 2 & 3: Wound Capping (Lines 1150, 1153)**
+- **Before:** `Math.min(newWounds, target.health)` ❌
+- **After:** `Math.min(newWounds, target.maxHealth)` ✅
+- **Issue:** Capped wounds at remaining HP, making wounded units harder to kill
+- **Impact:** Damage application now works correctly
+
+**Refactor: Knockout Message Timing**
+- Removed knockout detection from `applyDamage()` method (lines 1136-1158)
+- Added knockout check after single-weapon attack (lines 1080-1084)
+- Added knockout check after dual-wield loop (lines 1135-1139)
+- **Issue:** Knockout message appeared between dual-wield strikes
+- **Impact:** Combat log now shows proper message order
+
+**Updated Method:**
+```typescript
+private applyDamage(target: CombatUnit, damage: number): void {
+  // Now only updates wounds, no knockout detection
+  // Knockout checks moved to caller for proper message ordering
+}
+```
+
+---
+
+#### 24. `react-app/src/models/combat/CombatUnit.ts`
+**Branch:** `attack-action-bugs`
+**Changes:** Enhanced documentation for health/maxHealth/wounds
+**Lines Modified:** +24 documentation lines
+
+**Documentation Added (Lines 59-84):**
+- Clarified `health` is calculated value (maxHealth - wounds)
+- Emphasized to use `maxHealth` for knockout detection, NOT `health`
+- Added example: maxHealth=100, wounds=30 → health=70
+- Warned against common mistake of comparing wounds to health
+
+**Purpose:** Prevent future developers from making the same knockout detection mistake
+
+---
+
+#### 25. `react-app/src/utils/FontAtlasRenderer.ts`
+**Branch:** `attack-action-bugs`
+**Changes:** Added `renderTextWithShadow()` method for improved text readability
+**Lines Modified:** +61 added (new method)
+
+**New Method (Lines 123-183):**
+```typescript
+static renderTextWithShadow(
+  ctx: CanvasRenderingContext2D,
+  text: string,
+  x: number,
+  y: number,
+  fontId: string,
+  atlasImage: HTMLImageElement,
+  scale: number = 1,
+  alignment: 'left' | 'center' | 'right' = 'left',
+  color?: string,
+  shadowColor: string = 'rgba(0, 0, 0, 0.8)',
+  shadowOffsetX: number = 1,
+  shadowOffsetY: number = 1
+): number
+```
+
+**Features:**
+- Renders text with configurable drop shadow
+- Two `renderText()` calls: shadow first (offset), then main text
+- Supports all alignments (left/center/right)
+- Default: semi-transparent black shadow, 1px offset
+- Returns text width (same as `renderText()`)
+
+**Use Case:** Floating damage/miss text readable against any background
+
+---
+
+#### 26. `react-app/src/models/combat/AttackAnimationSequence.ts`
+**Branch:** `attack-action-bugs`
+**Changes:** Updated floating text to use shadows
+**Lines Modified:** ~6 lines modified (2 method calls)
+
+**Damage Number Animation (Lines 127-140):**
+- **Before:** `FontAtlasRenderer.renderText(..., '#ff0000')`
+- **After:** `FontAtlasRenderer.renderTextWithShadow(..., '#ff0000', 'black')`
+- Red damage text with black shadow
+
+**Miss Text Animation (Lines 160-172):**
+- **Before:** `FontAtlasRenderer.renderText(..., '#ffffff')`
+- **After:** `FontAtlasRenderer.renderTextWithShadow(..., '#ffffff', 'black')`
+- White "Miss" text with black shadow
+
+**Impact:** Floating text now readable over any tile/unit color
+
+---
+
 ---
 
 ## File Change Timeline
@@ -931,6 +1041,15 @@ Modified:
 - models/combat/utils/CombatCalculations.ts (developer override system)
 - components/combat/CombatView.tsx (developer functions, perform-attack handler)
 - models/combat/managers/panels/ActionsMenuContent.ts (button disabling)
+```
+
+### Branch `attack-action-bugs` - Bug Fixes & Improvements
+```
+Modified:
+- models/combat/UnitTurnPhaseHandler.ts (knockout detection fix, message ordering)
+- models/combat/CombatUnit.ts (documentation improvements)
+- utils/FontAtlasRenderer.ts (added renderTextWithShadow method)
+- models/combat/AttackAnimationSequence.ts (floating text uses shadows)
 ```
 
 ---
@@ -996,21 +1115,33 @@ Modified:
 - **Documentation:** ~3,040 lines (implementation docs + code reviews + developer docs)
 - **Overall:** ~4,805 lines for Attack Action (Steps 1-4)
 
+### Bug Fixes & Improvements
+- **Modified Code:** ~91 lines (3 bug fixes + text shadow method)
+- **Documentation:** ~85 lines (CombatUnit.ts comments + Quick Reference updates)
+- **Total:** ~176 lines
+
+### Combined Total (Steps 1-4 + Bug Fixes)
+- **Production Code:** ~1,856 lines
+- **Documentation:** ~3,125 lines
+- **Overall:** ~4,981 lines
+
 ---
 
 ## Impact Analysis
 
 ### High Impact (Core Logic)
 - `PlayerTurnStrategy.ts` - Major state additions (~290 lines total across all steps)
-- `UnitTurnPhaseHandler.ts` - Rendering, delegation, attack execution (~369 lines total across all steps)
+- `UnitTurnPhaseHandler.ts` - Rendering, delegation, attack execution (~429 lines total including bug fixes)
 - `AttackMenuContent.ts` - New panel component, major rewrite in Step 3 (~417 lines total)
 
 ### Medium Impact (Infrastructure)
 - `AttackRangeCalculator.ts` - New utility (~115 lines)
 - `LineOfSightCalculator.ts` - New utility (~115 lines)
-- `AttackAnimationSequence.ts` - New animation system (~172 lines)
+- `AttackAnimationSequence.ts` - New animation system (~178 lines including shadow updates)
 - `CombatCalculations.ts` - Stub system + developer overrides (~119 lines)
 - `CombatView.tsx` - Position data flow, developer functions (~57 lines total)
+- `FontAtlasRenderer.ts` - Text rendering with shadow support (~61 lines added)
+- `CombatUnit.ts` - Enhanced documentation (~24 lines documentation)
 
 ### Low Impact (Glue Code)
 - `ActionsMenuContent.ts` - Button disabling logic (~24 lines modified)
@@ -1110,14 +1241,15 @@ UnitTurnPhaseHandler.ts
 
 ## Status Summary
 
-### ✅ Completed (Steps 1-4)
+### ✅ Completed (Steps 1-4 + Bug Fixes)
 1. ✅ **Step 1:** Attack menu panel with cancel button
 2. ✅ **Step 2:** Attack range preview with line of sight
 3. ✅ **Step 3:** Target selection and attack info display
 4. ✅ **Step 4:** Attack execution, animations, developer testing tools
+5. ✅ **Bug Fixes:** Knockout detection, combat log message ordering, text shadows
 
 ### 🚧 In Progress
-- None (Step 4 complete, ready for merge)
+- None (All work complete, ready for merge to main branch)
 
 ### 📋 Planned
 - Step 5: Victory/Defeat detection
