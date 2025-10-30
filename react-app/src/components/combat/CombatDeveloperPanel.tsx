@@ -1,5 +1,4 @@
 import React from 'react';
-import { FontRegistry } from '../../utils/FontRegistry';
 import type { SaveSlotMetadata } from '../../utils/combatStorage';
 
 interface CombatDeveloperPanelProps {
@@ -17,20 +16,6 @@ interface CombatDeveloperPanelProps {
   showFPS: boolean;
   onShowFPSChange: (show: boolean) => void;
 
-  // Font selection
-  titleAtlasFont: string;
-  onTitleAtlasFontChange: (font: string) => void;
-  messageAtlasFont: string;
-  onMessageAtlasFontChange: (font: string) => void;
-  dialogAtlasFont: string;
-  onDialogAtlasFontChange: (font: string) => void;
-  unitInfoAtlasFont: string;
-  onUnitInfoAtlasFontChange: (font: string) => void;
-
-  // Color
-  highlightColor: string;
-  onHighlightColorChange: (color: string) => void;
-
   // Save/Load
   saveErrorMessage: string | null;
   slotMetadata: (SaveSlotMetadata | null)[];
@@ -44,7 +29,7 @@ interface CombatDeveloperPanelProps {
 
 /**
  * Developer settings panel for CombatView
- * Provides controls for display settings, debugging, font selection, and save/load functionality
+ * Provides controls for display settings, debugging, and save/load functionality
  */
 export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
   integerScalingEnabled,
@@ -57,16 +42,6 @@ export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
   onDebugGridChange,
   showFPS,
   onShowFPSChange,
-  titleAtlasFont,
-  onTitleAtlasFontChange,
-  messageAtlasFont,
-  onMessageAtlasFontChange,
-  dialogAtlasFont,
-  onDialogAtlasFontChange,
-  unitInfoAtlasFont,
-  onUnitInfoAtlasFontChange,
-  highlightColor,
-  onHighlightColorChange,
   saveErrorMessage,
   slotMetadata,
   onExportToFile,
@@ -208,128 +183,6 @@ export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
         <option value={30}>30 FPS</option>
         <option value={60}>60 FPS</option>
       </select>
-
-      {/* Title Font Atlas Selector */}
-      <label style={{ display: 'block', marginBottom: '4px' }}>
-        Title Font Atlas:
-      </label>
-      <select
-        value={titleAtlasFont}
-        onChange={(e) => onTitleAtlasFontChange(e.target.value)}
-        style={{
-          width: '200px',
-          padding: '4px',
-          background: '#222',
-          border: '1px solid #555',
-          borderRadius: '3px',
-          color: '#fff',
-          fontFamily: 'monospace',
-          fontSize: '11px',
-          marginBottom: '8px',
-        }}
-      >
-        {FontRegistry.getAllIds().sort().map((fontId) => (
-          <option key={fontId} value={fontId}>
-            {fontId}
-          </option>
-        ))}
-      </select>
-
-      {/* Message Font Atlas Selector */}
-      <label style={{ display: 'block', marginBottom: '4px' }}>
-        Message Font Atlas:
-      </label>
-      <select
-        value={messageAtlasFont}
-        onChange={(e) => onMessageAtlasFontChange(e.target.value)}
-        style={{
-          width: '200px',
-          padding: '4px',
-          background: '#222',
-          border: '1px solid #555',
-          borderRadius: '3px',
-          color: '#fff',
-          fontFamily: 'monospace',
-          fontSize: '11px',
-          marginBottom: '8px',
-        }}
-      >
-        {FontRegistry.getAllIds().sort().map((fontId) => (
-          <option key={fontId} value={fontId}>
-            {fontId}
-          </option>
-        ))}
-      </select>
-
-      {/* Dialog Font Atlas Selector */}
-      <label style={{ display: 'block', marginBottom: '4px' }}>
-        Dialog Font Atlas (Party Selection):
-      </label>
-      <select
-        value={dialogAtlasFont}
-        onChange={(e) => onDialogAtlasFontChange(e.target.value)}
-        style={{
-          width: '200px',
-          padding: '4px',
-          background: '#222',
-          border: '1px solid #555',
-          borderRadius: '3px',
-          color: '#fff',
-          fontFamily: 'monospace',
-          fontSize: '11px',
-          marginBottom: '8px',
-        }}
-      >
-        {FontRegistry.getAllIds().sort().map((fontId) => (
-          <option key={fontId} value={fontId}>
-            {fontId}
-          </option>
-        ))}
-      </select>
-
-      {/* Unit Info Font Atlas Selector */}
-      <label style={{ display: 'block', marginBottom: '4px' }}>
-        Unit Info Font Atlas:
-      </label>
-      <select
-        value={unitInfoAtlasFont}
-        onChange={(e) => onUnitInfoAtlasFontChange(e.target.value)}
-        style={{
-          width: '200px',
-          padding: '4px',
-          background: '#222',
-          border: '1px solid #555',
-          borderRadius: '3px',
-          color: '#fff',
-          fontFamily: 'monospace',
-          fontSize: '11px',
-        }}
-      >
-        {FontRegistry.getAllIds().sort().map((fontId) => (
-          <option key={fontId} value={fontId}>
-            {fontId}
-          </option>
-        ))}
-      </select>
-
-      {/* Highlight Color Picker */}
-      <label style={{ display: 'block', marginTop: '16px', marginBottom: '4px' }}>
-        Highlight Color:
-      </label>
-      <input
-        type="color"
-        value={highlightColor}
-        onChange={(e) => onHighlightColorChange(e.target.value)}
-        style={{
-          width: '200px',
-          height: '32px',
-          padding: '2px',
-          background: '#222',
-          border: '1px solid #555',
-          borderRadius: '3px',
-          cursor: 'pointer',
-        }}
-      />
 
       {/* Combat Save/Load Section */}
       <div style={{ marginTop: '20px', paddingTop: '15px', borderTop: '1px solid #666' }}>

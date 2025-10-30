@@ -232,11 +232,11 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     requestAnimationFrame(updateCanvasStyle);
   }, [windowSize.width, windowSize.height, integerScalingEnabled, manualScale]);
 
-  // Track selected font atlases from FontRegistry
-  const [titleAtlasFont, setTitleAtlasFont] = useState<string>('15px-dungeonslant');
-  const [messageAtlasFont, setMessageAtlasFont] = useState<string>('7px-04b03');
-  const [dialogAtlasFont, setDialogAtlasFont] = useState<string>('7px-04b03');
-  const [unitInfoAtlasFont, setUnitInfoAtlasFont] = useState<string>('7px-04b03');
+  // Font atlases used for rendering (hardcoded values)
+  const titleAtlasFont = '15px-dungeonslant';
+  const messageAtlasFont = '7px-04b03';
+  const dialogAtlasFont = '7px-04b03';
+  const unitInfoAtlasFont = '7px-04b03';
 
   // Handle integer scaling toggle
   const handleIntegerScalingToggle = useCallback((enabled: boolean) => {
@@ -267,8 +267,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Track the hovered party member index (for visual feedback)
   const hoveredPartyMemberRef = useRef<number | null>(null);
 
-  // Track highlight color for testing
-  const [highlightColor, setHighlightColor] = useState<string>('#ccaa00');
+  // Highlight color (hardcoded value)
+  const highlightColor = '#ccaa00';
 
   // Track debug grid overlay
   const [showDebugGrid, setShowDebugGrid] = useState<boolean>(false);
@@ -1503,16 +1503,6 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
           onDebugGridChange={setShowDebugGrid}
           showFPS={showFPS}
           onShowFPSChange={setShowFPS}
-          titleAtlasFont={titleAtlasFont}
-          onTitleAtlasFontChange={setTitleAtlasFont}
-          messageAtlasFont={messageAtlasFont}
-          onMessageAtlasFontChange={setMessageAtlasFont}
-          dialogAtlasFont={dialogAtlasFont}
-          onDialogAtlasFontChange={setDialogAtlasFont}
-          unitInfoAtlasFont={unitInfoAtlasFont}
-          onUnitInfoAtlasFontChange={setUnitInfoAtlasFont}
-          highlightColor={highlightColor}
-          onHighlightColorChange={setHighlightColor}
           saveErrorMessage={saveErrorMessage}
           slotMetadata={slotMetadata}
           onExportToFile={handleExportToFile}
