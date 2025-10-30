@@ -57,17 +57,29 @@ export interface CombatUnit {
   get classExperienceSpent(): ReadonlyMap<string, number>;
 
   /**
-   * Amount of wounds the unit can take before fainting
+   * Current remaining health (calculated as maxHealth - wounds)
+   *
+   * IMPORTANT: This is a CALCULATED value representing remaining HP, not maximum HP!
+   * - For knockout detection, compare wounds to maxHealth, NOT to health
+   * - For damage caps, use maxHealth, NOT health
+   *
+   * Example: If maxHealth=100 and wounds=30, then health=70
    */
   get health(): number;
 
   /**
-   * The maximum health this unit may have
+   * The maximum health capacity of this unit
+   *
+   * IMPORTANT: Use this (NOT health) for:
+   * - Knockout detection: wounds >= maxHealth
+   * - Damage capping: Math.min(newWounds, maxHealth)
    */
   get maxHealth(): number;
 
   /**
-   * The number of wounds this unit has sustained
+   * The total number of wounds (damage) this unit has sustained
+   *
+   * IMPORTANT: Compare to maxHealth (NOT health) for knockout detection
    */
   get wounds(): number;
 

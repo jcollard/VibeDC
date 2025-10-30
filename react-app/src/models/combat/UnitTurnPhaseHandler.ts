@@ -1135,6 +1135,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
   /**
    * Apply damage to a unit and check for knockout
+   *
+   * IMPORTANT: health vs maxHealth semantics
+   * - health: Current remaining HP (maxHealth - wounds) - DO NOT use for knockout checks!
+   * - maxHealth: Maximum HP capacity - Use this for knockout detection
+   * - wounds: Total damage taken - Compare to maxHealth, not health
    */
   private applyDamage(target: CombatUnit, damage: number): void {
     // Reduce target's wounds (increases HP loss)
@@ -1142,14 +1147,14 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Update wounds (cap at max health)
     if ('setWounds' in target && typeof (target as any).setWounds === 'function') {
-      (target as any).setWounds(Math.min(newWounds, target.health));
+      (target as any).setWounds(Math.min(newWounds, target.maxHealth));
     } else {
       // Fallback: directly mutate wounds (not ideal, but necessary for MonsterUnit)
-      (target as any)._wounds = Math.min(newWounds, target.health);
+      (target as any)._wounds = Math.min(newWounds, target.maxHealth);
     }
 
     // Check if unit was knocked out
-    if (target.wounds >= target.health) {
+    if (target.wounds >= target.maxHealth) {
       const targetNameColor = target.isPlayerControlled
         ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
         : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
