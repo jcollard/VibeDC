@@ -66,6 +66,9 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     unitManifest: new CombatUnitManifest(),
   });
 
+  // Phase handler reset version (increments when loading saves to force recreation)
+  const [phaseHandlerVersion, setPhaseHandlerVersion] = useState(0);
+
   // Initialize UI state manager
   const uiStateManager = useMemo(() => new CombatUIStateManager(), []);
 
@@ -81,13 +84,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   // Get active encounter (loaded encounter takes precedence over prop)
   const activeEncounter = loadedEncounterRef.current ?? encounter;
 
-  // Switch phase handler when phase changes
+  // Switch phase handler when phase changes or version increments (on load)
   useEffect(() => {
-    // Only create a new handler if the phase actually changed
-    if (currentPhaseRef.current === combatState.phase) {
-      return; // Handler is already correct for this phase
-    }
-
     currentPhaseRef.current = combatState.phase;
 
     if (combatState.phase === 'deployment') {
@@ -100,7 +98,7 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current = new UnitTurnPhaseHandler();
     }
     // Add other phase handlers as needed (victory, defeat)
-  }, [combatState.phase, uiStateManager]);
+  }, [combatState.phase, uiStateManager, phaseHandlerVersion]);
 
   // Expose developer mode functions to window (for testing)
   useEffect(() => {
@@ -1340,6 +1338,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const handleLoadComplete = useCallback(
     (result: LoadResult) => {
       if (result.success && result.combatState && result.combatLog) {
+        // Force phase handler to be recreated (even if phase hasn't changed)
+        // This clears any stale selection state from the previous game
+        setPhaseHandlerVersion(v => v + 1);
+
         // Apply new state
         setCombatState(result.combatState);
 
