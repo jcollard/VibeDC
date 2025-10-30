@@ -17,20 +17,24 @@ export class CombatCalculations {
   /**
    * Calculates the chance to hit for an attack.
    *
+   * Formula:
+   * - Physical: Base Hit = 100% - Defender's Physical Evade
+   *   - If Attacker's Courage > Defender's Courage: Bonus = (difference × 0.25)%
+   * - Magical: Base Hit = 100% - Defender's Magic Evade
+   *   - If Attacker's Attunement > Defender's Attunement: Bonus = (difference × 0.25)%
+   * - Final hit chance clamped between 3% and 97%
+   *
    * @param attacker - The attacking unit
    * @param defender - The defending unit
    * @param distance - Manhattan distance between attacker and defender
    * @param damageType - Type of damage ('physical' or 'magical')
    * @returns Hit chance as a number between 0 and 1 (0 = 0%, 1 = 100%)
-   *
-   * @stub Currently returns 1.0 (100% hit rate)
-   * @future Will calculate based on attacker accuracy vs defender P.Evd/M.Evd
    */
   static getChanceToHit(
-    _attacker: CombatUnit,
-    _defender: CombatUnit,
+    attacker: CombatUnit,
+    defender: CombatUnit,
     _distance: number,
-    _damageType: 'physical' | 'magical'
+    damageType: 'physical' | 'magical'
   ): number {
     // Check for developer mode override (persists until cleared)
     if (this.nextHitRateOverride !== null) {
@@ -39,12 +43,47 @@ export class CombatCalculations {
       return override;
     }
 
-    // Stub: Always 100% hit rate
-    return 1.0;
+    // Calculate base hit chance from evasion
+    let baseHitChance: number;
+    let mentalStatBonus = 0;
+
+    if (damageType === 'physical') {
+      // Base hit = 100% - Physical Evade
+      baseHitChance = 100 - defender.physicalEvade;
+
+      // Courage bonus (only if attacker has more courage)
+      if (attacker.courage > defender.courage) {
+        mentalStatBonus = (attacker.courage - defender.courage) * 0.25;
+      }
+    } else {
+      // Base hit = 100% - Magic Evade
+      baseHitChance = 100 - defender.magicEvade;
+
+      // Attunement bonus (only if attacker has more attunement)
+      if (attacker.attunement > defender.attunement) {
+        mentalStatBonus = (attacker.attunement - defender.attunement) * 0.25;
+      }
+    }
+
+    // Apply mental stat bonus
+    let finalHitChance = baseHitChance + mentalStatBonus;
+
+    // Clamp between 3% and 97%
+    finalHitChance = Math.max(3, Math.min(97, finalHitChance));
+
+    // Convert to decimal (0-1 range)
+    return finalHitChance / 100;
   }
 
   /**
    * Calculates the damage dealt by an attack.
+   *
+   * Formula:
+   * - Physical: Base = (Attacker's Physical Power + Weapon Physical Power Modifier) × Weapon Physical Power Multiplier
+   *   - If Defender's Courage > Attacker's Courage: Penalty = floor(difference × 0.25)
+   * - Magical: Base = (Attacker's Magic Power + Weapon Magic Power Modifier) × Weapon Magic Power Multiplier
+   *   - If Defender's Attunement > Attacker's Attunement: Penalty = floor(difference × 0.25)
+   * - Final damage = max(0, Base - Penalty)
    *
    * @param attacker - The attacking unit
    * @param weapon - The weapon being used
@@ -52,16 +91,13 @@ export class CombatCalculations {
    * @param distance - Manhattan distance between attacker and defender
    * @param damageType - Type of damage ('physical' or 'magical')
    * @returns Damage dealt as an integer
-   *
-   * @stub Currently returns 1 (1 damage)
-   * @future Will calculate based on weapon power, attacker P.Pow/M.Pow, defender defenses
    */
   static calculateAttackDamage(
-    _attacker: CombatUnit,
-    _weapon: Equipment,
-    _defender: CombatUnit,
+    attacker: CombatUnit,
+    weapon: Equipment,
+    defender: CombatUnit,
     _distance: number,
-    _damageType: 'physical' | 'magical'
+    damageType: 'physical' | 'magical'
   ): number {
     // Check for developer mode override (persists until cleared)
     if (this.nextDamageOverride !== null) {
@@ -70,8 +106,39 @@ export class CombatCalculations {
       return override;
     }
 
-    // Stub: Always 1 damage
-    return 1;
+    let baseDamage: number;
+    let mentalStatPenalty = 0;
+
+    if (damageType === 'physical') {
+      // Physical damage: (Physical Power + Weapon Modifier) × Weapon Multiplier
+      const powerModifier = weapon.modifiers.physicalPowerModifier;
+      const powerMultiplier = weapon.modifiers.physicalPowerMultiplier;
+      baseDamage = (attacker.physicalPower + powerModifier) * powerMultiplier;
+
+      // Courage penalty (only if defender has more courage)
+      if (defender.courage > attacker.courage) {
+        mentalStatPenalty = Math.floor((defender.courage - attacker.courage) * 0.25);
+      }
+    } else {
+      // Magical damage: (Magic Power + Weapon Modifier) × Weapon Multiplier
+      const powerModifier = weapon.modifiers.magicPowerModifier;
+      const powerMultiplier = weapon.modifiers.magicPowerMultiplier;
+      baseDamage = (attacker.magicPower + powerModifier) * powerMultiplier;
+
+      // Attunement penalty (only if defender has more attunement)
+      if (defender.attunement > attacker.attunement) {
+        mentalStatPenalty = Math.floor((defender.attunement - attacker.attunement) * 0.25);
+      }
+    }
+
+    // Apply mental stat penalty
+    let finalDamage = baseDamage - mentalStatPenalty;
+
+    // Damage cannot be negative
+    finalDamage = Math.max(0, finalDamage);
+
+    // Return as integer (round down)
+    return Math.floor(finalDamage);
   }
 
   /**
