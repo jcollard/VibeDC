@@ -5,16 +5,16 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
  * Attack Animation Sequence
  *
  * Handles the visual feedback for attack actions:
- * - Hit: Red flicker (200ms) + damage number floating up (2s)
+ * - Hit: Red flicker (1s) + damage number floating up (2s)
  * - Miss: "Miss" text floating up (2s)
  *
- * Total duration: 2.2 seconds per attack (0.2s flicker + 2.0s float)
+ * Total duration: 3.0 seconds per attack (1.0s flicker + 2.0s float)
  */
 export class AttackAnimationSequence {
   private elapsedTime: number = 0;
-  private readonly duration: number = 2.2; // Total animation duration in seconds
+  private readonly duration: number = 3.0; // Total animation duration in seconds
 
-  private readonly flickerDuration: number = 0.2; // Flicker lasts 200ms
+  private readonly flickerDuration: number = 1.0; // Flicker lasts 1 second
   private readonly floatDuration: number = 2.0; // Float lasts 2s
   private readonly floatDistance: number = 12; // 1 tile (12px) upward movement
 
@@ -99,9 +99,9 @@ export class AttackAnimationSequence {
     tileCenterY: number,
     fontAtlasImage: HTMLImageElement
   ): void {
-    // Red flicker phase (0-200ms)
+    // Red flicker phase (0-1000ms)
     if (this.elapsedTime < this.flickerDuration) {
-      // Alternates every 50ms: 0-50ms (red), 50-100ms (normal), 100-150ms (red), 150-200ms (normal)
+      // Alternates every 50ms for 1 second total
       const flickerInterval = 0.05; // 50ms intervals
       const intervalIndex = Math.floor(this.elapsedTime / flickerInterval);
       const shouldShowRed = intervalIndex % 2 === 0;
@@ -116,7 +116,7 @@ export class AttackAnimationSequence {
       }
     }
 
-    // Floating damage number phase (200ms-2200ms)
+    // Floating damage number phase (1000ms-3000ms)
     if (this.elapsedTime >= this.flickerDuration) {
       const floatElapsed = this.elapsedTime - this.flickerDuration;
       const floatProgress = Math.min(floatElapsed / this.floatDuration, 1.0);
