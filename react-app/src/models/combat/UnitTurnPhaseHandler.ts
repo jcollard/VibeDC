@@ -1077,6 +1077,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         const damageMessage = `[color=${attackerNameColor}]${attacker.name}[/color] hits [color=${targetNameColor}]${target.name}[/color] for ${damage} damage.`;
         this.pendingLogMessages.push(damageMessage);
 
+        // Check if unit was knocked out
+        if (target.wounds >= target.maxHealth) {
+          const knockoutMessage = `[color=${targetNameColor}]${target.name}[/color] was knocked out.`;
+          this.pendingLogMessages.push(knockoutMessage);
+        }
+
         // Create hit animation
         this.attackAnimations = [new AttackAnimationSequence(targetPosition, true, damage)];
       } else {
@@ -1126,6 +1132,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         }
       }
 
+      // Check if unit was knocked out (after all weapons have struck)
+      if (target.wounds >= target.maxHealth) {
+        const knockoutMessage = `[color=${targetNameColor}]${target.name}[/color] was knocked out.`;
+        this.pendingLogMessages.push(knockoutMessage);
+      }
+
       this.attackAnimations = animations;
     }
 
@@ -1134,7 +1146,10 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   /**
-   * Apply damage to a unit and check for knockout
+   * Apply damage to a unit (updates wounds only)
+   *
+   * Note: Knockout detection is handled by the caller to ensure
+   * proper message ordering (especially for dual-wield attacks).
    *
    * IMPORTANT: health vs maxHealth semantics
    * - health: Current remaining HP (maxHealth - wounds) - DO NOT use for knockout checks!
@@ -1151,16 +1166,6 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     } else {
       // Fallback: directly mutate wounds (not ideal, but necessary for MonsterUnit)
       (target as any)._wounds = Math.min(newWounds, target.maxHealth);
-    }
-
-    // Check if unit was knocked out
-    if (target.wounds >= target.maxHealth) {
-      const targetNameColor = target.isPlayerControlled
-        ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
-        : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
-
-      const knockoutMessage = `[color=${targetNameColor}]${target.name}[/color] was knocked out.`;
-      this.pendingLogMessages.push(knockoutMessage);
     }
   }
 
