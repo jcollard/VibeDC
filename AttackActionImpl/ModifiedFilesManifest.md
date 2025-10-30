@@ -2,20 +2,20 @@
 
 **Purpose:** Track all files created/modified during Attack Action implementation
 
-**Last Updated:** 2025-10-29 (Step 3 Complete)
+**Last Updated:** 2025-10-30 (Step 4 Complete)
 
 ---
 
 ## Summary Statistics
 
-- **Files Created:** 8
-- **Files Modified:** 14
-- **Total Changed:** 22 files
-- **Branches:** `attack-action`, `attack-action-preview-range`, `attack-action-03-show-info`
+- **Files Created:** 11
+- **Files Modified:** 17
+- **Total Changed:** 28 files
+- **Branches:** `attack-action`, `attack-action-preview-range`, `attack-action-03-show-info`, `attack-action-04-perform-attack`
 
 ---
 
-## Files Created (8)
+## Files Created (11)
 
 ### Step 1: Attack Menu Panel
 
@@ -180,7 +180,73 @@ static calculateAttackDamage(
 
 ---
 
-## Files Modified (14)
+### Step 4: Attack Execution and Animation
+
+#### 9. `react-app/src/models/combat/AttackAnimationSequence.ts`
+**Lines:** ~172
+**Purpose:** Attack animation visual feedback system
+**Created in:** `attack-action-04-perform-attack` branch
+**Features:**
+- Manages visual feedback for attack outcomes (hit/miss)
+- Hit animation: Red flicker (1s) + floating damage number (2s)
+- Miss animation: White "Miss" text floating upward (2s)
+- Total duration: 3.0 seconds per attack
+- Flicker interval: 150ms (alternating red overlay)
+- Floating text moves 12px upward (1 tile)
+
+**Key Methods:**
+- `update(deltaTime)` → `boolean` - Updates animation progress, returns true when complete
+- `isComplete()` → `boolean` - Checks if animation finished
+- `render(ctx, tileSize, offsetX, offsetY, fontAtlasImage)` - Renders current animation frame
+- `renderHitAnimation()` - Private: Red flicker + damage number
+- `renderMissAnimation()` - Private: White "Miss" text
+
+**Animation Timing:**
+- Flicker phase: 0-1000ms (6-7 flickers at 150ms intervals)
+- Float phase: 1000-3000ms (damage number or "Miss" text floats up)
+- Total: 3000ms per attack
+
+**Rendering:**
+- Uses `FontAtlasRenderer` for text (damage numbers, "Miss" text)
+- Uses `ctx.fillRect()` for red flicker overlay (semi-transparent)
+- Proper coordinate rounding with `Math.floor()`
+- Read-only properties prevent mutation
+
+---
+
+### Documentation Files (Step 4)
+
+#### 10. `AttackActionImpl/04-AttackActionPerformAttack.md`
+**Lines:** ~421
+**Purpose:** Implementation summary for Step 4 (Attack Execution)
+**Created in:** `attack-action-04-perform-attack` branch
+**Contents:**
+- Overview of attack execution and animation system
+- Files created (1) and modified (5)
+- Features implemented (attack execution, animations, dual wielding, knockout detection)
+- Technical details (animation timing, damage application, developer tools)
+- User experience flow (attack button → animation → completion)
+- Design decisions (5 key architectural choices)
+- Developer testing functions (setHitRate, setDamage, clearAttackOverride)
+
+---
+
+#### 11. `AttackActionImpl/04-AttackActionPerformAttack-CodeReview.md`
+**Lines:** ~639
+**Purpose:** Comprehensive code review against GeneralGuidelines.md
+**Created in:** Documentation phase
+**Contents:**
+- Executive summary (APPROVED FOR MERGE - Full compliance)
+- File-by-file analysis with compliance checklist
+- Code quality assessment with strengths highlighted
+- Performance analysis (memory, timing, per-frame costs)
+- Minor recommendations (3 future enhancements, non-blocking)
+- Testing recommendations (manual checklist, automated test ideas)
+- Pre-merge checklist and suggested merge command
+
+---
+
+## Files Modified (17)
 
 ### Step 1: Attack Menu Panel
 
@@ -626,6 +692,186 @@ private handleAttackClick(position: Position, state: CombatState): PhaseEventRes
 
 ---
 
+### Step 4: Attack Execution and Animation
+
+#### 18. `react-app/src/models/combat/UnitTurnPhaseHandler.ts`
+**Branch:** `attack-action-04-perform-attack`
+**Changes:** **Major addition** - Attack execution, animation orchestration, damage application
+**Lines Modified:** ~262 added
+
+**New State Variables:**
+- `attackAnimations: AttackAnimationSequence[]` - Array of animations (dual wielding support)
+- `attackAnimationIndex: number` - Currently playing animation index
+- `canAct: boolean` - Whether unit can perform actions this turn
+
+**New Methods:**
+- `handlePerformAttack()` - Entry point for "Perform Attack" button click
+- `executeAttack(attacker, attackerPos, target, targetPos)` - Core attack execution:
+  - Calculates Manhattan distance for range
+  - Retrieves equipped weapons (left/right hand)
+  - Rolls hit/miss using `CombatCalculations.getChanceToHit()`
+  - Calculates damage using `CombatCalculations.calculateAttackDamage()`
+  - Applies damage via `applyDamage()`
+  - Creates attack animations (1 or 2 for dual wielding)
+  - Adds combat log messages
+  - Sets `canAct = false` immediately (prevents menu interaction during animation)
+  - Clears attack range highlights
+- `applyDamage(target, damage)` - Reduces target wounds, checks knockout:
+  - Updates `target.wounds` (uses `setWounds()` if available)
+  - Caps wounds at max health
+  - Detects knockout when `wounds >= health`
+  - Adds knockout message to combat log
+- `completeAttack(state)` - Cleanup after animation finishes:
+  - Clears animation arrays
+  - Resets animation index
+  - Returns state unchanged (stays in unit-turn phase)
+- `getCanAct()` - Getter for canAct flag
+- `handleActionSelected(actionId)` - Updated to handle 'perform-attack' action
+
+**Updated Methods:**
+- `updatePhase()` - Added attack animation update loop (lines 419-437):
+  - Checks if animations are playing
+  - Updates current animation with deltaTime
+  - Advances to next animation when complete (dual wielding)
+  - Calls `completeAttack()` when all animations finish
+  - Returns state early to prevent other updates during animation
+- `renderUI()` - Added attack animation rendering (lines 398-407):
+  - Renders current animation if active
+  - Extracts fontAtlasImage from context map
+  - Passes rendering context to animation
+- Constructor cleanup - Resets animation state on phase entry
+
+**Dual Wielding Support:**
+- Detects two weapons equipped in left/right hand
+- Creates two sequential animations (6 seconds total)
+- Independent hit rolls per weapon
+- Cumulative damage application
+- Combat log shows "First strike" and "Second strike"
+
+**Key Implementation Details:**
+- Sets `canAct = false` BEFORE animation starts (critical bug fix)
+- Animation updates happen in main update loop (not per-frame render)
+- Damage application uses fallback for units without `setWounds()` method
+- Combat log messages use color tags for unit names
+
+---
+
+#### 19. `react-app/src/models/combat/utils/CombatCalculations.ts`
+**Branch:** `attack-action-04-perform-attack`
+**Changes:** **Developer override system added**
+**Lines Modified:** ~65 added
+
+**New State Variables:**
+- `nextHitRateOverride: number | null` - Persistent hit rate override (static)
+- `nextDamageOverride: number | null` - Persistent damage override (static)
+
+**New Methods:**
+- `setHitRate(hitRate)` - Developer function:
+  - Sets persistent hit rate override (0-1 range)
+  - Validates and clamps input (0-1)
+  - Logs confirmation with `[DEV]` prefix
+  - Persists until `clearAttackOverride()` called
+- `setDamage(damage)` - Developer function:
+  - Sets persistent damage override (integer)
+  - Validates non-negative
+  - Logs confirmation with `[DEV]` prefix
+  - Persists until `clearAttackOverride()` called
+- `clearAttackOverride()` - Clears all overrides:
+  - Resets both hit rate and damage overrides to null
+  - Logs feedback showing what was cleared
+  - Provides confirmation even if no overrides active
+
+**Updated Methods:**
+- `getChanceToHit()` - Added override check:
+  - Returns override value if set (logs usage)
+  - Falls back to stub (1.0 = 100% hit rate)
+- `calculateAttackDamage()` - Added override check:
+  - Returns override value if set (logs usage)
+  - Falls back to stub (1 damage)
+
+**Console Logging:**
+- All logs prefixed with `[DEV]` for easy filtering
+- Logs when override is used (per attack)
+- Logs when override is set/cleared
+- Persistent override behavior documented in log messages
+
+---
+
+#### 20. `react-app/src/components/combat/CombatView.tsx`
+**Branch:** `attack-action-04-perform-attack`
+**Changes:** Developer functions exposed, perform-attack handler added
+**Lines Modified:** ~40 added
+
+**New useEffect Hook (lines 105-128):**
+- Exposes developer functions to window object:
+  - `window.setHitRate(n)` - Sets hit rate override
+  - `window.setDamage(n)` - Sets damage override
+  - `window.clearAttackOverride()` - Clears all overrides
+- Cleanup function deletes window properties on unmount
+- Empty dependency array (runs once on mount)
+
+**Updated Click Handler (lines 969-976):**
+- Added `'perform-attack'` case:
+  - Checks phase is 'unit-turn'
+  - Type-safe check for `handleActionSelected` method
+  - Casts to `UnitTurnPhaseHandler` after verification
+  - Calls `handleActionSelected('perform-attack')`
+  - Returns early after handling
+
+**Updated Panel State (lines 596-599):**
+- Retrieves `canAct` from phase handler using `getCanAct()`
+- Falls back to `true` if method not available
+- Passes `canAct` to `ActionsMenuContent.updateUnit()`
+
+---
+
+#### 21. `react-app/src/models/combat/managers/panels/ActionsMenuContent.ts`
+**Branch:** `attack-action-04-perform-attack`
+**Changes:** Button disabling based on canAct flag
+**Lines Modified:** +24 lines, -24 lines modified (parameter additions)
+
+**Updated Method Signature:**
+- `updateUnit(unit, hasMoved, activeAction, canResetMove, canAct = true)` - Added `canAct` parameter
+- `buildButtonList(unit, hasMoved, canResetMove, canAct = true)` - Added `canAct` parameter
+- Both default to `true` for backward compatibility
+
+**Updated Button Logic:**
+- **Attack button** (line 134):
+  - Changed: `enabled: true` → `enabled: canAct`
+  - Disables during attack animations
+- **Primary class button** (line 143):
+  - Changed: `enabled: true` → `enabled: canAct`
+  - Disables during attack animations
+- **Secondary class button** (line 153):
+  - Changed: `enabled: true` → `enabled: canAct`
+  - Disables during attack animations
+- **Delay button** (line 160):
+  - Changed: `enabled: !hasMoved` → `enabled: !hasMoved && canAct`
+  - Combined condition: disabled if moved OR cannot act
+
+**Purpose:**
+- Prevents player from clicking menu buttons during attack animation
+- Maintains consistent disabled state across all action buttons
+- Prevents race conditions and animation interruption
+
+---
+
+#### 22. `AttackActionImpl/DeveloperTestingFunctions.md` (NEW)
+**Branch:** `attack-action-04-perform-attack`
+**Lines:** ~187
+**Purpose:** Documentation for developer console testing functions
+**Contents:**
+- Overview of developer mode system
+- Function reference for all 3 functions (setHitRate, setDamage, clearAttackOverride)
+- Usage examples with code snippets
+- Testing workflows (guaranteed hit, guaranteed miss, damage testing, clearing)
+- Implementation details (where functions are defined, how they're exposed)
+- Design decisions (why persistent, why window object, why clearAttackOverride)
+
+---
+
+---
+
 ## File Change Timeline
 
 ### Commit `70ed5a0` - Step 1: Attack Menu Panel
@@ -672,6 +918,21 @@ Modified:
 - AttackActionImpl/AttackActionImplTemplate.md (minor)
 ```
 
+### Branch `attack-action-04-perform-attack` - Step 4: Attack Execution
+```
+Created:
+- models/combat/AttackAnimationSequence.ts
+- AttackActionImpl/DeveloperTestingFunctions.md
+- AttackActionImpl/04-AttackActionPerformAttack.md
+- AttackActionImpl/04-AttackActionPerformAttack-CodeReview.md
+
+Modified:
+- models/combat/UnitTurnPhaseHandler.ts (major addition - +262 lines)
+- models/combat/utils/CombatCalculations.ts (developer override system)
+- components/combat/CombatView.tsx (developer functions, perform-attack handler)
+- models/combat/managers/panels/ActionsMenuContent.ts (button disabling)
+```
+
 ---
 
 ## File Categories
@@ -686,10 +947,13 @@ Modified:
 ### UI Components
 - `managers/panels/AttackMenuContent.ts` - Attack menu panel
 
+### Animation
+- `AttackAnimationSequence.ts` - Attack visual feedback (hit/miss animations)
+
 ### Utilities
 - `utils/AttackRangeCalculator.ts` - Range calculation
 - `utils/LineOfSightCalculator.ts` - Line of sight checks
-- `utils/CombatCalculations.ts` - Hit chance and damage calculations (stubs)
+- `utils/CombatCalculations.ts` - Hit chance and damage calculations (stubs + developer overrides)
 
 ### Layout & View
 - `managers/CombatLayoutManager.ts` - Panel switching
@@ -721,10 +985,16 @@ Modified:
 - **Modified:** ~319 lines across 9 files (includes AttackMenuContent major rewrite)
 - **Total:** ~373 lines
 
-### Grand Total (Steps 1-3)
-- **New Code:** ~1,202 lines
-- **Documentation:** ~1,793 lines (implementation docs + code reviews)
-- **Overall:** ~2,995 lines for Attack Action (Steps 1-3)
+### Step 4: Attack Execution and Animation
+- **Created:** ~172 lines (AttackAnimationSequence.ts)
+- **Modified:** ~391 lines across 4 files (includes UnitTurnPhaseHandler major addition +262)
+- **Documentation:** ~1,247 lines (DeveloperTestingFunctions.md + implementation doc + code review)
+- **Total:** ~1,810 lines
+
+### Grand Total (Steps 1-4)
+- **New Code:** ~1,765 lines (production code)
+- **Documentation:** ~3,040 lines (implementation docs + code reviews + developer docs)
+- **Overall:** ~4,805 lines for Attack Action (Steps 1-4)
 
 ---
 
@@ -732,16 +1002,18 @@ Modified:
 
 ### High Impact (Core Logic)
 - `PlayerTurnStrategy.ts` - Major state additions (~290 lines total across all steps)
-- `UnitTurnPhaseHandler.ts` - Rendering and delegation (~107 lines total across all steps)
+- `UnitTurnPhaseHandler.ts` - Rendering, delegation, attack execution (~369 lines total across all steps)
 - `AttackMenuContent.ts` - New panel component, major rewrite in Step 3 (~417 lines total)
 
 ### Medium Impact (Infrastructure)
 - `AttackRangeCalculator.ts` - New utility (~115 lines)
 - `LineOfSightCalculator.ts` - New utility (~115 lines)
-- `CombatCalculations.ts` - New stub system (~54 lines)
-- `CombatView.tsx` - Position data flow (~17 lines total)
+- `AttackAnimationSequence.ts` - New animation system (~172 lines)
+- `CombatCalculations.ts` - Stub system + developer overrides (~119 lines)
+- `CombatView.tsx` - Position data flow, developer functions (~57 lines total)
 
 ### Low Impact (Glue Code)
+- `ActionsMenuContent.ts` - Button disabling logic (~24 lines modified)
 - `CombatLayoutManager.ts` - Panel switching and position passing (~13 lines)
 - `TurnStrategy.ts` - Interface extensions (~8 lines)
 - `CombatLayoutRenderer.ts` - Interface extension (~2 lines)
@@ -778,21 +1050,80 @@ AttackRangeCalculator.ts
 LineOfSightCalculator.ts
 
 UnitTurnPhaseHandler.ts
-    ↓ (reads)
+    ↓ (reads colors)
 CombatConstants.ts
+
+# Step 4 additions:
+UnitTurnPhaseHandler.ts
+    ↓ (uses for attack execution)
+CombatCalculations.ts (with developer overrides)
+
+UnitTurnPhaseHandler.ts
+    ↓ (creates and renders)
+AttackAnimationSequence.ts
+    ↓ (uses for text rendering)
+FontAtlasRenderer
+
+ActionsMenuContent.ts
+    ← (receives canAct flag from)
+UnitTurnPhaseHandler.ts
 ```
 
 ---
 
-## Next Files to Modify (Step 4: Attack Execution)
+## Next Steps (Step 5 and Beyond)
 
-### Expected Changes
-- `UnitTurnPhaseHandler.ts` - Handle `'perform-attack'` click result, execute attack
-- `AttackAnimationSequence.ts` (NEW) - Flicker and floating text animations
-- `CombatCalculations.ts` - Use existing stub methods for hit/damage rolls
-- `PlayerTurnStrategy.ts` - Exit attack mode after attack completes
-- `CombatUnit.ts` or `HumanoidUnit.ts` - Apply damage, handle knockout
-- `CombatLogManager.ts` - Add attack log messages (hit/miss/damage/knockout)
+### Potential Future Enhancements
+
+**Step 5: Victory/Defeat Detection**
+- Detect when all enemies are knocked out (victory condition)
+- Detect when all player units are knocked out (defeat condition)
+- Transition to victory/defeat phases (currently stubbed)
+- Victory/defeat UI and phase handlers
+
+**Step 6: Replace Stub Formulas**
+- Implement actual hit chance formula in `CombatCalculations.getChanceToHit()`
+- Implement actual damage formula in `CombatCalculations.calculateAttackDamage()`
+- Consider factors: attacker stats, defender stats, weapon power, range, terrain
+- Balance testing with real formulas
+
+**Step 7: Advanced Combat Features**
+- Counterattacks (when attacked in melee range)
+- Critical hits (bonus damage chance)
+- Status effects (poison, blind, etc.)
+- Elemental damage types and resistances
+- Weapon durability system
+
+**Step 8: AI Attack Implementation**
+- Enemy AI attack decision-making
+- Target selection algorithms
+- Range and positioning awareness
+- Difficulty levels (conservative vs aggressive)
+
+**Optimization Opportunities:**
+- Extract damage application to shared `CombatDamage` utility
+- Extract combat log message formatting to helper function
+- Make animation speed configurable (user preference)
+- Add override history tracking for complex debugging
+
+---
+
+## Status Summary
+
+### ✅ Completed (Steps 1-4)
+1. ✅ **Step 1:** Attack menu panel with cancel button
+2. ✅ **Step 2:** Attack range preview with line of sight
+3. ✅ **Step 3:** Target selection and attack info display
+4. ✅ **Step 4:** Attack execution, animations, developer testing tools
+
+### 🚧 In Progress
+- None (Step 4 complete, ready for merge)
+
+### 📋 Planned
+- Step 5: Victory/Defeat detection
+- Step 6: Real combat formulas
+- Step 7: Advanced combat features
+- Step 8: Enemy AI attacks
 
 ---
 

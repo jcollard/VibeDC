@@ -2,7 +2,7 @@
 
 **Purpose:** Token-efficient reference for AI agents working on Attack Action implementation
 
-**Last Updated:** 2025-10-29 (Step 3 Complete)
+**Last Updated:** 2025-10-30 (Step 4 Complete)
 
 ---
 
@@ -32,7 +32,21 @@ The **Attack Action** allows units to attack enemies during the Unit Turn Phase.
 ### User Flow Summary
 
 ```
-Click "Attack" → See range highlights → Hover/click target → See prediction → Click "Perform Attack" → Animation plays → Unit done
+Click "Attack" button
+    ↓
+See range highlights (red=range, yellow=valid target, white=blocked)
+    ↓
+Hover over targets (orange highlight)
+    ↓
+Click target (green highlight, shows weapon info + hit%/damage)
+    ↓
+Click "Perform Attack" button
+    ↓
+Animation plays (3s per weapon: red flicker + floating damage/miss text)
+    ↓
+Damage applied, combat log updated, knockout detection
+    ↓
+Return to Actions menu (unit can still move if not moved yet)
 ```
 
 ---
@@ -151,22 +165,63 @@ Alpha: 0.33 (semi-transparent)
 
 ---
 
-### 🚧 Step 4: Attack Execution (Planned)
-**Status:** Not started
+### ✅ Step 4: Attack Execution and Animation
+**File:** [04-AttackActionPerformAttack.md](./04-AttackActionPerformAttack.md)
+**Code Review:** [04-AttackActionPerformAttack-CodeReview.md](./04-AttackActionPerformAttack-CodeReview.md)
+**Developer Docs:** [DeveloperTestingFunctions.md](./DeveloperTestingFunctions.md)
+**Branch:** `attack-action-04-perform-attack`
+**Status:** Complete, approved for merge
 
-**Goals:**
-- Click "Perform Attack" → execute attack
-- Single weapon: One attack roll, damage application
-- Dual wielding: Two sequential attacks (4.4s total animation)
-- Combat log messages for hit/miss/damage/knockout
-- Set `canAct = false` after attack
+**What Was Done:**
+- Implemented attack execution with hit/miss rolls and damage application
+- Created attack animation system (red flicker + floating damage numbers)
+- Single weapon: One 3-second animation per attack
+- Dual wielding: Two sequential 3-second animations (6s total)
+- Combat log messages for all attack outcomes
+- Knockout detection when wounds >= health
+- Button disabling system (canAct flag prevents actions during animation)
+- Developer testing functions for hit rate and damage overrides
 
-**Key Work:**
-- Create `AttackAnimationSequence.ts` (flicker + floating text)
-- Implement damage calculation in phase handler
-- Update unit HP (wounds system)
-- Handle knockout detection
-- Disable Attack/Delay/Class buttons after attack
+**Key Files Created:**
+- `models/combat/AttackAnimationSequence.ts` - Attack visual feedback system (172 lines)
+- `AttackActionImpl/DeveloperTestingFunctions.md` - Developer console utilities (187 lines)
+
+**Key Files Modified:**
+- `UnitTurnPhaseHandler.ts` - Attack execution, animation orchestration (+262 lines)
+- `CombatCalculations.ts` - Developer override system (+65 lines)
+- `CombatView.tsx` - Developer functions exposed, perform-attack handler (+40 lines)
+- `ActionsMenuContent.ts` - Button disabling based on canAct flag (+24/-24 lines)
+
+**Technical Highlights:**
+- **Attack Animation:** 3.0s total (1s red flicker at 150ms intervals + 2s floating text)
+- **Dual Wielding:** Independent hit rolls per weapon, sequential animations
+- **Button Disabling:** canAct=false set IMMEDIATELY before animation (prevents race conditions)
+- **Developer Tools:** Persistent overrides for hit rate and damage testing
+- **Damage Application:** Supports both setWounds() method and direct mutation fallback
+- **Knockout Detection:** Checks wounds >= health, adds combat log message
+- **100% GeneralGuidelines.md compliance** (see code review)
+
+**Animation Timing:**
+```typescript
+Hit Animation:
+- 0-1000ms: Red flicker (150ms intervals, ~6-7 flickers)
+- 1000-3000ms: Damage number floats up 12px (1 tile)
+
+Miss Animation:
+- 0-3000ms: White "Miss" text floats up 12px
+
+Dual Wielding:
+- First attack: 0-3000ms
+- Second attack: 3000-6000ms
+```
+
+**Developer Testing Functions:**
+```javascript
+// Browser console commands
+setHitRate(0.5)        // 50% hit chance
+setDamage(10)          // 10 damage per hit
+clearAttackOverride()  // Reset to defaults
+```
 
 ---
 
@@ -185,19 +240,25 @@ Alpha: 0.33 (semi-transparent)
 - [x] Weapon stats display in panel
 - [x] Hit% and damage prediction (stub formulas)
 - [x] Dual wielding UI support (two columns)
-- [x] "Perform Attack" button (ready for execution)
+- [x] "Perform Attack" button
+- [x] Attack execution (damage application)
+- [x] Attack animations (red flicker, floating text)
+- [x] Dual wielding execution (two sequential attacks)
+- [x] Knockout detection (wounds >= health)
+- [x] Combat log messages (hit/miss/damage/knockout)
+- [x] Button disabling during animations
+- [x] Developer testing functions
 
 ### In Progress 🚧
-- None (Step 3 complete, ready for Step 4)
+- None (Step 4 complete, ready for merge to attack-action branch)
 
 ### Not Started 📋
-- [ ] Attack execution (damage application)
-- [ ] Attack animations (flicker, floating numbers)
-- [ ] Dual wielding execution (two attacks sequentially)
-- [ ] Knockout detection
-- [ ] Victory/defeat condition checks
-- [ ] Real combat formulas (replace stubs)
-- [ ] Enemy AI attack evaluation (stub)
+- [ ] Victory/defeat condition checks (all enemies/players knocked out)
+- [ ] Real combat formulas (replace stubs with actual calculations)
+- [ ] Enemy AI attack evaluation
+- [ ] Counterattacks
+- [ ] Critical hits
+- [ ] Status effects
 
 ---
 
@@ -205,20 +266,23 @@ Alpha: 0.33 (semi-transparent)
 
 ### Core Attack Logic
 - **`PlayerTurnStrategy.ts`** - Attack mode state, range calculation, target selection
-- **`UnitTurnPhaseHandler.ts`** - Rendering, active action state, attack execution
-- **`AttackMenuContent.ts`** - Panel UI, button handling
+- **`UnitTurnPhaseHandler.ts`** - Rendering, active action state, attack execution, animation orchestration
+- **`AttackMenuContent.ts`** - Panel UI, button handling, button disabling
+
+### Animation
+- **`AttackAnimationSequence.ts`** - Attack visual feedback (red flicker, floating damage/miss text)
 
 ### Utilities
 - **`AttackRangeCalculator.ts`** - Manhattan distance, tile categorization
 - **`LineOfSightCalculator.ts`** - Bresenham's algorithm, blocking checks
-- **`CombatCalculations.ts`** - Hit chance and damage calculations (stub formulas, ready for real implementation)
+- **`CombatCalculations.ts`** - Hit chance and damage calculations (stub formulas + developer overrides)
 
 ### Constants
 - **`CombatConstants.ts`** - Color constants (6 attack colors + alpha)
 
 ### Layout
 - **`CombatLayoutManager.ts`** - Panel switching logic
-- **`CombatView.tsx`** - Event handling, active action retrieval
+- **`CombatView.tsx`** - Event handling, active action retrieval, developer function exposure
 
 ---
 
@@ -285,32 +349,19 @@ Bresenham's line algorithm:
 
 ## Next Steps
 
-### Immediate (Step 4: Attack Execution)
-1. Handle "perform-attack" click result in `UnitTurnPhaseHandler`
-2. Create `AttackAnimationSequence.ts` for animations:
-   - Red flicker (200ms, 50ms intervals)
-   - Floating text (2s, moves up 12px)
-   - "Miss" text (white) or damage number (red)
-3. Implement attack execution flow in phase handler:
-   - Roll hit/miss using `CombatCalculations.getChanceToHit()`
-   - Calculate damage using `CombatCalculations.calculateAttackDamage()`
-   - Apply damage to target unit
-   - Create animation sequence
-   - Add combat log messages (hit/miss/damage/knockout)
-   - Set `canAct = false` after completion
-   - Exit attack mode
-4. Handle dual wielding:
-   - Execute two sequential attacks (one per weapon)
-   - Independent hit rolls
-   - 4.4s total animation time (2.2s per attack)
-5. Add knockout detection:
-   - Check if target HP reaches 0
-   - Set `isKnockedOut = true`
-   - Visual indicator
-   - Remove from turn order
-   - Check victory/defeat conditions
+### Immediate (Ready for Merge)
+- Merge `attack-action-04-perform-attack` → `attack-action` branch
+- Run final testing suite (manual + automated if available)
+- Consider merging `attack-action` → `main` for deployment
 
-### Long-term (Step 5+)
+### Short-term (Step 5: Victory/Defeat)
+1. Detect when all enemies are knocked out (victory condition)
+2. Detect when all player units are knocked out (defeat condition)
+3. Create victory/defeat phase handlers
+4. Victory/defeat UI screens
+5. Proper game state transitions
+
+### Medium-term (Step 6: Real Combat Formulas)
 1. Replace stub formulas with real combat calculations:
    - Hit chance: Attacker accuracy vs defender P.Evd/M.Evd
    - Damage: Weapon power + attacker P.Pow/M.Pow - defender defenses
@@ -333,6 +384,10 @@ Bresenham's line algorithm:
 - **[02-AddRangePreview-CodeReview.md](./02-AddRangePreview-CodeReview.md)** - Step 2 code quality review
 - **[03-AttackActionTargetInfo.md](./03-AttackActionTargetInfo.md)** - Step 3 implementation summary
 - **[03-AttackActionTargetInfo-CodeReview.md](./03-AttackActionTargetInfo-CodeReview.md)** - Step 3 code quality review
+- **[04-AttackActionPerformAttack.md](./04-AttackActionPerformAttack.md)** - Step 4 implementation summary
+- **[04-AttackActionPerformAttack-CodeReview.md](./04-AttackActionPerformAttack-CodeReview.md)** - Step 4 code quality review
+- **[DeveloperTestingFunctions.md](./DeveloperTestingFunctions.md)** - Developer console utilities
+- **[ModifiedFilesManifest.md](./ModifiedFilesManifest.md)** - Complete file change tracking
 - **[CombatHierarchy.md](../CombatHierarchy.md)** - Overall combat system architecture
 - **[GeneralGuidelines.md](../GeneralGuidelines.md)** - Coding standards and patterns
 
@@ -357,6 +412,18 @@ A: Move mode shows movement range (yellow tiles, pathfinding). Attack mode shows
 
 **Q: Can units attack after moving?**
 A: Yes. Units can perform one movement and one action per turn in any order. Move then attack, or attack then move (if haven't moved yet).
+
+**Q: What are the developer testing functions for?**
+A: The developer console functions (`setHitRate()`, `setDamage()`, `clearAttackOverride()`) allow testing attack scenarios without implementing real combat formulas. They override the stub calculations to test animations, UI states, knockout detection, etc. Overrides persist until explicitly cleared.
+
+**Q: Why does the attack animation last 3 seconds instead of the original 2.2 seconds?**
+A: User feedback during implementation indicated the flicker was too fast at 200ms. Final timing is 1 second flicker (150ms intervals) + 2 seconds floating text = 3 seconds total. For dual wielding: 6 seconds total (3s per weapon).
+
+**Q: Why is canAct set to false BEFORE the animation starts?**
+A: This was a critical bug fix. Initially canAct was set to false after the animation completed, which allowed the player to click menu buttons during the 3-6 second animation, causing race conditions and state bugs. Setting it false immediately prevents all interaction during animation playback.
+
+**Q: How does knockout detection work?**
+A: After applying damage, the system checks if `target.wounds >= target.health`. If true, the unit is knocked out and a combat log message is added. Victory/defeat detection (checking if all enemies/players are knocked out) is planned for Step 5.
 
 ---
 
