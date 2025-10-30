@@ -1,5 +1,6 @@
 import type { Position } from '../../types';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Attack Animation Sequence
@@ -131,7 +132,7 @@ export class AttackAnimationSequence {
         damageText,
         tileCenterX,
         floatY,
-        '7px-04b03',
+        CombatConstants.FONTS.UI_FONT_ID,
         fontAtlasImage,
         1, // scale
         'center', // alignment
@@ -163,7 +164,7 @@ export class AttackAnimationSequence {
       'Miss',
       tileCenterX,
       floatY,
-      '7px-04b03',
+      CombatConstants.FONTS.UI_FONT_ID,
       fontAtlasImage,
       1, // scale
       'center', // alignment

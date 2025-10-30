@@ -1,6 +1,7 @@
 import type { TopPanelRenderer, PanelRegion } from '../TopPanelRenderer';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
+import { CombatConstants } from '../../CombatConstants';
 
 /**
  * Renders a simple header for the deployment phase.
@@ -30,7 +31,7 @@ export class DeploymentHeaderRenderer implements TopPanelRenderer {
   ): void {
     if (!fontAtlasImage) return;
 
-    const fontId = '15px-dungeonslant';
+    const fontId = CombatConstants.FONTS.TITLE_FONT_ID;
     const font = FontRegistry.getById(fontId);
     if (!font) return;
 

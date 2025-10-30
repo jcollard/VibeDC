@@ -261,12 +261,12 @@ export class DeploymentPhaseHandler extends PhaseBase {
     const { ctx, canvasWidth, canvasHeight, tileSize, spriteSize, spriteImages, titleAtlasFontId, messageAtlasFontId, fontAtlasImages } = context;
 
     // Render "Deploy Units" header
-    const titleFontId = titleAtlasFontId || '15px-dungeonslant';
+    const titleFontId = titleAtlasFontId || CombatConstants.FONTS.TITLE_FONT_ID;
     const titleAtlas = fontAtlasImages?.get(titleFontId) || null;
     this.ui.renderPhaseHeader(ctx, canvasWidth, titleFontId, titleAtlas);
 
     // Render waylaid message (8px below title)
-    const messageFontId = messageAtlasFontId || '7px-04b03';
+    const messageFontId = messageAtlasFontId || CombatConstants.FONTS.UI_FONT_ID;
     const messageAtlas = fontAtlasImages?.get(messageFontId) || null;
     this.ui.renderWaylaidMessage(ctx, canvasWidth, messageFontId, messageAtlas);
 

@@ -3,6 +3,7 @@ import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { FontRegistry } from '../../utils/FontRegistry';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Represents a part of a message - either text or a sprite
@@ -32,14 +33,14 @@ export class MessageFadeInSequence implements CinematicSequence {
   /**
    * @param message - The message to display (use [sprite:id] to embed sprites)
    * @param duration - Duration of the fade-in effect in seconds (default: 2)
-   * @param fontId - Font ID from FontRegistry (default: '7px-04b03')
+   * @param fontId - Font ID from FontRegistry (default: CombatConstants.FONTS.UI_FONT_ID)
    * @param scale - Scale factor for font rendering (default: 1, reduced from 2)
    * @param yPosition - Y position on screen (default: 35, reduced from 140)
    */
   constructor(
     message: string,
     duration: number = 2.0,
-    fontId: string = '7px-04b03',
+    fontId: string = CombatConstants.FONTS.UI_FONT_ID,
     scale: number = 1,
     yPosition: number = 35
   ) {

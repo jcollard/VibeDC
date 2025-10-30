@@ -525,7 +525,7 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
     topPanelManager.render(
       ctx,
       { x, y, width, height },
-      '15px-dungeonslant',
+      CombatConstants.FONTS.TITLE_FONT_ID,
       topPanelFontAtlasImage || null,
       spriteImages,
       spriteSize,

@@ -2,6 +2,7 @@ import type { TopPanelRenderer, PanelRegion } from '../TopPanelRenderer';
 import type { CombatUnit } from '../../CombatUnit';
 import { SpriteRenderer } from '../../../../utils/SpriteRenderer';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
+import { CombatConstants } from '../../CombatConstants';
 
 /**
  * Renders the turn order as a horizontal list of unit sprites with tick counter.
@@ -244,7 +245,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         'TIME UNTIL NEXT TURN',
         titleX,
         titleY,
-        '7px-04b03',
+        CombatConstants.FONTS.UI_FONT_ID,
         smallFontAtlasImage,
         1,
         'center',
@@ -266,7 +267,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         'TIME',
         timeLabelX,
         timeLabelY,
-        '7px-04b03',
+        CombatConstants.FONTS.UI_FONT_ID,
         smallFontAtlasImage,
         1,
         'center',
@@ -296,7 +297,7 @@ export class TurnOrderRenderer implements TopPanelRenderer {
         this.tickCount.toString(),
         tickTextX,
         tickTextY,
-        '7px-04b03',
+        CombatConstants.FONTS.UI_FONT_ID,
         smallFontAtlasImage,
         1,
         'center',
@@ -399,13 +400,13 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       const textX = x + this.spriteSize / 2; // Center under sprite
       const textY = y + this.spriteSize;
 
-      // Use 7px-04b03 font for small, readable numbers
+      // Use UI font for small, readable numbers
       FontAtlasRenderer.renderText(
         ctx,
         timerText,
         textX,
         textY,
-        '7px-04b03',
+        CombatConstants.FONTS.UI_FONT_ID,
         smallFontAtlasImage,
         1, // Normal scale
         'center', // alignment

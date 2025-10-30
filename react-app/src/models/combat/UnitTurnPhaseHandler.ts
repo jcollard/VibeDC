@@ -253,7 +253,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
   renderUI(_state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
     const { ctx, tileSize, spriteSize, offsetX, offsetY, spriteImages, fontAtlasImages } = context;
-    const fontAtlasImage = fontAtlasImages?.get('7px-04b03') || null;
+    const fontAtlasImage = fontAtlasImages?.get(CombatConstants.FONTS.UI_FONT_ID) || null;
 
     // Render animated unit during movement (rendered AFTER normal units to override)
     if (this.movementSequence) {
