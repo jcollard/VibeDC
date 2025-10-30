@@ -292,6 +292,62 @@ FontAtlasRenderer.renderTextWithShadow(
 
 ---
 
+### Improvement 3: Real Combat Formulas Implemented
+
+**Context:** Previously used stub formulas (100% hit rate, 1 damage). Now using actual combat calculations.
+
+**Implementation:**
+- [CombatCalculations.ts](../react-app/src/models/combat/utils/CombatCalculations.ts) - Lines 33-142
+
+**Physical Attack Hit Chance:**
+```
+Base Hit = 100% - Defender's Physical Evade
+If Attacker Courage > Defender Courage:
+  Bonus = (difference × 0.25)%
+Final = clamp(Base + Bonus, 3%, 97%)
+```
+
+**Magical Attack Hit Chance:**
+```
+Base Hit = 100% - Defender's Magic Evade
+If Attacker Attunement > Defender Attunement:
+  Bonus = (difference × 0.25)%
+Final = clamp(Base + Bonus, 3%, 97%)
+```
+
+**Physical Damage:**
+```
+Base = (Phys Power + Weapon Phys Modifier) × Weapon Phys Multiplier
+If Defender Courage > Attacker Courage:
+  Penalty = floor((difference × 0.25))
+Final = max(0, Base - Penalty)
+```
+
+**Magical Damage:**
+```
+Base = (Magic Power + Weapon Magic Modifier) × Weapon Magic Multiplier
+If Defender Attunement > Attacker Attunement:
+  Penalty = floor((difference × 0.25))
+Final = max(0, Base - Penalty)
+```
+
+**Key Features:**
+- Evasion directly reduces hit chance (16 evade = 84% base hit)
+- Mental stats provide asymmetric bonuses:
+  - Attacker superior: Bonus to hit chance
+  - Defender superior: Reduction to damage
+- 25% conversion rate (4 stat points = 1% or 1 damage)
+- Hard limits: 3-97% hit chance, 0+ damage
+- Developer overrides: `window.setHitRate()`, `window.setDamage()`, `window.clearAttackOverride()`
+
+**Documentation:**
+- Comprehensive formulas document: [CombatFormulas.md](../CombatFormulas.md)
+- Includes 6 worked examples and design philosophy
+
+**Impact:** Combat now uses strategic stat-based calculations instead of placeholder values
+
+---
+
 ## Current Status
 
 ### Completed ✅
@@ -317,13 +373,13 @@ FontAtlasRenderer.renderTextWithShadow(
 - [x] Developer testing functions
 - [x] Text shadow rendering utility
 - [x] Improved floating text readability
+- [x] Real combat formulas (hit chance and damage calculations with mental stats)
 
 ### In Progress 🚧
 - None (Step 4 complete, ready for merge to attack-action branch)
 
 ### Not Started 📋
 - [ ] Victory/defeat condition checks (all enemies/players knocked out)
-- [ ] Real combat formulas (replace stubs with actual calculations)
 - [ ] Enemy AI attack evaluation
 - [ ] Counterattacks
 - [ ] Critical hits
@@ -344,7 +400,7 @@ FontAtlasRenderer.renderTextWithShadow(
 ### Utilities
 - **`AttackRangeCalculator.ts`** - Manhattan distance, tile categorization
 - **`LineOfSightCalculator.ts`** - Bresenham's algorithm, blocking checks
-- **`CombatCalculations.ts`** - Hit chance and damage calculations (stub formulas + developer overrides)
+- **`CombatCalculations.ts`** - Real combat formulas (hit chance, damage, mental stats, 3-97% limits, developer overrides)
 - **`FontAtlasRenderer.ts`** - Text rendering with shadow support (readability enhancement)
 
 ### Constants
@@ -458,6 +514,7 @@ Bresenham's line algorithm:
 - **[04-AttackActionPerformAttack-CodeReview.md](./04-AttackActionPerformAttack-CodeReview.md)** - Step 4 code quality review
 - **[DeveloperTestingFunctions.md](./DeveloperTestingFunctions.md)** - Developer console utilities
 - **[ModifiedFilesManifest.md](./ModifiedFilesManifest.md)** - Complete file change tracking
+- **[CombatFormulas.md](../CombatFormulas.md)** - Combat calculation formulas (hit chance, damage, mental stats)
 - **[CombatHierarchy.md](../CombatHierarchy.md)** - Overall combat system architecture
 - **[GeneralGuidelines.md](../GeneralGuidelines.md)** - Coding standards and patterns
 
@@ -505,6 +562,13 @@ A: Originally `applyDamage()` immediately checked for knockout, causing the mess
 
 **Q: Why does floating text have shadows now?**
 A: Damage numbers and "Miss" text can be difficult to read when appearing over same-colored tiles or units. Drop shadows (black, 1px offset) ensure text is readable against any background. The `renderTextWithShadow()` utility method was added to `FontAtlasRenderer` for this purpose.
+
+**Q: How do the combat formulas work?**
+A: Combat uses strategic stat-based calculations:
+- **Hit chance**: Base = 100% - Evasion, bonus if attacker has higher Courage/Attunement (25% conversion), clamped 3-97%
+- **Damage**: Base = (Power + Modifier) × Multiplier, penalty if defender has higher Courage/Attunement (25% conversion, floored), minimum 0
+- **Mental stats**: Courage affects physical combat, Attunement affects magical combat. Superior attacker gets hit bonus, superior defender gets damage reduction.
+See [CombatFormulas.md](../CombatFormulas.md) for detailed formulas, worked examples, and design philosophy.
 
 ---
 

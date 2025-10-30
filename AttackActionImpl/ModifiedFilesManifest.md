@@ -2,7 +2,7 @@
 
 **Purpose:** Track all files created/modified during Attack Action implementation
 
-**Last Updated:** 2025-10-30 (Step 4 Complete + Bug Fixes)
+**Last Updated:** 2025-10-30 (Step 4 Complete + Bug Fixes + Combat Formulas)
 
 ---
 
@@ -19,9 +19,15 @@
 - **Branch:** `attack-action-bugs`
 - **Focus:** Knockout detection fix, combat log message ordering, text readability
 
+### Combat Formulas Implementation
+- **Files Modified:** 1 (CombatCalculations.ts - replaced stubs with real formulas)
+- **Files Created:** 1 (CombatFormulas.md - comprehensive documentation)
+- **Branch:** `attack-action`
+- **Focus:** Strategic stat-based combat calculations with mental stats
+
 ---
 
-## Files Created (11)
+## Files Created (12)
 
 ### Step 1: Attack Menu Panel
 
@@ -980,6 +986,78 @@ static renderTextWithShadow(
 
 ---
 
+### Combat Formulas Implementation
+
+#### 27. `react-app/src/models/combat/utils/CombatCalculations.ts`
+**Branch:** `attack-action` (current work)
+**Changes:** Replaced stub formulas with real combat calculations
+**Lines Modified:** ~90 added/modified (formulas + mental stats)
+
+**Hit Chance Implementation (Lines 33-76):**
+- Physical attacks: Base = 100% - Defender's Physical Evade
+  - Bonus if Attacker Courage > Defender Courage: (difference × 0.25)%
+  - Clamped to 3-97% range
+- Magical attacks: Base = 100% - Defender's Magic Evade
+  - Bonus if Attacker Attunement > Defender Attunement: (difference × 0.25)%
+  - Clamped to 3-97% range
+
+**Damage Calculation Implementation (Lines 95-142):**
+- Physical damage: (Physical Power + Weapon Modifier) × Weapon Multiplier
+  - Penalty if Defender Courage > Attacker Courage: floor((difference × 0.25))
+  - Minimum damage: 0
+- Magical damage: (Magic Power + Weapon Modifier) × Weapon Multiplier
+  - Penalty if Defender Attunement > Attacker Attunement: floor((difference × 0.25))
+  - Minimum damage: 0
+
+**Key Features:**
+- Evasion directly reduces hit chance (16 evade = 84% base hit)
+- Mental stats provide asymmetric bonuses:
+  - Attacker superior: Bonus to hit chance
+  - Defender superior: Reduction to damage
+- 25% conversion rate (4 stat points = 1% hit or 1 damage)
+- Hard limits: 3-97% hit chance, 0+ damage
+- Retains developer override system
+
+**Formula Characteristics:**
+- Hit bonus NOT rounded (keeps decimal precision like 2.5%)
+- Damage penalty rounded down (floor function)
+- Equipment modifiers added before multiplication
+- Accesses `weapon.modifiers.physicalPowerModifier` etc.
+
+---
+
+#### 28. `CombatFormulas.md` (NEW)
+**Branch:** `attack-action` (current work)
+**Lines:** ~512
+**Purpose:** Comprehensive combat formula documentation
+**Contents:**
+- Step-by-step formulas for hit chance and damage
+- Physical and magical attack calculations
+- Mental stats system (Courage/Attunement)
+- 6 detailed worked examples:
+  - Even match (84% hit, 37 damage)
+  - Brave attacker (91.75% hit, 18 damage)
+  - Brave defender (80% hit, 21 damage)
+  - High evasion target (5.75% hit, 42 damage)
+  - Attuned defender (92% hit, 26 damage)
+  - Zero damage scenario (90% hit, 0 damage)
+- Design philosophy and rationale
+- Developer override documentation
+- Implementation notes with line references
+
+**Structure:**
+- Table of Contents with anchors
+- Overview of combat system
+- Detailed hit chance formulas (physical/magical)
+- Detailed damage formulas (physical/magical)
+- Mental stats system explanation
+- Worked examples with calculations
+- Design philosophy section
+- Developer overrides reference
+- Implementation notes
+
+---
+
 ---
 
 ## File Change Timeline
@@ -1052,6 +1130,15 @@ Modified:
 - models/combat/AttackAnimationSequence.ts (floating text uses shadows)
 ```
 
+### Branch `attack-action` - Combat Formulas Implementation
+```
+Created:
+- CombatFormulas.md (comprehensive formula documentation, 512 lines)
+
+Modified:
+- models/combat/utils/CombatCalculations.ts (real combat formulas with mental stats)
+```
+
 ---
 
 ## File Categories
@@ -1072,7 +1159,8 @@ Modified:
 ### Utilities
 - `utils/AttackRangeCalculator.ts` - Range calculation
 - `utils/LineOfSightCalculator.ts` - Line of sight checks
-- `utils/CombatCalculations.ts` - Hit chance and damage calculations (stubs + developer overrides)
+- `utils/CombatCalculations.ts` - Real combat formulas (hit chance, damage, mental stats, developer overrides)
+- `utils/FontAtlasRenderer.ts` - Text rendering with shadow support
 
 ### Layout & View
 - `managers/CombatLayoutManager.ts` - Panel switching
@@ -1084,6 +1172,12 @@ Modified:
 ### Data Files (Test)
 - `data/equipment-definitions.yaml` - Equipment data
 - `data/party-definitions.yaml` - Party data
+
+### Documentation
+- `CombatFormulas.md` - Combat formula reference (hit chance, damage, mental stats)
+- `AttackActionImpl/DeveloperTestingFunctions.md` - Developer console utilities
+- `AttackActionImpl/00-AttackActionQuickReference.md` - Comprehensive quick reference
+- `AttackActionImpl/ModifiedFilesManifest.md` - File change tracking (this document)
 
 ---
 
@@ -1120,10 +1214,15 @@ Modified:
 - **Documentation:** ~85 lines (CombatUnit.ts comments + Quick Reference updates)
 - **Total:** ~176 lines
 
-### Combined Total (Steps 1-4 + Bug Fixes)
-- **Production Code:** ~1,856 lines
-- **Documentation:** ~3,125 lines
-- **Overall:** ~4,981 lines
+### Combat Formulas Implementation
+- **Modified Code:** ~90 lines (CombatCalculations.ts - real formulas replacing stubs)
+- **Documentation:** ~512 lines (CombatFormulas.md - comprehensive formula reference)
+- **Total:** ~602 lines
+
+### Combined Total (Steps 1-4 + Bug Fixes + Combat Formulas)
+- **Production Code:** ~1,946 lines
+- **Documentation:** ~3,637 lines
+- **Overall:** ~5,583 lines
 
 ---
 
@@ -1133,12 +1232,12 @@ Modified:
 - `PlayerTurnStrategy.ts` - Major state additions (~290 lines total across all steps)
 - `UnitTurnPhaseHandler.ts` - Rendering, delegation, attack execution (~429 lines total including bug fixes)
 - `AttackMenuContent.ts` - New panel component, major rewrite in Step 3 (~417 lines total)
+- `CombatCalculations.ts` - Real combat formulas with mental stats (~209 lines total including overrides)
 
 ### Medium Impact (Infrastructure)
 - `AttackRangeCalculator.ts` - New utility (~115 lines)
 - `LineOfSightCalculator.ts` - New utility (~115 lines)
 - `AttackAnimationSequence.ts` - New animation system (~178 lines including shadow updates)
-- `CombatCalculations.ts` - Stub system + developer overrides (~119 lines)
 - `CombatView.tsx` - Position data flow, developer functions (~57 lines total)
 - `FontAtlasRenderer.ts` - Text rendering with shadow support (~61 lines added)
 - `CombatUnit.ts` - Enhanced documentation (~24 lines documentation)
@@ -1212,20 +1311,14 @@ UnitTurnPhaseHandler.ts
 - Transition to victory/defeat phases (currently stubbed)
 - Victory/defeat UI and phase handlers
 
-**Step 6: Replace Stub Formulas**
-- Implement actual hit chance formula in `CombatCalculations.getChanceToHit()`
-- Implement actual damage formula in `CombatCalculations.calculateAttackDamage()`
-- Consider factors: attacker stats, defender stats, weapon power, range, terrain
-- Balance testing with real formulas
-
-**Step 7: Advanced Combat Features**
+**Step 6: Advanced Combat Features**
 - Counterattacks (when attacked in melee range)
 - Critical hits (bonus damage chance)
 - Status effects (poison, blind, etc.)
 - Elemental damage types and resistances
 - Weapon durability system
 
-**Step 8: AI Attack Implementation**
+**Step 7: AI Attack Implementation**
 - Enemy AI attack decision-making
 - Target selection algorithms
 - Range and positioning awareness
@@ -1241,21 +1334,21 @@ UnitTurnPhaseHandler.ts
 
 ## Status Summary
 
-### ✅ Completed (Steps 1-4 + Bug Fixes)
+### ✅ Completed (Steps 1-4 + Bug Fixes + Combat Formulas)
 1. ✅ **Step 1:** Attack menu panel with cancel button
 2. ✅ **Step 2:** Attack range preview with line of sight
 3. ✅ **Step 3:** Target selection and attack info display
 4. ✅ **Step 4:** Attack execution, animations, developer testing tools
 5. ✅ **Bug Fixes:** Knockout detection, combat log message ordering, text shadows
+6. ✅ **Combat Formulas:** Real hit chance and damage calculations with mental stats
 
 ### 🚧 In Progress
 - None (All work complete, ready for merge to main branch)
 
 ### 📋 Planned
 - Step 5: Victory/Defeat detection
-- Step 6: Real combat formulas
-- Step 7: Advanced combat features
-- Step 8: Enemy AI attacks
+- Step 6: Advanced combat features (counterattacks, criticals, status effects)
+- Step 7: Enemy AI attacks
 
 ---
 
