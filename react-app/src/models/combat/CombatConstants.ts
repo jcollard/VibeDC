@@ -74,10 +74,11 @@ export const CombatConstants = {
     PLAYER_NAME_COLOR: '#00cc00',      // Green (matches deployment)
     ENEMY_NAME_COLOR: '#ff0000',       // Red (matches enemy deployment)
 
-    // Active unit cursor (dark green, blinking)
+    // Active unit cursor (gradient animation for maximum visibility)
     CURSOR_SPRITE_ID: 'particles-5',
-    CURSOR_ALBEDO_DARK_GREEN: '#006400',
-    CURSOR_BLINK_RATE: 0.5,            // Full cycle (on→off→on) in seconds
+    CURSOR_COLOR_A: '#FFFFFF',         // White (visible on dark backgrounds) - kept for reference
+    CURSOR_COLOR_B: '#000000',         // Black (visible on light backgrounds) - kept for reference
+    CURSOR_BLINK_RATE: 1.0,            // Full gradient cycle (black→gray→white→gray→black) in seconds
 
     // Target unit cursor (red, always visible)
     TARGET_CURSOR_SPRITE_ID: 'particles-5',

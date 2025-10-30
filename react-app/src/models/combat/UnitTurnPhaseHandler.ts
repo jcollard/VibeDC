@@ -57,9 +57,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   // Strategy pattern - handles player vs enemy behavior
   private currentStrategy: TurnStrategy | null = null;
 
-  // Cursor animation
+  // Cursor animation (cycles through black → gray → white → gray → black)
   private cursorBlinkTimer: number = 0;
-  private cursorVisible: boolean = true;
+  private cursorPhase: number = 0; // 0-6: black, dark gray, gray, white, gray, dark gray, (back to black)
 
   // Cached panel content (per GeneralGuidelines.md - cache stateful components)
   private unitInfoContent: UnitInfoContent | null = null;
@@ -275,13 +275,16 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       );
     }
 
-    // Render active unit cursor (dark green, blinking) - rendered AFTER units per user feedback
-    if (this.activeUnitPosition && this.cursorVisible && !this.movementSequence) {
+    // Render active unit cursor (gradient cycle: black → gray → white → gray → black)
+    if (this.activeUnitPosition && !this.movementSequence) {
       // Per GeneralGuidelines.md - round coordinates for pixel-perfect rendering
       const x = Math.floor(offsetX + (this.activeUnitPosition.x * tileSize));
       const y = Math.floor(offsetY + (this.activeUnitPosition.y * tileSize));
 
-      // Render with dark green tint
+      // Cycle through shades: black → dark gray → medium gray → white → medium gray → dark gray → (back to black)
+      const colors = ['#000000', '#555555', '#AAAAAA', '#FFFFFF', '#AAAAAA', '#555555'];
+      const cursorColor = colors[this.cursorPhase];
+
       this.renderTintedSprite(
         ctx,
         CombatConstants.UNIT_TURN.CURSOR_SPRITE_ID,
@@ -291,7 +294,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         y,
         tileSize,
         tileSize,
-        CombatConstants.UNIT_TURN.CURSOR_ALBEDO_DARK_GREEN,
+        cursorColor,
         1.0
       );
     }
@@ -501,11 +504,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       this.readyMessageWritten = true;
     }
 
-    // Update cursor blink timer
+    // Update cursor phase cycle timer (black → gray → white → gray → black)
     this.cursorBlinkTimer += deltaTime;
-    if (this.cursorBlinkTimer >= CombatConstants.UNIT_TURN.CURSOR_BLINK_RATE) {
+    if (this.cursorBlinkTimer >= CombatConstants.UNIT_TURN.CURSOR_BLINK_RATE / 6) {
       this.cursorBlinkTimer = 0;
-      this.cursorVisible = !this.cursorVisible;
+      this.cursorPhase = (this.cursorPhase + 1) % 6; // Cycle through 0, 1, 2, 3, 4, 5
     }
 
     // Update strategy and check for action decision
