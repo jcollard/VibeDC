@@ -373,12 +373,33 @@ export class PlayerTurnStrategy implements TurnStrategy {
    * Enter move selection mode
    */
   private enterMoveMode(): void {
-    if (!this.activeUnit || !this.activePosition || !this.currentState) {
+    if (!this.activeUnit || !this.currentState) {
       console.warn('[PlayerTurnStrategy] Cannot enter move mode - missing active unit');
       return;
     }
 
     this.mode = 'moveSelection';
+
+    // Re-select the active unit to ensure we're using the correct movement range
+    // Get current position in case unit has moved
+    const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
+    if (!currentPosition) {
+      console.warn('[PlayerTurnStrategy] Cannot enter move mode - active unit not in manifest');
+      return;
+    }
+
+    // Update targeted unit to be the active unit (deselects any other unit)
+    this.targetedUnit = this.activeUnit;
+    this.targetedPosition = currentPosition;
+
+    // Recalculate movement range for the active unit at their current position
+    this.movementRange = MovementRangeCalculator.calculateReachableTiles({
+      startPosition: currentPosition,
+      movement: this.activeUnit.movement,
+      map: this.currentState.map,
+      unitManifest: this.currentState.unitManifest,
+      activeUnit: this.activeUnit
+    });
 
     // Add combat log message with colored unit name
     const nameColor = this.activeUnit.isPlayerControlled ? '#00cc00' : '#ff0000';
@@ -389,7 +410,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
     for (const tile of this.movementRange) {
       const path = MovementPathfinder.calculatePath({
-        start: this.activePosition,
+        start: currentPosition,
         end: tile,
         maxRange: this.activeUnit.movement,
         map: this.currentState.map,
