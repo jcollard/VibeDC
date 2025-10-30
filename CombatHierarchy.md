@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.8
-**Last Updated:** Wed, Oct 29, 2025 (Added AI agent usage instructions and navigation index)
+**Version:** 1.9
+**Last Updated:** Thu, Oct 30, 2025 11:27:38 AM (Added attack action components and utilities) <!-- Update using `date` command -->
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -81,6 +81,9 @@ When providing this file to an AI agent, you can say:
 - **Hover interactions** → `#### UnitInfoContent.ts`, search "handleTopPanelHover"
 - **Detail panels** → `#### AbilityInfoContent.ts`, `#### EquipmentInfoContent.ts`
 - **Button states** → `#### ActionsMenuContent.ts`
+- **Attack action** → `#### AttackMenuContent.ts`, `#### AttackAnimationSequence.ts`
+- **Combat formulas** → `#### CombatCalculations.ts`
+- **Attack range** → `#### AttackRangeCalculator.ts`, `#### LineOfSightCalculator.ts`
 - **Animation** → `### 6. Cinematics & Animation`
 - **Pathfinding** → `### 8. Utilities & Predicates`
 
@@ -115,6 +118,7 @@ When providing this file to an AI agent, you can say:
 - **Modify rendering** → `CombatRenderer` (maps/units), `CombatLayoutManager` (UI layout)
 - **Add movement/pathfinding logic** → `MovementRangeCalculator` utility, phase handler integration
 - **Modify unit movement logic** → `MovementPathfinder` utility, `UnitMovementSequence` animation, `PlayerTurnStrategy` mode management
+- **Add attack logic** → `AttackMenuContent` (panel), `CombatCalculations` (formulas), `AttackRangeCalculator` (range), `AttackAnimationSequence` (animation)
 - **Add deployment zone logic** → `DeploymentPhaseHandler`, `DeploymentZoneRenderer`
 - **Change turn order display** → `TurnOrderRenderer`, `TopPanelManager`
 - **Modify turn order scrolling** → `TurnOrderRenderer` (scroll arrows, hold-to-scroll), cached by phase handlers
@@ -217,7 +221,14 @@ react-app/src/
 - Movement range colors:
   - `MOVEMENT_RANGE_COLOR_NORMAL = '#ffff00'` (yellow, default)
   - `MOVEMENT_RANGE_COLOR_ACTIVE = '#00ff00'` (green, move mode)
+- Attack range colors (all with alpha 0.33):
+  - `ATTACK_RANGE_BASE_COLOR = '#ff0000'` (red, base attack range)
+  - `ATTACK_RANGE_BLOCKED_COLOR = '#ffffff'` (white, blocked by walls/no LoS)
+  - `ATTACK_TARGET_VALID_COLOR = '#ffff00'` (yellow, valid enemy targets)
+  - `ATTACK_TARGET_HOVER_COLOR = '#ffa500'` (orange, hovered target)
+  - `ATTACK_TARGET_SELECTED_COLOR = '#00ff00'` (green, selected target)
 - Ready message colors (player green, enemy red)
+- Player/enemy name colors for combat log
 - Cursor blink rate (0.5 seconds)
 **Used By:** All combat files for consistent values
 
@@ -331,7 +342,7 @@ react-app/src/
 #### `UnitTurnPhaseHandler.ts`
 **Purpose:** Individual unit's turn - delegates behavior to strategy pattern (player vs enemy)
 **Exports:** `UnitTurnPhaseHandler`
-**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick(), executeAction(), **startMoveAnimation()**, **completeMoveAnimation()**, **executeResetMove()**
+**Key Methods:** updatePhase(), getTopPanelRenderer(), getInfoPanelContent(), getActiveUnit(), getTargetedUnit(), handleMapClick(), executeAction(), **startMoveAnimation()**, **completeMoveAnimation()**, **executeResetMove()**, **executeAttack()**, **handlePerformAttack()**, **handleCancelAttack()**, **getCanAct()**
 **Architecture:** Uses Strategy Pattern to separate player input from AI decision-making
 - Creates PlayerTurnStrategy for player-controlled units
 - Creates EnemyTurnStrategy for AI-controlled units
@@ -345,20 +356,27 @@ react-app/src/
 - Shows red target cursor only when targeting different unit (not on active unit)
 - Initializes appropriate strategy based on unit.isPlayerControlled
 - Delegates all turn behavior to strategy.update()
-- Gets movement range, target info, and path preview from strategy
+- Gets movement range, attack range, target info, and path preview from strategy
 - **Executes Move action with animation**
 - **Executes Reset Move action (teleport back to original position)**
+- **Executes Attack action with hit/miss rolls, damage, and animation**
 - Executes Delay and End Turn actions from action menu
 - Transitions back to action-timer phase with slide animation
 **UI Panels:**
 - Top panel: Shows unit name as title (green for players, red for enemies)
-- Bottom panel: Shows "ACTIONS" menu with Move, Attack, Delay, End Turn, and conditional Reset Move
+- Bottom panel (dynamic): Shows "ACTIONS" menu OR "ATTACK" menu depending on activeAction
+  - Actions menu: Move, Attack, Delay, End Turn, and conditional Reset Move
+  - Attack menu: Weapon info, target selection, attack predictions, Perform Attack button
 **Rendering:**
 - Uses dual-method rendering pattern (render() and renderUI())
-- render(): Movement range highlights (green in move mode, yellow otherwise), path preview (yellow) - BEFORE units
-- renderUI(): Animated unit during movement, active unit cursor (green, blinking), target cursor (red) - AFTER units
+- render(): Not used (attack range rendered in renderUI for proper Z-order)
+- renderUI(): Movement ranges, attack ranges, animated units, cursors, attack animations - AFTER units
+  - Movement range highlights (green in move mode, yellow otherwise), path preview (yellow)
+  - Attack range highlights (5-level color priority: green > orange > yellow > white > red)
+  - Active unit cursor (green, blinking), target cursor (red)
+  - Attack animations (red flicker + floating damage text, or floating "Miss" text)
 - Cached tinting buffer for color tinting (avoids GC pressure)
-- Queries strategy for movement range, color override, and path preview each frame
+- Queries strategy for movement range, attack range, color override, and path preview each frame
 **Movement Animation:**
 - Temporarily moves unit to (-999, -999) during animation
 - Renders animated unit manually in `renderUI()` at interpolated position
@@ -377,11 +395,21 @@ react-app/src/
 - Returns new state with phase='action-timer'
 - ActionTimerPhaseHandler applies mutation at start of updatePhase() and triggers slide animation
 - Prevents one-frame flash of final state before animation
+**Attack Animation:**
+- Hit: Red flicker (1s, 150ms intervals) + damage number floats up (2s) = 3s total
+- Miss: "Miss" text floats up (3s)
+- Dual wielding: Two sequential 3s animations = 6s total
+- Buttons disabled during animation (canAct = false)
+- Combat log messages with colored names (player green, enemy red)
+- Knockout detection (wounds >= maxHealth)
 **State Tracking:**
 - unitHasMoved: boolean (prevents second move)
 - originalPosition: Position | null (for reset)
 - canResetMove: boolean (enables reset button)
-- movementSequence: UnitMovementSequence | null (active animation)
+- canAct: boolean (prevents actions during attack animation)
+- movementSequence: UnitMovementSequence | null (active movement animation)
+- attackAnimations: AttackAnimationSequence[] (active attack animations, 1-2 for dual wield)
+- attackAnimationIndex: number (current animation index for dual wielding)
 **Turn Order Logic:**
 - Calculates timeToReady = (100 - actionTimer) / speed for each unit
 - Sorts ascending (soonest first), then alphabetically by name
@@ -392,11 +420,12 @@ react-app/src/
 - Caches tinting buffer canvas to avoid per-frame allocations
 - Caches strategy instance for duration of turn
 **Future Functionality:**
-- Execute Attack action with damage calculation
 - Execute Ability action with ability system integration
-**Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy, **UnitMovementSequence**, **MovementPathfinder**
+- Victory/defeat detection after attack knockouts
+- Enemy AI attack decision making
+**Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy, **UnitMovementSequence**, **MovementPathfinder**, **AttackAnimationSequence**, **CombatCalculations**
 **Used By:** CombatView during unit-turn phase
-**Transitions To:** action-timer phase (when Delay/End Turn/Move completes)
+**Transitions To:** action-timer phase (when Delay/End Turn/Move completes), stays in phase after attack animation
 
 ---
 
@@ -425,21 +454,32 @@ react-app/src/
 - **Path preview**: Pre-calculates all paths on mode entry, instant hover updates
 - **Movement execution**: Returns `{ type: 'move', destination }` action
 - **Reset move**: Returns `{ type: 'reset-move' }` action to undo movement
+- **Attack mode**: Click Attack button → shows attack range with 5-color priority, click target to select
+- **Attack range**: Pre-calculated using AttackRangeCalculator (Manhattan distance, line of sight)
+- **Target selection**: Click valid target → turns green, name shown in attack panel
 - Handles unit selection and info panel updates
 **State Tracking:**
-- mode: 'normal' | 'moveSelection'
+- mode: 'normal' | 'moveSelection' | 'attackSelection'
 - moveModePaths: Map<string, Position[]> (pre-calculated paths)
 - hoveredMovePath: Position[] | null (for yellow preview)
+- attackRange: AttackRangeTiles | null (cached attack range: inRange, blocked, validTargets)
+- hoveredAttackTarget: Position | null (for orange highlight)
+- selectedAttackTarget: Position | null (for green highlight)
+- attackRangeCachedPosition: Position | null (position used to calculate attack range)
 - hasMoved: boolean (cleared after reset)
 - activeUnit, activePosition: The unit whose turn it is
-- targetedUnit, targetedPosition: Currently selected unit (for inspection)
+- targetedUnit, targetedPosition: Currently selected unit (for inspection or attack target)
 - movementRange: Movement highlight tiles
 - currentState: Reference to CombatState for calculations
 **Path Caching:**
 - Calculates all valid paths on `enterMoveMode()`
 - Hover updates instant (no recalculation)
 - Cache cleared on `exitMoveMode()`
-**Dependencies:** MovementRangeCalculator, MovementPathfinder
+**Attack Range Caching:**
+- Calculates attack range on `enterAttackMode()` based on weapon range
+- Recalculates if unit position changes (e.g., after movement)
+- Cache cleared on `exitAttackMode()`
+**Dependencies:** MovementRangeCalculator, MovementPathfinder, AttackRangeCalculator
 **Used By:** UnitTurnPhaseHandler for player-controlled units
 
 #### `strategies/EnemyTurnStrategy.ts`
@@ -809,8 +849,53 @@ react-app/src/
 - Actual execution of class actions with ability system integration
 - Keyboard shortcuts
 - Animation/feedback when button pressed
-**Dependencies:** FontAtlasRenderer, FontRegistry, CombatUnit, colors.ts (HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT)
+**Dependencies:** FontAtlasRenderer, FontRegistry, CombatUnit, colors.ts (HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT, ACTIVE_COLOR)
 **Used By:** InfoPanelManager (via CombatLayoutManager) for bottom panel during unit-turn phase
+
+#### `managers/panels/AttackMenuContent.ts`
+**Purpose:** Attack action panel for weapon info, target selection, and attack predictions
+**Exports:** `AttackMenuContent`, `AttackMenuConfig`
+**Key Methods:** render(), handleClick(), handleHover(), setButtonsDisabled(), updateUnit(), updateSelectedTarget()
+**Current Functionality:**
+- Shows "ATTACK" title in dark red (#8B0000)
+- **Weapon Info Section:**
+  - Single column (centered) for one weapon or two-handed weapon
+  - Dual columns (side-by-side with 8px gap) for dual wielding
+  - Each weapon shows: Name (orange), Range, Hit% (calculated or "??"), Dmg (calculated or "??")
+- **Target Selection Section:**
+  - "Target: " label in white
+  - Target name in orange (or "Select a Target" in grey)
+  - Updates when player clicks valid enemy in attack range
+- **Cancel Attack Button:**
+  - Always visible, right-aligned on title line
+  - Returns to actions menu when clicked
+  - Color: White (enabled), Yellow (hovered), Grey (disabled)
+- **Perform Attack Button:**
+  - Only visible when target selected
+  - Centered below target section
+  - Triggers attack execution
+  - Color: White (enabled), Yellow (hovered), Grey (disabled)
+- **Attack Predictions:**
+  - Uses CombatCalculations.getChanceToHit() for hit percentage
+  - Uses CombatCalculations.calculateAttackDamage() for damage value
+  - Shows "??" when no target selected
+  - Updates dynamically as target changes
+- Returns PanelClickResult with `{ type: 'cancel-attack' }` or `{ type: 'perform-attack' }`
+**State Management:**
+- Cached in CombatLayoutManager (per GeneralGuidelines.md)
+- `updateUnit(unit, position)` updates current unit and recalculates predictions
+- `updateSelectedTarget(target, position)` updates target and predictions
+- `setButtonsDisabled(disabled)` prevents clicks during animation
+**Layout:**
+- Title: "ATTACK" (dark red) on left, "Cancel" button on right (line 0)
+- Blank line (line 1)
+- Target: label + name (line 2)
+- 2px spacing (line 3)
+- Weapon info (lines 4+, varies by weapon count)
+- Perform Attack button (centered, only when target selected)
+- Uses 7px-04b03 font with 8px line spacing, 1px padding
+**Dependencies:** FontAtlasRenderer, FontRegistry, CombatUnit, HumanoidUnit, Equipment, CombatCalculations, colors.ts (HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, ITEM_NAME_COLOR)
+**Used By:** InfoPanelManager (via CombatLayoutManager) for bottom panel during attack mode in unit-turn phase
 
 #### `managers/panels/EmptyContent.ts`
 **Purpose:** Empty panel with optional title
@@ -959,6 +1044,32 @@ react-app/src/
 **Used By:** UnitTurnPhaseHandler during move action
 **Note:** Does NOT implement CinematicSequence (simpler standalone interface)
 
+#### `AttackAnimationSequence.ts`
+**Purpose:** Animates attack visual feedback (hit/miss) with red flicker and floating text
+**Exports:** `AttackAnimationSequence` class
+**Key Methods:** update(deltaTime), render(), isComplete()
+**Animation Behavior:**
+- **Hit animation (3.0s total):**
+  - 0.0s-1.0s: Red flicker (alternates every 150ms, semi-transparent overlay on target tile)
+  - 1.0s-3.0s: Damage number floats upward 12px (1 tile) with black shadow
+  - Color: Red (#ff0000) for damage text
+- **Miss animation (3.0s total):**
+  - 0.0s-3.0s: "Miss" text floats upward 12px (no flicker phase)
+  - Color: White (#ffffff) for miss text
+- Linear interpolation for floating motion
+- Text rendered with shadow for readability (uses FontAtlasRenderer.renderTextWithShadow())
+**Integration Pattern:**
+- Phase handler creates sequence(s) when attack executes
+- Single weapon: 1 animation (3s)
+- Dual wielding: 2 animations (6s total, sequential)
+- Calls `update()` each frame to advance animation
+- Renders via `render()` in phase handler's `renderUI()`
+- Moves to next animation when `isComplete()` returns true
+**Constructor:** `(targetPosition, isHit, damage)`
+**Dependencies:** Position, FontAtlasRenderer
+**Used By:** UnitTurnPhaseHandler during attack execution
+**Note:** Does NOT implement CinematicSequence (simpler standalone interface)
+
 ---
 
 ### 7. Unit System
@@ -1039,6 +1150,73 @@ react-app/src/
 **Performance:** O(tiles × movement) - negligible for 32×18 maps
 **Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
 **Used By:** UnitTurnPhaseHandler for movement animation, PlayerTurnStrategy for path preview
+
+#### `utils/AttackRangeCalculator.ts`
+**Purpose:** Calculates attack range tiles with line of sight validation
+**Exports:** `AttackRangeCalculator`, `AttackRangeOptions`, `AttackRangeTiles`
+**Key Methods:** calculateAttackRange() (static)
+**Algorithm:** Orthogonal distance (Manhattan) + Bresenham line-of-sight check
+**Attack Range Calculation:**
+- Scans all tiles within maxRange using Manhattan distance
+- Filters by minRange and maxRange (inclusive)
+- Checks terrain walkability (walls block LoS)
+- Uses LineOfSightCalculator to check clear path
+- Categorizes tiles into: inRange, blocked, validTargets
+**Return Value (AttackRangeTiles):**
+- `inRange`: All tiles within weapon range (orthogonal distance)
+- `blocked`: Tiles blocked by walls or no line of sight
+- `validTargets`: Tiles with valid enemy targets (in range + clear LoS)
+**Line of Sight Rules:**
+- Units block line of sight (both friendly and enemy)
+- Non-walkable terrain (walls) blocks line of sight
+- Uses Bresenham's algorithm for ray casting
+**Performance:** O(range² × tile check) - negligible for typical weapon ranges
+**Dependencies:** Position, CombatMap, CombatUnitManifest, LineOfSightCalculator
+**Used By:** PlayerTurnStrategy for attack range display
+
+#### `utils/LineOfSightCalculator.ts`
+**Purpose:** Determines if clear line of sight exists between two positions
+**Exports:** `LineOfSightCalculator`, `LineOfSightOptions`
+**Key Methods:** hasLineOfSight() (static), getLinePositions() (static)
+**Algorithm:** Bresenham's line algorithm for ray casting
+**Line of Sight Rules:**
+- Traces line from source to target using Bresenham
+- Checks each intermediate tile (excludes start and end)
+- Blocked by: Non-walkable terrain (walls), Any units (friendly or enemy)
+- Returns true if path is clear, false if blocked
+**Implementation Details:**
+- `getLinePositions()`: Returns all positions along line (includes start/end)
+- `hasLineOfSight()`: Checks intermediate positions for obstacles
+- Handles out-of-bounds positions (returns false)
+**Performance:** O(distance) - negligible for typical combat distances
+**Dependencies:** Position, CombatMap, CombatUnitManifest
+**Used By:** AttackRangeCalculator for validating attack targets
+
+#### `utils/CombatCalculations.ts`
+**Purpose:** Combat formulas for hit chance and damage calculations
+**Exports:** `CombatCalculations`
+**Key Methods:** getChanceToHit() (static), calculateAttackDamage() (static), setHitRate(), setDamage(), clearAttackOverride()
+**Hit Chance Formula:**
+- **Physical:** Base = 100% - Defender's Physical Evade
+  - Bonus if Attacker Courage > Defender Courage: (diff × 0.25)%
+  - Clamped 3-97%
+- **Magical:** Base = 100% - Defender's Magic Evade
+  - Bonus if Attacker Attunement > Defender Attunement: (diff × 0.25)%
+  - Clamped 3-97%
+**Damage Formula:**
+- **Physical:** Base = (Attacker P.Pow + Weapon Modifier) × Weapon Multiplier
+  - Penalty if Defender Courage > Attacker Courage: floor(diff × 0.25)
+  - Minimum 0
+- **Magical:** Base = (Attacker M.Pow + Weapon Modifier) × Weapon Multiplier
+  - Penalty if Defender Attunement > Attacker Attunement: floor(diff × 0.25)
+  - Minimum 0
+**Developer Testing Functions:**
+- `setHitRate(n)`: Override hit rate (0-1, persists until cleared)
+- `setDamage(n)`: Override damage (integer, persists until cleared)
+- `clearAttackOverride()`: Clear all overrides
+- Exposed to window object via CombatView for console testing
+**Dependencies:** CombatUnit, Equipment
+**Used By:** AttackMenuContent (predictions), UnitTurnPhaseHandler (attack execution)
 
 #### `CombatPredicate.ts`
 **Purpose:** Victory/defeat condition evaluation
@@ -1396,18 +1574,18 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 60 Core Files
+## File Count: 65 Core Files
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
 **Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
 **Rendering:** 2 files
-**Layout & UI:** 17 files (ActionsMenuContent, AbilityInfoContent, EquipmentInfoContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
+**Layout & UI:** 18 files (ActionsMenuContent, AttackMenuContent, AbilityInfoContent, EquipmentInfoContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
-**Cinematics:** 8 files
+**Cinematics & Animation:** 9 files (includes UnitMovementSequence, AttackAnimationSequence, and 7 cinematic sequences)
 **Unit System:** 7 files
-**Utilities:** 2 files (CombatPredicate, MovementRangeCalculator)
+**Utilities:** 5 files (CombatPredicate, MovementRangeCalculator, MovementPathfinder, AttackRangeCalculator, LineOfSightCalculator, CombatCalculations)
 **Serialization:** 2 files (CombatSaveData, combatStorage)
 
 ---
