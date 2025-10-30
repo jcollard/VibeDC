@@ -52,8 +52,8 @@ export interface AIContext {
   /** All reachable positions from current location (movement range) */
   readonly movementRange: ReadonlyArray<Position>;
 
-  /** Attack range tiles from current position (null if unit has no weapon) */
-  readonly attackRange: AttackRangeTiles | null;
+  /** Attack range tiles from current position (unarmed = range 1 if no weapon) */
+  readonly attackRange: AttackRangeTiles;
 
   // ===== Helper Methods =====
 
@@ -136,6 +136,9 @@ export interface AIContext {
  * Handles all pre-calculations and helper method implementations.
  */
 export class AIContextBuilder {
+  /** Cache for unit positions (avoids duplicate name lookups) */
+  private static unitPositions = new WeakMap<CombatUnit, Position>();
+
   /**
    * Build a complete AI context for decision-making.
    *
@@ -149,6 +152,15 @@ export class AIContextBuilder {
     selfPosition: Position,
     state: CombatState
   ): AIContext {
+    // Clear previous tracking by creating new WeakMap
+    // Note: WeakMap doesn't have a clear() method, so we create a new instance
+    this.unitPositions = new WeakMap<CombatUnit, Position>();
+
+    // Build unit tracking map
+    for (const placement of state.unitManifest.getAllUnits()) {
+      this.unitPositions.set(placement.unit, placement.position);
+    }
+
     // 1. Partition units into allies and enemies
     const alliedUnits: UnitPlacement[] = [];
     const enemyUnits: UnitPlacement[] = [];
@@ -178,7 +190,8 @@ export class AIContextBuilder {
     });
 
     // 3. Calculate attack range from current position
-    let attackRange: AttackRangeTiles | null = null;
+    // Units always have attack range (unarmed = range 1 if no weapons)
+    let attackRange: AttackRangeTiles;
     const weapons = this.getEquippedWeapons(self);
     if (weapons && weapons.length > 0) {
       const weapon = weapons[0];
@@ -189,6 +202,15 @@ export class AIContextBuilder {
         attackerPosition: selfPosition,
         minRange,
         maxRange,
+        map: state.map,
+        unitManifest: state.unitManifest,
+      });
+    } else {
+      // Unarmed attack: range 1 (adjacent tiles only)
+      attackRange = AttackRangeCalculator.calculateAttackRange({
+        attackerPosition: selfPosition,
+        minRange: 1,
+        maxRange: 1,
         map: state.map,
         unitManifest: state.unitManifest,
       });
@@ -233,8 +255,6 @@ export class AIContextBuilder {
           ? attackRange
           : this.calculateAttackRangeFrom(from);
 
-        if (!attackRangeFromPos) return [];
-
         const result: UnitPlacement[] = [];
         for (const targetPos of attackRangeFromPos.validTargets) {
           const targetUnit = state.unitManifest.getUnitAtPosition(targetPos);
@@ -268,13 +288,15 @@ export class AIContextBuilder {
       // Helper: Calculate attack range from position
       calculateAttackRangeFrom(position: Position): AttackRangeTiles {
         const weapons = AIContextBuilder.getEquippedWeapons(self);
-        if (!weapons || weapons.length === 0) {
-          return { inRange: [], blocked: [], validTargets: [] };
-        }
+        let minRange = 1;
+        let maxRange = 1;
 
-        const weapon = weapons[0];
-        const minRange = weapon.minRange ?? 1;
-        const maxRange = weapon.maxRange ?? 1;
+        if (weapons && weapons.length > 0) {
+          const weapon = weapons[0];
+          minRange = weapon.minRange ?? 1;
+          maxRange = weapon.maxRange ?? 1;
+        }
+        // else: unarmed attack, range 1
 
         return AttackRangeCalculator.calculateAttackRange({
           attackerPosition: position,
@@ -288,7 +310,7 @@ export class AIContextBuilder {
       // Helper: Predict damage
       predictDamage(target: CombatUnit, weapon?: Equipment): number {
         const weaponToUse = weapon ?? getDefaultWeapon();
-        if (!weaponToUse) return 0;
+        // weaponToUse can be null for unarmed attacks
 
         // Calculate distance for damage calculation
         const targetPos = state.unitManifest.getUnitPosition(target);
@@ -298,10 +320,13 @@ export class AIContextBuilder {
                         Math.abs(selfPosition.y - targetPos.y);
 
         // Determine damage type from weapon modifiers
-        // If weapon has magic power modifiers, it's magical, otherwise physical
-        const hasMagicPower = weaponToUse.modifiers.magicPowerModifier !== 0 ||
-                             weaponToUse.modifiers.magicPowerMultiplier !== 1;
-        const damageType: 'physical' | 'magical' = hasMagicPower ? 'magical' : 'physical';
+        // Unarmed attacks are always physical
+        let damageType: 'physical' | 'magical' = 'physical';
+        if (weaponToUse) {
+          const hasMagicPower = weaponToUse.modifiers.magicPowerModifier !== 0 ||
+                               weaponToUse.modifiers.magicPowerMultiplier !== 1;
+          damageType = hasMagicPower ? 'magical' : 'physical';
+        }
 
         return CombatCalculations.calculateAttackDamage(
           self,
@@ -315,7 +340,7 @@ export class AIContextBuilder {
       // Helper: Predict hit chance
       predictHitChance(target: CombatUnit, weapon?: Equipment): number {
         const weaponToUse = weapon ?? getDefaultWeapon();
-        if (!weaponToUse) return 0;
+        // weaponToUse can be null for unarmed attacks
 
         // Calculate distance for hit chance calculation
         const targetPos = state.unitManifest.getUnitPosition(target);
@@ -325,10 +350,13 @@ export class AIContextBuilder {
                         Math.abs(selfPosition.y - targetPos.y);
 
         // Determine damage type from weapon modifiers
-        // If weapon has magic power modifiers, it's magical, otherwise physical
-        const hasMagicPower = weaponToUse.modifiers.magicPowerModifier !== 0 ||
-                             weaponToUse.modifiers.magicPowerMultiplier !== 1;
-        const damageType: 'physical' | 'magical' = hasMagicPower ? 'magical' : 'physical';
+        // Unarmed attacks are always physical
+        let damageType: 'physical' | 'magical' = 'physical';
+        if (weaponToUse) {
+          const hasMagicPower = weaponToUse.modifiers.magicPowerModifier !== 0 ||
+                               weaponToUse.modifiers.magicPowerMultiplier !== 1;
+          damageType = hasMagicPower ? 'magical' : 'physical';
+        }
 
         return CombatCalculations.getChanceToHit(
           self,

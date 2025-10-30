@@ -84,9 +84,10 @@ export class CombatCalculations {
    * - Magical: Base = (Attacker's Magic Power + Weapon Magic Power Modifier) × Weapon Magic Power Multiplier
    *   - If Defender's Attunement > Attacker's Attunement: Penalty = floor(difference × 0.25)
    * - Final damage = max(0, Base - Penalty)
+   * - Unarmed: If weapon is null, uses Physical Power with no modifiers/multipliers (1.0)
    *
    * @param attacker - The attacking unit
-   * @param weapon - The weapon being used
+   * @param weapon - The weapon being used (null for unarmed attacks)
    * @param defender - The defending unit
    * @param distance - Manhattan distance between attacker and defender
    * @param damageType - Type of damage ('physical' or 'magical')
@@ -94,7 +95,7 @@ export class CombatCalculations {
    */
   static calculateAttackDamage(
     attacker: CombatUnit,
-    weapon: Equipment,
+    weapon: Equipment | null,
     defender: CombatUnit,
     _distance: number,
     damageType: 'physical' | 'magical'
@@ -111,8 +112,9 @@ export class CombatCalculations {
 
     if (damageType === 'physical') {
       // Physical damage: (Physical Power + Weapon Modifier) × Weapon Multiplier
-      const powerModifier = weapon.modifiers.physicalPowerModifier;
-      const powerMultiplier = weapon.modifiers.physicalPowerMultiplier;
+      // Unarmed: Just use Physical Power with no modifiers (1.0 multiplier)
+      const powerModifier = weapon?.modifiers.physicalPowerModifier ?? 0;
+      const powerMultiplier = weapon?.modifiers.physicalPowerMultiplier ?? 1.0;
       baseDamage = (attacker.physicalPower + powerModifier) * powerMultiplier;
 
       // Courage penalty (only if defender has more courage)
@@ -121,8 +123,9 @@ export class CombatCalculations {
       }
     } else {
       // Magical damage: (Magic Power + Weapon Modifier) × Weapon Multiplier
-      const powerModifier = weapon.modifiers.magicPowerModifier;
-      const powerMultiplier = weapon.modifiers.magicPowerMultiplier;
+      // Unarmed: Just use Magic Power with no modifiers (1.0 multiplier)
+      const powerModifier = weapon?.modifiers.magicPowerModifier ?? 0;
+      const powerMultiplier = weapon?.modifiers.magicPowerMultiplier ?? 1.0;
       baseDamage = (attacker.magicPower + powerModifier) * powerMultiplier;
 
       // Attunement penalty (only if defender has more attunement)

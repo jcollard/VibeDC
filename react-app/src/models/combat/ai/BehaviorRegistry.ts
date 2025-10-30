@@ -1,5 +1,7 @@
 import type { AIBehavior, AIBehaviorConfig } from './types/AIBehavior';
 import { DefaultBehavior } from './behaviors/DefaultBehavior';
+import { AttackNearestOpponent } from './behaviors/AttackNearestOpponent';
+import { DefeatNearbyOpponent } from './behaviors/DefeatNearbyOpponent';
 
 /**
  * Factory function for creating behavior instances.
@@ -76,7 +78,17 @@ BehaviorRegistry.register('DefaultBehavior', (priority, config) =>
   new DefaultBehavior(priority, config)
 );
 
+BehaviorRegistry.register('AttackNearestOpponent', (priority, config) =>
+  new AttackNearestOpponent(priority, config)
+);
+
+BehaviorRegistry.register('DefeatNearbyOpponent', (priority, config) =>
+  new DefeatNearbyOpponent(priority, config)
+);
+
 // Default behavior configuration used when no behaviors specified
 export const DEFAULT_ENEMY_BEHAVIORS: AIBehaviorConfig[] = [
+  { type: 'DefeatNearbyOpponent', priority: 100 },
+  { type: 'AttackNearestOpponent', priority: 80 },
   { type: 'DefaultBehavior', priority: 0 },
 ];

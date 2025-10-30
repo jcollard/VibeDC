@@ -512,7 +512,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     }
 
     // Update strategy and check for action decision
-    if (this.currentStrategy && this.activeUnit && this.activeUnitPosition) {
+    // Only call strategy update if canAct is true (not during attack animations)
+    if (this.currentStrategy && this.activeUnit && this.activeUnitPosition && this.canAct) {
       // Check for pending messages from strategy (e.g., "Click a tile to move...")
       if ('getPendingMessage' in this.currentStrategy) {
         const message = (this.currentStrategy as any).getPendingMessage();
@@ -537,6 +538,20 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         } else if (action.type === 'reset-move') {
           // Reset move - teleport back to original position
           return this.executeResetMove(state);
+        } else if (action.type === 'attack') {
+          // Execute attack action
+          const targetUnit = state.unitManifest.getUnitAtPosition(action.target);
+          if (targetUnit && this.activeUnit && this.activeUnitPosition) {
+            this.executeAttack(this.activeUnit, this.activeUnitPosition, targetUnit, action.target);
+            // Stay in unit-turn phase (attack animation playing)
+            return state;
+          } else {
+            console.warn('[UnitTurnPhaseHandler] Attack failed - no target at position', action.target);
+            // End turn if attack target invalid
+            const newState = this.executeAction({ type: 'end-turn' }, state);
+            this.currentStrategy.onTurnEnd();
+            return newState;
+          }
         } else {
           // Execute other actions (delay, end-turn)
           const newState = this.executeAction(action, state);
@@ -1031,10 +1046,10 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       }
     }
 
-    // If no weapons equipped, cannot attack (should not happen, but safety check)
-    if (weapons.length === 0) {
-      console.warn('[UnitTurnPhaseHandler] Cannot attack - no weapons equipped');
-      return;
+    // If no weapons equipped, use unarmed attack (null weapon)
+    const isUnarmed = weapons.length === 0;
+    if (isUnarmed) {
+      console.log('[UnitTurnPhaseHandler] Unarmed attack');
     }
 
     // Set canAct to false IMMEDIATELY (before animation starts)
@@ -1055,10 +1070,10 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       ? CombatConstants.UNIT_TURN.PLAYER_NAME_COLOR
       : CombatConstants.UNIT_TURN.ENEMY_NAME_COLOR;
 
-    // Single weapon or dual wielding
-    if (weapons.length === 1) {
-      // Single weapon attack
-      const weapon = weapons[0];
+    // Single weapon, unarmed, or dual wielding
+    if (weapons.length === 0 || weapons.length === 1) {
+      // Single weapon attack OR unarmed attack
+      const weapon = weapons.length === 1 ? weapons[0] : null;
 
       // Add initial combat log message
       const logMessage = `[color=${attackerNameColor}]${attacker.name}[/color] attacks [color=${targetNameColor}]${target.name}[/color]...`;
@@ -1070,7 +1085,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       const isHit = hitRoll < hitChance;
 
       if (isHit) {
-        // Calculate damage
+        // Calculate damage (weapon can be null for unarmed)
         const damage = CombatCalculations.calculateAttackDamage(attacker, weapon, target, distance, 'physical');
 
         // Apply damage to target
@@ -1183,7 +1198,19 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Note: canAct and canResetMove were already set to false at the START of executeAttack
     // This prevents menu interaction during the animation
 
-    // Stay in unit-turn phase (don't auto-advance)
+    // For AI units, end turn after attack completes
+    if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
+      console.log(`[UnitTurnPhaseHandler] AI attack complete, ending turn`);
+      const newState = this.executeAction({ type: 'end-turn' }, state);
+      if (this.currentStrategy) {
+        this.currentStrategy.onTurnEnd();
+      }
+      return newState;
+    }
+
+    // For player units, stay in unit-turn phase (don't auto-advance)
+    // Re-enable actions so player can continue their turn
+    this.canAct = true;
     return state;
   }
 

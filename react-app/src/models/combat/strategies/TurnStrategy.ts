@@ -11,8 +11,9 @@ import type { AttackRangeTiles } from '../utils/AttackRangeCalculator';
 export type TurnAction =
   | { type: 'delay' }             // Set actionTimer to 50
   | { type: 'end-turn' }          // Set actionTimer to 0
-  | { type: 'move'; destination: Position } // Move to destination
-  | { type: 'reset-move' };       // Reset to original position
+  | { type: 'move'; destination: Position; path?: Position[] } // Move to destination (path optional, calculated if not provided)
+  | { type: 'reset-move' }        // Reset to original position
+  | { type: 'attack'; target: Position }; // Attack target at position
 
 /**
  * Strategy pattern for handling unit turns

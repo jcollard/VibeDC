@@ -21,6 +21,8 @@ export { AIContextBuilder } from './types/AIContext';
 
 // Behaviors
 export { DefaultBehavior } from './behaviors/DefaultBehavior';
+export { AttackNearestOpponent } from './behaviors/AttackNearestOpponent';
+export { DefeatNearbyOpponent } from './behaviors/DefeatNearbyOpponent';
 
 // Registry
 export { BehaviorRegistry, DEFAULT_ENEMY_BEHAVIORS } from './BehaviorRegistry';
