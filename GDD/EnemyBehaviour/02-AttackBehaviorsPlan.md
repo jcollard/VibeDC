@@ -385,7 +385,8 @@ export class AIContextBuilder {
     selfPosition: Position,
     state: CombatState
   ): AIContext {
-    // Clear previous tracking
+    // Clear previous tracking by creating new WeakMap
+    // Note: WeakMap doesn't have a clear() method, so we create a new instance
     this.unitPositions = new WeakMap<CombatUnit, Position>();
 
     // Build unit tracking map
@@ -410,7 +411,8 @@ getUnitsInAttackRange(from: Position = selfPosition): UnitPlacement[] {
 
   const result: UnitPlacement[] = [];
   for (const targetPos of attackRangeFromPos.validTargets) {
-    // Use WeakMap for efficient lookup
+    // Find unit at this position from enemyUnits array
+    // Note: Already filtered to enemies only, so we only search enemy list
     const targetUnit = [...enemyUnits].find(
       placement => placement.position.x === targetPos.x &&
                    placement.position.y === targetPos.y
@@ -432,7 +434,12 @@ getUnitsInAttackRange(from: Position = selfPosition): UnitPlacement[] {
 - WeakMap prevents memory leaks (garbage collected with units)
 - Built once per turn, not per query
 - Avoids string-based name lookups (duplicate name issues)
-- Fallback to manifest.getUnitAtPosition() if needed
+- Follows GeneralGuidelines.md "WeakMap for Object-to-ID Mapping" pattern
+- WeakMap doesn't have clear() method - create new instance instead
+
+**From GeneralGuidelines.md:**
+> "Use `Map` for primary storage and `WeakMap` for reverse lookup"
+> "WeakMap allows garbage collection when units are removed from primary storage"
 
 ---
 
