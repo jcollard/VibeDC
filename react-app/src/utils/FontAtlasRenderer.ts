@@ -121,6 +121,68 @@ export class FontAtlasRenderer {
   }
 
   /**
+   * Render text with a drop shadow for improved readability
+   *
+   * Renders text twice: first as a shadow (offset), then as the main text.
+   * Useful for floating damage numbers, titles, or any text that might appear
+   * over varying backgrounds.
+   *
+   * @param ctx - Canvas rendering context
+   * @param text - Text to render
+   * @param x - X position (use alignment for positioning)
+   * @param y - Y position (top of text)
+   * @param fontId - Font ID from FontRegistry
+   * @param atlasImage - Loaded font atlas image
+   * @param scale - Scale factor for rendering (default 1)
+   * @param alignment - Text alignment: 'left', 'center', 'right' (default 'left')
+   * @param color - Text color (default white/no tint)
+   * @param shadowColor - Shadow color (default semi-transparent black)
+   * @param shadowOffsetX - Shadow offset in pixels on X axis (default 1)
+   * @param shadowOffsetY - Shadow offset in pixels on Y axis (default 1)
+   * @returns Width of rendered text in pixels (at scale 1)
+   */
+  static renderTextWithShadow(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    x: number,
+    y: number,
+    fontId: string,
+    atlasImage: HTMLImageElement,
+    scale: number = 1,
+    alignment: 'left' | 'center' | 'right' = 'left',
+    color?: string,
+    shadowColor: string = 'rgba(0, 0, 0, 0.8)',
+    shadowOffsetX: number = 1,
+    shadowOffsetY: number = 1
+  ): number {
+    // Render shadow (offset)
+    this.renderText(
+      ctx,
+      text,
+      x + shadowOffsetX,
+      y + shadowOffsetY,
+      fontId,
+      atlasImage,
+      scale,
+      alignment,
+      shadowColor
+    );
+
+    // Render main text
+    return this.renderText(
+      ctx,
+      text,
+      x,
+      y,
+      fontId,
+      atlasImage,
+      scale,
+      alignment,
+      color
+    );
+  }
+
+  /**
    * Measure the width of text in pixels (at scale 1)
    * @param text - Text to measure
    * @param font - Font definition

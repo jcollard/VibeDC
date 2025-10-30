@@ -124,9 +124,9 @@ export class AttackAnimationSequence {
       // Calculate floating Y position (moves up by floatDistance pixels)
       const floatY = tileCenterY - Math.floor(floatProgress * this.floatDistance);
 
-      // Render damage number in red
+      // Render damage number in red with black shadow
       const damageText = this.damage.toString();
-      FontAtlasRenderer.renderText(
+      FontAtlasRenderer.renderTextWithShadow(
         ctx,
         damageText,
         tileCenterX,
@@ -135,7 +135,8 @@ export class AttackAnimationSequence {
         fontAtlasImage,
         1, // scale
         'center', // alignment
-        '#ff0000' // Red color for damage
+        '#ff0000', // Red color for damage
+        'black' // Black shadow for contrast
       );
     }
   }
@@ -156,8 +157,8 @@ export class AttackAnimationSequence {
     // Calculate floating Y position (moves up by floatDistance pixels)
     const floatY = tileCenterY - Math.floor(floatProgress * this.floatDistance);
 
-    // Render "Miss" text in white
-    FontAtlasRenderer.renderText(
+    // Render "Miss" text in white with black shadow
+    FontAtlasRenderer.renderTextWithShadow(
       ctx,
       'Miss',
       tileCenterX,
@@ -166,7 +167,8 @@ export class AttackAnimationSequence {
       fontAtlasImage,
       1, // scale
       'center', // alignment
-      '#ffffff' // White color for miss
+      '#ffffff', // White color for miss
+      'black' // Black shadow for contrast
     );
   }
 }
