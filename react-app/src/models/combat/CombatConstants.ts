@@ -75,10 +75,9 @@ export const CombatConstants = {
     ENEMY_NAME_COLOR: '#ff0000',       // Red (matches enemy deployment)
 
     // Active unit cursor (gradient animation for maximum visibility)
+    // Cycles through 6 phases: black → dark gray → medium gray → white → medium gray → dark gray
     CURSOR_SPRITE_ID: 'particles-5',
-    CURSOR_COLOR_A: '#FFFFFF',         // White (visible on dark backgrounds) - kept for reference
-    CURSOR_COLOR_B: '#000000',         // Black (visible on light backgrounds) - kept for reference
-    CURSOR_BLINK_RATE: 1.0,            // Full gradient cycle (black→gray→white→gray→black) in seconds
+    CURSOR_BLINK_RATE: 1.0,            // Full gradient cycle in seconds
 
     // Target unit cursor (red, always visible)
     TARGET_CURSOR_SPRITE_ID: 'particles-5',

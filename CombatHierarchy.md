@@ -1,7 +1,7 @@
 # Combat System Hierarchy
 
-**Version:** 1.9
-**Last Updated:** Thu, Oct 30, 2025 11:27:38 AM (Added attack action components and utilities) <!-- Update using `date` command -->
+**Version:** 2.0
+**Last Updated:** Thu, Oct 30, 2025 12:59:56 PM (Bug fixes, code organization, gradient cursor, font centralization) <!-- Update using `date` command -->
 **Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
 
 ## Purpose
@@ -213,9 +213,20 @@ react-app/src/
 #### `CombatConstants.ts`
 **Purpose:** Centralized configuration (canvas size, colors, text, animations)
 **Exports:** `CombatConstants` object
-**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN
+**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN, FONTS
+**FONTS Section:**
+- `TITLE_FONT_ID: '15px-dungeonslant'` - Large font for titles and headers
+- `UI_FONT_ID: '7px-04b03'` - Small font for UI panels, combat log, turn order, etc.
+- Replaces hardcoded font strings across 7 files (12 total replacements)
 **UNIT_TURN Section:**
-- Cursor colors and sprite IDs (active unit, target unit)
+- **Active Unit Cursor (gradient animation):**
+  - 6-phase gradient cycle: `['#000000', '#555555', '#AAAAAA', '#FFFFFF', '#AAAAAA', '#555555']`
+  - Colors: black → dark gray → medium gray → white → medium gray → dark gray → (repeat)
+  - Cycle time: 1.0 second (full cycle)
+  - Phase duration: ~0.167 seconds per phase
+  - Visibility: Maximum contrast on any background color
+  - Sprite ID: `particles-5`
+- **Target Unit Cursor:** Red (#ff0000), always visible, `particles-5` sprite
 - Movement range highlight settings (color, alpha, sprite)
 - Movement animation speed: `MOVEMENT_SPEED_PER_TILE = 0.2` (seconds per tile)
 - Movement range colors:
@@ -229,7 +240,6 @@ react-app/src/
   - `ATTACK_TARGET_SELECTED_COLOR = '#00ff00'` (green, selected target)
 - Ready message colors (player green, enemy red)
 - Player/enemy name colors for combat log
-- Cursor blink rate (0.5 seconds)
 **Used By:** All combat files for consistent values
 
 #### `CombatUIState.ts`
@@ -352,7 +362,7 @@ react-app/src/
 - Identifies ready unit (first in turn order with AT >= 100)
 - Displays colored ready message: "[Unit Name] is ready!" (green for players, red for enemies)
 - Auto-selects active unit on turn start (via strategy pattern)
-- Shows blinking dark green cursor on active unit (0.5s blink rate)
+- Shows gradient cursor on active unit (6-phase cycle: black→gray→white→gray→black, 1.0s cycle)
 - Shows red target cursor only when targeting different unit (not on active unit)
 - Initializes appropriate strategy based on unit.isPlayerControlled
 - Delegates all turn behavior to strategy.update()
@@ -373,7 +383,7 @@ react-app/src/
 - renderUI(): Movement ranges, attack ranges, animated units, cursors, attack animations - AFTER units
   - Movement range highlights (green in move mode, yellow otherwise), path preview (yellow)
   - Attack range highlights (5-level color priority: green > orange > yellow > white > red)
-  - Active unit cursor (green, blinking), target cursor (red)
+  - Active unit cursor (gradient: black→gray→white→gray→black), target cursor (red)
   - Attack animations (red flicker + floating damage text, or floating "Miss" text)
 - Cached tinting buffer for color tinting (avoids GC pressure)
 - Queries strategy for movement range, attack range, color override, and path preview each frame
@@ -479,6 +489,13 @@ react-app/src/
 - Calculates attack range on `enterAttackMode()` based on weapon range
 - Recalculates if unit position changes (e.g., after movement)
 - Cache cleared on `exitAttackMode()`
+**Bug Fixes (v2.0):**
+- `enterMoveMode()`: Re-selects active unit and recalculates range from current position
+  - Prevents movement range showing for wrong unit when different unit was previously selected
+  - Updates targeted unit to be the active unit (deselects any other unit)
+- `exitAttackMode()`: Queries current position from manifest instead of cached activePosition
+  - Prevents selection square appearing at stale position after unit has moved
+  - Uses `unitManifest.getUnitPosition()` to get authoritative current position
 **Dependencies:** MovementRangeCalculator, MovementPathfinder, AttackRangeCalculator
 **Used By:** UnitTurnPhaseHandler for player-controlled units
 
@@ -1334,6 +1351,13 @@ react-app/src/
 - All rendering and logic uses `activeEncounter` instead of prop
 - Enables loading saves from different encounters than currently displayed
 
+**Phase Handler Version Pattern:**
+- State: `phaseHandlerVersion` counter (increments on load to force recreation)
+- Clears stale selection state from previous game when loading saves
+- Triggers useEffect via dependency array: `[combatState.phase, uiStateManager, phaseHandlerVersion]`
+- Pattern: `setPhaseHandlerVersion(v => v + 1)` in handleLoadComplete()
+- Ensures phase handlers are recreated even if phase hasn't changed
+
 **Quick Save/Load UI:**
 - Location: Developer Settings panel (top-left, DEV mode only)
 - 4 save slots with metadata display
@@ -1383,6 +1407,26 @@ IDLE → (isLoading=true) → FADE_TO_LOADING
 - Total fast load: ~700ms
 **Dependencies:** FontAtlasLoader, FontAtlasRenderer
 **Used By:** CombatView for save/load operations
+
+### `components/combat/CombatDeveloperPanel.tsx`
+**Purpose:** Developer settings UI panel extracted from CombatView
+**Exports:** `CombatDeveloperPanel` React component, `CombatDeveloperPanelProps`
+**Key Responsibilities:**
+- Display settings (integer scaling, manual scale, max FPS)
+- Debug overlays (debug grid, FPS counter)
+- Save/load UI (file export/import, localStorage, quick save slots)
+- Slot metadata formatting
+**Props Pattern:**
+- All state passed via props (no internal state)
+- All interactions via callback props (on\*)
+- Pure presentation component
+**Quick Save Slots:**
+- 4 save slots with metadata display
+- Each slot shows: "Slot N", status ("Empty" or "Turn X (Phase) - HH:MM")
+- Save button (green) - always enabled
+- Load button (blue) - disabled for empty slots
+**Dependencies:** SaveSlotMetadata type from combatStorage
+**Used By:** CombatView (DEV mode only)
 
 ### `components/combat/CombatViewRoute.tsx`
 **Purpose:** Routing wrapper for CombatView
