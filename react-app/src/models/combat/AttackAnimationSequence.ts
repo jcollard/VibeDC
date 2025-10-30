@@ -101,8 +101,8 @@ export class AttackAnimationSequence {
   ): void {
     // Red flicker phase (0-1000ms)
     if (this.elapsedTime < this.flickerDuration) {
-      // Alternates every 50ms for 1 second total
-      const flickerInterval = 0.05; // 50ms intervals
+      // Alternates every 150ms for 1 second total
+      const flickerInterval = 0.15; // 150ms intervals
       const intervalIndex = Math.floor(this.elapsedTime / flickerInterval);
       const shouldShowRed = intervalIndex % 2 === 0;
 

@@ -40,6 +40,7 @@ import {
   type SaveSlotMetadata,
 } from '../../utils/combatStorage';
 import { LoadingView, type LoadResult } from './LoadingView';
+import { CombatCalculations } from '../../models/combat/utils/CombatCalculations';
 
 interface CombatViewProps {
   encounter: CombatEncounter;
@@ -100,6 +101,31 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     }
     // Add other phase handlers as needed (victory, defeat)
   }, [combatState.phase, uiStateManager]);
+
+  // Expose developer mode functions to window (for testing)
+  useEffect(() => {
+    // Expose setHitRate function
+    (window as any).setHitRate = (hitRate: number) => {
+      CombatCalculations.setHitRate(hitRate);
+    };
+
+    // Expose setDamage function
+    (window as any).setDamage = (damage: number) => {
+      CombatCalculations.setDamage(damage);
+    };
+
+    // Expose clearAttackOverride function
+    (window as any).clearAttackOverride = () => {
+      CombatCalculations.clearAttackOverride();
+    };
+
+    // Cleanup on unmount
+    return () => {
+      delete (window as any).setHitRate;
+      delete (window as any).setDamage;
+      delete (window as any).clearAttackOverride;
+    };
+  }, []);
 
   // Initialize cinematic manager
   const cinematicManagerRef = useRef<CinematicManager>(new CinematicManager());
