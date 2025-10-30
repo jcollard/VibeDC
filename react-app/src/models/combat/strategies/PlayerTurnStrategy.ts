@@ -537,8 +537,12 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.selectedAttackTarget = null;
 
     // Re-select the active unit to restore its info display
-    if (this.activeUnit && this.activePosition && this.currentState) {
-      this.selectUnit(this.activeUnit, this.activePosition, this.currentState);
+    // Use current position from manifest (not cached activePosition which may be stale after movement)
+    if (this.activeUnit && this.currentState) {
+      const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
+      if (currentPosition) {
+        this.selectUnit(this.activeUnit, currentPosition, this.currentState);
+      }
     }
   }
 
