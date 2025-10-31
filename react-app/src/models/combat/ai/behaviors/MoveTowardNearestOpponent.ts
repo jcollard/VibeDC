@@ -1,5 +1,5 @@
 import type { AIBehavior, AIDecision } from '../types/AIBehavior';
-import type { AIContext } from '../types/AIContext';
+import type { AIContext, UnitPlacement } from '../types/AIContext';
 import type { Position } from '../../../../types';
 import { CombatConstants } from '../../CombatConstants';
 
@@ -10,10 +10,17 @@ import { CombatConstants } from '../../CombatConstants';
  * Priority: 10 (default, above DefaultBehavior)
  *
  * Decision Logic:
- * - Finds all enemy units on the battlefield
- * - Selects nearest enemy by Manhattan distance
- * - Moves as close as possible toward that enemy
- * - Does NOT attack (move-only)
+ * 1. Use BFS from current position to filter to reachable enemies only
+ * 2. For each movement position, calculate Manhattan distance to nearest reachable enemy
+ * 3. Select the movement position with shortest Manhattan distance
+ * 4. Tie-breakers: prefer higher hit chance, then lower HP
+ * 5. Does NOT attack (move-only)
+ *
+ * Hybrid Approach Rationale:
+ * - BFS from current position: Ensures we only consider enemies we can actually path to
+ * - Manhattan from movement positions: Avoids collision detection issues when calculating
+ *   from hypothetical positions (unit still at original position in manifest)
+ * - Movement range already includes pathfinding (only reachable tiles)
  *
  * Use Case:
  * - Fallback when no enemies are in movement + attack range
@@ -41,35 +48,103 @@ export class MoveTowardNearestOpponent implements AIBehavior {
   decide(context: AIContext): AIDecision | null {
     if (context.enemyUnits.length === 0) return null;
 
-    // Find nearest enemy by Manhattan distance
-    let nearestEnemy = context.enemyUnits[0];
-    let nearestDistance = context.getDistance(
-      context.selfPosition,
-      nearestEnemy.position
-    );
+    if (CombatConstants.AI.DEBUG_LOGGING) {
+      console.log(
+        `[AI] ${context.self.name} at (${context.selfPosition.x},${context.selfPosition.y}) ` +
+        `evaluating ${context.movementRange.length} movement positions, ${context.enemyUnits.length} enemies`
+      );
+    }
 
-    for (const enemy of context.enemyUnits.slice(1)) {
-      const distance = context.getDistance(context.selfPosition, enemy.position);
-      if (distance < nearestDistance) {
-        nearestDistance = distance;
-        nearestEnemy = enemy;
+    // For each movement position, calculate BFS distance to all enemies
+    // Select the position that minimizes distance to nearest opponent
+    let bestMovePosition: Position | null = null;
+    let bestDistanceToNearestEnemy = Infinity;
+    let bestTargetEnemy: UnitPlacement | null = null;
+
+    for (const movePos of context.movementRange) {
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(
+          `[AI] ${context.self.name} evaluating move to (${movePos.x},${movePos.y})`
+        );
+      }
+
+      // Find nearest enemy from this movement position using BFS
+      let nearestEnemyFromPos = context.enemyUnits[0];
+      let nearestDistanceFromPos = context.getPathDistance(
+        movePos,
+        nearestEnemyFromPos.position
+      );
+
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(
+          `  Distance to ${nearestEnemyFromPos.unit.name} at (${nearestEnemyFromPos.position.x},${nearestEnemyFromPos.position.y}): ${nearestDistanceFromPos}`
+        );
+      }
+
+      for (const enemy of context.enemyUnits.slice(1)) {
+        const distance = context.getPathDistance(movePos, enemy.position);
+        if (CombatConstants.AI.DEBUG_LOGGING) {
+          console.log(
+            `  Distance to ${enemy.unit.name} at (${enemy.position.x},${enemy.position.y}): ${distance}`
+          );
+        }
+        if (distance < nearestDistanceFromPos) {
+          nearestDistanceFromPos = distance;
+          nearestEnemyFromPos = enemy;
+        }
+      }
+
+      // Check if this position is better than current best
+      if (nearestDistanceFromPos < bestDistanceToNearestEnemy) {
+        bestDistanceToNearestEnemy = nearestDistanceFromPos;
+        bestMovePosition = movePos;
+        bestTargetEnemy = nearestEnemyFromPos;
+      } else if (nearestDistanceFromPos === bestDistanceToNearestEnemy && bestTargetEnemy) {
+        // Tie-breaker 1: Prefer enemy with higher hit chance
+        const currentHitChance = context.predictHitChance(bestTargetEnemy.unit);
+        const newHitChance = context.predictHitChance(nearestEnemyFromPos.unit);
+
+        if (newHitChance > currentHitChance) {
+          bestMovePosition = movePos;
+          bestTargetEnemy = nearestEnemyFromPos;
+        } else if (newHitChance === currentHitChance) {
+          // Tie-breaker 2: Prefer enemy with lower HP
+          if (nearestEnemyFromPos.unit.health < bestTargetEnemy.unit.health) {
+            bestMovePosition = movePos;
+            bestTargetEnemy = nearestEnemyFromPos;
+          }
+        }
       }
     }
 
-    // Find the movement position that gets us closest to the nearest enemy
-    let bestMovePosition: Position | null = null;
-    let bestDistanceToEnemy = Infinity;
+    // If all enemies are unreachable from all movement positions
+    if (bestDistanceToNearestEnemy === Infinity) {
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(
+          `[AI] ${context.self.name} cannot reach any enemies from any movement position`
+        );
+      }
+      return null;
+    }
 
-    for (const movePos of context.movementRange) {
-      const distanceToEnemy = context.getDistance(movePos, nearestEnemy.position);
-      if (distanceToEnemy < bestDistanceToEnemy) {
-        bestDistanceToEnemy = distanceToEnemy;
-        bestMovePosition = movePos;
+    if (CombatConstants.AI.DEBUG_LOGGING) {
+      if (bestMovePosition && bestTargetEnemy) {
+        console.log(
+          `[AI] ${context.self.name} found best move: (${bestMovePosition.x},${bestMovePosition.y}) ` +
+          `distance ${bestDistanceToNearestEnemy} to ${bestTargetEnemy.unit.name}`
+        );
+      } else {
+        console.log(`[AI] ${context.self.name} found no valid move position`);
       }
     }
 
     // If no valid movement position found, return null
-    if (!bestMovePosition) return null;
+    if (!bestMovePosition) {
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(`[AI] ${context.self.name} has no movement options`);
+      }
+      return null;
+    }
 
     // If the best move position is our current position, don't move
     // (we're already as close as we can get)
@@ -77,6 +152,11 @@ export class MoveTowardNearestOpponent implements AIBehavior {
       bestMovePosition.x === context.selfPosition.x &&
       bestMovePosition.y === context.selfPosition.y
     ) {
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(
+          `[AI] ${context.self.name} best position is current position - not moving`
+        );
+      }
       return null;
     }
 
@@ -89,9 +169,9 @@ export class MoveTowardNearestOpponent implements AIBehavior {
       return null;
     }
 
-    if (CombatConstants.AI.DEBUG_LOGGING) {
+    if (CombatConstants.AI.DEBUG_LOGGING && bestTargetEnemy) {
       console.log(
-        `[AI] ${context.self.name} moving toward ${nearestEnemy.unit.name} at ${nearestEnemy.position.x},${nearestEnemy.position.y}`
+        `[AI] ${context.self.name} moving toward ${bestTargetEnemy.unit.name} at ${bestTargetEnemy.position.x},${bestTargetEnemy.position.y}`
       );
     }
 

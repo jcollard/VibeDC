@@ -138,12 +138,25 @@ export interface AIContext {
 
   /**
    * Calculate Manhattan distance between two positions.
+   * Note: This is a straight-line distance that does NOT account for walls.
+   * For AI decision-making that requires pathfinding, use getPathDistance() instead.
    *
    * @param from - Starting position
    * @param to - Ending position
    * @returns Distance (integer, 0+)
    */
   getDistance(from: Position, to: Position): number;
+
+  /**
+   * Calculate actual pathfinding distance between two positions.
+   * Uses BFS to find the shortest valid path, accounting for walls and obstacles.
+   * This is the correct distance metric for AI target selection.
+   *
+   * @param from - Starting position
+   * @param to - Ending position
+   * @returns Path distance in tiles, or Infinity if no path exists
+   */
+  getPathDistance(from: Position, to: Position): number;
 }
 
 /**
@@ -403,9 +416,57 @@ export class AIContextBuilder {
         return damage >= target.health;
       },
 
-      // Helper: Calculate distance
+      // Helper: Calculate Manhattan distance
       getDistance(from: Position, to: Position): number {
         return Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
+      },
+
+      // Helper: Calculate pathfinding distance
+      getPathDistance(from: Position, to: Position): number {
+        // Same position = 0 distance
+        if (from.x === to.x && from.y === to.y) {
+          return 0;
+        }
+
+        // Special handling: if 'from' is not the unit's current position,
+        // we need to check if the unit's current position blocks the path
+        const selfPos = state.unitManifest.getUnitPosition(self);
+        const selfBlocksPath = selfPos &&
+          !(selfPos.x === from.x && selfPos.y === from.y) &&
+          !(selfPos.x === to.x && selfPos.y === to.y);
+
+        // If calculating from a hypothetical position, temporarily remove self from manifest
+        if (selfBlocksPath && selfPos) {
+          // Remove self temporarily
+          state.unitManifest.removeUnit(self);
+
+          // Calculate path
+          const path = MovementPathfinder.calculatePath({
+            start: from,
+            end: to,
+            maxRange: 9999,
+            map: state.map,
+            unitManifest: state.unitManifest,
+            activeUnit: self,
+          });
+
+          // Restore self to manifest
+          state.unitManifest.addUnit(self, selfPos);
+
+          return path.length === 0 ? Infinity : path.length;
+        }
+
+        // Normal path calculation (from current position or self not blocking)
+        const path = MovementPathfinder.calculatePath({
+          start: from,
+          end: to,
+          maxRange: 9999,
+          map: state.map,
+          unitManifest: state.unitManifest,
+          activeUnit: self,
+        });
+
+        return path.length === 0 ? Infinity : path.length;
       },
     };
 

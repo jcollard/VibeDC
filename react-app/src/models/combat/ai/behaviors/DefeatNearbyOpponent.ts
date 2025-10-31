@@ -101,8 +101,8 @@ export class DefeatNearbyOpponent implements AIBehavior {
         // Check if can defeat
         if (!context.canDefeat(targetUnit)) continue;
 
-        // Prefer closer targets
-        const distance = context.getDistance(movePos, targetPos);
+        // Prefer closer targets by pathfinding distance
+        const distance = context.getPathDistance(movePos, targetPos);
         if (distance < bestDistance) {
           bestDistance = distance;
           bestTarget = targetPos;

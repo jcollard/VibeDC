@@ -9,7 +9,7 @@ import type { AIContext } from '../types/AIContext';
  *
  * Decision Logic:
  * - Finds all enemy units in current attack range
- * - Selects nearest enemy by Manhattan distance
+ * - Selects nearest enemy by pathfinding distance (accounts for walls)
  * - Tie-breaker: Prefers enemy with higher hit chance
  * - Returns attack-only decision (no movement)
  *
@@ -40,15 +40,15 @@ export class AttackNearestOpponent implements AIBehavior {
     const targets = context.getUnitsInAttackRange();
     if (targets.length === 0) return null;
 
-    // Find nearest target by Manhattan distance
+    // Find nearest target by pathfinding distance
     let nearestTarget = targets[0];
-    let nearestDistance = context.getDistance(
+    let nearestDistance = context.getPathDistance(
       context.selfPosition,
       nearestTarget.position
     );
 
     for (const target of targets.slice(1)) {
-      const distance = context.getDistance(context.selfPosition, target.position);
+      const distance = context.getPathDistance(context.selfPosition, target.position);
 
       // Prefer closer, or same distance with higher hit chance
       if (distance < nearestDistance) {

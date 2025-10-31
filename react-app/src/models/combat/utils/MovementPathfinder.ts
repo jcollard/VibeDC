@@ -26,7 +26,8 @@ export class MovementPathfinder {
    * @returns Ordered array of positions from start (exclusive) to end (inclusive)
    */
   static calculatePath(options: PathfindingOptions): Position[] {
-    const { start, end, maxRange, map, unitManifest, activeUnit } = options;
+    const { start, end, maxRange, map } = options;
+    // Note: unitManifest and activeUnit no longer used - pathfinding ignores all units
 
     // BFS queue with path tracking
     const queue: Array<{ position: Position; path: Position[] }> = [];
@@ -57,19 +58,10 @@ export class MovementPathfinder {
         if (!map.isInBounds(neighbor)) continue;
         if (!map.isWalkable(neighbor)) continue;
 
-        // Unit collision (can path through friendlies and KO'd units)
-        const unitAtPosition = unitManifest.getUnitAtPosition(neighbor);
-        if (unitAtPosition) {
-          // Block pathing through active enemy units only
-          // Allow through: friendly units OR KO'd units (any team)
-          const canPathThrough =
-            this.isFriendly(activeUnit, unitAtPosition) ||
-            unitAtPosition.isKnockedOut;
-
-          if (!canPathThrough) {
-            continue; // Cannot path through active enemies
-          }
-        }
+        // Unit collision: Allow pathing through ALL units for distance calculation
+        // Note: Units cannot END movement on occupied tiles (handled by MovementRangeCalculator)
+        // but CAN path through them to calculate distances
+        // This allows AI to correctly calculate distances even when other units are in the way
 
         visited.add(key);
         queue.push({
@@ -93,13 +85,6 @@ export class MovementPathfinder {
       { x: position.x - 1, y: position.y }, // Left
       { x: position.x + 1, y: position.y }, // Right
     ];
-  }
-
-  /**
-   * Check if two units are friendly (same team)
-   */
-  private static isFriendly(unit1: CombatUnit, unit2: CombatUnit): boolean {
-    return unit1.isPlayerControlled === unit2.isPlayerControlled;
   }
 
   /**

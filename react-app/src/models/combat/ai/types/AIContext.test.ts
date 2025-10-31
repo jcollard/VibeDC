@@ -353,4 +353,216 @@ describe('AIContextBuilder - KO Unit Filtering', () => {
       expect(canDefeat).toBe(true);
     });
   });
+
+  describe('Path Distance Calculation', () => {
+    it('getPathDistance should return 0 for same position', () => {
+      // Setup: AI at (4,4)
+      manifest.addUnit(aiUnit, { x: 4, y: 4 });
+      state = createMockCombatState(map, manifest);
+
+      const context = AIContextBuilder.build(
+        aiUnit,
+        { x: 4, y: 4 },
+        state,
+        false,
+        false
+      );
+
+      const distance = context.getPathDistance({ x: 4, y: 4 }, { x: 4, y: 4 });
+      expect(distance).toBe(0);
+    });
+
+    it('getPathDistance should match Manhattan distance in open space', () => {
+      // Setup: AI at (2,2)
+      manifest.addUnit(aiUnit, { x: 2, y: 2 });
+      state = createMockCombatState(map, manifest);
+
+      const context = AIContextBuilder.build(
+        aiUnit,
+        { x: 2, y: 2 },
+        state,
+        false,
+        false
+      );
+
+      // Test: Distance from (2,2) to (5,3)
+      // Manhattan: |5-2| + |3-2| = 3 + 1 = 4
+      // Path: Should also be 4 in open space
+      const from = { x: 2, y: 2 };
+      const to = { x: 5, y: 3 };
+      const pathDistance = context.getPathDistance(from, to);
+      const manhattanDistance = context.getDistance(from, to);
+
+      expect(pathDistance).toBe(4);
+      expect(pathDistance).toBe(manhattanDistance);
+    });
+
+    it('getPathDistance should return Infinity when no path exists (wall)', () => {
+      // Clear previous state and set up UnitClass
+      UnitClass.clearRegistry();
+      const testClass = new UnitClass('Test Class', 'A test class for units');
+
+      // Create map with vertical wall dividing the space
+      const ascii: ASCIIMapDefinition = {
+        tileTypes: [
+          { char: '#', terrain: TerrainType.Wall, walkable: false },
+          { char: '.', terrain: TerrainType.Floor, walkable: true },
+        ],
+        grid: `
+          ##########
+          #....#....
+          #....#....
+          #....#....
+          #....#....
+          #....#....
+          #....#....
+          #....#....
+          ##########
+        `,
+      };
+      const wallMap = parseASCIIMap(ascii);
+      const wallManifest = new CombatUnitManifest();
+
+      const testUnit = new MonsterUnit(
+        'Test',
+        testClass,
+        100, 0, 50, 10, 15, 3, 5, 5, 10, 10,
+        'test-sprite',
+        false
+      );
+
+      // Setup: Unit at (2,2), target at (7,2) on other side of wall
+      wallManifest.addUnit(testUnit, { x: 2, y: 2 });
+      const wallState = createMockCombatState(wallMap, wallManifest);
+
+      const context = AIContextBuilder.build(
+        testUnit,
+        { x: 2, y: 2 },
+        wallState,
+        false,
+        false
+      );
+
+      // No path exists through wall
+      const distance = context.getPathDistance({ x: 2, y: 2 }, { x: 7, y: 2 });
+      expect(distance).toBe(Infinity);
+    });
+
+    it('getPathDistance should be longer than Manhattan when routing around walls', () => {
+      // Clear previous state and set up UnitClass
+      UnitClass.clearRegistry();
+      const testClass = new UnitClass('Test Class', 'A test class for units');
+
+      // Create map with a wall requiring detour
+      const ascii: ASCIIMapDefinition = {
+        tileTypes: [
+          { char: '#', terrain: TerrainType.Wall, walkable: false },
+          { char: '.', terrain: TerrainType.Floor, walkable: true },
+        ],
+        grid: `
+          ##########
+          #.......##
+          #..###...#
+          #..#.....#
+          #..###...#
+          #........#
+          ##########
+        `,
+      };
+      const detourMap = parseASCIIMap(ascii);
+      const detourManifest = new CombatUnitManifest();
+
+      const testUnit = new MonsterUnit(
+        'Test',
+        testClass,
+        100, 0, 50, 10, 15, 20, 5, 5, 10, 10,
+        'test-sprite',
+        false
+      );
+
+      // Setup: Unit at (2,2), target at (4,3) on other side of small wall
+      detourManifest.addUnit(testUnit, { x: 2, y: 2 });
+      const detourState = createMockCombatState(detourMap, detourManifest);
+
+      const context = AIContextBuilder.build(
+        testUnit,
+        { x: 2, y: 2 },
+        detourState,
+        false,
+        false
+      );
+
+      const from = { x: 2, y: 2 };
+      const to = { x: 4, y: 3 };
+      const pathDistance = context.getPathDistance(from, to);
+      const manhattanDistance = context.getDistance(from, to);
+
+      // Manhattan distance: |4-2| + |3-2| = 2 + 1 = 3
+      expect(manhattanDistance).toBe(3);
+      // Path distance should be longer (need to route around wall)
+      expect(pathDistance).toBeGreaterThan(manhattanDistance);
+    });
+
+    it('getPathDistance should handle paths through friendly units', () => {
+      // Setup: AI at (2,2), ally blocking at (3,2), destination at (4,2)
+      manifest.addUnit(aiUnit, { x: 2, y: 2 });
+      manifest.addUnit(allyUnit, { x: 3, y: 2 }); // Friendly unit in the way
+      state = createMockCombatState(map, manifest);
+
+      const context = AIContextBuilder.build(
+        aiUnit,
+        { x: 2, y: 2 },
+        state,
+        false,
+        false
+      );
+
+      // Should be able to path through friendly unit
+      const distance = context.getPathDistance({ x: 2, y: 2 }, { x: 4, y: 2 });
+      expect(distance).toBe(2); // Can go straight through ally
+    });
+
+    it('getPathDistance should route around enemy units', () => {
+      // Setup: AI at (2,2), enemy blocking at (3,2), destination at (4,2)
+      manifest.addUnit(aiUnit, { x: 2, y: 2 });
+      manifest.addUnit(enemyUnit1, { x: 3, y: 2 }); // Enemy unit blocking
+      state = createMockCombatState(map, manifest);
+
+      const context = AIContextBuilder.build(
+        aiUnit,
+        { x: 2, y: 2 },
+        state,
+        false,
+        false
+      );
+
+      // Should route around enemy (if possible)
+      const distance = context.getPathDistance({ x: 2, y: 2 }, { x: 4, y: 2 });
+      // Path should be longer than 2 (need to go around enemy)
+      expect(distance).toBeGreaterThan(2);
+    });
+
+    it('getPathDistance should handle paths through KO\'d units', () => {
+      // Setup: AI at (2,2), KO'd enemy at (3,2), destination at (4,2)
+      manifest.addUnit(aiUnit, { x: 2, y: 2 });
+      manifest.addUnit(enemyUnit1, { x: 3, y: 2 });
+
+      // KO the enemy
+      (enemyUnit1 as any)._wounds = enemyUnit1.maxHealth;
+
+      state = createMockCombatState(map, manifest);
+
+      const context = AIContextBuilder.build(
+        aiUnit,
+        { x: 2, y: 2 },
+        state,
+        false,
+        false
+      );
+
+      // Should be able to path through KO'd unit
+      const distance = context.getPathDistance({ x: 2, y: 2 }, { x: 4, y: 2 });
+      expect(distance).toBe(2); // Can go straight through KO'd enemy
+    });
+  });
 });
