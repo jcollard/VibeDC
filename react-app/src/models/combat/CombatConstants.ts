@@ -212,4 +212,50 @@ export const CombatConstants = {
     // Combat log
     DEFEAT_MESSAGE: 'The enemies have triumphed over you!' as const,
   } as const,
+
+  /**
+   * Constants for victory screen modal and overlay
+   */
+  VICTORY_SCREEN: {
+    // Overlay
+    OVERLAY_OPACITY: 0.5 as const,
+    OVERLAY_COLOR: '#000000' as const,
+
+    // Modal dimensions (grid-based: columns 1-19 = 18 cols × 12px = 216px, rows 3-13 = 10 rows × 12px = 120px)
+    MODAL_X: 18 as const,      // Column 1 × 12px + 6px adjustment
+    MODAL_Y: 42 as const,      // Row 3 × 12px + 6px adjustment
+    MODAL_WIDTH: 216 as const, // 18 columns × 12px (columns 1-19)
+    MODAL_HEIGHT: 120 as const, // 10 rows × 12px (rows 3-13)
+    MODAL_PADDING: 8 as const,  // Reduced padding to fit content
+
+    // Title
+    TITLE_TEXT: 'Victory!' as const,
+    TITLE_FONT_ID: '15px-dungeonslant' as const,
+    TITLE_COLOR: '#00ff00' as const,  // Green
+
+    // Content sections
+    SECTION_FONT_ID: '7px-04b03' as const,
+    SECTION_LABEL_COLOR: '#ffff00' as const,  // Yellow
+    SECTION_VALUE_COLOR: '#ffffff' as const,  // White
+    SECTION_SPACING: 8 as const,
+
+    // Item grid
+    ITEM_GRID_COLUMNS: 3 as const,
+    ITEM_CELL_SIZE: 12 as const,
+    ITEM_SPACING: 4 as const,
+    ITEM_HOVER_COLOR: '#ffff00' as const,      // Yellow border
+    ITEM_SELECTED_COLOR: '#00ff00' as const,   // Green border
+    ITEM_BACKGROUND: '#333333' as const,       // Dark grey
+    ITEM_LABEL_COLOR: '#ffffff' as const,      // White
+
+    // Continue button
+    CONTINUE_TEXT: 'Continue' as const,
+    CONTINUE_FONT_ID: '7px-04b03' as const,
+    CONTINUE_COLOR_NORMAL: '#ffffff' as const,
+    CONTINUE_COLOR_HOVER: '#ffff00' as const,  // Yellow
+    CONTINUE_COLOR_DISABLED: '#666666' as const, // Grey
+
+    // Combat log
+    VICTORY_MESSAGE: 'You are victorious!' as const,
+  } as const,
 } as const;

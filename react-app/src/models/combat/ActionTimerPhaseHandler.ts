@@ -267,6 +267,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     // Check victory/defeat conditions first
     if (encounter.isVictory(state)) {
       console.log('[ActionTimerPhaseHandler] Victory conditions met');
+      // Add victory message to combat log
+      this.pendingLogMessages.push(CombatConstants.VICTORY_SCREEN.VICTORY_MESSAGE);
       return {
         ...state,
         phase: 'victory'

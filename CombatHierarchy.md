@@ -1,8 +1,8 @@
 # Combat System Hierarchy
 
-**Version:** 2.2
-**Last Updated:** Fri, Oct 31, 2025 (Defeat screen: DefeatPhaseHandler, DefeatModalRenderer, Try Again functionality with cinematic transitions) <!-- Update using `date` command -->
-**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md), [GDD/DefeatScreen/DefeatScreenManifest.md](GDD/DefeatScreen/DefeatScreenManifest.md)
+**Version:** 2.3
+**Last Updated:** Fri, Oct 31, 2025 (Victory screen: VictoryPhaseHandler, VictoryModalRenderer, VictoryRewards, item selection with continue button) <!-- Update using `date` command -->
+**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md), [GDD/DefeatScreen/DefeatScreenManifest.md](GDD/DefeatScreen/DefeatScreenManifest.md), [GDD/VictoryScreen/VictoryScreenImplementationPlan.md](GDD/VictoryScreen/VictoryScreenImplementationPlan.md)
 
 ## Purpose
 
@@ -176,11 +176,22 @@ react-app/src/
 **Used By:** All phase handlers, CombatView, renderers, serialization
 
 #### `CombatEncounter.ts`
-**Purpose:** Defines combat scenario (map, enemies, conditions, deployment zones)
+**Purpose:** Defines combat scenario (map, enemies, conditions, deployment zones, rewards)
 **Exports:** `CombatEncounter`, `EnemyPlacement`, `UnitPlacement`
 **Key Methods:** createEnemyUnits(), isVictory(), isDefeat(), fromJSON()
-**Dependencies:** CombatMap, CombatPredicate, EnemyRegistry
+**Key Fields:** rewards (VictoryRewards) - XP, gold, and items awarded on victory
+**Dependencies:** CombatMap, CombatPredicate, EnemyRegistry, VictoryRewards
 **Used By:** CombatView, phase handlers, data loaders
+
+#### `VictoryRewards.ts`
+**Purpose:** Data structure for victory rewards (XP, gold, items)
+**Exports:** `VictoryRewards`, `ItemReward`, `createDefaultRewards()`
+**Key Fields:**
+- xp: Experience points awarded (number)
+- gold: Gold awarded (number)
+- items: Array of ItemReward objects (spriteId, name, optional quantity)
+**Dependencies:** None (pure data structure)
+**Used By:** CombatEncounter, VictoryPhaseHandler, VictoryModalRenderer
 
 #### `CombatMap.ts`
 **Purpose:** Tactical grid with terrain, walkability, sprite IDs
@@ -542,6 +553,46 @@ react-app/src/
 **Dependencies:** PhaseBase, DefeatModalRenderer, CombatConstants, CombatUnitManifest
 **Used By:** CombatView during defeat phase
 **Transitions To:** deployment phase (via Try Again button)
+
+#### `VictoryPhaseHandler.ts`
+**Purpose:** Handles victory screen UI with modal overlay displaying rewards (XP, gold, items) and continue button
+**Exports:** `VictoryPhaseHandler`
+**Key Methods:** handleMouseMove(), handleMouseDown(), handleContinue(), getItemBounds(), getContinueButtonBounds()
+**Current Functionality:**
+- Displays full-screen semi-transparent overlay to disable background interactions
+- Renders centered modal panel with victory title, XP/gold display, item grid, and continue button
+- Hover detection for item cells and continue button with visual feedback (yellow hover, green selected)
+- Click handling for item selection (toggle) and continue button
+- Requires all items to be selected before allowing continue
+- Uses VictoryRewards data structure from CombatEncounter
+**Rewards System:**
+- XP: Experience points awarded (displayed as "XP: 150")
+- Gold: Gold awarded (displayed as "Gold: 50")
+- Items: Array of ItemReward objects with spriteId, name, and optional quantity
+- Item grid: 3-column layout with 12x12 sprite cells
+**Item Selection:**
+- Click items to toggle selection (border changes from grey → yellow hover → green selected)
+- Must select all items before continue button is enabled
+- Selected items tracked in Set<number> for efficient lookup
+**Continue Button:**
+- Disabled (grey) until all items are selected
+- Enabled: white (normal) or yellow (hover)
+- Click triggers handleContinue() (currently logs items, returns to world in future)
+**UI Rendering:**
+- renderUI() renders complete victory modal on top of all other UI
+- Uses VictoryModalRenderer for visual rendering (overlay, panel, rewards, item grid, button)
+- Tracks hover state for items and continue button
+- All rendering done in renderUI() to appear above game content
+**Mouse Interaction:**
+- handleMouseMove(): Updates hover state for items and button, triggers re-render on state change
+- handleMouseDown(): Checks item bounds and button bounds, toggles selection or continues
+- Returns PhaseEventResult with newState to trigger re-render
+**Constants:**
+- Modal dimensions, colors, fonts, and text defined in CombatConstants.VICTORY_SCREEN
+- VICTORY_MESSAGE added to combat log when transitioning to victory phase
+**Dependencies:** PhaseBase, VictoryModalRenderer, VictoryRewards, CombatConstants, SpriteRegistry
+**Used By:** CombatView during victory phase
+**Transitions To:** world view (future - not yet implemented)
 
 ---
 
@@ -1054,6 +1105,52 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - TITLE_TEXT, TRY_AGAIN_TEXT, SKIP_TEXT, TRY_AGAIN_HELPER, SKIP_HELPER
 **Dependencies:** CombatConstants, FontAtlasRenderer, FontRegistry
 **Used By:** DefeatPhaseHandler.renderUI()
+
+#### `rendering/VictoryModalRenderer.ts`
+**Purpose:** Renders victory screen modal overlay with rewards (XP, gold, items) and continue button
+**Exports:** `VictoryModalRenderer`
+**Key Methods:** render(), renderOverlay(), renderPanelBackground(), renderTitle(), renderXPGold(), renderItemsSection(), renderItemCell(), renderContinueButton(), getItemBounds(), getContinueButtonBounds()
+**Current Functionality:**
+- Renders full-screen semi-transparent black overlay (OVERLAY_OPACITY from constants)
+- Renders centered modal panel with black background and white border
+- Renders "Victory!" title text centered at top of modal (using TITLE_FONT_ID, green color)
+- Renders XP and Gold lines: "XP: 150" and "Gold: 50"
+- Renders "Items:" label followed by 3-column grid of item cells
+- Item cells: 12x12 sprite with colored border (grey default, yellow hover, green selected)
+- Renders "Continue" button at bottom (grey when disabled, white/yellow when enabled)
+- All text rendered using FontAtlasRenderer for pixel-perfect font rendering
+- Item sprites rendered using SpriteRegistry for sprite lookup
+**Layout Calculations:**
+- Modal positioned at center of screen
+- Dynamic height based on content (title + XP + gold + items grid + button + padding)
+- Item grid: 3 columns, 12x12 cells with 4px spacing
+- Button centered horizontally with spacing above
+**Item Grid:**
+- renderItemCell(): Renders individual item sprite with state-based border
+- 12x12 cell size matches sprite size for 1:1 rendering
+- Border colors: grey (default), yellow (hover), green (selected)
+- Uses SpriteRegistry.getById() to look up sprite definitions
+- Renders sprite from sprite sheet using sprite coordinates
+**Hit Detection:**
+- getItemBounds(): Calculates clickable regions for all item cells
+- getContinueButtonBounds(): Calculates clickable region for continue button
+- Returns array of bounds for item grid and single bounds for button
+- Performance: Calculated on-demand, could be cached if needed
+**Rendering Order:**
+1. Full-screen overlay
+2. Modal panel background with border
+3. Title text (with shadow effect)
+4. XP and Gold text lines
+5. Items label and grid (if items exist)
+6. Continue button (with color based on enabled/hover state)
+**Constants:**
+- All visual constants from CombatConstants.VICTORY_SCREEN
+- MODAL_WIDTH, TITLE_FONT_ID, SECTION_FONT_ID, CONTINUE_FONT_ID
+- TITLE_COLOR (green), SECTION_LABEL_COLOR (yellow), SECTION_VALUE_COLOR (white)
+- ITEM_HOVER_COLOR (yellow), ITEM_SELECTED_COLOR (green), ITEM_BACKGROUND (dark grey)
+- CONTINUE_COLOR_NORMAL, CONTINUE_COLOR_HOVER, CONTINUE_COLOR_DISABLED
+**Dependencies:** CombatConstants, FontAtlasRenderer, FontRegistry, SpriteRegistry, VictoryRewards
+**Used By:** VictoryPhaseHandler.renderUI()
 
 #### `managers/panels/PanelContent.ts`
 **Purpose:** Interface for info panel content with event handling and sprite rendering support

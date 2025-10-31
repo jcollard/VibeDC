@@ -8,6 +8,7 @@ import { EnemyDeploymentPhaseHandler } from '../../models/combat/EnemyDeployment
 import { ActionTimerPhaseHandler } from '../../models/combat/ActionTimerPhaseHandler';
 import { UnitTurnPhaseHandler } from '../../models/combat/UnitTurnPhaseHandler';
 import { DefeatPhaseHandler } from '../../models/combat/DefeatPhaseHandler';
+import { VictoryPhaseHandler } from '../../models/combat/VictoryPhaseHandler';
 import { UIConfig } from '../../config/UIConfig';
 import { UISettings } from '../../config/UISettings';
 import { CombatUnitManifest } from '../../models/combat/CombatUnitManifest';
@@ -100,9 +101,10 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       phaseHandlerRef.current = new UnitTurnPhaseHandler();
     } else if (combatState.phase === 'defeat') {
       phaseHandlerRef.current = new DefeatPhaseHandler();
+    } else if (combatState.phase === 'victory') {
+      phaseHandlerRef.current = new VictoryPhaseHandler(activeEncounter.rewards);
     }
-    // Add other phase handlers as needed (victory)
-  }, [combatState.phase, uiStateManager, phaseHandlerVersion]);
+  }, [combatState.phase, uiStateManager, phaseHandlerVersion, activeEncounter]);
 
   // Expose developer mode functions to window (for testing)
   useEffect(() => {
@@ -130,12 +132,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       }));
     };
 
+    // Expose forceVictory function (for testing victory screen)
+    (window as any).forceVictory = () => {
+      console.log('[DEV] Forcing victory screen transition...');
+      setCombatState(prevState => ({
+        ...prevState,
+        phase: 'victory' as const,
+      }));
+    };
+
     // Cleanup on unmount
     return () => {
       delete (window as any).setHitRate;
       delete (window as any).setDamage;
       delete (window as any).clearAttackOverride;
       delete (window as any).forceDefeat;
+      delete (window as any).forceVictory;
     };
   }, []);
 
@@ -498,8 +510,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     renderer.renderUnits(ctx, combatState.unitManifest, spriteImagesRef.current, offsetX, offsetY);
 
     // Render phase-specific UI overlays (after units so cursors appear on top)
-    // Note: Defeat screen is rendered separately after all UI to cover the entire canvas
-    if (phaseHandlerRef.current.renderUI && combatState.phase !== 'defeat') {
+    // Note: Defeat and Victory screens are rendered separately after all UI to cover the entire canvas
+    if (phaseHandlerRef.current.renderUI && combatState.phase !== 'defeat' && combatState.phase !== 'victory') {
       phaseHandlerRef.current.renderUI(combatState, activeEncounter, {
         ctx,
         canvasWidth: CANVAS_WIDTH,
@@ -670,6 +682,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Render defeat screen overlay (full screen, after all other UI)
     if (combatState.phase === 'defeat' && phaseHandlerRef.current.renderUI) {
+      phaseHandlerRef.current.renderUI(combatState, activeEncounter, {
+        ctx,
+        canvasWidth: CANVAS_WIDTH,
+        canvasHeight: CANVAS_HEIGHT,
+        tileSize: TILE_SIZE,
+        spriteSize: SPRITE_SIZE,
+        offsetX: 0,
+        offsetY: 0,
+        spriteImages: spriteImagesRef.current,
+        fontAtlasImages: fontLoader.getAll(),
+        combatLog: combatLogManager,
+      });
+    }
+
+    // Render victory screen overlay (full screen, after all other UI)
+    if (combatState.phase === 'victory' && phaseHandlerRef.current.renderUI) {
       phaseHandlerRef.current.renderUI(combatState, activeEncounter, {
         ctx,
         canvasWidth: CANVAS_WIDTH,

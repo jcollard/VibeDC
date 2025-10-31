@@ -10,6 +10,8 @@ import type {
   CombatPredicateJSON,
 } from "./CombatPredicate";
 import { CombatPredicateFactory } from "./CombatPredicate";
+import type { VictoryRewards } from "./VictoryRewards";
+import { createDefaultRewards } from "./VictoryRewards";
 
 /**
  * Represents an enemy placement on the combat map.
@@ -45,6 +47,7 @@ export class CombatEncounter {
   readonly playerDeploymentZones: Position[];
   readonly enemyPlacements: EnemyPlacement[];
   readonly tilesetId?: string; // Optional tileset ID for map reference
+  readonly rewards: VictoryRewards; // Victory rewards (XP, gold, items)
 
   constructor(
     id: string,
@@ -55,7 +58,8 @@ export class CombatEncounter {
     defeatConditions: CombatPredicate[],
     playerDeploymentZones: Position[],
     enemyPlacements: EnemyPlacement[],
-    tilesetId?: string
+    tilesetId?: string,
+    rewards?: VictoryRewards
   ) {
     this.id = id;
     this.name = name;
@@ -66,6 +70,7 @@ export class CombatEncounter {
     this.playerDeploymentZones = playerDeploymentZones;
     this.enemyPlacements = enemyPlacements;
     this.tilesetId = tilesetId;
+    this.rewards = rewards ?? createDefaultRewards();
 
     CombatEncounter.registry.set(id, this);
   }
@@ -139,6 +144,7 @@ export class CombatEncounter {
       defeatConditions: this.defeatConditions.map((dc) => dc.toJSON()),
       playerDeploymentZones: this.playerDeploymentZones,
       enemyPlacements: this.enemyPlacements,
+      rewards: this.rewards,
     };
   }
 
@@ -204,7 +210,8 @@ export class CombatEncounter {
       defeatConditions,
       json.playerDeploymentZones,
       enemyPlacements,
-      tilesetId
+      tilesetId,
+      json.rewards
     );
   }
 
@@ -234,4 +241,5 @@ export interface CombatEncounterJSON {
   defeatConditions: CombatPredicateJSON[];
   playerDeploymentZones: Position[];
   enemyPlacements: EnemyPlacement[];
+  rewards?: VictoryRewards; // Optional victory rewards
 }
