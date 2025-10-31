@@ -54,7 +54,7 @@ This document provides a phased, step-by-step implementation plan for the Knocke
 |-------|-------------|-------|------------|-----------|--------|-------|
 | 1 | Visual Representation (State, Constants, Map Rendering) | 7 | Medium | 2.5 hours | ✅ DONE | [Guide](./01-VisualRepresentation.md) |
 | 2 | Turn Order and Action Timer | 3 | Medium | 3.5 hours | ✅ DONE | [Guide](./02-TurnOrderAndActionTimer.md) |
-| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | 📋 READY | TBD |
+| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | 📋 READY | [Guide](./03-MovementAndPathfinding.md) |
 | 4 | Attack Range and AI Integration | 4 | Medium | 2 hours | ⏳ PENDING | TBD |
 | **Total** | - | **9 unique** | - | **~9 hours** | **2/4 Complete** | - |
 
