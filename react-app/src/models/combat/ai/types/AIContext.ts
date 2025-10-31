@@ -9,6 +9,7 @@ import { MovementRangeCalculator } from '../../utils/MovementRangeCalculator';
 import { AttackRangeCalculator, type AttackRangeTiles } from '../../utils/AttackRangeCalculator';
 import { MovementPathfinder } from '../../utils/MovementPathfinder';
 import { CombatCalculations } from '../../utils/CombatCalculations';
+import { CombatConstants } from '../../CombatConstants';
 
 /**
  * Represents a unit and its position on the battlefield.
@@ -225,10 +226,11 @@ export class AIContextBuilder {
       });
     } else {
       // Unarmed attack: range 1 (adjacent tiles only)
+      const unarmedRange = CombatConstants.AI.UNARMED_ATTACK_RANGE;
       attackRange = AttackRangeCalculator.calculateAttackRange({
         attackerPosition: selfPosition,
-        minRange: 1,
-        maxRange: 1,
+        minRange: unarmedRange,
+        maxRange: unarmedRange,
         map: state.map,
         unitManifest: state.unitManifest,
       });

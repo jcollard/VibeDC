@@ -7,6 +7,7 @@ import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler'
 import type { AIBehavior, AIDecision, AIContext, AIBehaviorConfig } from '../ai';
 import { AIContextBuilder, BehaviorRegistry, DEFAULT_ENEMY_BEHAVIORS } from '../ai';
 import { MovementRangeCalculator } from '../utils/MovementRangeCalculator';
+import { CombatConstants } from '../CombatConstants';
 
 /**
  * Enemy turn strategy - uses AI rules to decide actions automatically
@@ -38,7 +39,7 @@ export class EnemyTurnStrategy implements TurnStrategy {
   // AI decision state
   private movementRange: Position[] = [];
   private thinkingTimer: number = 0;
-  private thinkingDuration: number = 1.0; // seconds
+  private thinkingDuration: number = CombatConstants.AI.THINKING_DURATION;
   private actionDecided: TurnAction | null = null;
 
   // Target state (for visualization)
@@ -59,15 +60,19 @@ export class EnemyTurnStrategy implements TurnStrategy {
   }
 
   onTurnStart(_unit: CombatUnit, position: Position, state: CombatState, hasMoved: boolean = false, hasActed: boolean = false): void {
-    console.log(`[AI] ${_unit.name} turn starting, building context (hasMoved=${hasMoved}, hasActed=${hasActed})...`);
+    if (CombatConstants.AI.DEBUG_LOGGING) {
+      console.log(`[AI] ${_unit.name} turn starting, building context (hasMoved=${hasMoved}, hasActed=${hasActed})...`);
+    }
 
     // Build AI context
     try {
       this.context = AIContextBuilder.build(_unit, position, state, hasMoved, hasActed);
-      console.log(`[AI] ${_unit.name} context built successfully`);
-      console.log(`[AI] ${_unit.name} attack range:`, this.context.attackRange);
-      console.log(`[AI] ${_unit.name} movement range tiles:`, this.context.movementRange.length);
-      console.log(`[AI] ${_unit.name} canMove=${this.context.canMove}, canAct=${this.context.canAct}`);
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(`[AI] ${_unit.name} context built successfully`);
+        console.log(`[AI] ${_unit.name} attack range:`, this.context.attackRange);
+        console.log(`[AI] ${_unit.name} movement range tiles:`, this.context.movementRange.length);
+        console.log(`[AI] ${_unit.name} canMove=${this.context.canMove}, canAct=${this.context.canAct}`);
+      }
     } catch (error) {
       console.error(`[AI] ${_unit.name} context build failed:`, error);
       this.context = null;
@@ -184,7 +189,9 @@ export class EnemyTurnStrategy implements TurnStrategy {
   ): TurnAction {
     // Check for pending action from previous move-first decision
     if (this.pendingActionAfterMove) {
-      console.log(`[AI] ${unit.name} has pending action after move, executing it`);
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(`[AI] ${unit.name} has pending action after move, executing it`);
+      }
       const pendingAction = this.pendingActionAfterMove;
       this.pendingActionAfterMove = null; // Clear immediately
 
@@ -217,7 +224,9 @@ export class EnemyTurnStrategy implements TurnStrategy {
       return true;
     });
 
-    console.log(`[AI] ${unit.name} evaluating ${validBehaviors.length}/${this.behaviors.length} behaviors (canMove=${this.context.canMove}, canAct=${this.context.canAct})`);
+    if (CombatConstants.AI.DEBUG_LOGGING) {
+      console.log(`[AI] ${unit.name} evaluating ${validBehaviors.length}/${this.behaviors.length} behaviors (canMove=${this.context.canMove}, canAct=${this.context.canAct})`);
+    }
 
     for (const behavior of validBehaviors) {
       if (behavior.canExecute(this.context)) {
@@ -226,8 +235,9 @@ export class EnemyTurnStrategy implements TurnStrategy {
         if (decision) {
           const action = this.convertDecisionToAction(decision);
 
-          // Debug logging for AI decision-making
-          console.log(`[AI] ${unit.name} chose behavior: ${behavior.type}`);
+          if (CombatConstants.AI.DEBUG_LOGGING) {
+            console.log(`[AI] ${unit.name} chose behavior: ${behavior.type}`);
+          }
           return action;
         }
       }

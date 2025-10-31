@@ -1,5 +1,6 @@
 import type { CombatUnit } from '../CombatUnit';
 import type { Equipment } from '../Equipment';
+import { CombatConstants } from '../CombatConstants';
 
 /**
  * Combat calculation utilities for attack resolution.
@@ -113,8 +114,8 @@ export class CombatCalculations {
     if (damageType === 'physical') {
       // Physical damage: (Physical Power + Weapon Modifier) × Weapon Multiplier
       // Unarmed: Just use Physical Power with no modifiers (1.0 multiplier)
-      const powerModifier = weapon?.modifiers.physicalPowerModifier ?? 0;
-      const powerMultiplier = weapon?.modifiers.physicalPowerMultiplier ?? 1.0;
+      const powerModifier = weapon?.modifiers.physicalPowerModifier ?? CombatConstants.AI.UNARMED_POWER_MODIFIER;
+      const powerMultiplier = weapon?.modifiers.physicalPowerMultiplier ?? CombatConstants.AI.UNARMED_POWER_MULTIPLIER;
       baseDamage = (attacker.physicalPower + powerModifier) * powerMultiplier;
 
       // Courage penalty (only if defender has more courage)
@@ -124,8 +125,8 @@ export class CombatCalculations {
     } else {
       // Magical damage: (Magic Power + Weapon Modifier) × Weapon Multiplier
       // Unarmed: Just use Magic Power with no modifiers (1.0 multiplier)
-      const powerModifier = weapon?.modifiers.magicPowerModifier ?? 0;
-      const powerMultiplier = weapon?.modifiers.magicPowerMultiplier ?? 1.0;
+      const powerModifier = weapon?.modifiers.magicPowerModifier ?? CombatConstants.AI.UNARMED_POWER_MODIFIER;
+      const powerMultiplier = weapon?.modifiers.magicPowerMultiplier ?? CombatConstants.AI.UNARMED_POWER_MULTIPLIER;
       baseDamage = (attacker.magicPower + powerModifier) * powerMultiplier;
 
       // Attunement penalty (only if defender has more attunement)

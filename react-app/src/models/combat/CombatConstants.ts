@@ -129,4 +129,13 @@ export const CombatConstants = {
     TEXT_SHADOW_OFFSET: 2,
     TEXT_COLOR: '#ffffff',
   },
+
+  // AI Behavior
+  AI: {
+    THINKING_DURATION: 1.0,           // Seconds AI "thinks" before acting
+    UNARMED_ATTACK_RANGE: 1,          // Melee range for unarmed attacks
+    UNARMED_POWER_MODIFIER: 0,        // No bonus modifier for unarmed
+    UNARMED_POWER_MULTIPLIER: 1.0,    // No bonus multiplier for unarmed
+    DEBUG_LOGGING: true,              // Enable/disable debug console logs
+  },
 } as const;

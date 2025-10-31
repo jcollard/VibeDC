@@ -737,7 +737,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Re-evaluate AI behaviors after movement completes (action economy system)
     if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
-      console.log(`[UnitTurnPhaseHandler] AI movement complete, re-evaluating behaviors (hasMoved=true, hasActed=${this.hasActed})`);
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(`[UnitTurnPhaseHandler] AI movement complete, re-evaluating behaviors (hasMoved=true, hasActed=${this.hasActed})`);
+      }
 
       // Rebuild strategy context with updated action state
       this.currentStrategy?.onTurnStart(
@@ -784,7 +786,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Re-evaluate AI behaviors after move reset (action economy system)
     if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
-      console.log(`[UnitTurnPhaseHandler] AI move reset, re-evaluating behaviors (hasMoved=false, hasActed=${this.hasActed})`);
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(`[UnitTurnPhaseHandler] AI move reset, re-evaluating behaviors (hasMoved=false, hasActed=${this.hasActed})`);
+      }
 
       // Rebuild strategy context with updated action state
       this.currentStrategy?.onTurnStart(
@@ -1251,7 +1255,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Re-evaluate AI behaviors after attack completes (action economy system)
     if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
-      console.log(`[UnitTurnPhaseHandler] AI attack complete, re-evaluating behaviors (hasMoved=${this.unitHasMoved}, hasActed=true)`);
+      if (CombatConstants.AI.DEBUG_LOGGING) {
+        console.log(`[UnitTurnPhaseHandler] AI attack complete, re-evaluating behaviors (hasMoved=${this.unitHasMoved}, hasActed=true)`);
+      }
 
       // Rebuild strategy context with updated action state
       this.currentStrategy?.onTurnStart(
