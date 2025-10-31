@@ -1,8 +1,8 @@
 # Combat System Hierarchy
 
 **Version:** 2.1
-**Last Updated:** Fri, Oct 31, 2025 (Knocked Out (KO) feature complete - 4 phases, visual representation, turn order, movement, targeting/AI) <!-- Update using `date` command -->
-**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md)
+**Last Updated:** Fri, Oct 31, 2025 (Enemy AI pathfinding: BFS distance calculation for target selection, paths through all units) <!-- Update using `date` command -->
+**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md)
 
 ## Purpose
 
@@ -668,7 +668,8 @@ react-app/src/
 - `predictDamage(target, weapon?)` - Damage prediction (weapon optional, handles unarmed)
 - `predictHitChance(target, weapon?)` - Hit chance prediction (weapon optional)
 - `canDefeat(target)` - Check if damage >= target's current health
-- `getDistance(from, to)` - Manhattan distance calculation
+- `getDistance(from, to)` - Manhattan distance calculation (fast approximation, doesn't account for walls)
+- `getPathDistance(from, to)` - BFS pathfinding distance (accurate, accounts for walls/obstacles, returns Infinity if no path)
 **Unarmed Attack Support (Phase 2):**
 - If no weapon equipped: attackRange defaults to range 1 (melee)
 - Unarmed damage: PhysicalPower only, no modifiers (see CombatConstants.AI)
@@ -735,13 +736,21 @@ react-app/src/
 **Action Requirements:** `requiresMove: true`, `requiresAction: false`
 **Logic:**
 1. Return null if no movement range available
-2. Find nearest enemy unit by Manhattan distance from current position
-3. For each tile in movement range, calculate distance to nearest enemy
-4. Choose tile that minimizes distance (gets closest to enemy)
+2. **For each tile in movement range:**
+   - Find nearest enemy from that position using **BFS pathfinding distance** (getPathDistance)
+   - Track the best position and distance
+3. **Select position with shortest path distance to any enemy**
+4. **Tie-breakers (if multiple positions have same distance):**
+   - Prefer target with higher hit chance
+   - Then prefer target with lower HP
 5. Return movement decision (move-only)
-**Use Case:** Enemies advance toward combat instead of standing idle
-**Behavior:** Creates more aggressive, dynamic AI that engages player
-**Dependencies:** AIBehavior, AIContext helpers (getDistance, calculatePath)
+**Pathfinding Details:**
+- Uses `getPathDistance()` which accounts for walls and obstacles (not Manhattan distance)
+- Returns Infinity if no valid path exists (e.g., enemy behind impassable wall)
+- Filters out unreachable enemies automatically
+**Use Case:** Enemies advance toward combat instead of standing idle, correctly routing around obstacles
+**Behavior:** Creates more aggressive, dynamic AI that engages player intelligently
+**Dependencies:** AIBehavior, AIContext helpers (getPathDistance, calculatePath, predictHitChance), UnitPlacement
 **Used By:** All enemy units via DEFAULT_ENEMY_BEHAVIORS
 
 #### `ai/BehaviorRegistry.ts`
@@ -1427,24 +1436,24 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Used By:** UnitTurnPhaseHandler for movement range display
 
 #### `utils/MovementPathfinder.ts`
-**Purpose:** Calculates shortest orthogonal paths for unit movement
+**Purpose:** Calculates shortest orthogonal paths for unit movement and distance calculations
 **Exports:** `MovementPathfinder`, `PathfindingOptions`
 **Key Methods:** calculatePath() (static)
-**Algorithm:** BFS for shortest path with collision detection
+**Algorithm:** BFS for shortest path
 **Pathfinding Rules:**
 - Checks terrain walkability via CombatMap.isWalkable()
-- Can path THROUGH friendly units (same isPlayerControlled value)
-- **Can path THROUGH KO'd units** (any team) - added in v2.1
-- Cannot END movement on occupied tiles (any unit, including KO'd)
-- Cannot path through **active** enemy units
+- **Paths through ALL units** (friendly, enemy, KO'd) - ignores unit collision entirely (v2.1)
+- This allows accurate AI distance calculation even when units block direct paths
+- Movement destination validation (cannot END on occupied tiles) is handled separately by MovementRangeCalculator
 - Returns path excluding start, including destination
-**KO Integration:**
-- Uses identical `canPathThrough` logic as MovementRangeCalculator: `isFriendly(unit) || unit.isKnockedOut`
-- Paths can go through KO'd units to reach tiles beyond them
-- Consistent behavior ensures range and pathfinding match
-**Performance:** O(tiles × movement) - negligible for 32×18 maps, KO check adds <0.1% overhead
+**Design Rationale:**
+- AI needs to calculate "true" pathfinding distance to targets, ignoring temporary unit positions
+- Units CAN move through spaces in sequence (A moves away, then B uses that space)
+- Separates pathfinding (finding routes) from movement validation (legal destinations)
+- MovementRangeCalculator handles "can END here?" checks
+**Performance:** O(tiles × movement) - negligible for 32×18 maps
 **Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
-**Used By:** UnitTurnPhaseHandler for movement animation, PlayerTurnStrategy for path preview
+**Used By:** UnitTurnPhaseHandler for movement animation, PlayerTurnStrategy for path preview, AIContext.getPathDistance() for AI decision-making
 
 #### `utils/AttackRangeCalculator.ts`
 **Purpose:** Calculates attack range tiles with line of sight validation
