@@ -91,6 +91,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   private attackAnimationIndex: number = 0; // Which animation is currently playing
   private canAct: boolean = true; // Whether unit can still perform actions this turn
 
+  // Action economy tracking (for AI re-evaluation)
+  private hasActed: boolean = false; // Whether unit has performed an action (attack/ability) this turn
+
   constructor() {
     super();
   }
@@ -478,6 +481,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
       // Reset action tracking
       this.canAct = true;
+      this.hasActed = false;
       this.attackAnimations = [];
       this.attackAnimationIndex = 0;
 
@@ -486,8 +490,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         ? new PlayerTurnStrategy()
         : new EnemyTurnStrategy();
 
-      // Notify strategy that turn is starting
-      this.currentStrategy.onTurnStart(this.activeUnit, this.activeUnitPosition, state);
+      // Notify strategy that turn is starting (hasMoved=false, hasActed=false)
+      this.currentStrategy.onTurnStart(this.activeUnit, this.activeUnitPosition, state, false, false);
     }
 
     // Write ready message once
@@ -731,31 +735,21 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       (this.currentStrategy as any).onUnitMoved();
     }
 
-    // Check for pending AI action after movement (move + attack pattern)
-    if (this.currentStrategy && 'hasPendingAction' in this.currentStrategy) {
-      const hasPending = (this.currentStrategy as any).hasPendingAction();
-      if (hasPending) {
-        console.log('[UnitTurnPhaseHandler] AI has pending action after move');
-        const pendingAction = (this.currentStrategy as any).getPendingAction();
+    // Re-evaluate AI behaviors after movement completes (action economy system)
+    if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
+      console.log(`[UnitTurnPhaseHandler] AI movement complete, re-evaluating behaviors (hasMoved=true, hasActed=${this.hasActed})`);
 
-        if (pendingAction?.type === 'attack' && pendingAction.target) {
-          // Execute the pending attack
-          const targetUnit = state.unitManifest.getUnitAtPosition(pendingAction.target);
-          if (targetUnit && this.activeUnit && this.activeUnitPosition) {
-            console.log('[UnitTurnPhaseHandler] Executing pending attack after move');
-            this.executeAttack(this.activeUnit, this.activeUnitPosition, targetUnit, pendingAction.target);
-            // Stay in unit-turn phase (attack animation will play)
-          } else {
-            console.warn('[UnitTurnPhaseHandler] Pending attack target not found, ending turn');
-            // Target disappeared, end turn
-            const newState = this.executeAction({ type: 'end-turn' }, state);
-            if (this.currentStrategy) {
-              this.currentStrategy.onTurnEnd();
-            }
-            return newState;
-          }
-        }
-      }
+      // Rebuild strategy context with updated action state
+      this.currentStrategy?.onTurnStart(
+        this.activeUnit,
+        this.activeUnitPosition,
+        state,
+        true,  // hasMoved = true
+        this.hasActed  // hasActed (false unless already acted)
+      );
+
+      // Strategy will be re-evaluated in next update() cycle
+      // Don't auto-end turn - let behaviors decide
     }
 
     return state;
@@ -786,6 +780,20 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Notify strategy to restore movement range
     if (this.currentStrategy && 'onMoveReset' in this.currentStrategy) {
       (this.currentStrategy as any).onMoveReset(this.activeUnit, this.activeUnitPosition, state);
+    }
+
+    // Re-evaluate AI behaviors after move reset (action economy system)
+    if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
+      console.log(`[UnitTurnPhaseHandler] AI move reset, re-evaluating behaviors (hasMoved=false, hasActed=${this.hasActed})`);
+
+      // Rebuild strategy context with updated action state
+      this.currentStrategy?.onTurnStart(
+        this.activeUnit,
+        this.activeUnitPosition,
+        state,
+        false,  // hasMoved = false (reset)
+        this.hasActed  // hasActed (unchanged)
+      );
     }
 
     // Add log message
@@ -1234,22 +1242,33 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     this.attackAnimations = [];
     this.attackAnimationIndex = 0;
 
-    // Note: canAct and canResetMove were already set to false at the START of executeAttack
-    // This prevents menu interaction during the animation
+    // Mark that unit has acted
+    this.hasActed = true;
 
-    // For AI units, end turn after attack completes
+    // Re-enable canAct flag so update() can evaluate next action
+    // (It was set to false at start of attack to prevent menu interaction during animation)
+    this.canAct = true;
+
+    // Re-evaluate AI behaviors after attack completes (action economy system)
     if (this.activeUnit && !this.activeUnit.isPlayerControlled) {
-      console.log(`[UnitTurnPhaseHandler] AI attack complete, ending turn`);
-      const newState = this.executeAction({ type: 'end-turn' }, state);
-      if (this.currentStrategy) {
-        this.currentStrategy.onTurnEnd();
-      }
-      return newState;
+      console.log(`[UnitTurnPhaseHandler] AI attack complete, re-evaluating behaviors (hasMoved=${this.unitHasMoved}, hasActed=true)`);
+
+      // Rebuild strategy context with updated action state
+      this.currentStrategy?.onTurnStart(
+        this.activeUnit,
+        this.activeUnitPosition!,
+        state,
+        this.unitHasMoved,  // hasMoved (could be true if moved before attacking)
+        true  // hasActed = true
+      );
+
+      // Strategy will be re-evaluated in next update() cycle
+      // canAct is now true, so update() will call strategy.update()
+      return state;
     }
 
     // For player units, stay in unit-turn phase (don't auto-advance)
-    // Re-enable actions so player can continue their turn
-    this.canAct = true;
+    // canAct already re-enabled above
     return state;
   }
 

@@ -55,6 +55,20 @@ export interface AIContext {
   /** Attack range tiles from current position (unarmed = range 1 if no weapon) */
   readonly attackRange: AttackRangeTiles;
 
+  // ===== Action Economy =====
+
+  /** Has the unit moved this turn? */
+  readonly hasMoved: boolean;
+
+  /** Has the unit acted (attacked/used ability) this turn? */
+  readonly hasActed: boolean;
+
+  /** Can the unit still move? (false if already moved or no movement available) */
+  readonly canMove: boolean;
+
+  /** Can the unit still act? (false if already acted) */
+  readonly canAct: boolean;
+
   // ===== Helper Methods =====
 
   /**
@@ -145,12 +159,16 @@ export class AIContextBuilder {
    * @param self - The unit making the decision
    * @param selfPosition - Current position of the unit
    * @param state - Current combat state
+   * @param hasMoved - Has the unit moved this turn?
+   * @param hasActed - Has the unit acted this turn?
    * @returns Immutable AI context with all data and helpers
    */
   static build(
     self: CombatUnit,
     selfPosition: Position,
-    state: CombatState
+    state: CombatState,
+    hasMoved: boolean = false,
+    hasActed: boolean = false
   ): AIContext {
     // Clear previous tracking by creating new WeakMap
     // Note: WeakMap doesn't have a clear() method, so we create a new instance
@@ -222,6 +240,10 @@ export class AIContextBuilder {
       return weapons && weapons.length > 0 ? weapons[0] : null;
     };
 
+    // 4. Calculate action economy state
+    const canMove = !hasMoved && movementRange.length > 0;
+    const canAct = !hasActed;
+
     // 5. Build context with helper methods
     const context: AIContext = {
       self,
@@ -232,6 +254,10 @@ export class AIContextBuilder {
       manifest: state.unitManifest,
       movementRange: Object.freeze(movementRange),
       attackRange,
+      hasMoved,
+      hasActed,
+      canMove,
+      canAct,
 
       // Helper: Get units in range
       getUnitsInRange(range: number, from: Position = selfPosition): UnitPlacement[] {

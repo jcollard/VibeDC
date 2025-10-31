@@ -70,7 +70,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
   private selectedAttackTarget: Position | null = null;
   private attackRangeCachedPosition: Position | null = null; // Position used to calculate attack range
 
-  onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void {
+  onTurnStart(unit: CombatUnit, position: Position, state: CombatState, hasMoved: boolean = false, _hasActed: boolean = false): void {
     this.activeUnit = unit;
     this.activePosition = position;
     this.currentState = state;
@@ -79,7 +79,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.mode = 'normal';
     this.moveModePaths.clear();
     this.hoveredMovePath = null;
-    this.hasMoved = false;
+    this.hasMoved = hasMoved; // Use parameter instead of always resetting to false
     this.attackRange = null;
     this.hoveredAttackTarget = null;
     this.selectedAttackTarget = null;

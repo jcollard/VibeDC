@@ -26,6 +26,8 @@ export class DefeatNearbyOpponent implements AIBehavior {
   readonly type = 'DefeatNearbyOpponent';
   readonly priority: number;
   readonly config?: unknown;
+  readonly requiresMove = false;  // Can work with or without movement
+  readonly requiresAction = true; // Requires attack action
 
   constructor(priority: number = 100, config?: unknown) {
     this.priority = priority;

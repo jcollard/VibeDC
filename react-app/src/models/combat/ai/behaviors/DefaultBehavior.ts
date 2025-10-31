@@ -11,6 +11,8 @@ export class DefaultBehavior implements AIBehavior {
   readonly type = 'DefaultBehavior';
   readonly priority: number;
   readonly config?: unknown;
+  readonly requiresMove = false;   // Doesn't need movement
+  readonly requiresAction = false; // Doesn't need action (just ends turn)
 
   constructor(priority: number = 0, config?: unknown) {
     this.priority = priority;

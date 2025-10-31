@@ -26,6 +26,18 @@ export interface AIBehavior {
   readonly config?: unknown;
 
   /**
+   * Does this behavior require movement to be available?
+   * If true, canExecute() will only be called if unit hasn't moved yet.
+   */
+  readonly requiresMove: boolean;
+
+  /**
+   * Does this behavior require an action to be available?
+   * If true, canExecute() will only be called if unit hasn't acted yet.
+   */
+  readonly requiresAction: boolean;
+
+  /**
    * Determines if this behavior can execute in the current context.
    * Called during behavior evaluation to filter valid behaviors.
    *

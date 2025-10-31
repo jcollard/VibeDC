@@ -23,8 +23,14 @@ export interface TurnStrategy {
   /**
    * Called when this strategy becomes active (unit's turn starts)
    * Use this to initialize any strategy-specific state
+   *
+   * @param unit - The active unit
+   * @param position - The active unit's position
+   * @param state - Current combat state
+   * @param hasMoved - Whether the unit has moved this turn (default: false)
+   * @param hasActed - Whether the unit has acted this turn (default: false)
    */
-  onTurnStart(unit: CombatUnit, position: Position, state: CombatState): void;
+  onTurnStart(unit: CombatUnit, position: Position, state: CombatState, hasMoved?: boolean, hasActed?: boolean): void;
 
   /**
    * Called when this strategy becomes inactive (turn ends or phase changes)

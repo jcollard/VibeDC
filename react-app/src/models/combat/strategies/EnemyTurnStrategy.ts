@@ -58,15 +58,16 @@ export class EnemyTurnStrategy implements TurnStrategy {
     this.behaviors = BehaviorRegistry.createMany(configs);
   }
 
-  onTurnStart(_unit: CombatUnit, position: Position, state: CombatState): void {
-    console.log(`[AI] ${_unit.name} turn starting, building context...`);
+  onTurnStart(_unit: CombatUnit, position: Position, state: CombatState, hasMoved: boolean = false, hasActed: boolean = false): void {
+    console.log(`[AI] ${_unit.name} turn starting, building context (hasMoved=${hasMoved}, hasActed=${hasActed})...`);
 
     // Build AI context
     try {
-      this.context = AIContextBuilder.build(_unit, position, state);
+      this.context = AIContextBuilder.build(_unit, position, state, hasMoved, hasActed);
       console.log(`[AI] ${_unit.name} context built successfully`);
       console.log(`[AI] ${_unit.name} attack range:`, this.context.attackRange);
       console.log(`[AI] ${_unit.name} movement range tiles:`, this.context.movementRange.length);
+      console.log(`[AI] ${_unit.name} canMove=${this.context.canMove}, canAct=${this.context.canAct}`);
     } catch (error) {
       console.error(`[AI] ${_unit.name} context build failed:`, error);
       this.context = null;
@@ -81,9 +82,18 @@ export class EnemyTurnStrategy implements TurnStrategy {
       activeUnit: _unit
     });
 
-    // Reset AI state
-    this.thinkingTimer = 0;
-    this.actionDecided = null;
+    // Reset AI state (but keep action state between re-evaluations)
+    if (!hasMoved && !hasActed) {
+      // Only reset these at the very start of the turn
+      this.thinkingTimer = 0;
+      this.actionDecided = null;
+      this.pendingActionAfterMove = null; // Clear any stale pending actions
+    } else {
+      // When re-evaluating after movement/action, reset thinking and decision
+      // This allows immediate re-evaluation without delay
+      this.thinkingTimer = this.thinkingDuration; // Skip thinking delay
+      this.actionDecided = null; // Allow new decision
+    }
 
     // Auto-select the active enemy unit at turn start (for UI display)
     this.targetedUnit = _unit;
@@ -162,6 +172,7 @@ export class EnemyTurnStrategy implements TurnStrategy {
    * AI decision logic - evaluates behaviors in priority order
    *
    * Evaluates each behavior in priority order (highest first).
+   * Filters behaviors based on action economy (canMove/canAct).
    * First behavior with canExecute() === true gets to decide().
    * Converts AIDecision to TurnAction format.
    */
@@ -171,21 +182,49 @@ export class EnemyTurnStrategy implements TurnStrategy {
     _state: CombatState,
     _encounter: CombatEncounter
   ): TurnAction {
+    // Check for pending action from previous move-first decision
+    if (this.pendingActionAfterMove) {
+      console.log(`[AI] ${unit.name} has pending action after move, executing it`);
+      const pendingAction = this.pendingActionAfterMove;
+      this.pendingActionAfterMove = null; // Clear immediately
+
+      // Convert pending action to TurnAction
+      if (pendingAction.type === 'attack' && pendingAction.target) {
+        this.targetedPosition = pendingAction.target;
+        return {
+          type: 'attack',
+          target: pendingAction.target,
+        };
+      }
+    }
+
     // Evaluate behaviors in priority order
     if (!this.context) {
       console.warn(`[AI] ${unit.name} has no context, ending turn`);
       return { type: 'end-turn' };
     }
 
-    let decisionMade = false;
+    // Filter behaviors based on action economy requirements
+    const validBehaviors = this.behaviors.filter(behavior => {
+      // Skip if behavior requires move but unit can't move
+      if (behavior.requiresMove && !this.context!.canMove) {
+        return false;
+      }
+      // Skip if behavior requires action but unit can't act
+      if (behavior.requiresAction && !this.context!.canAct) {
+        return false;
+      }
+      return true;
+    });
 
-    for (const behavior of this.behaviors) {
+    console.log(`[AI] ${unit.name} evaluating ${validBehaviors.length}/${this.behaviors.length} behaviors (canMove=${this.context.canMove}, canAct=${this.context.canAct})`);
+
+    for (const behavior of validBehaviors) {
       if (behavior.canExecute(this.context)) {
         const decision = behavior.decide(this.context);
 
         if (decision) {
           const action = this.convertDecisionToAction(decision);
-          decisionMade = true;
 
           // Debug logging for AI decision-making
           console.log(`[AI] ${unit.name} chose behavior: ${behavior.type}`);
@@ -194,12 +233,8 @@ export class EnemyTurnStrategy implements TurnStrategy {
       }
     }
 
-    // Fallback if no behavior returned valid decision (should never happen with DefaultBehavior)
-    if (!decisionMade) {
-      console.warn(`[AI] ${unit.name} had no valid behaviors, ending turn`);
-      return { type: 'end-turn' };
-    }
-
+    // Fallback if no behavior returned valid decision
+    console.warn(`[AI] ${unit.name} had no valid behaviors, ending turn`);
     return { type: 'end-turn' };
   }
 

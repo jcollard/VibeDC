@@ -23,6 +23,8 @@ export class MoveTowardNearestOpponent implements AIBehavior {
   readonly type = 'MoveTowardNearestOpponent';
   readonly priority: number;
   readonly config?: unknown;
+  readonly requiresMove = true;   // Requires movement
+  readonly requiresAction = false; // No action, just movement
 
   constructor(priority: number = 10, config?: unknown) {
     this.priority = priority;
