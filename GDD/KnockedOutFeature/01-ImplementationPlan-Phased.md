@@ -197,7 +197,7 @@ Add all KO-related constants to CombatConstants for consistency and easy tuning.
     // Map overlay text
     MAP_TEXT: 'KO' as const,
     MAP_TEXT_COLOR: '#ff0000' as const,     // Red
-    MAP_FONT_ID: '15px-dungeonslant' as const,
+    MAP_FONT_ID: '7px-04b03' as const,
 
     // Turn order label
     TURN_ORDER_TEXT: 'KO' as const,
@@ -210,7 +210,7 @@ Add all KO-related constants to CombatConstants for consistency and easy tuning.
 ```
 
 **Rationale:**
-- Uses existing font IDs (15px-dungeonslant for titles, 7px-04b03 for UI)
+- Uses existing font IDs (7px-04b03)
 - Red color (#ff0000) for high visibility and danger indication
 - Canvas filter API string for consistent grey tint (70% brightness, 0% saturation)
 - `as const` for literal types and immutability
@@ -449,7 +449,7 @@ Render "KO" text centered on KO'd unit tiles on the battle map.
 
 **Visual Reference:**
 - Text should be centered both horizontally and vertically
-- Font size: 15px-dungeonslant (large, title font)
+- Font size: 7px-04b03
 - Color: Red (#ff0000)
 - Shadow: Black for contrast
 
@@ -458,7 +458,7 @@ Render "KO" text centered on KO'd unit tiles on the battle map.
 - Multiple KO'd units (all show "KO" text)
 - Font not loaded (gracefully skips)
 
-**Font Pre-loading:** Verify that the font `15px-dungeonslant` is pre-loaded during CombatView initialization. If the font is not loaded, KO text will fail silently (graceful degradation).
+**Font Pre-loading:** Verify that the font `7px-04b03` is pre-loaded during CombatView initialization. If the font is not loaded, KO text will fail silently (graceful degradation).
 
 **Rollback:** Revert UnitTurnPhaseHandler.ts if visual issues arise.
 

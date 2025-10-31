@@ -24,8 +24,8 @@ KO'd units represent defeated combatants who are incapacitated but not permanent
 #### On the Battle Map
 - **Grey Tint**: Unit sprite rendered with desaturated/greyscale color filter
 - **"KO" Text Overlay**: Large "KO" text centered on the tile occupied by the KO'd unit
-  - Font: 15px-dungeonslant (title font)
-  - Color: Red (#ff0000) or white (#ffffff) with black shadow for visibility
+  - Font: 7px-04b03 (small font)
+  - Color: Red (#ff0000) with black shadow for visibility
   - Position: Centered horizontally and vertically on the unit's tile
   - Rendering: After unit sprite, before UI overlays (in renderUI phase)
 
@@ -301,7 +301,7 @@ KNOCKED_OUT: {
   // Map overlay text
   MAP_TEXT: 'KO',
   MAP_TEXT_COLOR: '#ff0000',     // Red
-  MAP_FONT_ID: '15px-dungeonslant',
+  MAP_FONT_ID: '7px-04b03',
 
   // Turn order label
   TURN_ORDER_TEXT: 'KO',

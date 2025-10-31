@@ -94,7 +94,7 @@ KNOCKED_OUT: {
   // Map overlay text
   MAP_TEXT: 'KO' as const,
   MAP_TEXT_COLOR: '#ff0000' as const,     // Red
-  MAP_FONT_ID: '15px-dungeonslant' as const,
+  MAP_FONT_ID: '7px-04b03' as const,
 
   // Turn order label
   TURN_ORDER_TEXT: 'KO' as const,

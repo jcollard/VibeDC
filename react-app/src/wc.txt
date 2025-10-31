@@ -4,20 +4,21 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
     163 src/components/AnimatedPerspectiveCamera.tsx
      52 src/components/CameraLights.tsx
     145 src/components/Cell.tsx
-    174 src/components/combat/CharacterSelectionDialogContent.ts
+    356 src/components/combat/CombatDeveloperPanel.tsx
     374 src/components/combat/CombatUnitInfoDialogContent.ts
-   1171 src/components/combat/CombatView.tsx
+   1562 src/components/combat/CombatView.tsx
      56 src/components/combat/CombatViewRoute.tsx
+    528 src/components/combat/LoadingView.tsx
     280 src/components/DebugPanel.tsx
     495 src/components/developer/AbilityBrowser.tsx
     888 src/components/developer/AbilityRegistryPanel.tsx
-   1096 src/components/developer/ClassRegistryPanel.tsx
+   1208 src/components/developer/ClassRegistryPanel.tsx
     248 src/components/developer/DeveloperPanel.tsx
    1049 src/components/developer/EncounterPreview.tsx
    1388 src/components/developer/EncounterRegistryPanel.tsx
    1760 src/components/developer/EnemyRegistryPanel.tsx
     391 src/components/developer/EquipmentBrowser.tsx
-    832 src/components/developer/EquipmentRegistryPanel.tsx
+    996 src/components/developer/EquipmentRegistryPanel.tsx
    1512 src/components/developer/FontAtlasGenerator.tsx
     922 src/components/developer/FontRegistryPanel.tsx
    1580 src/components/developer/PartyMemberRegistryPanel.tsx
@@ -31,60 +32,76 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
     289 src/components/MapEditor.tsx
     192 src/components/ui/Button.ts
      24 src/config/UIConfig.ts
-    138 src/config/UISettings.ts
+    165 src/config/UISettings.ts
     460 src/data/DataLoader.test.ts
-    288 src/data/DataLoader.ts
+    314 src/data/DataLoader.ts
     218 src/examples/SpriteRegistryExample.tsx
      37 src/firebase.ts
      56 src/font-tool.tsx
      25 src/hooks/useCombatUIState.ts
      10 src/main.tsx
+    751 src/models/combat/ActionTimerPhaseHandler.ts
+    100 src/models/combat/ai/BehaviorRegistry.ts
+     75 src/models/combat/ai/behaviors/AttackNearestOpponent.ts
+     40 src/models/combat/ai/behaviors/DefaultBehavior.ts
+    137 src/models/combat/ai/behaviors/DefeatNearbyOpponent.ts
+    104 src/models/combat/ai/behaviors/MoveTowardNearestOpponent.ts
+     29 src/models/combat/ai/index.ts
+    113 src/models/combat/ai/types/AIBehavior.ts
+    423 src/models/combat/ai/types/AIContext.ts
+    175 src/models/combat/AttackAnimationSequence.ts
+    244 src/models/combat/BattlePhaseHandler.ts
     119 src/models/combat/CinematicSequence.ts
      94 src/models/combat/CombatAbility.ts
-     92 src/models/combat/CombatConstants.ts
+    141 src/models/combat/CombatConstants.ts
     123 src/models/combat/CombatEffect.ts
     386 src/models/combat/CombatEncounter.test.ts
     237 src/models/combat/CombatEncounter.ts
-    703 src/models/combat/CombatLogManager.ts
+    758 src/models/combat/CombatLogManager.ts
     212 src/models/combat/CombatMap.test.ts
     238 src/models/combat/CombatMap.ts
-    204 src/models/combat/CombatPhaseHandler.ts
+    212 src/models/combat/CombatPhaseHandler.ts
     279 src/models/combat/CombatPredicate.test.ts
     336 src/models/combat/CombatPredicate.ts
-     46 src/models/combat/CombatState.ts
+     68 src/models/combat/CombatSaveData.ts
+    143 src/models/combat/CombatState.ts
     143 src/models/combat/CombatUIState.ts
-    147 src/models/combat/CombatUnit.ts
-    119 src/models/combat/CombatUnitManifest.ts
+    165 src/models/combat/CombatUnit.ts
+    254 src/models/combat/CombatUnitManifest.ts
     173 src/models/combat/CombatUnitModifiers.ts
     185 src/models/combat/deployment/DeploymentUI.ts
     136 src/models/combat/deployment/DeploymentZoneRenderer.ts
-    245 src/models/combat/deployment/PartySelectionDialog.ts
     120 src/models/combat/deployment/UnitDeploymentManager.ts
-    553 src/models/combat/DeploymentPhaseHandler.ts
-    295 src/models/combat/EnemyDeploymentPhaseHandler.ts
+    504 src/models/combat/DeploymentPhaseHandler.ts
+    302 src/models/combat/EnemyDeploymentPhaseHandler.ts
     194 src/models/combat/EnemySpriteSequence.ts
     321 src/models/combat/Equipment.test.ts
-    128 src/models/combat/Equipment.ts
-    506 src/models/combat/HumanoidUnit.test.ts
-    708 src/models/combat/HumanoidUnit.ts
-    597 src/models/combat/layouts/CombatLayoutManager.ts
-     70 src/models/combat/layouts/CombatLayoutRenderer.ts
+    197 src/models/combat/Equipment.ts
+    770 src/models/combat/HumanoidUnit.test.ts
+    819 src/models/combat/HumanoidUnit.ts
+    775 src/models/combat/layouts/CombatLayoutManager.ts
+     75 src/models/combat/layouts/CombatLayoutRenderer.ts
     290 src/models/combat/layouts/HorizontalVerticalLayout.ts
-    101 src/models/combat/managers/InfoPanelManager.ts
-     64 src/models/combat/managers/panels/EmptyContent.ts
-     12 src/models/combat/managers/panels/index.ts
+    110 src/models/combat/managers/InfoPanelManager.ts
+    112 src/models/combat/managers/panels/AbilityInfoContent.ts
+    443 src/models/combat/managers/panels/ActionsMenuContent.ts
+    443 src/models/combat/managers/panels/AttackMenuContent.ts
+     21 src/models/combat/managers/panels/colors.ts
+     66 src/models/combat/managers/panels/EmptyContent.ts
+    307 src/models/combat/managers/panels/EquipmentInfoContent.ts
+     18 src/models/combat/managers/panels/index.ts
     339 src/models/combat/managers/panels/PanelButton.ts
-     81 src/models/combat/managers/panels/PanelContent.ts
-    349 src/models/combat/managers/panels/PartyMembersContent.ts
-    132 src/models/combat/managers/panels/UnitInfoContent.ts
-     62 src/models/combat/managers/renderers/DeploymentHeaderRenderer.ts
-    100 src/models/combat/managers/renderers/TurnOrderRenderer.ts
-     57 src/models/combat/managers/TopPanelManager.ts
-     46 src/models/combat/managers/TopPanelRenderer.ts
+     89 src/models/combat/managers/panels/PanelContent.ts
+    351 src/models/combat/managers/panels/PartyMembersContent.ts
+    774 src/models/combat/managers/panels/UnitInfoContent.ts
+     63 src/models/combat/managers/renderers/DeploymentHeaderRenderer.ts
+    664 src/models/combat/managers/renderers/TurnOrderRenderer.ts
+     88 src/models/combat/managers/TopPanelManager.ts
+     71 src/models/combat/managers/TopPanelRenderer.ts
     191 src/models/combat/MapFadeInSequence.ts
-    277 src/models/combat/MessageFadeInSequence.ts
-    349 src/models/combat/MonsterUnit.test.ts
-    382 src/models/combat/MonsterUnit.ts
+    278 src/models/combat/MessageFadeInSequence.ts
+    350 src/models/combat/MonsterUnit.test.ts
+    396 src/models/combat/MonsterUnit.ts
     100 src/models/combat/PhaseBase.ts
     226 src/models/combat/rendering/CombatMapRenderer.ts
     248 src/models/combat/rendering/CombatRenderer.ts
@@ -92,9 +109,19 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
      93 src/models/combat/SequenceChain.ts
      71 src/models/combat/SequenceParallel.ts
     130 src/models/combat/StaggeredSequenceManager.ts
+    377 src/models/combat/strategies/EnemyTurnStrategy.ts
+    709 src/models/combat/strategies/PlayerTurnStrategy.ts
+    157 src/models/combat/strategies/TurnStrategy.ts
     178 src/models/combat/TitleFadeInSequence.ts
     281 src/models/combat/UnitClass.test.ts
-    143 src/models/combat/UnitClass.ts
+    152 src/models/combat/UnitClass.ts
+    123 src/models/combat/UnitMovementSequence.ts
+   1296 src/models/combat/UnitTurnPhaseHandler.ts
+    114 src/models/combat/utils/AttackRangeCalculator.ts
+    190 src/models/combat/utils/CombatCalculations.ts
+    100 src/models/combat/utils/LineOfSightCalculator.ts
+    103 src/models/combat/utils/MovementPathfinder.ts
+    114 src/models/combat/utils/MovementRangeCalculator.ts
      56 src/models/MapCell.ts
     140 src/models/MapData.ts
     201 src/models/Player.ts
@@ -107,21 +134,23 @@ find src/ \( -name "*.ts" -o -name "*.tsx" \) -type f -exec wc -l {} +
      20 src/utils/CameraAnimation.ts
     120 src/utils/CombatAbilityRegistry.ts
     224 src/utils/CombatDebugger.ts
+    297 src/utils/combatStorage.ts
     286 src/utils/DialogRenderer.ts
     302 src/utils/EnemyRegistry.ts
-    195 src/utils/EquipmentRegistry.ts
-    209 src/utils/FontAtlasRenderer.ts
+    217 src/utils/EquipmentRegistry.ts
+    132 src/utils/EquipmentTagRegistry.ts
+    271 src/utils/FontAtlasRenderer.ts
     135 src/utils/FontLoader.ts
     443 src/utils/FontRegistry.ts
      24 src/utils/mapParser.ts
-    335 src/utils/PartyMemberRegistry.ts
+    345 src/utils/PartyMemberRegistry.ts
     233 src/utils/SpriteRegistry.test.ts
     292 src/utils/SpriteRegistry.ts
     129 src/utils/SpriteRenderer.ts
     161 src/utils/SpriteSheetLoader.ts
     123 src/utils/TilesetRegistry.ts
      68 src/utils/tileTextureConfig.ts
-    228 src/utils/UnitClassRegistry.ts
+    236 src/utils/UnitClassRegistry.ts
     141 src/utils/viewportCalculator.ts
      12 src/vite-env.d.ts
-  36830 total
+  47676 total
