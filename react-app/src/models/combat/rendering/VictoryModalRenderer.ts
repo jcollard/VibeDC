@@ -188,7 +188,6 @@ export class VictoryModalRenderer {
       return startY + 40;
     }
 
-    const leftMargin = modalX + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
     const currentY = startY;
 
     // Render XP and Gold on the same row with 24px spacing
