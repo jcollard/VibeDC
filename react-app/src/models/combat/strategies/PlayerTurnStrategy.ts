@@ -607,7 +607,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
    * Update the hovered attack target (for orange highlight)
    */
   private updateHoveredAttackTarget(position: Position): void {
-    if (!this.attackRange) {
+    if (!this.attackRange || !this.currentState) {
       this.hoveredAttackTarget = null;
       return;
     }
@@ -617,7 +617,17 @@ export class PlayerTurnStrategy implements TurnStrategy {
       target => target.x === position.x && target.y === position.y
     );
 
-    this.hoveredAttackTarget = isValidTarget ? position : null;
+    if (isValidTarget) {
+      // Additional check: Ensure target unit is not KO'd (defensive programming)
+      const targetUnit = this.currentState.unitManifest.getUnitAtPosition(position);
+      if (targetUnit && !targetUnit.isKnockedOut) {
+        this.hoveredAttackTarget = position;
+      } else {
+        this.hoveredAttackTarget = null;
+      }
+    } else {
+      this.hoveredAttackTarget = null;
+    }
   }
 
   /**
@@ -688,10 +698,15 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
       // Update targeted unit to show in top panel
       const targetUnit = state.unitManifest.getUnitAtPosition(position);
-      if (targetUnit) {
-        this.targetedUnit = targetUnit;
-        this.targetedPosition = position;
+
+      // Sanity check: Ensure target is not KO'd (should already be filtered by AttackRangeCalculator)
+      if (!targetUnit || targetUnit.isKnockedOut) {
+        console.warn('[PlayerTurnStrategy] Attempted to target KO\'d or missing unit');
+        return { handled: true };
       }
+
+      this.targetedUnit = targetUnit;
+      this.targetedPosition = position;
 
       return { handled: true };
     }

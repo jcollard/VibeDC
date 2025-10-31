@@ -180,12 +180,15 @@ export class AIContextBuilder {
       this.unitPositions.set(placement.unit, placement.position);
     }
 
-    // 1. Partition units into allies and enemies
+    // 1. Partition units into allies and enemies (exclude KO'd units)
     const alliedUnits: UnitPlacement[] = [];
     const enemyUnits: UnitPlacement[] = [];
 
     for (const placement of state.unitManifest.getAllUnits()) {
       if (placement.unit === self) continue; // Skip self
+
+      // Skip KO'd units - they don't participate in AI decision-making
+      if (placement.unit.isKnockedOut) continue;
 
       const unitPlacement: UnitPlacement = {
         unit: placement.unit,

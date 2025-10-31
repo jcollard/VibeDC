@@ -44,8 +44,9 @@ export class LineOfSightCalculator {
         return false;
       }
 
-      // Check if a unit blocks line of sight
-      if (unitManifest.getUnitAtPosition(pos)) {
+      // Check if a unit blocks line of sight (KO'd units don't block - they're lying down)
+      const unitAtPosition = unitManifest.getUnitAtPosition(pos);
+      if (unitAtPosition && !unitAtPosition.isKnockedOut) {
         return false;
       }
     }

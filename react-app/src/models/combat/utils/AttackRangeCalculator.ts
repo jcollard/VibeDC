@@ -63,8 +63,9 @@ export class AttackRangeCalculator {
       }
 
       // Check if there's any unit at this position (friendly fire allowed)
+      // Exclude KO'd units from targeting
       const unitAtPosition = unitManifest.getUnitAtPosition(tile);
-      if (unitAtPosition) {
+      if (unitAtPosition && !unitAtPosition.isKnockedOut) {
         validTargets.push(tile);
       }
     }
