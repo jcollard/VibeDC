@@ -50,13 +50,13 @@ This document provides a phased, step-by-step implementation plan for the Knocke
 
 ## Phase Overview
 
-| Phase | Description | Files | Complexity | Time Est. | Dependencies |
-|-------|-------------|-------|------------|-----------|--------------|
-| 1 | Visual Representation (State, Constants, Map Rendering) | 5 | Medium | 2.5 hours | None |
-| 2 | Turn Order and Action Timer | 3 | Medium | 3.5 hours | 1 |
-| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | 1 |
-| 4 | Attack Range and AI Integration | 4 | Medium | 2 hours | 1, 3 |
-| **Total** | - | **9 unique** | - | **~9 hours** | - |
+| Phase | Description | Files | Complexity | Time Est. | Status | Guide |
+|-------|-------------|-------|------------|-----------|--------|-------|
+| 1 | Visual Representation (State, Constants, Map Rendering) | 7 | Medium | 2.5 hours | ✅ DONE | [Guide](./01-VisualRepresentation.md) |
+| 2 | Turn Order and Action Timer | 3 | Medium | 3.5 hours | 📋 READY | [Guide](./02-TurnOrderAndActionTimer.md) |
+| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | ⏳ PENDING | TBD |
+| 4 | Attack Range and AI Integration | 4 | Medium | 2 hours | ⏳ PENDING | TBD |
+| **Total** | - | **9 unique** | - | **~9 hours** | **1/4 Complete** | - |
 
 ---
 
@@ -323,16 +323,17 @@ units[0].unit.wounds = 0;
 ```
 
 **Acceptance Criteria:**
-- [x] TypeScript compiles without errors
-- [x] `isKnockedOut` getter works correctly for both unit types
-- [x] Constants accessible via CombatConstants.KNOCKED_OUT
-- [x] KO'd unit sprite appears with grey tint on map (0% saturation, 70% brightness)
-- [x] "KO" text appears centered on KO'd unit tiles
-- [x] Text is red (#ff0000) with shadow for visibility
-- [x] Text appears ON TOP of unit sprite (not under)
-- [x] Healthy units render with normal colors and no text
-- [x] No visual artifacts or filter bleeding
-- [x] No performance degradation (60 FPS maintained)
+- ✅ TypeScript compiles without errors
+- ✅ `isKnockedOut` getter works correctly for both unit types
+- ✅ Constants accessible via CombatConstants.KNOCKED_OUT
+- ✅ KO'd unit sprite appears with grey tint on map (0% saturation, 70% brightness)
+- ✅ "KO" text appears centered on KO'd unit tiles
+- ✅ Text is red (#ff0000) with shadow for visibility
+- ✅ Text appears ON TOP of unit sprite (not under)
+- ✅ Healthy units render with normal colors and no text
+- ✅ No visual artifacts or filter bleeding
+- ✅ No performance degradation (60 FPS maintained)
+- ✅ KO text appears during BOTH action timer phase and unit turn phase
 
 **Visual Reference:**
 - Grey tint: Clearly distinguishable from healthy units but still recognizable
@@ -348,6 +349,40 @@ units[0].unit.wounds = 0;
 **Font Pre-loading:** Verify that the font `7px-04b03` is pre-loaded during CombatView initialization. If the font is not loaded, KO text will fail silently (graceful degradation).
 
 **Rollback:** Revert all 6 modified files if issues arise.
+
+### Phase 1 Implementation Notes (2025-10-31)
+
+**Status:** ✅ COMPLETED
+
+**Files Modified:**
+1. ✅ `models/combat/CombatUnit.ts` - Added `isKnockedOut` interface definition
+2. ✅ `models/combat/HumanoidUnit.ts` - Implemented `isKnockedOut` getter
+3. ✅ `models/combat/MonsterUnit.ts` - Implemented `isKnockedOut` getter
+4. ✅ `models/combat/CombatConstants.ts` - Added KNOCKED_OUT constants section
+5. ✅ `models/combat/rendering/CombatRenderer.ts` - Applied grey tint filter
+6. ✅ `models/combat/UnitTurnPhaseHandler.ts` - Added KO text rendering
+7. ✅ `models/combat/ActionTimerPhaseHandler.ts` - Added KO text rendering (bug fix)
+
+**Key Changes:**
+- Added `isKnockedOut: boolean` getter to CombatUnit interface (line 166)
+- Implemented getter in both HumanoidUnit (line 226-228) and MonsterUnit (line 207-209)
+- Added KNOCKED_OUT constants with red color (#ff0000), 7px-04b03 font, and grey tint filter (lines 142-158)
+- CombatRenderer applies `saturate(0%) brightness(70%)` filter for KO'd units (lines 122-142)
+- UnitTurnPhaseHandler renders centered red "KO" text with shadow (lines 418-460)
+- ActionTimerPhaseHandler renders same KO text (lines 186-231) - discovered during testing
+
+**Build Status:** ✅ Clean build, no TypeScript errors
+
+**Testing Results:**
+- ✅ Grey tint appears correctly on map
+- ✅ Red "KO" text centered on KO'd unit tiles
+- ✅ Text visible in both action timer phase and unit turn phase
+- ✅ No visual artifacts or filter bleeding
+- ✅ Performance: No measurable impact
+
+**Bug Fixed:** KO text was initially only appearing during unit turn phase. Added identical rendering logic to ActionTimerPhaseHandler.renderUI() to ensure consistent display across all combat phases.
+
+**Next Phase:** Phase 2 - Turn Order and Action Timer
 
 ---
 
