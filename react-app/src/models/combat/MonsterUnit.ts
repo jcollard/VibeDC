@@ -204,6 +204,10 @@ export class MonsterUnit implements CombatUnit {
     return this._isPlayerControlled;
   }
 
+  get isKnockedOut(): boolean {
+    return this.wounds >= this.maxHealth;
+  }
+
   setPlayerControlled(value: boolean): void {
     this._isPlayerControlled = value;
   }

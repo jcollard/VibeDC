@@ -3,6 +3,7 @@ import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 import type { CombatMap } from '../CombatMap';
 import type { CombatUnitManifest } from '../CombatUnitManifest';
+import { CombatConstants } from '../CombatConstants';
 
 /**
  * Handles rendering of combat map and units
@@ -118,6 +119,11 @@ export class CombatRenderer {
         if (spriteDef) {
           const spriteImage = spriteImages.get(spriteDef.spriteSheet);
           if (spriteImage) {
+            // Apply grey tint for KO'd units
+            if (unit.isKnockedOut) {
+              ctx.filter = CombatConstants.KNOCKED_OUT.TINT_FILTER;
+            }
+
             // Draw the unit sprite with pixel-perfect rendering
             SpriteRenderer.renderSprite(
               ctx,
@@ -129,6 +135,11 @@ export class CombatRenderer {
               this.tileSize,
               this.tileSize
             );
+
+            // Reset filter after rendering
+            if (unit.isKnockedOut) {
+              ctx.filter = 'none';
+            }
           }
         }
       }

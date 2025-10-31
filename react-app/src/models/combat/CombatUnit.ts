@@ -159,6 +159,13 @@ export interface CombatUnit {
   get isPlayerControlled(): boolean;
 
   /**
+   * Returns true if this unit is knocked out (wounds >= maxHealth).
+   * KO'd units cannot act, don't accumulate action timer, and appear at
+   * the end of the turn order list with grey tint.
+   */
+  readonly isKnockedOut: boolean;
+
+  /**
    * Converts the unit to a JSON-serializable format
    */
   toJSON(): unknown;

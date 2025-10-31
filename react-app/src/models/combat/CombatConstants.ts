@@ -138,4 +138,22 @@ export const CombatConstants = {
     UNARMED_POWER_MULTIPLIER: 1.0,    // No bonus multiplier for unarmed
     DEBUG_LOGGING: true,              // Enable/disable debug console logs
   },
+
+  /**
+   * Constants for knocked-out unit rendering and behavior
+   */
+  KNOCKED_OUT: {
+    // Map overlay text
+    MAP_TEXT: 'KO' as const,
+    MAP_TEXT_COLOR: '#ff0000' as const,     // Red
+    MAP_FONT_ID: '7px-04b03' as const,
+
+    // Turn order label
+    TURN_ORDER_TEXT: 'KO' as const,
+    TURN_ORDER_COLOR: '#ff0000' as const,   // Red
+    TURN_ORDER_FONT_ID: '7px-04b03' as const,
+
+    // Grey tint settings (for canvas filter)
+    TINT_FILTER: 'saturate(0%) brightness(70%)' as const,
+  } as const,
 } as const;

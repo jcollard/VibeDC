@@ -16,6 +16,8 @@ import type { Position } from '../../types';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { UnitInfoContent } from './managers/panels/UnitInfoContent';
 import { SpriteRenderer } from '../../utils/SpriteRenderer';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../utils/FontRegistry';
 import { CombatConstants } from './CombatConstants';
 import type { TurnStrategy, TurnAction } from './strategies/TurnStrategy';
 import { PlayerTurnStrategy } from './strategies/PlayerTurnStrategy';
@@ -411,6 +413,49 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         offsetY,
         fontAtlasImage
       );
+    }
+
+    // Render "KO" text overlay for knocked out units
+    const allUnits = _state.unitManifest.getAllUnits();
+    for (const placement of allUnits) {
+      if (placement.unit.isKnockedOut) {
+        const { x, y } = placement.position;
+        const screenX = offsetX + x * tileSize;
+        const screenY = offsetY + y * tileSize;
+
+        // Get KO text configuration
+        const koText = CombatConstants.KNOCKED_OUT.MAP_TEXT;
+        const fontId = CombatConstants.KNOCKED_OUT.MAP_FONT_ID;
+        const koColor = CombatConstants.KNOCKED_OUT.MAP_TEXT_COLOR;
+
+        // Get font for text measurement
+        const fontImage = fontAtlasImages?.get(fontId);
+        if (!fontImage) continue;
+
+        const font = FontRegistry.getById(fontId);
+        if (!font) continue;
+
+        // Measure text width for centering
+        const textWidth = FontAtlasRenderer.measureText(koText, font);
+
+        // Center horizontally and vertically on tile
+        // Round coordinates for pixel-perfect rendering (per GeneralGuidelines.md)
+        const textX = Math.floor(screenX + (tileSize - textWidth) / 2);
+        const textY = Math.floor(screenY + (tileSize - font.charHeight) / 2);
+
+        // Render with shadow for visibility
+        FontAtlasRenderer.renderTextWithShadow(
+          ctx,
+          koText,
+          textX,
+          textY,
+          fontId,
+          fontImage,
+          1,
+          'left',
+          koColor
+        );
+      }
     }
   }
 
