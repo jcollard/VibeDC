@@ -515,6 +515,23 @@ this.strategy.onTurnStart(unit, position, state, this.hasMoved, true);
 4. Infinite move attempts (fixed turn ending on failed moves)
 5. Move-only actions didn't end turn (fixed with pending action check)
 6. Unarmed enemies can't attack (fixed with unarmed support)
+7. **Player action menu not disabling after attack** (Phase 2 post-merge bug)
+   - **Root Cause:** `canAct` flag used for two conflicting purposes:
+     - Animation gating (prevent updates during animations) ✅ Correct
+     - Action economy tracking (has player acted?) ❌ Wrong approach
+   - **Symptom:** Player could attack multiple times per turn
+   - **Fix:** Split responsibilities:
+     - `canAct` (internal) - Controls animation/update gating
+     - `hasActed` (internal) - Tracks if action performed this turn
+     - `getCanAct()` (public) - Returns `!hasActed` for menu state
+   - **Lesson:** Don't overload single flag for multiple purposes
+   - **Location:** UnitTurnPhaseHandler.ts (completeAttack + getCanAct)
+8. **Player cannot move after attacking** (Phase 2 post-merge bug)
+   - **Root Cause:** `canAct` remained `false` after attack, blocking strategy.update()
+   - **Symptom:** Move button worked but clicking tiles did nothing
+   - **Fix:** Restore `canAct = true` after attack completes (for all units)
+   - **Why:** Strategy needs `canAct = true` to process player input (movement)
+   - **Location:** UnitTurnPhaseHandler.ts:1254 (completeAttack method)
 
 **Deviations from Plan:**
 - AttackNearestOpponent simplified to attack-only (cleaner design)
