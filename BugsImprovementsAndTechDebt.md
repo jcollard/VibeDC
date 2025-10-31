@@ -2,7 +2,6 @@ Known Bugs
 
 - Sometimes during sliding animation, the last frame shows the original order -- attempted but could not fix
 - The map area is offset slightly which cuts off 2 px at the bottom. Should shift it up 2px. It looks like the top panel may be a few pixels too tall.
-- Attack is not disabled after performing an attack
 - Enemies use bad distance calculation for determining move
 
 Missing Features
@@ -21,5 +20,6 @@ Missing Features
 
 General improvments
  - Change text from "TIME UNTIL NEXT TURN" to "TIME UNTIL NEXT ACTION"
+ - It would be great to have developer tools to easiliy filter logs when debugging.
  
  

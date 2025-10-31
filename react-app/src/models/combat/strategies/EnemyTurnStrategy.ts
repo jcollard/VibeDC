@@ -6,7 +6,6 @@ import type { Position } from '../../../types';
 import type { MouseEventContext, PhaseEventResult } from '../CombatPhaseHandler';
 import type { AIBehavior, AIDecision, AIContext, AIBehaviorConfig } from '../ai';
 import { AIContextBuilder, BehaviorRegistry, DEFAULT_ENEMY_BEHAVIORS } from '../ai';
-import { MovementRangeCalculator } from '../utils/MovementRangeCalculator';
 import { CombatConstants } from '../CombatConstants';
 
 /**
@@ -37,7 +36,6 @@ export class EnemyTurnStrategy implements TurnStrategy {
   private context: AIContext | null = null;
 
   // AI decision state
-  private movementRange: Position[] = [];
   private thinkingTimer: number = 0;
   private thinkingDuration: number = CombatConstants.AI.THINKING_DURATION;
   private actionDecided: TurnAction | null = null;
@@ -78,15 +76,6 @@ export class EnemyTurnStrategy implements TurnStrategy {
       this.context = null;
     }
 
-    // Calculate movement range for this unit (for backward compatibility with existing code)
-    this.movementRange = MovementRangeCalculator.calculateReachableTiles({
-      startPosition: position,
-      movement: _unit.movement,
-      map: state.map,
-      unitManifest: state.unitManifest,
-      activeUnit: _unit
-    });
-
     // Reset AI state (but keep action state between re-evaluations)
     if (!hasMoved && !hasActed) {
       // Only reset these at the very start of the turn
@@ -108,7 +97,6 @@ export class EnemyTurnStrategy implements TurnStrategy {
   onTurnEnd(): void {
     // Clean up strategy state
     this.context = null;
-    this.movementRange = [];
     this.thinkingTimer = 0;
     this.actionDecided = null;
     this.targetedUnit = null;
@@ -170,7 +158,9 @@ export class EnemyTurnStrategy implements TurnStrategy {
   }
 
   getMovementRange(): Position[] {
-    return this.movementRange;
+    // Return movement range from AIContext (already calculated during context build)
+    // Create a shallow copy to satisfy the mutable return type
+    return this.context ? [...this.context.movementRange] : [];
   }
 
   /**

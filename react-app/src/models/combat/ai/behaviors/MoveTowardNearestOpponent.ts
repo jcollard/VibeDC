@@ -1,6 +1,7 @@
 import type { AIBehavior, AIDecision } from '../types/AIBehavior';
 import type { AIContext } from '../types/AIContext';
 import type { Position } from '../../../../types';
+import { CombatConstants } from '../../CombatConstants';
 
 /**
  * Move toward the nearest opponent without attacking.
@@ -88,9 +89,11 @@ export class MoveTowardNearestOpponent implements AIBehavior {
       return null;
     }
 
-    console.log(
-      `[AI] ${context.self.name} moving toward ${nearestEnemy.unit.name} at ${nearestEnemy.position.x},${nearestEnemy.position.y}`
-    );
+    if (CombatConstants.AI.DEBUG_LOGGING) {
+      console.log(
+        `[AI] ${context.self.name} moving toward ${nearestEnemy.unit.name} at ${nearestEnemy.position.x},${nearestEnemy.position.y}`
+      );
+    }
 
     // Move toward enemy (no attack)
     return {

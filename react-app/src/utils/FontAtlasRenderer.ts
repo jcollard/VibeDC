@@ -6,6 +6,10 @@ import type { FontDefinition } from './FontRegistry';
  * Provides pixel-perfect text rendering with variable-width font support
  */
 export class FontAtlasRenderer {
+  // Cached tinting canvas for color rendering (performance optimization)
+  private static tintingCanvas: HTMLCanvasElement | null = null;
+  private static tintingCtx: CanvasRenderingContext2D | null = null;
+
   /**
    * Render text using a font atlas
    * @param ctx - Canvas rendering context
@@ -50,49 +54,65 @@ export class FontAtlasRenderer {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    // If color is specified, use a temporary canvas to tint the text
+    // If color is specified, use a cached canvas to tint the text
     if (color) {
-      // Create a temporary canvas for each character to apply color tinting
-      const tempCanvas = document.createElement('canvas');
-      const tempCtx = tempCanvas.getContext('2d');
+      // Initialize cached tinting canvas on first use (lazy initialization)
+      if (!FontAtlasRenderer.tintingCanvas || !FontAtlasRenderer.tintingCtx) {
+        FontAtlasRenderer.tintingCanvas = document.createElement('canvas');
+        FontAtlasRenderer.tintingCtx = FontAtlasRenderer.tintingCanvas.getContext('2d');
+        if (!FontAtlasRenderer.tintingCtx) {
+          console.warn('Failed to create tinting canvas context');
+          ctx.restore();
+          return 0;
+        }
+      }
 
-      if (tempCtx) {
-        // Render each character with color tinting
-        for (const char of text) {
-          const coords = FontRegistry.getCharCoordinates(font, char);
-          if (coords) {
-            // Size temp canvas to fit the scaled character
-            tempCanvas.width = Math.round(coords.width * scale);
-            tempCanvas.height = Math.round(font.charHeight * scale);
+      const tempCanvas = FontAtlasRenderer.tintingCanvas;
+      const tempCtx = FontAtlasRenderer.tintingCtx;
 
-            // Draw the character from atlas to temp canvas
+      // Render each character with color tinting
+      for (const char of text) {
+        const coords = FontRegistry.getCharCoordinates(font, char);
+        if (coords) {
+          // Resize temp canvas only if dimensions changed
+          const charWidth = Math.round(coords.width * scale);
+          const charHeight = Math.round(font.charHeight * scale);
+
+          if (tempCanvas.width !== charWidth || tempCanvas.height !== charHeight) {
+            tempCanvas.width = charWidth;
+            tempCanvas.height = charHeight;
+            // Re-set smoothing after resize
             tempCtx.imageSmoothingEnabled = false;
-            tempCtx.drawImage(
-              atlasImage,
-              coords.x,
-              coords.y,
-              coords.width,
-              font.charHeight,
-              0,
-              0,
-              tempCanvas.width,
-              tempCanvas.height
-            );
-
-            // Apply color tint using globalCompositeOperation
-            tempCtx.globalCompositeOperation = 'source-in';
-            tempCtx.fillStyle = color;
-            tempCtx.fillRect(0, 0, tempCanvas.width, tempCanvas.height);
-
-            // Draw the tinted character to the main canvas
-            ctx.drawImage(
-              tempCanvas,
-              Math.round(currentX),
-              Math.round(y)
-            );
-
-            currentX += coords.width * scale + (font.charSpacing || 0) * scale;
           }
+
+          // Clear and draw the character from atlas to temp canvas
+          tempCtx.clearRect(0, 0, charWidth, charHeight);
+          tempCtx.globalCompositeOperation = 'source-over';
+          tempCtx.drawImage(
+            atlasImage,
+            coords.x,
+            coords.y,
+            coords.width,
+            font.charHeight,
+            0,
+            0,
+            charWidth,
+            charHeight
+          );
+
+          // Apply color tint using globalCompositeOperation
+          tempCtx.globalCompositeOperation = 'source-in';
+          tempCtx.fillStyle = color;
+          tempCtx.fillRect(0, 0, charWidth, charHeight);
+
+          // Draw the tinted character to the main canvas
+          ctx.drawImage(
+            tempCanvas,
+            Math.round(currentX),
+            Math.round(y)
+          );
+
+          currentX += coords.width * scale + (font.charSpacing || 0) * scale;
         }
       }
     } else {
