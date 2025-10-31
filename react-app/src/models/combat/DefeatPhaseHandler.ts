@@ -138,8 +138,27 @@ export class DefeatPhaseHandler extends PhaseBase {
 
   private handleTryAgain(_state: CombatState, encounter: CombatEncounter): { newState: CombatState; playCinematic: boolean } | null {
     try {
-      // Create a fresh initial combat state (same as CombatView initialization)
-      // This ensures all initialization logic runs properly including combat log
+      // DESIGN DECISION: Full Restart vs Snapshot Restoration
+      //
+      // The original design doc specified saving a snapshot of the initial state
+      // and restoring it on "Try Again". However, we've chosen a simpler approach:
+      // completely restart the encounter from deployment phase.
+      //
+      // Advantages of this approach:
+      // - Simpler: No serialization/deserialization complexity
+      // - More robust: No risk of snapshot corruption or deserialization failures
+      // - Flexible: Players can try different deployment strategies
+      // - Cleaner: Fresh unit instances avoid stale state bugs
+      //
+      // How it works:
+      // - Create fresh CombatState with empty unitManifest and phase='deployment'
+      // - DeploymentPhaseHandler loads party members from PartyMemberRegistry.getAll()
+      // - Player deploys units again (can choose different positions/units)
+      // - Enemy deployment creates fresh enemies from encounter.createEnemyUnits()
+      // - Combat log is cleared and cinematic replays (handled in CombatView)
+      //
+      // This matches player expectations: "Try Again" = full restart
+
       const freshState: CombatState = {
         turnNumber: 0,
         map: encounter.map,

@@ -617,6 +617,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return { ...state, phase: 'victory' as const };
     }
     if (encounter.isDefeat(state)) {
+      // Add defeat message to combat log
+      this.pendingLogMessages.push(CombatConstants.DEFEAT_SCREEN.DEFEAT_MESSAGE);
       return { ...state, phase: 'defeat' as const };
     }
 

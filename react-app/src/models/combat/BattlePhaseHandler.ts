@@ -13,6 +13,7 @@ import type { TopPanelRenderer } from './managers/TopPanelRenderer';
 import type { PanelContent, PanelRegion, PanelClickResult } from './managers/panels/PanelContent';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Placeholder info panel content for battle phase
@@ -96,6 +97,9 @@ export class BattlePhaseHandler extends PhaseBase implements CombatPhaseHandler 
   // Cached panel content (per GeneralGuidelines.md lines 103-110)
   private infoPanelContent: BattleInfoPanelContent | null = null;
 
+  // Pending combat log messages (added in render when combatLog is available)
+  private pendingLogMessages: string[] = [];
+
   constructor() {
     super();
     console.log('[BattlePhaseHandler] Initialized');
@@ -132,6 +136,14 @@ export class BattlePhaseHandler extends PhaseBase implements CombatPhaseHandler 
    * Future: Action menus, buttons, dialogs
    */
   renderUI(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
+    // Add pending combat log messages on first render
+    if (this.pendingLogMessages.length > 0 && _context.combatLog) {
+      for (const message of this.pendingLogMessages) {
+        _context.combatLog.addMessage(message);
+      }
+      this.pendingLogMessages = [];
+    }
+
     // Battle phase doesn't need post-unit UI overlays (yet)
     // UI panels are rendered by CombatLayoutManager
   }
@@ -157,6 +169,8 @@ export class BattlePhaseHandler extends PhaseBase implements CombatPhaseHandler 
 
     if (encounter.isDefeat(state)) {
       console.log('[BattlePhaseHandler] Defeat conditions met');
+      // Add defeat message to combat log
+      this.pendingLogMessages.push(CombatConstants.DEFEAT_SCREEN.DEFEAT_MESSAGE);
       return {
         ...state,
         phase: 'defeat'

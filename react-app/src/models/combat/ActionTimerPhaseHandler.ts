@@ -140,6 +140,9 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   // Flag to track if we've already calculated the turn
   private turnCalculated: boolean = false;
 
+  // Pending combat log messages (added in render when combatLog is available)
+  private pendingLogMessages: string[] = [];
+
   // Animation mode: 'immediate-slide' | 'discrete-ticks' | 'idle'
   private animationMode: 'immediate-slide' | 'discrete-ticks' | 'idle' = 'idle';
 
@@ -184,7 +187,15 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
    * Renders KO text overlays for knocked out units
    */
   renderUI(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
-    const { ctx, tileSize, offsetX, offsetY, fontAtlasImages } = _context;
+    const { ctx, tileSize, offsetX, offsetY, fontAtlasImages, combatLog } = _context;
+
+    // Add pending combat log messages on first render
+    if (this.pendingLogMessages.length > 0 && combatLog) {
+      for (const message of this.pendingLogMessages) {
+        combatLog.addMessage(message);
+      }
+      this.pendingLogMessages = [];
+    }
 
     // Render "KO" text overlay for knocked out units
     const allUnits = _state.unitManifest.getAllUnits();
@@ -264,6 +275,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
     if (encounter.isDefeat(state)) {
       console.log('[ActionTimerPhaseHandler] Defeat conditions met');
+      // Add defeat message to combat log
+      this.pendingLogMessages.push(CombatConstants.DEFEAT_SCREEN.DEFEAT_MESSAGE);
       return {
         ...state,
         phase: 'defeat'
