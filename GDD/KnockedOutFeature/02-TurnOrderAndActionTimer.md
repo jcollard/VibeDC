@@ -37,6 +37,17 @@ Update turn order display to show KO'd units at the end with grey tint and "KO" 
 2. `models/combat/ActionTimerPhaseHandler.ts` (timer accumulation + sorting)
 3. `models/combat/UnitTurnPhaseHandler.ts` (ready unit selection + sorting)
 
+### Important: TurnOrderRenderer Lifecycle
+
+**Note on Component Caching:**
+Per GeneralGuidelines.md, `TurnOrderRenderer` instances are cached in phase handlers (not recreated each frame) because they maintain scroll state. This guide modifies the existing cached instance's `render()` method and adds a helper method, but does NOT change the caching pattern itself. The renderer instance continues to live for the entire combat encounter.
+
+**Why This Matters:**
+- The `getSortedUnits()` helper method (Step 2.1) will be called each frame
+- Sorting ~15 units per frame is acceptable (<0.1ms)
+- No need to cache sorted arrays (would violate Guidelines: stale data risk)
+- Scroll state remains in the renderer instance (unchanged)
+
 ---
 
 ## Prerequisites Check
@@ -135,9 +146,16 @@ export class TurnOrderRenderer {
 - Uses spread operator for clean concatenation (no mutation)
 - Alphabetical tiebreaker ensures deterministic ordering
 
+**Why Use Getter Instead of Map/WeakMap:**
+- `isKnockedOut` is derived from `wounds >= maxHealth` (implemented in Phase 1)
+- No need for separate storage or cache invalidation
+- No risk of stale data (always reflects current wounds/maxHealth state)
+- Follows GeneralGuidelines.md principle: use getters for derived state
+- Simpler code (no additional data structure to maintain)
+
 **Guidelines Compliance:**
 - ✅ No per-frame allocations (filter/sort operate on existing arrays)
-- ✅ Uses getter (`u.isKnockedOut`)
+- ✅ Uses getter (`u.isKnockedOut`) for derived state
 - ✅ No stored state
 - ✅ Pure function (no side effects)
 
@@ -215,6 +233,13 @@ this.scrollOffset = Math.min(this.scrollOffset, maxOffset);
 **File:** `models/combat/managers/renderers/TurnOrderRenderer.ts`
 
 **Location:** In the `render()` method, in the unit rendering loop where sprites are drawn
+
+**Before modifying the render loop, ensure CombatConstants is imported:**
+```typescript
+import { CombatConstants } from '../../CombatConstants';
+```
+
+If already imported, skip this step. Check the top of the file for existing imports.
 
 **Find the sprite rendering code (approximate):**
 ```typescript
@@ -347,10 +372,20 @@ for (let i = 0; i < visibleUnits.length; i++) {
 - Preserves existing ticks-until-ready logic for active units
 - Clear visual distinction (red "KO" vs white number)
 
+**Coordinate Rounding Note:**
+If `textX` or `textY` are calculated (not tile-aligned), ensure they're rounded for pixel-perfect rendering per GeneralGuidelines.md:
+```typescript
+const textX = Math.floor(calculatedX);
+const textY = Math.floor(calculatedY);
+```
+
+If coordinates are already integers from tile calculations, explicit rounding is optional but recommended for future-proofing.
+
 **Guidelines Compliance:**
 - ✅ Uses FontAtlasRenderer (not ctx.fillText)
 - ✅ Uses centralized constants
 - ✅ No per-frame allocations (just primitives)
+- ✅ Coordinates rounded for pixel-perfect rendering (if calculated)
 
 ---
 
@@ -410,12 +445,28 @@ for (const placement of allUnits) {
 - Preserves existing timer calculation for active units
 - Defensive programming (ensures timer is 0, even if corrupted)
 
-**Important Note:** The actual timer update mechanism may vary:
-- May use direct mutation: `(unit as any)._actionTimer = value`
-- May use a separate timer map: `unitTimers.set(unit, value)`
-- May use state updates: `state = { ...state, updatedTimers: ... }`
+**Important Note:** The actual timer update mechanism may vary. Adapt the code to match the existing pattern in the file.
 
-Adapt the code to match the existing pattern in the file.
+**How to Identify the Timer Update Pattern:**
+
+1. **Search for `_actionTimer` in the file:**
+   - If found: Likely uses direct mutation pattern
+   - Example: `(unit as any)._actionTimer = value`
+
+2. **Search for `WeakMap` or `Map` declarations:**
+   - If found with timer-related names: Likely uses timer map pattern
+   - Example: `unitTimers.set(unit, value)`
+
+3. **Search for `{ ...state` returns in updatePhase():**
+   - If found: Likely uses immutable state updates
+   - Example: `return { ...state, updatedTimers: newTimersMap }`
+
+**Adapt based on what you find:**
+- If direct mutation: Use `(unit as any)._actionTimer = 0` as shown above
+- If timer map: Use `unitTimers.set(unit, 0)` instead
+- If state updates: Create new state with timer set to 0
+
+Match the existing pattern you find.
 
 **Guidelines Compliance:**
 - ✅ Uses getter (`unit.isKnockedOut`)
