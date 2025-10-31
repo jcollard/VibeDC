@@ -121,11 +121,21 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
       CombatCalculations.clearAttackOverride();
     };
 
+    // Expose forceDefeat function (for testing defeat screen)
+    (window as any).forceDefeat = () => {
+      console.log('[DEV] Forcing defeat screen transition...');
+      setCombatState(prevState => ({
+        ...prevState,
+        phase: 'defeat' as const
+      }));
+    };
+
     // Cleanup on unmount
     return () => {
       delete (window as any).setHitRate;
       delete (window as any).setDamage;
       delete (window as any).clearAttackOverride;
+      delete (window as any).forceDefeat;
     };
   }, []);
 

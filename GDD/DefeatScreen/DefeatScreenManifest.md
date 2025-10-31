@@ -41,7 +41,8 @@ Implementation of the defeat screen feature for the VibeDC combat system. This f
 5. **[CombatView.tsx](../../react-app/src/components/combat/CombatView.tsx)**
    - Added import for `DefeatPhaseHandler`
    - Added defeat phase handler instantiation in useEffect
-   - **Lines modified**: 10, 101-102
+   - Added `forceDefeat()` developer function for testing
+   - **Lines modified**: 10, 101-102, 124-131, 138
 
 ### New Files (2 files)
 
@@ -113,6 +114,19 @@ Implementation of the defeat screen feature for the VibeDC combat system. This f
 - ✅ TypeScript compilation: **PASSED** (no errors)
 - ✅ Vite build: **PASSED** (built in ~5s)
 - ⚠️ Bundle size warning: 1.2MB (expected, not related to defeat screen)
+
+### Developer Testing Functions
+
+For quick testing without playing through combat, use the browser console:
+
+```javascript
+// Force transition to defeat screen (instant)
+forceDefeat()
+```
+
+**Location**: [CombatView.tsx:124-131](../../react-app/src/components/combat/CombatView.tsx:124-131)
+
+See [DeveloperTestingGuide.md](DeveloperTestingGuide.md) for complete testing instructions.
 
 ### Manual Testing Required
 **Note**: Automated tests not created per implementation plan (UI-focused feature)

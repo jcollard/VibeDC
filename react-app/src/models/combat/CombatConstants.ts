@@ -188,7 +188,7 @@ export const CombatConstants = {
 
     // Title
     TITLE_TEXT: 'Defeat' as const,
-    TITLE_FONT_ID: 'dungeonslant' as const,
+    TITLE_FONT_ID: '15px-dungeonslant' as const,
     TITLE_SIZE: 12 as const,
     TITLE_COLOR: '#ff0000' as const,  // Red
 
