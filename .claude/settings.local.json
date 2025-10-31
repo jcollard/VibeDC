@@ -23,7 +23,8 @@
       "Bash(grep -n \"^#### \\`ActionTimerPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
       "Bash(npm test -- HumanoidUnit.test.ts)",
       "Bash(grep:*)",
-      "Bash(npm test:*)"
+      "Bash(npm test:*)",
+      "Bash(mkdir:*)"
     ],
     "deny": [
       "Bash(npm run dev)"
