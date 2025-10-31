@@ -38,8 +38,8 @@ export class DefeatModalRenderer {
     // 5. Render buttons
     const buttonY = this.renderButtons(ctx, modalX, modalY, hoveredButton, fonts);
 
-    // 6. Render helper text
-    this.renderHelperText(ctx, modalX, buttonY, fonts);
+    // 6. Render helper text (only for hovered button)
+    this.renderHelperText(ctx, modalX, buttonY, hoveredButton, fonts);
   }
 
   private renderOverlay(ctx: CanvasRenderingContext2D, panelBounds: { width: number; height: number }): void {
@@ -50,7 +50,18 @@ export class DefeatModalRenderer {
   private renderPanelBackground(ctx: CanvasRenderingContext2D, modalX: number, modalY: number): void {
     // Simple rectangle background with border
     const modalWidth = CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH;
-    const modalHeight = 150;  // Approximate height, will adjust based on content
+
+    // Calculate height based on content:
+    // 8px (top) + titleHeight + 4px (title-to-menu) + buttonHeight + 4px (menu-to-helper) + helperHeight + 2px (bottom)
+    const titleFont = FontRegistry.getById(CombatConstants.DEFEAT_SCREEN.TITLE_FONT_ID);
+    const buttonFont = FontRegistry.getById(CombatConstants.DEFEAT_SCREEN.BUTTON_FONT_ID);
+    const helperFont = FontRegistry.getById(CombatConstants.DEFEAT_SCREEN.HELPER_FONT_ID);
+
+    const titleHeight = titleFont ? titleFont.charHeight : 15;
+    const buttonHeight = buttonFont ? buttonFont.charHeight : 7;
+    const helperHeight = helperFont ? helperFont.charHeight : 7;
+
+    const modalHeight = 8 + titleHeight + 4 + buttonHeight + 4 + helperHeight + 2;
 
     ctx.fillStyle = '#000000';
     ctx.fillRect(modalX, modalY, modalWidth, modalHeight);
@@ -78,7 +89,7 @@ export class DefeatModalRenderer {
 
     // Center horizontally within modal
     const titleX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - titleWidth) / 2);
-    const titleY = modalY + CombatConstants.DEFEAT_SCREEN.MODAL_PADDING;
+    const titleY = modalY + 8; // 8px padding from top to title
 
     FontAtlasRenderer.renderTextWithShadow(
       ctx,
@@ -108,23 +119,38 @@ export class DefeatModalRenderer {
       return modalY + 80;  // Return approximate Y position
     }
 
-    // Starting Y position for buttons (below title)
-    let currentY = modalY + CombatConstants.DEFEAT_SCREEN.MODAL_PADDING * 3;
+    // Get title font to calculate spacing
+    const titleFont = FontRegistry.getById(CombatConstants.DEFEAT_SCREEN.TITLE_FONT_ID);
+    const titleHeight = titleFont ? titleFont.charHeight : 15; // Fallback if not loaded
 
-    // Button 1: Try Again
+    // Starting Y position for buttons: 8px (top padding) + titleHeight + 4px (title-to-menu spacing)
+    const buttonY = modalY + 8 + titleHeight + 4;
+
+    // Measure both button texts
+    const tryAgainText = CombatConstants.DEFEAT_SCREEN.TRY_AGAIN_TEXT;
+    const skipText = CombatConstants.DEFEAT_SCREEN.SKIP_TEXT;
+    const tryAgainWidth = FontAtlasRenderer.measureText(tryAgainText, buttonFont);
+    const skipWidth = FontAtlasRenderer.measureText(skipText, buttonFont);
+
+    // Calculate total width of both buttons plus spacing between them
+    const buttonSpacing = 24; // 24px between buttons
+    const totalWidth = tryAgainWidth + buttonSpacing + skipWidth;
+
+    // Center both buttons as a group
+    const startX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - totalWidth) / 2);
+
+    // Button 1: Try Again (left)
     const tryAgainColor = hoveredButton === 'try-again'
       ? CombatConstants.DEFEAT_SCREEN.BUTTON_COLOR_HOVER
       : CombatConstants.DEFEAT_SCREEN.BUTTON_COLOR_NORMAL;
 
-    const tryAgainText = CombatConstants.DEFEAT_SCREEN.TRY_AGAIN_TEXT;
-    const tryAgainWidth = FontAtlasRenderer.measureText(tryAgainText, buttonFont);
-    const tryAgainX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - tryAgainWidth) / 2);
+    const tryAgainX = startX;
 
     FontAtlasRenderer.renderText(
       ctx,
       tryAgainText,
       tryAgainX,
-      currentY,
+      buttonY,
       CombatConstants.DEFEAT_SCREEN.BUTTON_FONT_ID,
       buttonFontImage,
       1,
@@ -132,22 +158,18 @@ export class DefeatModalRenderer {
       tryAgainColor
     );
 
-    currentY += buttonFont.charHeight + CombatConstants.DEFEAT_SCREEN.BUTTON_SPACING;
-
-    // Button 2: Skip Encounter
+    // Button 2: Skip Encounter (right, 24px from Try Again)
     const skipColor = hoveredButton === 'skip'
       ? CombatConstants.DEFEAT_SCREEN.BUTTON_COLOR_HOVER
       : CombatConstants.DEFEAT_SCREEN.BUTTON_COLOR_NORMAL;
 
-    const skipText = CombatConstants.DEFEAT_SCREEN.SKIP_TEXT;
-    const skipWidth = FontAtlasRenderer.measureText(skipText, buttonFont);
-    const skipX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - skipWidth) / 2);
+    const skipX = startX + tryAgainWidth + buttonSpacing;
 
     FontAtlasRenderer.renderText(
       ctx,
       skipText,
       skipX,
-      currentY,
+      buttonY,
       CombatConstants.DEFEAT_SCREEN.BUTTON_FONT_ID,
       buttonFontImage,
       1,
@@ -155,17 +177,22 @@ export class DefeatModalRenderer {
       skipColor
     );
 
-    currentY += buttonFont.charHeight + CombatConstants.DEFEAT_SCREEN.HELPER_SPACING;
-
-    return currentY;  // Return Y position for helper text
+    // Return Y position after buttons for helper text
+    return buttonY + buttonFont.charHeight + CombatConstants.DEFEAT_SCREEN.HELPER_SPACING;
   }
 
   private renderHelperText(
     ctx: CanvasRenderingContext2D,
     modalX: number,
     startY: number,
+    hoveredButton: 'try-again' | 'skip' | null,
     fonts: Map<string, HTMLImageElement>
   ): void {
+    // Only show helper text if a button is hovered
+    if (!hoveredButton) {
+      return;
+    }
+
     const helperFont = FontRegistry.getById(CombatConstants.DEFEAT_SCREEN.HELPER_FONT_ID);
     const helperFontImage = fonts.get(CombatConstants.DEFEAT_SCREEN.HELPER_FONT_ID);
 
@@ -174,37 +201,25 @@ export class DefeatModalRenderer {
       return;
     }
 
-    let currentY = startY;
+    // Determine which helper text to show based on hovered button
+    let helperText: string;
+    if (hoveredButton === 'try-again') {
+      helperText = CombatConstants.DEFEAT_SCREEN.TRY_AGAIN_HELPER;
+    } else if (hoveredButton === 'skip') {
+      helperText = CombatConstants.DEFEAT_SCREEN.SKIP_HELPER;
+    } else {
+      return;
+    }
 
-    // Helper 1: Try Again
-    const tryAgainHelper = CombatConstants.DEFEAT_SCREEN.TRY_AGAIN_HELPER;
-    const tryAgainHelperWidth = FontAtlasRenderer.measureText(tryAgainHelper, helperFont);
-    const tryAgainHelperX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - tryAgainHelperWidth) / 2);
-
-    FontAtlasRenderer.renderText(
-      ctx,
-      tryAgainHelper,
-      tryAgainHelperX,
-      currentY,
-      CombatConstants.DEFEAT_SCREEN.HELPER_FONT_ID,
-      helperFontImage,
-      1,
-      'left',
-      CombatConstants.DEFEAT_SCREEN.HELPER_COLOR
-    );
-
-    currentY += helperFont.charHeight + CombatConstants.DEFEAT_SCREEN.BUTTON_SPACING * 2;
-
-    // Helper 2: Skip Encounter
-    const skipHelper = CombatConstants.DEFEAT_SCREEN.SKIP_HELPER;
-    const skipHelperWidth = FontAtlasRenderer.measureText(skipHelper, helperFont);
-    const skipHelperX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - skipHelperWidth) / 2);
+    // Render helper text centered below buttons
+    const helperWidth = FontAtlasRenderer.measureText(helperText, helperFont);
+    const helperX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - helperWidth) / 2);
 
     FontAtlasRenderer.renderText(
       ctx,
-      skipHelper,
-      skipHelperX,
-      currentY,
+      helperText,
+      helperX,
+      startY,
       CombatConstants.DEFEAT_SCREEN.HELPER_FONT_ID,
       helperFontImage,
       1,
@@ -239,28 +254,37 @@ export class DefeatModalRenderer {
       };
     }
 
-    let currentY = modalY + CombatConstants.DEFEAT_SCREEN.MODAL_PADDING * 3;
+    // Get title font to calculate spacing (same as renderButtons)
+    const titleFont = FontRegistry.getById(CombatConstants.DEFEAT_SCREEN.TITLE_FONT_ID);
+    const titleHeight = titleFont ? titleFont.charHeight : 15; // Fallback if not loaded
 
-    // Try Again bounds
+    // Same calculation as renderButtons - horizontal layout
+    // 8px (top padding) + titleHeight + 4px (title-to-menu spacing)
+    const buttonY = modalY + 8 + titleHeight + 4;
+
+    // Measure both button texts
     const tryAgainText = CombatConstants.DEFEAT_SCREEN.TRY_AGAIN_TEXT;
+    const skipText = CombatConstants.DEFEAT_SCREEN.SKIP_TEXT;
     const tryAgainWidth = FontAtlasRenderer.measureText(tryAgainText, buttonFont);
-    const tryAgainX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - tryAgainWidth) / 2);
+    const skipWidth = FontAtlasRenderer.measureText(skipText, buttonFont);
+
+    // Calculate total width and starting position
+    const buttonSpacing = 24; // 24px between buttons
+    const totalWidth = tryAgainWidth + buttonSpacing + skipWidth;
+    const startX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - totalWidth) / 2);
+
+    // Try Again bounds (left)
     const tryAgainBounds = {
-      x: tryAgainX,
-      y: currentY,
+      x: startX,
+      y: buttonY,
       width: tryAgainWidth,
       height: buttonFont.charHeight,
     };
 
-    currentY += buttonFont.charHeight + CombatConstants.DEFEAT_SCREEN.BUTTON_SPACING;
-
-    // Skip bounds
-    const skipText = CombatConstants.DEFEAT_SCREEN.SKIP_TEXT;
-    const skipWidth = FontAtlasRenderer.measureText(skipText, buttonFont);
-    const skipX = Math.floor(modalX + (CombatConstants.DEFEAT_SCREEN.MODAL_WIDTH - skipWidth) / 2);
+    // Skip bounds (right, 24px from Try Again)
     const skipBounds = {
-      x: skipX,
-      y: currentY,
+      x: startX + tryAgainWidth + buttonSpacing,
+      y: buttonY,
       width: skipWidth,
       height: buttonFont.charHeight,
     };
