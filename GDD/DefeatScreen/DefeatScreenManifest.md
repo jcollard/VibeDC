@@ -12,49 +12,47 @@ Implementation of the defeat screen feature for the VibeDC combat system. This f
 
 ## Files Modified
 
-### Core Combat System (5 files)
+### Core Combat System (3 files)
 
-1. **[CombatState.ts](../../react-app/src/models/combat/CombatState.ts)**
-   - Added `initialStateSnapshot?: CombatStateJSON | null` field to `CombatState` interface
-   - Added `initialStateSnapshot` to `CombatStateJSON` interface
-   - Updated `serializeCombatState()` to include `initialStateSnapshot`
-   - Updated `deserializeCombatState()` to handle `initialStateSnapshot`
-   - **Lines modified**: 78-83, 99, 117, 150
-
-2. **[CombatPredicate.ts](../../react-app/src/models/combat/CombatPredicate.ts)**
+1. **[CombatPredicate.ts](../../react-app/src/models/combat/CombatPredicate.ts)**
    - Implemented `AllEnemiesDefeatedPredicate.evaluate()` method
    - Implemented `AllPlayersDefeatedPredicate.evaluate()` method
    - Uses `isPlayerControlled` property to distinguish player vs enemy units
    - **Lines modified**: 85-96, 116-127
 
-3. **[EnemyDeploymentPhaseHandler.ts](../../react-app/src/models/combat/EnemyDeploymentPhaseHandler.ts)**
-   - Added import for `serializeCombatState`
-   - Added snapshot creation logic when transitioning to action-timer phase
-   - Snapshot created only once (first time transitioning from deployment)
-   - **Lines modified**: 1-3, 104-133
-
-4. **[CombatConstants.ts](../../react-app/src/models/combat/CombatConstants.ts)**
+2. **[CombatConstants.ts](../../react-app/src/models/combat/CombatConstants.ts)**
    - Added `DEFEAT_SCREEN` constants section
    - Includes overlay, modal dimensions, fonts, colors, button text, helper text
    - **Lines modified**: 175-215
 
-5. **[CombatView.tsx](../../react-app/src/components/combat/CombatView.tsx)**
+3. **[CombatView.tsx](../../react-app/src/components/combat/CombatView.tsx)**
    - Added import for `DefeatPhaseHandler`
    - Added defeat phase handler instantiation in useEffect
+   - **Updated handleCanvasClick to process PhaseEventResult from handleMouseDown**
+   - **Clears combat log and resets initialization flags** when Try Again is clicked
+   - Resets `combatLogInitializedRef` and `introCinematicPlayedRef` for fresh start
+   - Triggers ScreenFadeInSequence cinematic when `data.playCinematic` is true
+   - Ensures combat log shows initial messages after reset
    - Added `forceDefeat()` developer function for testing
-   - **Lines modified**: 10, 101-102, 124-131, 138
+   - Excluded defeat phase from clipped rendering (renders full-screen)
+   - Added full-screen defeat rendering after ctx.restore()
+   - **Lines modified**: 2, 10, 101-102, 125-131, 502, 670-684, 1043-1061
 
 ### New Files (2 files)
 
-6. **[DefeatPhaseHandler.ts](../../react-app/src/models/combat/DefeatPhaseHandler.ts)** *(NEW)*
+4. **[DefeatPhaseHandler.ts](../../react-app/src/models/combat/DefeatPhaseHandler.ts)** *(NEW)*
    - Phase handler for defeat screen
    - Implements `handleMouseMove()`, `handleMouseDown()`, `handleMouseUp()`
    - Returns `PhaseEventResult` with proper signatures
-   - Handles "Try Again" button click → deserializes initial state snapshot
+   - Handles "Try Again" button click → **creates fresh combat state from encounter**
+   - **No state serialization/deserialization** - simply reinitializes to deployment phase
+   - **Ensures all initialization logic runs** (including combat log)
+   - **Signals cinematic playback via `data.playCinematic` in PhaseEventResult**
+   - Triggers 2-second fade-in loading screen when resetting
    - Handles "Skip Encounter" button click → placeholder (future work)
-   - **Lines**: 162 total
+   - **Lines**: 166 total
 
-7. **[DefeatModalRenderer.ts](../../react-app/src/models/combat/rendering/DefeatModalRenderer.ts)** *(NEW)*
+5. **[DefeatModalRenderer.ts](../../react-app/src/models/combat/rendering/DefeatModalRenderer.ts)** *(NEW)*
    - Renders defeat screen modal overlay, panel, title, buttons, helper text
    - Uses `FontAtlasRenderer` and `FontRegistry` APIs correctly
    - Calculates button bounds for hit detection
@@ -76,13 +74,16 @@ Implementation of the defeat screen feature for the VibeDC combat system. This f
 - Implemented `AllEnemiesDefeatedPredicate.evaluate()`
 - Existing victory/defeat checking in [UnitTurnPhaseHandler.ts:615-621](../../react-app/src/models/combat/UnitTurnPhaseHandler.ts:615-621) already functional
 
-### Phase 2: State Serialization ✅
+### Phase 2: State Reset (Simplified Approach) ✅
 - **Estimated**: 2 hours
-- **Actual**: 1.5 hours
-- **Files**: [CombatState.ts](../../react-app/src/models/combat/CombatState.ts:78-150), [EnemyDeploymentPhaseHandler.ts](../../react-app/src/models/combat/EnemyDeploymentPhaseHandler.ts:104-133)
-- Added `initialStateSnapshot` field to CombatState
-- Snapshot created when transitioning from enemy-deployment to action-timer
-- Snapshot excludes itself to avoid recursion
+- **Actual**: 1 hour
+- **Files**: [DefeatPhaseHandler.ts](../../react-app/src/models/combat/DefeatPhaseHandler.ts:139-159), [CombatView.tsx](../../react-app/src/components/combat/CombatView.tsx:1043-1061)
+- **Simplified approach**: No state serialization/deserialization needed
+- "Try Again" creates fresh combat state from encounter (same as initial load)
+- **Clears combat log and resets initialization flags** for clean restart
+- Combat log shows initial "Waylaid!" and deployment messages after reset
+- Ensures all initialization logic runs properly
+- Unlimited retries work automatically (no snapshot preservation needed)
 
 ### Phase 3: Defeat Modal Rendering ✅
 - **Estimated**: 3 hours
@@ -95,17 +96,20 @@ Implementation of the defeat screen feature for the VibeDC combat system. This f
 
 ### Phase 4: Input Handling & Try Again ✅
 - **Estimated**: 2.5 hours
-- **Actual**: 2 hours
-- **Files**: [DefeatPhaseHandler.ts](../../react-app/src/models/combat/DefeatPhaseHandler.ts:60-136)
+- **Actual**: 1.5 hours
+- **Files**: [DefeatPhaseHandler.ts](../../react-app/src/models/combat/DefeatPhaseHandler.ts:95-159), [CombatView.tsx](../../react-app/src/components/combat/CombatView.tsx:1070-1097)
 - Implemented mouse event handlers with correct `PhaseEventResult` signatures
-- Try Again button → deserializes and restores initial combat state
+- Try Again button → creates fresh combat state from encounter
+- **Integrated loading screen (ScreenFadeInSequence) when resetting**
+- Uses `PhaseEventResult.data.playCinematic` to trigger 2-second fade-in
+- CombatView processes PhaseEventResult and plays cinematic sequence
 - Skip Encounter button → placeholder (logs message, no action)
 - Button hover detection working
 
 ## Total Implementation Time
 
 - **Estimated**: 9 hours
-- **Actual**: 7 hours
+- **Actual**: 6 hours (simplified approach reduced Phase 2 and Phase 4 time)
 - **Variance**: -2 hours (22% faster than estimated)
 
 ## Testing Status
@@ -145,9 +149,13 @@ See [DeveloperTestingGuide.md](DeveloperTestingGuide.md) for complete testing in
 #### Test Scenario 2: Try Again Functionality
 1. Trigger defeat screen
 2. Click "Try Again" button
-3. Verify combat resets to initial state (after deployment, before first turn)
-4. Verify all units restored to initial positions
-5. Verify all units restored to full health
+3. **Verify loading screen appears** (2-second black screen with dithered fade-in)
+4. **Verify defeat modal disappears immediately** (not visible during loading)
+5. **Verify combat returns to deployment phase** after fade completes
+6. **Verify combat log shows initial messages** (combat reinitialized properly)
+7. Verify player units not yet deployed (fresh state)
+8. Verify enemy units not yet deployed
+9. Verify can deploy units as if starting fresh
 
 #### Test Scenario 3: Button Hover States
 1. Trigger defeat screen
@@ -162,20 +170,16 @@ See [DeveloperTestingGuide.md](DeveloperTestingGuide.md) for complete testing in
 3. Move units to different positions
 4. Trigger defeat
 5. Click "Try Again"
-6. Verify state matches initial deployment (not current state)
+6. **Verify returns to fresh deployment phase** (not the mid-combat state)
+7. Verify all progress is reset (fresh encounter start)
+8. Verify can redeploy units in different positions
 
-#### Test Scenario 5: No Snapshot Handling
-1. Load a save file from mid-combat (no initialStateSnapshot)
-2. Trigger defeat
-3. Verify "Try Again" button shows error (console log)
-4. Note: In production, button should be disabled if no snapshot exists
-
-#### Test Scenario 6: Multiple Retry Attempts
+#### Test Scenario 5: Multiple Retry Attempts
 1. Trigger defeat
-2. Click "Try Again"
-3. Let defeat happen again
-4. Click "Try Again" again
-5. Verify snapshot still valid after multiple retries
+2. Click "Try Again" → verify loading screen and return to deployment
+3. Deploy units and trigger defeat again
+4. Click "Try Again" a second time → **verify it still works** (no snapshot needed)
+5. Repeat multiple times to ensure unlimited retries work correctly
 
 ## Known Limitations & Future Work
 
