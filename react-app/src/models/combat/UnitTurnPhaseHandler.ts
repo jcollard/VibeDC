@@ -89,9 +89,9 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   // Attack animation state
   private attackAnimations: AttackAnimationSequence[] = []; // Can have multiple (dual wielding)
   private attackAnimationIndex: number = 0; // Which animation is currently playing
-  private canAct: boolean = true; // Whether unit can still perform actions this turn
+  private canAct: boolean = true; // Animation/update gating: false during animations to prevent interruption
 
-  // Action economy tracking (for AI re-evaluation)
+  // Action economy tracking (for AI re-evaluation and menu state)
   private hasActed: boolean = false; // Whether unit has performed an action (attack/ability) this turn
 
   constructor() {
