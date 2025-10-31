@@ -15,6 +15,8 @@ import type { PanelContent, PanelRegion, PanelClickResult } from './managers/pan
 import type { UnitPlacement } from './CombatUnitManifest';
 import { TurnOrderRenderer } from './managers/renderers/TurnOrderRenderer';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { FontRegistry } from '../../utils/FontRegistry';
+import { CombatConstants } from './CombatConstants';
 
 /**
  * Multiplier for action timer fill rate
@@ -179,12 +181,53 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
   /**
    * Render action timer phase UI elements (after units are rendered)
    *
-   * STUB: Currently no UI overlays needed
-   * Future: Action menus, buttons, dialogs
+   * Renders KO text overlays for knocked out units
    */
   renderUI(_state: CombatState, _encounter: CombatEncounter, _context: PhaseRenderContext): void {
-    // Action timer phase doesn't need post-unit UI overlays (yet)
-    // UI panels are rendered by CombatLayoutManager
+    const { ctx, tileSize, offsetX, offsetY, fontAtlasImages } = _context;
+
+    // Render "KO" text overlay for knocked out units
+    const allUnits = _state.unitManifest.getAllUnits();
+    for (const placement of allUnits) {
+      if (placement.unit.isKnockedOut) {
+        const { x, y } = placement.position;
+        const screenX = offsetX + x * tileSize;
+        const screenY = offsetY + y * tileSize;
+
+        // Get KO text configuration
+        const koText = CombatConstants.KNOCKED_OUT.MAP_TEXT;
+        const fontId = CombatConstants.KNOCKED_OUT.MAP_FONT_ID;
+        const koColor = CombatConstants.KNOCKED_OUT.MAP_TEXT_COLOR;
+
+        // Get font for text measurement
+        const fontImage = fontAtlasImages?.get(fontId);
+        if (!fontImage) continue;
+
+        const font = FontRegistry.getById(fontId);
+        if (!font) continue;
+
+        // Measure text width for centering
+        const textWidth = FontAtlasRenderer.measureText(koText, font);
+
+        // Center horizontally and vertically on tile
+        // Round coordinates for pixel-perfect rendering (per GeneralGuidelines.md)
+        const textX = Math.floor(screenX + (tileSize - textWidth) / 2);
+        const textY = Math.floor(screenY + (tileSize - font.charHeight) / 2);
+
+        // Render with shadow for visibility
+        FontAtlasRenderer.renderTextWithShadow(
+          ctx,
+          koText,
+          textX,
+          textY,
+          fontId,
+          fontImage,
+          1,
+          'left',
+          koColor
+        );
+      }
+    }
   }
 
   /**
