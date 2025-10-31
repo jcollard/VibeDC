@@ -3,7 +3,7 @@ import { MovementRangeCalculator } from './MovementRangeCalculator';
 import { CombatMap, TerrainType, parseASCIIMap, type ASCIIMapDefinition } from '../CombatMap';
 import { CombatUnitManifest } from '../CombatUnitManifest';
 import { MonsterUnit } from '../MonsterUnit';
-import type { Position } from '../../../types';
+import { UnitClass } from '../UnitClass';
 
 describe('MovementRangeCalculator', () => {
   let map: CombatMap;
@@ -13,6 +13,12 @@ describe('MovementRangeCalculator', () => {
   let allyUnit: MonsterUnit;
 
   beforeEach(() => {
+    // Clear unit class registry before each test
+    UnitClass.clearRegistry();
+
+    // Create a test unit class
+    const testClass = new UnitClass('Test Class', 'A test class for units');
+
     // Create a simple 7x7 map with a few walls
     const ascii: ASCIIMapDefinition = {
       tileTypes: [
@@ -34,8 +40,9 @@ describe('MovementRangeCalculator', () => {
     // Create units
     playerUnit = new MonsterUnit(
       'Player',
-      'test-player',
+      testClass,
       100, // maxHealth
+      0,   // mana
       50,  // physicalPower
       10,  // magicPower
       15,  // speed
@@ -44,13 +51,15 @@ describe('MovementRangeCalculator', () => {
       5,   // magicEvade
       10,  // courage
       10,  // attunement
+      'test-player',
       true // isPlayerControlled
     );
 
     enemyUnit = new MonsterUnit(
       'Enemy',
-      'test-enemy',
+      testClass,
       100,
+      0,
       50,
       10,
       15,
@@ -59,13 +68,15 @@ describe('MovementRangeCalculator', () => {
       5,
       10,
       10,
+      'test-enemy',
       false // isPlayerControlled
     );
 
     allyUnit = new MonsterUnit(
       'Ally',
-      'test-ally',
+      testClass,
       100,
+      0,
       50,
       10,
       15,
@@ -74,6 +85,7 @@ describe('MovementRangeCalculator', () => {
       5,
       10,
       10,
+      'test-ally',
       true // isPlayerControlled
     );
 
@@ -335,9 +347,10 @@ describe('MovementRangeCalculator', () => {
     });
 
     it('should path through multiple KO\'d units', () => {
-      const koEnemy1 = new MonsterUnit('KO1', 'ko1', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const koEnemy2 = new MonsterUnit('KO2', 'ko2', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const koEnemy3 = new MonsterUnit('KO3', 'ko3', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy1 = new MonsterUnit('KO1', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko1', false);
+      const koEnemy2 = new MonsterUnit('KO2', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko2', false);
+      const koEnemy3 = new MonsterUnit('KO3', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko3', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(koEnemy1, { x: 2, y: 3 });
@@ -367,8 +380,9 @@ describe('MovementRangeCalculator', () => {
     });
 
     it('should differentiate between active and KO\'d enemies', () => {
-      const koEnemy = new MonsterUnit('KO', 'ko', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const activeEnemy = new MonsterUnit('Active', 'active', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy = new MonsterUnit('KO', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko', false);
+      const activeEnemy = new MonsterUnit('Active', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'active', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(koEnemy, { x: 2, y: 3 });
@@ -445,7 +459,8 @@ describe('MovementRangeCalculator', () => {
     });
 
     it('should respect movement cost through KO\'d units', () => {
-      const koEnemy = new MonsterUnit('KO', 'ko', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy = new MonsterUnit('KO', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(koEnemy, { x: 2, y: 3 });
@@ -469,7 +484,8 @@ describe('MovementRangeCalculator', () => {
     });
 
     it('should handle mixed unit types in path', () => {
-      const koEnemy = new MonsterUnit('KO', 'ko', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy = new MonsterUnit('KO', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(allyUnit, { x: 2, y: 3 });   // Friendly
@@ -541,10 +557,11 @@ describe('MovementRangeCalculator', () => {
     });
 
     it('should handle unit surrounded by enemies on orthogonal sides', () => {
-      const e1 = new MonsterUnit('E1', 'e1', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const e2 = new MonsterUnit('E2', 'e2', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const e3 = new MonsterUnit('E3', 'e3', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const e4 = new MonsterUnit('E4', 'e4', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const e1 = new MonsterUnit('E1', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e1', false);
+      const e2 = new MonsterUnit('E2', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e2', false);
+      const e3 = new MonsterUnit('E3', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e3', false);
+      const e4 = new MonsterUnit('E4', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e4', false);
 
       manifest.addUnit(playerUnit, { x: 3, y: 3 });
       manifest.addUnit(e1, { x: 2, y: 3 }); // Left
@@ -566,10 +583,11 @@ describe('MovementRangeCalculator', () => {
     });
 
     it('should handle unit surrounded by KO\'d enemies - can escape', () => {
-      const e1 = new MonsterUnit('E1', 'e1', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const e2 = new MonsterUnit('E2', 'e2', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const e3 = new MonsterUnit('E3', 'e3', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const e4 = new MonsterUnit('E4', 'e4', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const e1 = new MonsterUnit('E1', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e1', false);
+      const e2 = new MonsterUnit('E2', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e2', false);
+      const e3 = new MonsterUnit('E3', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e3', false);
+      const e4 = new MonsterUnit('E4', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'e4', false);
 
       manifest.addUnit(playerUnit, { x: 3, y: 3 });
       manifest.addUnit(e1, { x: 2, y: 3 });

@@ -3,7 +3,7 @@ import { MovementPathfinder } from './MovementPathfinder';
 import { CombatMap, TerrainType, parseASCIIMap, type ASCIIMapDefinition } from '../CombatMap';
 import { CombatUnitManifest } from '../CombatUnitManifest';
 import { MonsterUnit } from '../MonsterUnit';
-import type { Position } from '../../../types';
+import { UnitClass } from '../UnitClass';
 
 describe('MovementPathfinder', () => {
   let map: CombatMap;
@@ -13,6 +13,12 @@ describe('MovementPathfinder', () => {
   let allyUnit: MonsterUnit;
 
   beforeEach(() => {
+    // Clear unit class registry before each test
+    UnitClass.clearRegistry();
+
+    // Create a test unit class
+    const testClass = new UnitClass('Test Class', 'A test class for units');
+
     // Create a simple 7x7 map with a few walls
     const ascii: ASCIIMapDefinition = {
       tileTypes: [
@@ -34,8 +40,9 @@ describe('MovementPathfinder', () => {
     // Create units
     playerUnit = new MonsterUnit(
       'Player',
-      'test-player',
+      testClass,
       100, // maxHealth
+      0,   // mana
       50,  // physicalPower
       10,  // magicPower
       15,  // speed
@@ -44,13 +51,15 @@ describe('MovementPathfinder', () => {
       5,   // magicEvade
       10,  // courage
       10,  // attunement
+      'test-player',
       true // isPlayerControlled
     );
 
     enemyUnit = new MonsterUnit(
       'Enemy',
-      'test-enemy',
+      testClass,
       100,
+      0,
       50,
       10,
       15,
@@ -59,13 +68,15 @@ describe('MovementPathfinder', () => {
       5,
       10,
       10,
+      'test-enemy',
       false // isPlayerControlled
     );
 
     allyUnit = new MonsterUnit(
       'Ally',
-      'test-ally',
+      testClass,
       100,
+      0,
       50,
       10,
       15,
@@ -74,6 +85,7 @@ describe('MovementPathfinder', () => {
       5,
       10,
       10,
+      'test-ally',
       true // isPlayerControlled
     );
 
@@ -359,9 +371,10 @@ describe('MovementPathfinder', () => {
     });
 
     it('should path through multiple KO\'d units', () => {
-      const ko1 = new MonsterUnit('KO1', 'ko1', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const ko2 = new MonsterUnit('KO2', 'ko2', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const ko3 = new MonsterUnit('KO3', 'ko3', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const ko1 = new MonsterUnit('KO1', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko1', false);
+      const ko2 = new MonsterUnit('KO2', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko2', false);
+      const ko3 = new MonsterUnit('KO3', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko3', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(ko1, { x: 2, y: 3 });
@@ -393,8 +406,9 @@ describe('MovementPathfinder', () => {
     });
 
     it('should differentiate between active and KO\'d enemies', () => {
-      const koEnemy = new MonsterUnit('KO', 'ko', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
-      const activeEnemy = new MonsterUnit('Active', 'active', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy = new MonsterUnit('KO', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko', false);
+      const activeEnemy = new MonsterUnit('Active', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'active', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(koEnemy, { x: 2, y: 3 });
@@ -436,7 +450,8 @@ describe('MovementPathfinder', () => {
       };
       const narrowMap = parseASCIIMap(corridorMap);
 
-      const koEnemy = new MonsterUnit('KO', 'ko', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy = new MonsterUnit('KO', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 1 });
       manifest.addUnit(enemyUnit, { x: 2, y: 2 }); // Active enemy blocks main route
@@ -518,7 +533,8 @@ describe('MovementPathfinder', () => {
     });
 
     it('should handle mixed unit types in path', () => {
-      const koEnemy = new MonsterUnit('KO', 'ko', 100, 50, 10, 15, 3, 5, 5, 10, 10, false);
+      const testClass = new UnitClass('Test', 'Test class');
+      const koEnemy = new MonsterUnit('KO', testClass, 100, 0, 50, 10, 15, 3, 5, 5, 10, 10, 'ko', false);
 
       manifest.addUnit(playerUnit, { x: 1, y: 3 });
       manifest.addUnit(allyUnit, { x: 2, y: 3 });   // Friendly
