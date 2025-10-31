@@ -498,7 +498,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     renderer.renderUnits(ctx, combatState.unitManifest, spriteImagesRef.current, offsetX, offsetY);
 
     // Render phase-specific UI overlays (after units so cursors appear on top)
-    if (phaseHandlerRef.current.renderUI) {
+    // Note: Defeat screen is rendered separately after all UI to cover the entire canvas
+    if (phaseHandlerRef.current.renderUI && combatState.phase !== 'defeat') {
       phaseHandlerRef.current.renderUI(combatState, activeEncounter, {
         ctx,
         canvasWidth: CANVAS_WIDTH,
@@ -664,6 +665,22 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
         offsetX,
         offsetY,
         spriteImages: spriteImagesRef.current,
+      });
+    }
+
+    // Render defeat screen overlay (full screen, after all other UI)
+    if (combatState.phase === 'defeat' && phaseHandlerRef.current.renderUI) {
+      phaseHandlerRef.current.renderUI(combatState, activeEncounter, {
+        ctx,
+        canvasWidth: CANVAS_WIDTH,
+        canvasHeight: CANVAS_HEIGHT,
+        tileSize: TILE_SIZE,
+        spriteSize: SPRITE_SIZE,
+        offsetX: 0,
+        offsetY: 0,
+        spriteImages: spriteImagesRef.current,
+        fontAtlasImages: fontLoader.getAll(),
+        combatLog: combatLogManager,
       });
     }
 
