@@ -1,5 +1,6 @@
 import { PhaseBase } from './PhaseBase';
 import type { CombatState } from './CombatState';
+import { serializeCombatState } from './CombatState';
 import type { CombatEncounter, UnitPlacement } from './CombatEncounter';
 import type { PhaseSprites, PhaseRenderContext } from './CombatPhaseHandler';
 import { CombatConstants } from './CombatConstants';
@@ -100,11 +101,33 @@ export class EnemyDeploymentPhaseHandler extends PhaseBase {
         state.unitManifest.addUnit(unit, position);
       }
 
+      // Serialize initial state for "Try Again" functionality
+      // Only do this if initialStateSnapshot is not already set (first time only)
+      let initialSnapshot = state.initialStateSnapshot;
+
+      if (initialSnapshot === null || initialSnapshot === undefined) {
+        try {
+          // Create snapshot before transitioning to action-timer
+          // Ensure the snapshot itself has no initialStateSnapshot (avoid recursion)
+          const stateForSnapshot = {
+            ...state,
+            initialStateSnapshot: null,
+          };
+          initialSnapshot = serializeCombatState(stateForSnapshot);
+          console.log('[EnemyDeploymentPhaseHandler] Initial state snapshot created for Try Again functionality');
+        } catch (error) {
+          console.error('[EnemyDeploymentPhaseHandler] Failed to serialize initial combat state:', error);
+          // Continue without snapshot (Try Again will be disabled)
+          initialSnapshot = null;
+        }
+      }
+
       // Transition to action-timer phase
       const newState = {
         ...state,
         phase: 'action-timer' as const,
         tickCount: 0, // Initialize tick count when first entering action-timer phase
+        initialStateSnapshot: initialSnapshot,
       };
       console.log('[EnemyDeploymentPhaseHandler] Returning new state with phase:', newState.phase);
       return newState;

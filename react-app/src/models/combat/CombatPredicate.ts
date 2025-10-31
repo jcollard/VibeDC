@@ -77,16 +77,22 @@ export class AlwaysFalsePredicate implements CombatPredicate {
 }
 
 /**
- * Evaluates to true when all enemy units are defeated.
- * Implementation will be completed when combat state tracking is implemented.
+ * Evaluates to true when all enemy units are defeated (knocked out).
  */
 export class AllEnemiesDefeatedPredicate implements CombatPredicate {
   description = "All enemies defeated";
 
-  evaluate(_state: CombatState): boolean {
-    // TODO: Implement when CombatState includes unit tracking
-    // return state.enemies.every(enemy => enemy.isDefeated);
-    return false;
+  evaluate(state: CombatState): boolean {
+    const allUnits = state.unitManifest.getAllUnits();
+    const enemyUnits = allUnits.filter(p => !p.unit.isPlayerControlled);
+
+    // If no enemy units exist, victory is achieved (edge case)
+    if (enemyUnits.length === 0) {
+      return true;
+    }
+
+    // Victory if ALL enemy units are KO'd
+    return enemyUnits.every(p => p.unit.isKnockedOut);
   }
 
   toJSON(): CombatPredicateJSON {
@@ -102,16 +108,22 @@ export class AllEnemiesDefeatedPredicate implements CombatPredicate {
 }
 
 /**
- * Evaluates to true when all player units are defeated.
- * Implementation will be completed when combat state tracking is implemented.
+ * Evaluates to true when all player units are defeated (knocked out).
  */
 export class AllPlayersDefeatedPredicate implements CombatPredicate {
   description = "All players defeated";
 
-  evaluate(_state: CombatState): boolean {
-    // TODO: Implement when CombatState includes unit tracking
-    // return state.players.every(player => player.isDefeated);
-    return false;
+  evaluate(state: CombatState): boolean {
+    const allUnits = state.unitManifest.getAllUnits();
+    const playerUnits = allUnits.filter(p => p.unit.isPlayerControlled);
+
+    // If no player units exist, combat is not lost (edge case)
+    if (playerUnits.length === 0) {
+      return false;
+    }
+
+    // Defeat if ALL player units are KO'd
+    return playerUnits.every(p => p.unit.isKnockedOut);
   }
 
   toJSON(): CombatPredicateJSON {

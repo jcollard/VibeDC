@@ -171,4 +171,45 @@ export const CombatConstants = {
     // Revival mechanics (future feature)
     REVIVAL_ENABLED: false as const,        // Not yet implemented
   } as const,
+
+  /**
+   * Constants for defeat screen modal and overlay
+   */
+  DEFEAT_SCREEN: {
+    // Overlay
+    OVERLAY_OPACITY: 0.5 as const,
+    OVERLAY_COLOR: '#000000' as const,
+
+    // Modal dimensions
+    MODAL_WIDTH: 200 as const,
+    MODAL_PADDING: 16 as const,
+    BUTTON_SPACING: 8 as const,
+    HELPER_SPACING: 4 as const,
+
+    // Title
+    TITLE_TEXT: 'Defeat' as const,
+    TITLE_FONT_ID: 'dungeonslant' as const,
+    TITLE_SIZE: 12 as const,
+    TITLE_COLOR: '#ff0000' as const,  // Red
+
+    // Buttons
+    BUTTON_FONT_ID: '7px-04b03' as const,
+    BUTTON_SIZE: 7 as const,
+    BUTTON_COLOR_NORMAL: '#ffffff' as const,
+    BUTTON_COLOR_HOVER: '#ffff00' as const,  // Yellow
+
+    // Helper text
+    HELPER_FONT_ID: '7px-04b03' as const,
+    HELPER_SIZE: 5 as const,
+    HELPER_COLOR: '#aaaaaa' as const,  // Light grey
+
+    // Text content
+    TRY_AGAIN_TEXT: 'Try Again' as const,
+    TRY_AGAIN_HELPER: 'Restart this encounter to try again' as const,
+    SKIP_TEXT: 'Skip Encounter' as const,
+    SKIP_HELPER: 'Skips this encounter and all rewards' as const,
+
+    // Combat log
+    DEFEAT_MESSAGE: 'The enemies have triumphed over you!' as const,
+  } as const,
 } as const;
