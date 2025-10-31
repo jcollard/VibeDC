@@ -1249,7 +1249,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Mark that unit has acted
     this.hasActed = true;
 
-    // Re-enable canAct flag so update() can evaluate next action
+    // Re-enable canAct flag so update() can process further actions (e.g., movement after attack)
     // (It was set to false at start of attack to prevent menu interaction during animation)
     this.canAct = true;
 
@@ -1269,20 +1269,20 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       );
 
       // Strategy will be re-evaluated in next update() cycle
-      // canAct is now true, so update() will call strategy.update()
       return state;
     }
 
     // For player units, stay in unit-turn phase (don't auto-advance)
-    // canAct already re-enabled above
+    // Player can still move after attacking (if they haven't moved yet)
     return state;
   }
 
   /**
-   * Get whether the unit can still act this turn
+   * Get whether the unit can still act this turn (for menu display)
+   * Returns true if the unit has NOT yet performed an action (attack/ability)
    */
   getCanAct(): boolean {
-    return this.canAct;
+    return !this.hasActed;
   }
 
   /**
