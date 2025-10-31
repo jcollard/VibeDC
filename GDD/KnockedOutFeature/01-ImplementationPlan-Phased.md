@@ -318,6 +318,8 @@ for (const placement of allUnits) {
 - ✅ No per-frame allocations
 - ✅ Uses existing SpriteRenderer
 
+**Note:** Verify that `CombatRenderer` constructor sets `this.ctx.imageSmoothingEnabled = false` globally. If not already set, add this to the constructor per GeneralGuidelines.md lines 86-89.
+
 ### Testing Phase 3
 
 **Manual Test:**
@@ -394,6 +396,7 @@ Render "KO" text centered on KO'd unit tiles on the battle map.
         const textWidth = FontAtlasRenderer.measureTextWidth(koText, font);
 
         // Center horizontally and vertically on tile
+        // Round coordinates for pixel-perfect rendering (per GeneralGuidelines.md)
         const textX = Math.floor(screenX + (tileSize - textWidth) / 2);
         const textY = Math.floor(screenY + (tileSize - font.glyphHeight) / 2);
 
@@ -454,6 +457,8 @@ Render "KO" text centered on KO'd unit tiles on the battle map.
 - KO'd unit at edge of map (text still visible)
 - Multiple KO'd units (all show "KO" text)
 - Font not loaded (gracefully skips)
+
+**Font Pre-loading:** Verify that the font `15px-dungeonslant` is pre-loaded during CombatView initialization. If the font is not loaded, KO text will fail silently (graceful degradation).
 
 **Rollback:** Revert UnitTurnPhaseHandler.ts if visual issues arise.
 
@@ -527,6 +532,12 @@ Update TurnOrderRenderer to show KO'd units at the end with grey tint and "KO" l
 ```typescript
   // Sort units: active first, KO'd at end
   const sortedUnits = this.getSortedUnits();
+
+  // Clamp scroll offset to valid range after sorting
+  // (per GeneralGuidelines.md State Preservation Pattern)
+  const maxVisibleUnits = /* existing calculation */;
+  const maxOffset = Math.max(0, sortedUnits.length - maxVisibleUnits);
+  this.scrollOffset = Math.min(this.scrollOffset, maxOffset);
 
   // Get visible range based on scroll offset
   const visibleStartIndex = this.scrollOffset;
@@ -656,7 +667,7 @@ for (let i = 0; i < visibleUnits.length; i++) {
    ```javascript
    const units = window.combatState.unitManifest.getAllUnits();
    units[0].unit.wounds = units[0].unit.maxHealth;
-   units[1].unit.wounds = units[1].unit.maxHeight;
+   units[1].unit.wounds = units[1].unit.maxHealth;
    ```
 3. Observe turn order display
 
@@ -673,6 +684,7 @@ for (let i = 0; i < visibleUnits.length; i++) {
 - All units KO'd (only KO'd units in list)
 - 8+ units with mix of active and KO'd (scrolling)
 - Unit becomes KO'd while visible in turn order (updates correctly)
+- **Scroll Preservation:** Unit becomes KO'd while scrolled down in turn order - verify scroll position is clamped appropriately (doesn't jump to invalid position)
 
 **Performance:**
 - Sorting ~10-20 units per frame is negligible
@@ -845,6 +857,7 @@ const turnOrder = [...activeUnits, ...koUnits];
 - Unit becomes KO'd mid-tick animation (timer stops)
 - All enemies KO'd (victory should trigger - separate system)
 - All allies KO'd (defeat should trigger - separate system)
+- **Animation State Edge Case:** Unit becomes KO'd mid-tick animation (e.g., via console or cinematic). Expected: Animation completes, but final timer value is 0 (not the animated value).
 
 **Performance:**
 - No performance impact (just additional conditionals)
@@ -908,6 +921,8 @@ if (!occupant) {
 - KO'd units allow pathfinding THROUGH but not END on
 - Separates "can traverse" from "can end movement"
 - Preserves team-based pathfinding logic (friendlies allow through)
+
+**Important:** The actual implementation may vary based on existing BFS structure. The existing code might use a visited set, different queue structure, etc. **Key principle to preserve:** Allow traversal through KO'd units, disallow ending on KO'd tiles. Adapt pseudocode to match the existing algorithm structure.
 
 **Note:** If existing code has separate "can traverse" and "can end" logic, adapt accordingly. The key is:
 - **Traversal:** Allow through KO'd units
@@ -1089,17 +1104,18 @@ const enemyUnits = allPlacements
 const allPlacements = state.unitManifest.getAllUnits();
 
 // Separate allied and enemy units (exclude KO'd)
+// Check KO status first for faster rejection (boolean check is fastest)
 const alliedUnits = allPlacements
   .filter(p =>
+    !p.unit.isKnockedOut &&  // Exclude KO'd allies (check first)
     p.unit !== self &&
-    !p.unit.isKnockedOut &&  // Exclude KO'd allies
     p.unit.isPlayerControlled === self.isPlayerControlled
   )
   .map(/* ... */);
 
 const enemyUnits = allPlacements
   .filter(p =>
-    !p.unit.isKnockedOut &&  // Exclude KO'd enemies
+    !p.unit.isKnockedOut &&  // Exclude KO'd enemies (check first)
     p.unit.isPlayerControlled !== self.isPlayerControlled
   )
   .map(/* ... */);
@@ -1288,6 +1304,19 @@ if (typeof window !== 'undefined') {
       units[index].unit.wounds = 0;
       console.log(`Revived ${units[index].unit.name}`);
     }
+  };
+
+  // Performance measurement utility
+  window.measureKOPerformance = () => {
+    console.log('Measuring KO feature performance...');
+    const start = performance.now();
+    for (let i = 0; i < 1000; i++) {
+      // Trigger a render frame (implementation depends on CombatView structure)
+      // This may need to call the appropriate render method
+    }
+    const elapsed = performance.now() - start;
+    console.log(`1000 frames: ${elapsed.toFixed(2)}ms (avg ${(elapsed/1000).toFixed(3)}ms/frame)`);
+    console.log(`Target: <16.67ms/frame for 60 FPS`);
   };
 }
 ```
