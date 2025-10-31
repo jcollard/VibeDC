@@ -188,6 +188,21 @@ console.log(unit.isKnockedOut);  // Should be false
 - **70% brightness, 0% saturation:** Clear grey tint while preserving recognizability
 - **"KO" text:** Short, universally understood in gaming contexts
 
+**Font Pre-loading Verification:**
+The constant `MAP_FONT_ID: '7px-04b03'` assumes this font is already loaded in your font registry. Before proceeding:
+
+1. Check your font initialization code (likely in `CombatView` or asset loading)
+2. Verify `7px-04b03` is in the font preload list
+3. If using `FontAtlasLoader` or similar, ensure it includes this font ID
+4. The font file should be at a path like `assets/fonts/7px-04b03.png`
+
+**Common Locations to Check:**
+- `models/combat/CombatView.ts` - asset loading section
+- `loaders/FontAtlasLoader.ts` - font registration
+- `assets/fonts/` - verify the font file exists
+
+If the font is not loaded, the "KO" text will fail silently (graceful degradation). The grey tint will still work, but you won't see the text overlay.
+
 **Verification:**
 ```bash
 npm run build
@@ -198,6 +213,9 @@ npm run build
 console.log(CombatConstants.KNOCKED_OUT.MAP_TEXT);          // "KO"
 console.log(CombatConstants.KNOCKED_OUT.MAP_TEXT_COLOR);    // "#ff0000"
 console.log(CombatConstants.KNOCKED_OUT.TINT_FILTER);       // "saturate(0%) brightness(70%)"
+
+// Verify font is loaded
+console.log(FontRegistry.getFont('7px-04b03'));  // Should not be null/undefined
 ```
 
 ---
@@ -265,6 +283,11 @@ for (const placement of allUnits) {
 - ✅ Always resets filter after use
 - ✅ No per-frame allocations
 - ✅ Uses existing SpriteRenderer
+
+**Important Note on Canvas Filter API:**
+This implementation uses the simple Canvas Filter API (`ctx.filter`) for saturation/brightness adjustments, which is hardware-accelerated and appropriate for this use case. This is **different** from the "Color Tinting with Off-Screen Canvas" pattern described in GeneralGuidelines.md lines 105-198.
+
+The off-screen buffer pattern is only needed for complex composite operations (multiply, destination-in, etc.). For simple filter operations like desaturation and brightness, the Canvas Filter API is the recommended approach per GeneralGuidelines.md.
 
 **Additional Check:**
 Verify that the `CombatRenderer` constructor sets:
@@ -364,15 +387,40 @@ npm run build
 - ✅ Renders in renderUI() for correct Z-order
 - ✅ No per-frame allocations (just stack variables)
 
-**Common Variables to Check:**
-The code assumes these variables exist in the `renderUI()` context:
-- `mapOffsetX` - X offset of the map rendering
-- `mapOffsetY` - Y offset of the map rendering
-- `tileSize` - Size of each tile
-- `context` - Combat context with assets
-- `state` - Combat state with unit manifest
+**Common Variables Reference:**
 
-If your code uses different variable names, adjust accordingly.
+The code above assumes these variables exist in the `renderUI()` method context. If your variable names differ, adjust the code accordingly:
+
+| Variable | Type | Purpose | How to Find |
+|----------|------|---------|-------------|
+| `mapOffsetX` | `number` | X offset of map rendering area | Check `renderUI()` signature or early in method |
+| `mapOffsetY` | `number` | Y offset of map rendering area | Check `renderUI()` signature or early in method |
+| `tileSize` | `number` | Size of each tile in pixels | Usually from `this.tileSize` or passed parameter |
+| `context` | `PhaseRenderContext` | Combat context with assets | First parameter of `renderUI()` |
+| `state` | `CombatState` | Combat state with unit manifest | From `context.state` or passed parameter |
+
+**How to Verify Variable Names:**
+
+1. Open `react-app/src/models/combat/phases/UnitTurnPhaseHandler.ts`
+2. Find the `renderUI()` method signature
+3. Check what parameters are available
+4. Look at early lines in `renderUI()` for local variable declarations
+
+**Common Alternative Names:**
+- `mapOffsetX/Y` might be `offsetX/Y` or `mapX/mapY`
+- `tileSize` might be `TILE_SIZE` or from `CombatConstants.TILE_SIZE`
+- `context` might be `ctx` or `phaseContext`
+- `state` might be accessed via `this.state` or `context.combatState`
+
+**Example Check:**
+```typescript
+// Look for method signature like:
+renderUI(context: PhaseRenderContext): void {
+  const { state } = context;
+  const tileSize = CombatConstants.TILE_SIZE;
+  // ... find mapOffsetX and mapOffsetY
+}
+```
 
 **Verification:**
 ```bash
