@@ -1,8 +1,8 @@
 # Combat System Hierarchy
 
-**Version:** 2.0
-**Last Updated:** Thu, Oct 30, 2025 9:21:11 PM (Enemy AI Phase 2 complete - action economy, attack behaviors, documentation) <!-- Update using `date` command -->
-**Related:** [GeneralGuidelines.md](GeneralGuidelines.md)
+**Version:** 2.1
+**Last Updated:** Fri, Oct 31, 2025 (Knocked Out (KO) feature complete - 4 phases, visual representation, turn order, movement, targeting/AI) <!-- Update using `date` command -->
+**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md)
 
 ## Purpose
 
@@ -192,7 +192,7 @@ react-app/src/
 #### `CombatUnit.ts`
 **Purpose:** Interface for combat-ready characters (stats, abilities, classes)
 **Exports:** `CombatUnit` interface
-**Key Properties:** name, health, mana, speed, actionTimer, spriteId, abilities, isPlayerControlled
+**Key Properties:** name, health, mana, speed, actionTimer, spriteId, abilities, isPlayerControlled, **isKnockedOut**
 **Action Timer System:**
 - actionTimer: Current AT value (0-100+), increases by speed * deltaTime * multiplier
 - Starts at 0 at combat start
@@ -204,6 +204,18 @@ react-app/src/
 - Set to false for enemy units
 - Used for team identification in pathfinding and AI
 - Serialized/deserialized with unit data
+**Knocked Out (KO) System:**
+- isKnockedOut: boolean getter - returns `true` when `wounds >= maxHealth`
+- Derived state (not serialized) - always reflects current wounds/maxHealth
+- KO'd units display with grey tint (`saturate(0%) brightness(70%)`) on map and in turn order
+- KO'd units show red "KO" text overlay on their tile and in turn order
+- KO'd units don't accumulate action timer (stay at 0)
+- KO'd units never get turns (filtered from ready unit selection)
+- KO'd units allow traversal but not as movement destinations
+- KO'd units cannot be targeted for attacks
+- KO'd units don't block line of sight (they're "lying down")
+- KO'd units invisible to AI decision-making (filtered from AIContext)
+- See [KOFeatureOverview.md](../GDD/KnockedOutFeature/KOFeatureOverview.md) for full details
 **Implementations:** HumanoidUnit, MonsterUnit
 **Used By:** All unit-related components, rendering, combat logic
 
@@ -219,7 +231,7 @@ react-app/src/
 #### `CombatConstants.ts`
 **Purpose:** Centralized configuration (canvas size, colors, text, animations)
 **Exports:** `CombatConstants` object
-**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN, FONTS
+**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN, FONTS, **KNOCKED_OUT**, AI
 **FONTS Section:**
 - `TITLE_FONT_ID: '15px-dungeonslant'` - Large font for titles and headers
 - `UI_FONT_ID: '7px-04b03'` - Small font for UI panels, combat log, turn order, etc.
@@ -246,13 +258,23 @@ react-app/src/
   - `ATTACK_TARGET_SELECTED_COLOR = '#00ff00'` (green, selected target)
 - Ready message colors (player green, enemy red)
 - Player/enemy name colors for combat log
+**KNOCKED_OUT Section:** (Added in v2.1)
+- `MAP_TEXT: 'KO'` - Text overlay on knocked out units' tiles
+- `MAP_TEXT_COLOR: '#ff0000'` - Red color for map text
+- `MAP_FONT_ID: '7px-04b03'` - Font for map text overlay
+- `TURN_ORDER_TEXT: 'KO'` - Label in turn order for KO'd units
+- `TURN_ORDER_COLOR: '#ff0000'` - Red color for turn order label
+- `TURN_ORDER_FONT_ID: '7px-04b03'` - Font for turn order label
+- `TINT_FILTER: 'saturate(0%) brightness(70%)'` - Grey tint for KO'd unit sprites
+- `REVIVAL_ENABLED: false` - Future feature flag (not yet implemented)
+- See CombatUnit.ts `isKnockedOut` getter for behavior details
 **AI Section (Phase 2):**
 - `THINKING_DURATION = 1.0` - AI thinking delay in seconds (visual feedback)
 - `DEBUG_LOGGING = true` - Toggle AI debug console logs (set false for production)
 - `UNARMED_ATTACK_RANGE = 1` - Attack range for units without weapons (melee)
 - `UNARMED_ATTACK_MODIFIER = 0` - Damage modifier for unarmed attacks (no bonus)
 - `UNARMED_ATTACK_MULTIPLIER = 1.0` - Damage multiplier for unarmed attacks (no scaling)
-**Used By:** All combat files for consistent values, AI system for behavior configuration
+**Used By:** All combat files for consistent values, AI system for behavior configuration, KO system for visual rendering
 
 #### `CombatUIState.ts`
 **Purpose:** UI state management (hovered cell, selected unit, cursor)
@@ -339,9 +361,11 @@ react-app/src/
 **Tick Simulation:**
 - Creates TickSnapshot[] array with timer values and turn order for each tick
 - Increments all timers by discrete amounts each tick
-- Stops when any unit reaches >= 100
+- **KO'd units skipped** - their timers forced to 0 (don't accumulate)
+- Stops when any **active** unit reaches >= 100
 - No fractional ticks - units may exceed 100 by different amounts
 - Stores complete turn order at each tick for position change detection
+- Turn order sorting places KO'd units at end (active first by time-to-ready, then KO'd)
 **Animation Pattern:**
 - Uses WeakMap<CombatUnit, number> for per-unit timer tracking
 - Avoids duplicate name issues (multiple "Goblin" units work correctly)
@@ -371,7 +395,7 @@ react-app/src/
 - Delegates input handling, target selection, and action decisions to strategy
 - Keeps single 'unit-turn' phase for both player and enemy turns
 **Current Functionality:**
-- Identifies ready unit (first in turn order with AT >= 100)
+- Identifies ready unit (first in turn order with AT >= 100, **filters out KO'd units**)
 - Displays colored ready message: "[Unit Name] is ready!" (green for players, red for enemies)
 - Auto-selects active unit on turn start (via strategy pattern)
 - Shows gradient cursor on active unit (6-phase cycle: black→gray→white→gray→black, 1.0s cycle)
@@ -384,6 +408,7 @@ react-app/src/
 - **Executes Attack action with hit/miss rolls, damage, and animation**
 - Executes Delay and End Turn actions from action menu
 - Transitions back to action-timer phase with slide animation
+- **Renders red "KO" text overlay on knocked out units' tiles** (in renderUI after all other rendering)
 **UI Panels:**
 - Top panel: Shows unit name as title (green for players, red for enemies)
 - Bottom panel (dynamic): Shows "ACTIONS" menu OR "ATTACK" menu depending on activeAction
@@ -442,8 +467,9 @@ react-app/src/
 - attackAnimations: AttackAnimationSequence[] (active attack animations, 1-2 for dual wield)
 - attackAnimationIndex: number (current animation index for dual wielding)
 **Turn Order Logic:**
-- Calculates timeToReady = (100 - actionTimer) / speed for each unit
+- Calculates timeToReady = (100 - actionTimer) / speed for each **active** unit
 - Sorts ascending (soonest first), then alphabetically by name
+- **KO'd units placed at end** (active units first, then KO'd)
 - Uses same calculation as ActionTimerPhaseHandler for consistency
 **Caching Strategy:**
 - Caches TurnOrderRenderer instance to preserve scroll state
@@ -523,6 +549,11 @@ react-app/src/
 - Calculates attack range on `enterAttackMode()` based on weapon range
 - Recalculates if unit position changes (e.g., after movement)
 - Cache cleared on `exitAttackMode()`
+**KO Integration (v2.1):**
+- **Defensive checks** in `handleAttackClick()` and `updateHoveredAttackTarget()`
+- Prevents targeting KO'd units even if they slip through AttackRangeCalculator
+- Console warning logged if KO'd unit targeted (shouldn't happen, defensive)
+- AttackRangeCalculator already filters KO'd from validTargets (primary protection)
 **Bug Fixes (v2.0):**
 - `enterMoveMode()`: Re-selects active unit and recalculates range from current position
   - Prevents movement range showing for wrong unit when different unit was previously selected
@@ -613,10 +644,17 @@ react-app/src/
 **Key Methods:** `AIContextBuilder.build(unit, position, state, hasMoved?, hasActed?)` - creates immutable context
 **Context Contents:**
 - `self`, `selfPosition` - The unit making the decision
-- `alliedUnits`, `enemyUnits` - Partitioned units (excludes self)
+- `alliedUnits`, `enemyUnits` - Partitioned units (excludes self, **excludes KO'd** - v2.1)
 - `map`, `manifest` - Map data and unit positions
 - `movementRange` - Pre-calculated reachable tiles
 - `attackRange` - Pre-calculated attack range (range 1 if unarmed, see Phase 2)
+**CRITICAL KO Integration (v2.1):**
+- **KO'd units filtered during build()** - single `if (unit.isKnockedOut) continue;` check
+- **This ONE change automatically fixes ALL 7+ AI behaviors**
+- KO'd units invisible to AI - never in `alliedUnits` or `enemyUnits` arrays
+- All helper methods (getUnitsInRange, etc.) operate on pre-filtered arrays
+- AI never targets, paths toward, or considers KO'd units in decisions
+- Clean separation: AIContext filters, behaviors consume filtered data
 **Action Economy State (Phase 2):**
 - `hasMoved: boolean` - Has the unit moved this turn?
 - `hasActed: boolean` - Has the unit acted (attacked/ability) this turn?
@@ -751,7 +789,12 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Purpose:** Core rendering for map tiles and units
 **Exports:** `CombatRenderer`
 **Key Methods:** clearCanvas(), renderMap(), renderUnits(), renderDebugGrid()
-**Dependencies:** SpriteRenderer, FontAtlasRenderer, CombatMap, CombatUnitManifest
+**renderUnits() Special Handling:**
+- **Applies grey tint to KO'd units** before rendering sprite (saturate(0%) brightness(70%))
+- Uses Canvas Filter API: `ctx.filter = CombatConstants.KNOCKED_OUT.TINT_FILTER`
+- Always resets filter after rendering: `ctx.filter = 'none'`
+- Hardware-accelerated, no performance impact
+**Dependencies:** SpriteRenderer, FontAtlasRenderer, CombatMap, CombatUnitManifest, CombatConstants
 **Used By:** CombatView render loop
 
 #### `rendering/CombatMapRenderer.ts`
@@ -828,7 +871,7 @@ DEFAULT_ENEMY_BEHAVIORS = [
 #### `managers/renderers/TurnOrderRenderer.ts`
 **Purpose:** Renders turn order with unit sprites, ticks-until-ready values, tick counter, title, scrolling support, and slide animations
 **Exports:** `TurnOrderRenderer`
-**Key Methods:** render(), handleClick(), handleMouseDown(), handleMouseUp(), handleMouseLeave(), setUnits(), updateUnits(), setClickHandler(), startSlideAnimation(), updateSlideAnimation(), getUnits()
+**Key Methods:** render(), handleClick(), handleMouseDown(), handleMouseUp(), handleMouseLeave(), setUnits(), updateUnits(), setClickHandler(), startSlideAnimation(), updateSlideAnimation(), getUnits(), **getSortedUnits()**
 **Constructor Overload:**
 - `(units, onUnitClick?)` - legacy signature with click handler
 - `(units, tickCount, onUnitClick?)` - new signature with tick counter
@@ -839,7 +882,9 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Tick counter displayed below clock sprite in white
 - Units centered horizontally and aligned to bottom of panel
 - Unit sprites with 12px spacing between them
+- **KO'd units render with grey tint** (saturate(0%) brightness(70%))
 - Ticks-until-ready displayed below each sprite in white (formula: `Math.ceil((100 - actionTimer) / speed)`)
+- **Red "KO" label** displayed for knocked out units instead of ticks-until-ready
 - Supports dual font rendering (15px-dungeonslant and 7px-04b03)
 - Clickable unit portraits for selection
 **Slide Animation Features:**
@@ -855,6 +900,12 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - targetPositions: WeakMap of unit → target X coordinate
 - animatingUnits: Array of all units participating in animation
 - pendingSlideNewOrder: Deferred animation when region not yet cached
+**Unit Sorting (getSortedUnits helper):**
+- **Active units first** - sorted by ticks-until-ready (ascending), then alphabetically
+- **KO'd units at end** - unsorted (order doesn't matter when KO'd)
+- Partitions units into active and KO'd arrays, sorts active, concatenates
+- Called automatically during render() and event handling for consistent ordering
+- Ensures KO'd units always appear at the end of turn order display
 **Scrolling Features:**
 - Displays up to 8 units at once with horizontal scrolling for 8+ units
 - Scroll arrows (minimap-6, minimap-8) stacked vertically on right side
@@ -866,6 +917,7 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Scroll state preserved across animation updates via updateUnits()
 - Scroll state reset when setUnits() called (explicit context change)
 - Scroll resets to 0 when slide animation starts (shows first 8 units)
+- Scroll calculations use sorted unit list (includes KO'd at end)
 **Clipping:**
 - Canvas clipping with extended height (region.height + 7px)
 - Allows ticks-until-ready text to render 7px below panel without being cut off
@@ -958,7 +1010,7 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Helper text color: #888888 (HELPER_TEXT constant from colors.ts)
 - Clears hover state when mouse exits panel bounds
 **Stat Helper Text:**
-- HP: "If HP is reduced to 0 the unit is knocked out"
+- HP: "If wounds >= max health the unit is knocked out" (v2.1 - updated for KO system)
 - MP: "Unit's mana, required for magic based abilities"
 - P.Pow: "Physical Power is used to calculate physical damage"
 - P.Evd: "Evasion rate vs. Physical Attacks"
@@ -1363,9 +1415,14 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Pathfinding Rules:**
 - Checks terrain walkability via CombatMap.isWalkable()
 - Can path THROUGH friendly units (same isPlayerControlled value)
-- Cannot END movement on occupied tiles (any unit)
-- Cannot path through enemy units
-**Performance:** O(tiles × movement range) - negligible for 32×18 maps
+- **Can path THROUGH KO'd units** (any team) - added in v2.1
+- Cannot END movement on occupied tiles (any unit, including KO'd)
+- Cannot path through **active** enemy units
+**KO Integration:**
+- Uses `canPathThrough` logic: `isFriendly(unit) || unit.isKnockedOut`
+- KO'd units don't block movement traversal but can't be destinations
+- Extends movement range through and beyond KO'd units
+**Performance:** O(tiles × movement range) - negligible for 32×18 maps, KO check adds <0.1% overhead
 **Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
 **Used By:** UnitTurnPhaseHandler for movement range display
 
@@ -1377,10 +1434,15 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Pathfinding Rules:**
 - Checks terrain walkability via CombatMap.isWalkable()
 - Can path THROUGH friendly units (same isPlayerControlled value)
-- Cannot END movement on occupied tiles (any unit)
-- Cannot path through enemy units
+- **Can path THROUGH KO'd units** (any team) - added in v2.1
+- Cannot END movement on occupied tiles (any unit, including KO'd)
+- Cannot path through **active** enemy units
 - Returns path excluding start, including destination
-**Performance:** O(tiles × movement) - negligible for 32×18 maps
+**KO Integration:**
+- Uses identical `canPathThrough` logic as MovementRangeCalculator: `isFriendly(unit) || unit.isKnockedOut`
+- Paths can go through KO'd units to reach tiles beyond them
+- Consistent behavior ensures range and pathfinding match
+**Performance:** O(tiles × movement) - negligible for 32×18 maps, KO check adds <0.1% overhead
 **Dependencies:** Position, CombatMap, CombatUnitManifest, CombatUnit
 **Used By:** UnitTurnPhaseHandler for movement animation, PlayerTurnStrategy for path preview
 
@@ -1398,12 +1460,17 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Return Value (AttackRangeTiles):**
 - `inRange`: All tiles within weapon range (orthogonal distance)
 - `blocked`: Tiles blocked by walls or no line of sight
-- `validTargets`: Tiles with valid enemy targets (in range + clear LoS)
+- `validTargets`: Tiles with valid enemy targets (in range + clear LoS, **excludes KO'd units** - v2.1)
 **Line of Sight Rules:**
-- Units block line of sight (both friendly and enemy)
+- **Active units** block line of sight (both friendly and enemy)
+- **KO'd units DON'T block** line of sight (they're "lying down") - added in v2.1
 - Non-walkable terrain (walls) blocks line of sight
 - Uses Bresenham's algorithm for ray casting
-**Performance:** O(range² × tile check) - negligible for typical weapon ranges
+**KO Integration:**
+- `validTargets` filters out KO'd units: `if (unit && !unit.isKnockedOut)`
+- KO'd units not highlighted as valid attack targets
+- Cannot click KO'd units to attack them
+**Performance:** O(range² × tile check) - negligible for typical weapon ranges, KO check adds <0.1% overhead
 **Dependencies:** Position, CombatMap, CombatUnitManifest, LineOfSightCalculator
 **Used By:** PlayerTurnStrategy for attack range display
 
@@ -1415,8 +1482,13 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Line of Sight Rules:**
 - Traces line from source to target using Bresenham
 - Checks each intermediate tile (excludes start and end)
-- Blocked by: Non-walkable terrain (walls), Any units (friendly or enemy)
+- Blocked by: Non-walkable terrain (walls), **Active units** (friendly or enemy)
+- **KO'd units DON'T block** line of sight (they're "lying down") - added in v2.1
 - Returns true if path is clear, false if blocked
+**KO Integration:**
+- Check: `if (unitAtPosition && !unitAtPosition.isKnockedOut)` before blocking LoS
+- Allows shooting through/over KO'd units to reach active enemies beyond
+- Thematically consistent with KO'd units being "lying down"
 **Implementation Details:**
 - `getLinePositions()`: Returns all positions along line (includes start/end)
 - `hasLineOfSight()`: Checks intermediate positions for obstacles
