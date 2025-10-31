@@ -421,51 +421,24 @@ export class AIContextBuilder {
         return Math.abs(from.x - to.x) + Math.abs(from.y - to.y);
       },
 
-      // Helper: Calculate pathfinding distance
+      // Helper: Calculate pathfinding distance using BFS
       getPathDistance(from: Position, to: Position): number {
         // Same position = 0 distance
         if (from.x === to.x && from.y === to.y) {
           return 0;
         }
 
-        // Special handling: if 'from' is not the unit's current position,
-        // we need to check if the unit's current position blocks the path
-        const selfPos = state.unitManifest.getUnitPosition(self);
-        const selfBlocksPath = selfPos &&
-          !(selfPos.x === from.x && selfPos.y === from.y) &&
-          !(selfPos.x === to.x && selfPos.y === to.y);
-
-        // If calculating from a hypothetical position, temporarily remove self from manifest
-        if (selfBlocksPath && selfPos) {
-          // Remove self temporarily
-          state.unitManifest.removeUnit(self);
-
-          // Calculate path
-          const path = MovementPathfinder.calculatePath({
-            start: from,
-            end: to,
-            maxRange: 9999,
-            map: state.map,
-            unitManifest: state.unitManifest,
-            activeUnit: self,
-          });
-
-          // Restore self to manifest
-          state.unitManifest.addUnit(self, selfPos);
-
-          return path.length === 0 ? Infinity : path.length;
-        }
-
-        // Normal path calculation (from current position or self not blocking)
+        // Calculate path using BFS (ignores all units, only considers walls)
         const path = MovementPathfinder.calculatePath({
           start: from,
           end: to,
-          maxRange: 9999,
+          maxRange: 9999, // Effectively unlimited for distance calculation
           map: state.map,
           unitManifest: state.unitManifest,
           activeUnit: self,
         });
 
+        // Return path length or Infinity if no path exists
         return path.length === 0 ? Infinity : path.length;
       },
     };

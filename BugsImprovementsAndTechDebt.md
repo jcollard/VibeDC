@@ -2,8 +2,9 @@ Known Bugs
 
 - Sometimes during sliding animation, the last frame shows the original order -- attempted but could not fix
 - The map area is offset slightly which cuts off 2 px at the bottom. Should shift it up 2px. It looks like the top panel may be a few pixels too tall.
-- Enemies use bad distance calculation for determining move, they should use BFS because walls will block them.
 - Attack/Move options do not disable immediately (can be clicked during animation) and can be clicked and used
+- When animating a move, units will move through enemy tiles (positions are calculated properly, just not the path to get there)
+- Turn order renders improperly sometimes when multiple units are at 0
 
 Missing Features
  - Enemy AI
