@@ -11,7 +11,6 @@ import type {
 } from "./CombatPredicate";
 import { CombatPredicateFactory } from "./CombatPredicate";
 import type { VictoryRewards } from "./VictoryRewards";
-import { createDefaultRewards } from "./VictoryRewards";
 
 /**
  * Represents an enemy placement on the combat map.
@@ -70,9 +69,36 @@ export class CombatEncounter {
     this.playerDeploymentZones = playerDeploymentZones;
     this.enemyPlacements = enemyPlacements;
     this.tilesetId = tilesetId;
-    this.rewards = rewards ?? createDefaultRewards();
+
+    // Calculate rewards from enemies if not explicitly provided
+    this.rewards = rewards ?? this.calculateRewardsFromEnemies();
 
     CombatEncounter.registry.set(id, this);
+  }
+
+  /**
+   * Calculates total XP and Gold rewards from all enemies in this encounter.
+   * Returns a VictoryRewards object with the summed values.
+   */
+  private calculateRewardsFromEnemies(): VictoryRewards {
+    let totalXp = 0;
+    let totalGold = 0;
+
+    for (const placement of this.enemyPlacements) {
+      const enemyDef = EnemyRegistry.getById(placement.enemyId);
+      if (enemyDef) {
+        totalXp += enemyDef.xpValue;
+        totalGold += enemyDef.goldValue;
+      } else {
+        console.warn(`Enemy definition not found for '${placement.enemyId}' in encounter '${this.id}'`);
+      }
+    }
+
+    return {
+      xp: totalXp,
+      gold: totalGold,
+      items: [], // Items can be added manually via rewards parameter
+    };
   }
 
   /**

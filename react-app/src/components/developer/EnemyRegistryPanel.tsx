@@ -309,6 +309,8 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
       spriteId: 'monsters-0',
       tags: [],
       description: '',
+      xpValue: 10,
+      goldValue: 5,
     };
 
     // Register the new enemy

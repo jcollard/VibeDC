@@ -82,6 +82,16 @@ export interface EnemyDefinition {
    * Optional description
    */
   description?: string;
+
+  /**
+   * XP value awarded when this enemy is defeated
+   */
+  xpValue: number;
+
+  /**
+   * Gold value awarded when this enemy is defeated
+   */
+  goldValue: number;
 }
 
 /**
@@ -115,6 +125,8 @@ export interface EnemyDefinitionJSON {
   accessoryId?: string;
   tags?: string[];
   description?: string;
+  xpValue: number;
+  goldValue: number;
 }
 
 /**

@@ -122,6 +122,8 @@ describe('CombatEncounter', () => {
         baseCourage: 2,
         baseAttunement: 1,
         spriteId: 'goblin-sprite',
+        xpValue: 10,
+        goldValue: 5,
       });
 
       const encounter = new CombatEncounter(
@@ -269,6 +271,8 @@ describe('CombatEncounter', () => {
         baseCourage: 3,
         baseAttunement: 2,
         spriteId: 'test-sprite',
+        xpValue: 20,
+        goldValue: 15,
       });
 
       const original = new CombatEncounter(

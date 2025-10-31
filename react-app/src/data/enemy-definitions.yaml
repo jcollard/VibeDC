@@ -28,6 +28,8 @@ enemies:
     accessoryId: "strength-ring-001"
     tags: ["dragon", "boss", "strong", "magic", "legendary"]
     description: "An elder dragon of immense power and wisdom"
+    xpValue: 500
+    goldValue: 1000
 
   - id: "blob"
     name: "Blob"
@@ -46,6 +48,8 @@ enemies:
     spriteId: "monsters2-0"
     tags: ["goblin", "weak", "ranged"]
     description: "A goblin equipped with a crude bow"
+    xpValue: 15
+    goldValue: 8
 
   - id: "dire-wolf"
     name: "Dire Wolf"
@@ -64,6 +68,8 @@ enemies:
     spriteId: "monsters-9"
     tags: ["beast", "fast", "melee", "strong"]
     description: "A larger, more dangerous wolf with enhanced abilities"
+    xpValue: 40
+    goldValue: 25
 
   - id: "fire-elemental"
     name: "Fire Elemental"
@@ -82,6 +88,8 @@ enemies:
     spriteId: "monsters-32"
     tags: ["elemental", "fire", "magic"]
     description: "A being of pure flame"
+    xpValue: 35
+    goldValue: 20
 
   - id: "goblin"
     name: "Goblin"
@@ -100,6 +108,8 @@ enemies:
     spriteId: "monsters-0"
     tags: ["goblin", "weak", "melee"]
     description: "A small, aggressive creature with crude weapons"
+    xpValue: 10
+    goldValue: 5
 
   - id: "ice-elemental"
     name: "Ice Elemental"
@@ -118,6 +128,8 @@ enemies:
     spriteId: "monsters-33"
     tags: ["elemental", "ice", "magic"]
     description: "A being of frozen water and frost"
+    xpValue: 35
+    goldValue: 20
 
   - id: "orc-berserker"
     name: "Orc Berserker"
@@ -136,6 +148,8 @@ enemies:
     spriteId: "monsters-25"
     tags: ["orc", "strong", "melee", "berserker"]
     description: "A rage-fueled orc that fights with reckless abandon"
+    xpValue: 60
+    goldValue: 40
 
   - id: "orc-warrior"
     name: "Orc Warrior"
@@ -154,6 +168,8 @@ enemies:
     spriteId: "monsters-24"
     tags: ["orc", "strong", "melee"]
     description: "A brutish warrior with immense strength"
+    xpValue: 45
+    goldValue: 30
 
   - id: "skeleton"
     name: "Skeleton"
@@ -172,6 +188,8 @@ enemies:
     spriteId: "monsters-16"
     tags: ["undead", "melee"]
     description: "Animated bones driven by dark magic"
+    xpValue: 18
+    goldValue: 10
 
   - id: "skeleton-archer"
     name: "Skeleton Archer"
@@ -190,6 +208,8 @@ enemies:
     spriteId: "monsters-17"
     tags: ["undead", "ranged"]
     description: "An undead archer with unerring aim"
+    xpValue: 20
+    goldValue: 12
 
   - id: "wolf"
     name: "Wolf"
@@ -208,6 +228,8 @@ enemies:
     spriteId: "monsters-8"
     tags: ["beast", "fast", "melee"]
     description: "A fierce predator with sharp teeth and claws"
+    xpValue: 25
+    goldValue: 15
 
   - id: "young-dragon"
     name: "Young Dragon"
@@ -226,4 +248,6 @@ enemies:
     spriteId: "monsters-48"
     tags: ["dragon", "boss", "strong", "magic"]
     description: "A juvenile dragon, still formidable in power"
+    xpValue: 200
+    goldValue: 300
 
