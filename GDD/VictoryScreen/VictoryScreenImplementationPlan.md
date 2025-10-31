@@ -655,6 +655,107 @@ export { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 
 ---
 
+### Phase 9: Developer Testing Function (forceVictory)
+**Files:**
+- `react-app/src/components/combat/CombatView.tsx`
+
+**Purpose:** Add a developer-only function to force transition to victory phase for testing without needing to defeat all enemies.
+
+**Changes:**
+```typescript
+// In the useEffect that exposes developer mode functions (where forceDefeat is defined)
+
+useEffect(() => {
+  // Expose developer mode functions to window (for testing)
+  if (import.meta.env.DEV) {
+    // ... existing functions (setHitRate, setDamage, clearAttackOverride, forceDefeat)
+
+    // Expose forceVictory function (for testing victory screen)
+    (window as any).forceVictory = () => {
+      console.log('[DEV] Forcing victory screen transition...');
+      setCombatState(prevState => ({
+        ...prevState,
+        phase: 'victory' as const,
+      }));
+    };
+  }
+
+  // Cleanup on unmount
+  return () => {
+    if (import.meta.env.DEV) {
+      // ... existing cleanups
+      delete (window as any).forceVictory;
+    }
+  };
+}, []);
+```
+
+**Usage Instructions:**
+
+**In Browser Console:**
+```javascript
+// Force victory screen to appear immediately
+window.forceVictory();
+```
+
+**Testing Workflow:**
+1. Start combat encounter normally
+2. Deploy units in deployment phase
+3. Wait for enemy deployment to complete
+4. Open browser console (F12)
+5. Type `window.forceVictory()` and press Enter
+6. Victory screen should appear immediately
+
+**What It Does:**
+- Immediately transitions combat state to `phase='victory'`
+- Triggers VictoryPhaseHandler creation in CombatView
+- Generates random rewards (XP, gold, 0-8 items)
+- Displays victory modal overlay
+- Does NOT modify unit states (enemies remain alive in background)
+- Useful for testing victory screen UI without playing through combat
+
+**Testing Scenarios:**
+```javascript
+// Test victory screen from different phases
+window.forceVictory();  // From action-timer phase
+window.forceVictory();  // From unit-turn phase
+window.forceVictory();  // From deployment phase (edge case)
+
+// Test multiple times to see different random rewards
+window.forceVictory();  // First time - random items
+window.forceVictory();  // Again - different random items
+```
+
+**Similar to Existing forceDefeat:**
+This follows the exact same pattern as the existing `window.forceDefeat()` function added for the defeat screen. Both functions:
+- Only available in development mode (`import.meta.env.DEV`)
+- Exposed to window object for console access
+- Cleaned up on component unmount
+- Transition to their respective phases immediately
+- Used for rapid testing without playing through combat
+
+**Rationale:**
+- Essential for testing victory screen during development
+- Allows rapid iteration on UI/UX without defeating enemies
+- Enables testing with various reward configurations
+- Follows existing pattern from DefeatPhaseHandler testing
+- DEV-only, removed in production builds
+
+**Dependencies:** Phase 6 (CombatView Integration)
+
+**Estimated Time:** 10 minutes
+
+**Testing:**
+- [ ] window.forceVictory() is available in console (DEV mode)
+- [ ] Calling forceVictory() transitions to victory phase
+- [ ] Victory modal appears with random rewards
+- [ ] Can call forceVictory() multiple times (different rewards each time)
+- [ ] Works from any combat phase
+- [ ] Function cleaned up on component unmount
+- [ ] Function not available in production builds
+
+---
+
 ## Testing Plan
 
 ### Victory Condition Tests
@@ -752,10 +853,14 @@ export { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 - [ ] Exit with all items looted: works
 - [ ] Console logs show looted item IDs on exit
 
-### Developer Functions
-- [ ] window.forceVictory() transitions to victory
-- [ ] forceVictory works from any phase
-- [ ] Cleanup on unmount removes window functions
+### Developer Functions (Phase 9)
+- [ ] window.forceVictory() is available in console (DEV mode)
+- [ ] window.forceVictory() transitions to victory phase
+- [ ] Victory modal appears with random rewards after calling forceVictory()
+- [ ] Can call forceVictory() multiple times (different rewards each time)
+- [ ] forceVictory works from any phase (deployment, action-timer, unit-turn)
+- [ ] Function cleaned up on unmount removes window.forceVictory
+- [ ] Function not available in production builds (import.meta.env.DEV check)
 
 ## Implementation Order
 
@@ -767,8 +872,9 @@ export { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 6. **Phase 6: CombatView Integration** (1 hour) - Depends on #2, #4
 7. **Phase 7: Mouse Input Disabling** (30 min) - Depends on #4, #6
 8. **Phase 8: Type Exports** (5 min) - Depends on #2, #3, #4
+9. **Phase 9: Developer Testing Function** (10 min) - Depends on #6
 
-**Total Estimated Time:** 8-10 hours implementation + 3-4 hours testing = **11-14 hours total**
+**Total Estimated Time:** 8.5-10.5 hours implementation + 3-4 hours testing = **11.5-14.5 hours total**
 
 ## Notes & Decisions
 
