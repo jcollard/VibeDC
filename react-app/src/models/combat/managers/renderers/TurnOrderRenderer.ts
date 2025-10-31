@@ -195,6 +195,42 @@ export class TurnOrderRenderer implements TopPanelRenderer {
   }
 
   /**
+   * Returns units sorted with active units first (by ticks-until-ready),
+   * then KO'd units at the end.
+   *
+   * Active units are sorted by:
+   * 1. Ticks-until-ready (ascending) - units closer to acting appear first
+   * 2. Name (alphabetically) - tiebreaker for units with same ticks
+   *
+   * KO'd units are unsorted and appear at the end (order doesn't matter).
+   *
+   * @returns Sorted array of units (active first, KO'd last)
+   */
+  private getSortedUnits(units: CombatUnit[]): CombatUnit[] {
+    // Partition units into active and KO'd
+    const activeUnits = units.filter(u => !u.isKnockedOut);
+    const koUnits = units.filter(u => u.isKnockedOut);
+
+    // Sort active units by ticks-until-ready (ascending), then alphabetically
+    activeUnits.sort((a, b) => {
+      // Calculate ticks remaining until actionTimer reaches 100
+      const ticksA = Math.ceil((100 - a.actionTimer) / a.speed);
+      const ticksB = Math.ceil((100 - b.actionTimer) / b.speed);
+
+      // Primary sort: ticks-until-ready (ascending)
+      if (ticksA !== ticksB) {
+        return ticksA - ticksB;
+      }
+
+      // Tiebreaker: alphabetical by name
+      return a.name.localeCompare(b.name);
+    });
+
+    // Return active units first, then KO'd units (unsorted)
+    return [...activeUnits, ...koUnits];
+  }
+
+  /**
    * Calculate X positions for an array of units
    * @param units Units to position
    * @param region Panel region
@@ -305,9 +341,16 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       );
     }
 
+    // Sort units: active first (by ticks-until-ready), KO'd at end
+    const sortedUnits = this.getSortedUnits(this.units);
+
+    // Clamp scroll offset to valid range (after sorting)
+    const maxOffset = Math.max(0, sortedUnits.length - this.maxVisibleUnits);
+    this.scrollOffset = Math.min(this.scrollOffset, maxOffset);
+
     // Calculate visible window based on scroll position
     const startIndex = this.scrollOffset;
-    const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, this.units.length);
+    const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, sortedUnits.length);
     // Position sprites at the bottom of the panel
     // Leave room for sprite (12px) + timer text (7px), shifted down 3px total (2px + 1px for sprite)
     const spriteY = region.y + region.height - this.spriteSize - 7 + 3;
@@ -342,8 +385,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       }
     } else {
       // No animation, render at static positions
-      const visibleUnits = this.units.slice(startIndex, endIndex);
-      const positions = this.calculateUnitXPositions(this.units, region);
+      const visibleUnits = sortedUnits.slice(startIndex, endIndex);
+      const positions = this.calculateUnitXPositions(sortedUnits, region);
       for (let i = 0; i < visibleUnits.length; i++) {
         if (i >= positions.length) break;
         this.renderUnitAtPosition(ctx, visibleUnits[i], positions[i], spriteY, spriteImages, spriteSize, smallFontAtlasImage);
@@ -376,6 +419,11 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     spriteSize: number,
     smallFontAtlasImage: HTMLImageElement | null | undefined
   ): void {
+    // Apply grey tint for KO'd units
+    if (unit.isKnockedOut) {
+      ctx.filter = CombatConstants.KNOCKED_OUT.TINT_FILTER;
+    }
+
     // Render the unit sprite
     SpriteRenderer.renderSpriteById(
       ctx,
@@ -388,30 +436,53 @@ export class TurnOrderRenderer implements TopPanelRenderer {
       this.spriteSize
     );
 
-    // Render ticks until ready below sprite
+    // Reset filter (prevent bleed to other elements)
+    if (unit.isKnockedOut) {
+      ctx.filter = 'none';
+    }
+
+    // Render "KO" label for knocked out units, ticks for active units
     if (smallFontAtlasImage) {
-      // Calculate ticks until ready (when AT reaches 100)
-      const currentAT = unit.actionTimer;
-      const ticksUntilReady = unit.speed > 0
-        ? Math.ceil((100 - currentAT) / unit.speed)
-        : 999; // Show 999 for units with 0 speed
+      const textX = Math.floor(x + this.spriteSize / 2); // Center under sprite
+      const textY = Math.floor(y + this.spriteSize);
 
-      const timerText = ticksUntilReady.toString();
-      const textX = x + this.spriteSize / 2; // Center under sprite
-      const textY = y + this.spriteSize;
+      if (unit.isKnockedOut) {
+        // Render red "KO" label
+        const koText = CombatConstants.KNOCKED_OUT.TURN_ORDER_TEXT;
+        const koColor = CombatConstants.KNOCKED_OUT.TURN_ORDER_COLOR;
 
-      // Use UI font for small, readable numbers
-      FontAtlasRenderer.renderText(
-        ctx,
-        timerText,
-        textX,
-        textY,
-        CombatConstants.FONTS.UI_FONT_ID,
-        smallFontAtlasImage,
-        1, // Normal scale
-        'center', // alignment
-        '#ffffff' // color
-      );
+        FontAtlasRenderer.renderText(
+          ctx,
+          koText,
+          textX,
+          textY,
+          CombatConstants.FONTS.UI_FONT_ID,
+          smallFontAtlasImage,
+          1, // scale
+          'center',
+          koColor // Red
+        );
+      } else {
+        // Render ticks-until-ready for active units
+        const currentAT = unit.actionTimer;
+        const ticksUntilReady = unit.speed > 0
+          ? Math.ceil((100 - currentAT) / unit.speed)
+          : 999; // Show 999 for units with 0 speed
+
+        const timerText = ticksUntilReady.toString();
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          timerText,
+          textX,
+          textY,
+          CombatConstants.FONTS.UI_FONT_ID,
+          smallFontAtlasImage,
+          1, // Normal scale
+          'center', // alignment
+          '#ffffff' // White
+        );
+      }
     }
   }
 
@@ -511,10 +582,13 @@ export class TurnOrderRenderer implements TopPanelRenderer {
     // Priority 3: Check unit sprite clicks (using visible window)
     if (!this.onUnitClick) return false;
 
+    // Sort units (same as in render)
+    const sortedUnits = this.getSortedUnits(this.units);
+
     // Calculate visible window (same as in render)
     const startIndex = this.scrollOffset;
-    const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, this.units.length);
-    const visibleUnits = this.units.slice(startIndex, endIndex);
+    const endIndex = Math.min(this.scrollOffset + this.maxVisibleUnits, sortedUnits.length);
+    const visibleUnits = sortedUnits.slice(startIndex, endIndex);
 
     // Calculate total width for visible units
     const totalVisibleUnits = visibleUnits.length;
@@ -560,7 +634,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
    * Check if we can scroll right (more units beyond visible window)
    */
   private canScrollRight(): boolean {
-    return this.scrollOffset + this.maxVisibleUnits < this.units.length;
+    const sortedUnits = this.getSortedUnits(this.units);
+    return this.scrollOffset + this.maxVisibleUnits < sortedUnits.length;
   }
 
   /**
@@ -577,7 +652,8 @@ export class TurnOrderRenderer implements TopPanelRenderer {
    */
   private scrollRight(): void {
     if (this.canScrollRight()) {
-      const maxOffset = Math.max(0, this.units.length - this.maxVisibleUnits);
+      const sortedUnits = this.getSortedUnits(this.units);
+      const maxOffset = Math.max(0, sortedUnits.length - this.maxVisibleUnits);
       this.scrollOffset = Math.min(maxOffset, this.scrollOffset + 1);
     }
   }

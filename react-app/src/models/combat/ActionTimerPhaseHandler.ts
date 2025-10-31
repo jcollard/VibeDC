@@ -465,9 +465,18 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
     while (!foundReadyUnit && tickCount < maxTicks) {
       tickCount++;
 
-      // Increment all units by one discrete tick
+      // Increment all units by one discrete tick (skip KO'd units)
       for (const placement of allUnits) {
         const unit = placement.unit;
+
+        // Skip knocked out units - they don't accumulate action timer
+        if (unit.isKnockedOut) {
+          // Ensure timer stays at 0 (defensive - should already be 0)
+          workingTimers.set(unit, 0);
+          continue;
+        }
+
+        // Accumulate timer for active units (existing logic)
         const currentTimer = workingTimers.get(unit) || 0;
         const increment = unit.speed * TICK_SIZE * ACTION_TIMER_MULTIPLIER;
         const newTimer = currentTimer + increment;
@@ -505,13 +514,19 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
 
   /**
    * Calculate turn order based on time to reach 100 AT
-   * Sorts by time to ready (ascending - soonest first), then alphabetically by name
+   * Active units sorted by time to ready (ascending - soonest first), then alphabetically by name
+   * KO'd units appear at the end (unsorted)
    * @param units All units in combat
    * @param timerValues Map of unit to current AT value
-   * @returns Sorted array of units in turn order
+   * @returns Sorted array of units in turn order (active first, KO'd last)
    */
   private calculateTurnOrder(units: CombatUnit[], timerValues: Map<CombatUnit, number>): CombatUnit[] {
-    const unitsWithTime = units.map(unit => {
+    // Partition units into active and KO'd
+    const activeUnits = units.filter(u => !u.isKnockedOut);
+    const koUnits = units.filter(u => u.isKnockedOut);
+
+    // Calculate time-to-ready for active units
+    const unitsWithTime = activeUnits.map(unit => {
       const currentTimer = timerValues.get(unit) || unit.actionTimer;
       const timeToReady = unit.speed > 0
         ? (100 - currentTimer) / unit.speed
@@ -520,7 +535,7 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       return { unit, timeToReady };
     });
 
-    // Sort by time to ready (ascending - soonest first), then alphabetically
+    // Sort active units by time to ready (ascending - soonest first), then alphabetically
     unitsWithTime.sort((a, b) => {
       if (a.timeToReady !== b.timeToReady) {
         return a.timeToReady - b.timeToReady;
@@ -528,7 +543,8 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
       return a.unit.name.localeCompare(b.unit.name);
     });
 
-    return unitsWithTime.map(item => item.unit);
+    // Return active units first, then KO'd units (unsorted)
+    return [...unitsWithTime.map(item => item.unit), ...koUnits];
   }
 
   /**

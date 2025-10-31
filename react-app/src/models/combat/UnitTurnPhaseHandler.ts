@@ -504,9 +504,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return state;
     }
 
-    // Find the unit with highest action timer (first ready)
+    // Find the unit with highest action timer (first ready, skip KO'd)
     const allUnits = state.unitManifest.getAllUnits();
-    const sortedUnits = allUnits.sort((a, b) => {
+    // Filter out knocked out units - they never get turns
+    const activeUnits = allUnits.filter(p => !p.unit.isKnockedOut);
+    const sortedUnits = activeUnits.sort((a, b) => {
       if (b.unit.actionTimer !== a.unit.actionTimer) {
         return b.unit.actionTimer - a.unit.actionTimer;
       }
@@ -868,8 +870,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Get all units
     const units = state.unitManifest.getAllUnits().map(placement => placement.unit);
 
-    // Calculate time until each unit reaches 100 action timer
-    const unitsWithTime = units.map(unit => {
+    // Partition units: active and KO'd
+    const activeUnits = units.filter(u => !u.isKnockedOut);
+    const koUnits = units.filter(u => u.isKnockedOut);
+
+    // Calculate time until each active unit reaches 100 action timer
+    const unitsWithTime = activeUnits.map(unit => {
       const timeToReady = unit.speed > 0
         ? (100 - unit.actionTimer) / unit.speed
         : Infinity;
@@ -877,7 +883,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return { unit, timeToReady };
     });
 
-    // Sort by time to ready (ascending - soonest first), then alphabetically
+    // Sort active units by time to ready (ascending - soonest first), then alphabetically
     unitsWithTime.sort((a, b) => {
       if (a.timeToReady !== b.timeToReady) {
         return a.timeToReady - b.timeToReady;
@@ -885,8 +891,8 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       return a.unit.name.localeCompare(b.unit.name);
     });
 
-    // Extract sorted units
-    const sortedUnits = unitsWithTime.map(item => item.unit);
+    // Combine: active first, KO'd at end
+    const sortedUnits = [...unitsWithTime.map(item => item.unit), ...koUnits];
 
     // Create or update cached renderer (maintains scroll state)
     if (!this.turnOrderRenderer) {
