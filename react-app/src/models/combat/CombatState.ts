@@ -75,13 +75,6 @@ export interface CombatState {
    */
   pendingActionTimerMutation?: { unit: CombatUnit; newValue: number };
 
-  /**
-   * Snapshot of the initial combat state (after deployment, before first action-timer phase).
-   * Used for "Try Again" functionality on the defeat screen.
-   * Null if combat was loaded from a save or if not yet initialized.
-   */
-  initialStateSnapshot?: CombatStateJSON | null;
-
   // Additional fields will be added as combat mechanics are implemented
 }
 
@@ -96,7 +89,6 @@ export interface CombatStateJSON {
   unitManifest: CombatUnitManifestJSON;
   tickCount?: number;
   pendingSlideAnimation?: boolean;
-  initialStateSnapshot?: CombatStateJSON | null;
   // previousTurnOrder is NOT serialized - it's a transient runtime-only field
 }
 
@@ -113,8 +105,7 @@ export function serializeCombatState(state: CombatState): CombatStateJSON {
     map: state.map.toJSON(),
     unitManifest: state.unitManifest.toJSON(),
     tickCount: state.tickCount,
-    pendingSlideAnimation: state.pendingSlideAnimation,
-    initialStateSnapshot: state.initialStateSnapshot
+    pendingSlideAnimation: state.pendingSlideAnimation
     // previousTurnOrder is NOT serialized - it's transient
   };
 }
@@ -146,8 +137,7 @@ export function deserializeCombatState(json: CombatStateJSON): CombatState | nul
     map,
     unitManifest,
     tickCount: json.tickCount,
-    pendingSlideAnimation: json.pendingSlideAnimation,
-    initialStateSnapshot: json.initialStateSnapshot ?? null
+    pendingSlideAnimation: json.pendingSlideAnimation
     // previousTurnOrder is NOT deserialized - it's transient
   };
 }

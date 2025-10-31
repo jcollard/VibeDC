@@ -8,8 +8,8 @@ import type {
 import type { CombatState } from './CombatState';
 import type { CombatEncounter } from './CombatEncounter';
 import { DefeatModalRenderer } from './rendering/DefeatModalRenderer';
-import { deserializeCombatState } from './CombatState';
 import { CombatConstants } from './CombatConstants';
+import { CombatUnitManifest } from './CombatUnitManifest';
 
 /**
  * Phase handler for the defeat screen.
@@ -95,14 +95,14 @@ export class DefeatPhaseHandler extends PhaseBase {
   handleMouseDown(
     context: MouseEventContext,
     state: CombatState,
-    _encounter: CombatEncounter
+    encounter: CombatEncounter
   ): PhaseEventResult {
     const panelBounds = { width: CombatConstants.CANVAS_WIDTH, height: CombatConstants.CANVAS_HEIGHT };
     const buttonBounds = this.renderer.getButtonBounds(panelBounds);
 
     // Check if Try Again button clicked
     if (this.isPointInBounds(context.canvasX, context.canvasY, buttonBounds.tryAgain)) {
-      const result = this.handleTryAgain(state);
+      const result = this.handleTryAgain(state, encounter);
       if (result) {
         return {
           handled: true,
@@ -136,32 +136,23 @@ export class DefeatPhaseHandler extends PhaseBase {
     return { handled: false };
   }
 
-  private handleTryAgain(state: CombatState): { newState: CombatState; playCinematic: boolean } | null {
-    // Check if initial state snapshot exists
-    if (!state.initialStateSnapshot) {
-      console.error("[DefeatPhaseHandler] No initial state snapshot available for retry");
-      // TODO: Show error message to player (future enhancement)
-      return null;
-    }
-
+  private handleTryAgain(_state: CombatState, encounter: CombatEncounter): { newState: CombatState; playCinematic: boolean } | null {
     try {
-      // Deserialize initial state snapshot
-      const restoredState = deserializeCombatState(state.initialStateSnapshot);
+      // Create a fresh initial combat state (same as CombatView initialization)
+      // This ensures all initialization logic runs properly including combat log
+      const freshState: CombatState = {
+        turnNumber: 0,
+        map: encounter.map,
+        tilesetId: encounter.tilesetId || 'default',
+        phase: 'deployment',
+        unitManifest: new CombatUnitManifest(),
+      };
 
-      if (!restoredState) {
-        console.error("[DefeatPhaseHandler] Failed to deserialize initial state snapshot");
-        return null;
-      }
-
-      // IMPORTANT: Preserve the initialStateSnapshot so "Try Again" can be used multiple times
-      // The snapshot was excluded during serialization to avoid recursion, so we need to restore it
-      restoredState.initialStateSnapshot = state.initialStateSnapshot;
-
-      console.log("[DefeatPhaseHandler] Combat state restored from initial snapshot");
+      console.log("[DefeatPhaseHandler] Created fresh combat state for retry");
       // Return both the new state and a flag indicating that a cinematic should play
-      return { newState: restoredState, playCinematic: true };
+      return { newState: freshState, playCinematic: true };
     } catch (error) {
-      console.error("[DefeatPhaseHandler] Failed to restore initial state:", error);
+      console.error("[DefeatPhaseHandler] Failed to create fresh combat state:", error);
       // TODO: Show error message to player (future enhancement)
       return null;
     }
