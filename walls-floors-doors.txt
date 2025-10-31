@@ -1,0 +1,41 @@
+biomes
+
+0, 1, 2, 3 - Brown brick walls variants
+13 - Brown brick wall door
+14 - Brown brick wall stairs
+16 - Brown brick wall dark passage / door
+
+8, 9, 10 - Grey stone wall variants
+21 - grey stone door
+22 - grey stone stairs
+
+
+
+52 - grey brick wall
+53 - grey brick wall blood
+64 - grey brick wall door
+65 - grey brick wall dark passage
+66 - grey brick wall gate / door
+
+76 - chest
+
+89 - tree
+91 - grass
+92 - patterned grey
+93 - dark ground / dirt
+45 - dark with grey spots
+33 - dark with dark grey spots
+
+34, 35, 36, 37 - dark wall variants
+47 - dark wall door variant
+48 - dark wall stairs variant
+
+
+58, 59, 60, cave wall variants
+71 - cave wall door variant
+72 - cave wall stairs variant
+
+84, 85, 86, 87 - palace wall variants
+97 - palace door variant
+98 - palace stairs variant
+

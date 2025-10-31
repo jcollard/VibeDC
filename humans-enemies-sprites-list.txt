@@ -1,0 +1,61 @@
+crystalwarriors 
+0, 1, 2, 3, 14, 15, 16, 17 - Humanoid Fighter type
+4, 5, 6, 7, 18, 19 - Humanoid Rogue type
+8, 9, 10, 11, 12, 13 - Humanoid mage type
+
+monsters-52 - Humanoid wizard
+
+
+monsters-0 - Goblin / Orc / Kobold
+monsters-4 - Dragon, Demon, Beast
+monsters-8 - Spider
+monsters-12 - Knight / Armor and shield
+monsters-16 - Winged enemy
+monsters-20 - Snake / Seprent
+monsters-24 - Cat / Orc
+monsters-28 - Enemy with whip, goblin, orc, kobold?
+monsters-32 - Blob
+monsters-36 - red Blob
+monsters-42 - gelatenous cube
+monsters-44 - Green winged creature
+monsters-48 - Tall head creater with spear, 
+monsters-56 - Snail / Slug
+monsters-60 - Beholder
+monsters2-0 - Green slime
+monsters2-4 - Blue slime
+monsters2-8 - Grey slime
+monsters2-12 - Pink slime
+monsters2-16 - orange slime
+monsters2-20 - red slime
+monsters2-24 - Rainbow slime
+monsters2-28 - White slime
+monsters2-32 - Spectre
+monsters2-36 - Man Bat
+monsters2-40 - Blue Man Bat
+monsters2-44 - Ghost
+monsters2-50 - Green gelatenous cube
+monsters2-52 - Squib monster
+monsters2-56 - No face monster with stick
+monsters2-60 - Green spikey
+monsters2-64 - Blue spikey
+monsters2-68 - Red spikey
+monsters2-72 - Skeleton
+monsters2-76 - Snake / Serpent
+monsters2-80 - Demogorgon
+monsters2-84 - Red mushroom
+monsters2-88 - Orange mushroom
+monsters2-92 - Purple mushroom
+monsters2-96 - Blue mushroom
+monsters2-100 - Green Troll
+monsters2-104 - Orange Troll
+monsters2-108 - Blue Troll
+monsters2-112 - Green flame
+monsters2-116 - Blue flame
+monsters2-120 - Red flame
+monsters2-124 - Flaming Skull
+monsters2-128 - Blue Flaming Skull
+monsters2-132 - Green Dragon
+monsters2-136 - Grey Dragon
+monsters2-140 - Red Dragon
+
+
