@@ -1,8 +1,8 @@
 # Combat System Hierarchy
 
-**Version:** 2.1
-**Last Updated:** Fri, Oct 31, 2025 (Enemy AI pathfinding: BFS distance calculation for target selection, paths through all units) <!-- Update using `date` command -->
-**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md)
+**Version:** 2.2
+**Last Updated:** Fri, Oct 31, 2025 (Defeat screen: DefeatPhaseHandler, DefeatModalRenderer, Try Again functionality with cinematic transitions) <!-- Update using `date` command -->
+**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md), [GDD/DefeatScreen/DefeatScreenManifest.md](GDD/DefeatScreen/DefeatScreenManifest.md)
 
 ## Purpose
 
@@ -231,7 +231,7 @@ react-app/src/
 #### `CombatConstants.ts`
 **Purpose:** Centralized configuration (canvas size, colors, text, animations)
 **Exports:** `CombatConstants` object
-**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN, FONTS, **KNOCKED_OUT**, AI
+**Key Sections:** CANVAS, UI, TEXT, COMBAT_LOG, ENEMY_DEPLOYMENT, UNIT_TURN, FONTS, **KNOCKED_OUT**, AI, **DEFEAT_SCREEN**
 **FONTS Section:**
 - `TITLE_FONT_ID: '15px-dungeonslant'` - Large font for titles and headers
 - `UI_FONT_ID: '7px-04b03'` - Small font for UI panels, combat log, turn order, etc.
@@ -274,7 +274,24 @@ react-app/src/
 - `UNARMED_ATTACK_RANGE = 1` - Attack range for units without weapons (melee)
 - `UNARMED_ATTACK_MODIFIER = 0` - Damage modifier for unarmed attacks (no bonus)
 - `UNARMED_ATTACK_MULTIPLIER = 1.0` - Damage multiplier for unarmed attacks (no scaling)
-**Used By:** All combat files for consistent values, AI system for behavior configuration, KO system for visual rendering
+**DEFEAT_SCREEN Section:**
+- `MODAL_WIDTH = 120` - Width of defeat modal panel in pixels
+- `OVERLAY_OPACITY = 0.7` - Semi-transparent overlay opacity (0.0 to 1.0)
+- `TITLE_FONT_ID = '15px-dungeonslant'` - Large font for "DEFEAT" title
+- `BUTTON_FONT_ID = '7px-04b03'` - Small font for button text
+- `HELPER_FONT_ID = '7px-04b03'` - Small font for helper text
+- `TITLE_COLOR = '#ff0000'` - Red color for defeat title
+- `BUTTON_COLOR_NORMAL = '#ffffff'` - White for non-hovered buttons
+- `BUTTON_COLOR_HOVER = '#ffff00'` - Yellow for hovered buttons
+- `HELPER_COLOR = '#aaaaaa'` - Gray for helper text
+- `TITLE_TEXT = 'DEFEAT'` - Modal title text
+- `TRY_AGAIN_TEXT = 'Try Again'` - Left button text
+- `SKIP_TEXT = 'Skip Encounter'` - Right button text
+- `TRY_AGAIN_HELPER = 'Restart from deployment phase'` - Helper for Try Again
+- `SKIP_HELPER = 'Continue without completing this battle'` - Helper for Skip
+- `DEFEAT_MESSAGE = 'All allies have been defeated!'` - Combat log message
+- `HELPER_SPACING = 4` - Spacing between buttons and helper text (pixels)
+**Used By:** All combat files for consistent values, AI system for behavior configuration, KO system for visual rendering, DefeatPhaseHandler and DefeatModalRenderer for defeat screen UI
 
 #### `CombatUIState.ts`
 **Purpose:** UI state management (hovered cell, selected unit, cursor)
@@ -295,7 +312,7 @@ react-app/src/
 - render(): Called after map tiles, before units (for underlays like movement ranges)
 - renderUI(): Called after units (for overlays like cursors, UI elements) [optional]
 - Dual-method pattern enables proper Z-ordering control
-**Implementations:** DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler
+**Implementations:** DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, DefeatPhaseHandler
 **Used By:** CombatView (phase switching), phase implementations
 
 #### `PhaseBase.ts`
@@ -336,7 +353,7 @@ react-app/src/
 - Handles immediate slide animations triggered by Delay/End Turn actions
 - Placeholder info panel with "Action Timer Phase" text
 - Mouse event logging
-- Victory/defeat condition checking
+- Victory/defeat condition checking (adds DEFEAT_MESSAGE to combat log on defeat)
 **Key Constants:**
 - ACTION_TIMER_MULTIPLIER: 1 (controls combat pacing)
 - TICK_SIZE: 1 (size of each discrete tick increment)
@@ -381,9 +398,13 @@ react-app/src/
 - Time stop effects
 - Timer overflow handling (carry over to next turn)
 - Configurable ACTION_TIMER_MULTIPLIER and TICK_SIZE
-**Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter, CombatUnit (for WeakMap keys)
+**Defeat Detection:**
+- Checks CombatEncounter.isDefeat() after tick simulation completes
+- Adds DEFEAT_MESSAGE to combat log when defeat conditions met
+- Transitions to defeat phase immediately when all allies knocked out
+**Dependencies:** PhaseBase, TurnOrderRenderer, CombatEncounter, CombatUnit (for WeakMap keys), CombatConstants
 **Used By:** CombatView during action-timer phase
-**Transitions To:** unit-turn phase (when first unit reaches 100)
+**Transitions To:** unit-turn phase (when first unit reaches 100), **defeat phase** (when all allies knocked out)
 
 #### `UnitTurnPhaseHandler.ts`
 **Purpose:** Individual unit's turn - delegates behavior to strategy pattern (player vs enemy)
@@ -482,7 +503,45 @@ react-app/src/
 - Enemy AI attack decision making
 **Dependencies:** PhaseBase, TurnOrderRenderer, PlayerTurnStrategy, EnemyTurnStrategy, TurnStrategy, **UnitMovementSequence**, **MovementPathfinder**, **AttackAnimationSequence**, **CombatCalculations**
 **Used By:** CombatView during unit-turn phase
-**Transitions To:** action-timer phase (when Delay/End Turn/Move completes), stays in phase after attack animation
+**Transitions To:** action-timer phase (when Delay/End Turn/Move completes), stays in phase after attack animation, **defeat phase** (when all allies knocked out)
+
+#### `DefeatPhaseHandler.ts`
+**Purpose:** Handles defeat screen UI with modal overlay and player options (Try Again / Skip Encounter)
+**Exports:** `DefeatPhaseHandler`
+**Key Methods:** handleMouseMove(), handleMouseDown(), handleTryAgain(), handleSkipEncounter(), getButtonBounds()
+**Current Functionality:**
+- Displays full-screen semi-transparent overlay to disable background interactions
+- Renders centered modal panel with defeat title, buttons, and contextual helper text
+- Hover detection for "Try Again" and "Skip Encounter" buttons with visual feedback
+- Click handling for button interactions
+- **Try Again:** Restarts encounter from deployment phase with fresh combat state
+- **Skip Encounter:** Placeholder for future functionality (not yet implemented)
+**Try Again Implementation:**
+- Creates fresh CombatState with empty unitManifest and phase='deployment'
+- DeploymentPhaseHandler reloads party members from PartyMemberRegistry
+- EnemyDeploymentPhaseHandler creates fresh enemies from encounter.createEnemyUnits()
+- Combat log cleared and intro cinematic replayed (handled in CombatView)
+- Returns `playCinematic: true` flag to trigger screen fade-in animation
+**Design Decision:**
+- Uses full restart approach instead of snapshot restoration
+- Simpler implementation without serialization complexity
+- Allows players to try different deployment strategies
+- Avoids stale state bugs from saved snapshots
+**UI Rendering:**
+- renderUI() renders complete defeat modal on top of all other UI
+- Uses DefeatModalRenderer for visual rendering
+- Tracks hovered button state for color changes
+- All rendering done in renderUI() to appear above game content
+**Mouse Interaction:**
+- handleMouseMove(): Updates hover state, triggers re-render on state change
+- handleMouseDown(): Checks button bounds, executes Try Again or Skip actions
+- Returns PhaseEventResult with newState and optional data (playCinematic flag)
+**Constants:**
+- Modal dimensions, colors, fonts, and text defined in CombatConstants.DEFEAT_SCREEN
+- DEFEAT_MESSAGE added to combat log when transitioning to defeat phase
+**Dependencies:** PhaseBase, DefeatModalRenderer, CombatConstants, CombatUnitManifest
+**Used By:** CombatView during defeat phase
+**Transitions To:** deployment phase (via Try Again button)
 
 ---
 
@@ -957,6 +1016,44 @@ DEFAULT_ENEMY_BEHAVIORS = [
 **Key Methods:** render()
 **Dependencies:** FontAtlasRenderer
 **Used By:** TopPanelManager during deployment phases
+
+#### `rendering/DefeatModalRenderer.ts`
+**Purpose:** Renders defeat screen modal overlay with title, buttons, and helper text
+**Exports:** `DefeatModalRenderer`
+**Key Methods:** render(), renderOverlay(), renderPanelBackground(), renderTitle(), renderButtons(), renderHelperText(), getButtonBounds()
+**Current Functionality:**
+- Renders full-screen semi-transparent black overlay (OVERLAY_OPACITY from constants)
+- Renders centered modal panel with black background and white border
+- Renders "DEFEAT" title text centered at top of modal (using TITLE_FONT_ID)
+- Renders two horizontally-aligned buttons: "Try Again" and "Skip Encounter"
+- Buttons change color on hover (BUTTON_COLOR_NORMAL → BUTTON_COLOR_HOVER)
+- Renders contextual helper text below buttons (only when button is hovered)
+  - Try Again hover: "Restart from deployment phase"
+  - Skip Encounter hover: "Continue without completing this battle"
+- All text rendered using FontAtlasRenderer for pixel-perfect font rendering
+**Layout Calculations:**
+- Modal positioned at upper third of screen for visibility
+- Dynamic height based on font sizes (title + buttons + helper + padding)
+- Buttons centered horizontally as a group with 24px spacing between them
+- Helper text centered below buttons with configurable spacing
+**Hit Detection:**
+- getButtonBounds() calculates clickable regions for both buttons
+- Returns bounds for "Try Again" and "Skip Encounter" buttons
+- Performance note: Calculated on-demand (~0.1ms per call, negligible for non-critical UI)
+- Could be cached if performance becomes concern (buttons are static, not animated)
+**Rendering Order:**
+1. Full-screen overlay
+2. Modal panel background with border
+3. Title text (with shadow effect)
+4. Button texts (with color based on hover state)
+5. Helper text (only if button hovered)
+**Constants:**
+- All visual constants from CombatConstants.DEFEAT_SCREEN
+- MODAL_WIDTH, TITLE_FONT_ID, BUTTON_FONT_ID, HELPER_FONT_ID
+- TITLE_COLOR, BUTTON_COLOR_NORMAL, BUTTON_COLOR_HOVER, HELPER_COLOR
+- TITLE_TEXT, TRY_AGAIN_TEXT, SKIP_TEXT, TRY_AGAIN_HELPER, SKIP_HELPER
+**Dependencies:** CombatConstants, FontAtlasRenderer, FontRegistry
+**Used By:** DefeatPhaseHandler.renderUI()
 
 #### `managers/panels/PanelContent.ts`
 **Purpose:** Interface for info panel content with event handling and sprite rendering support
@@ -1641,12 +1738,13 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Animation loop (60 FPS)
 - State management (useState, useRef, useMemo)
 - **Encounter override mechanism** (loaded encounter via loadedEncounterRef)
-- Phase handler switching
+- Phase handler switching (including DefeatPhaseHandler for defeat phase)
 - Input handling (mouse events, coordinate conversion)
 - Renderer orchestration
 - Sprite/font loading
 - Save/load operations with LoadingView integration
 - **Quick save/load UI** in Developer Settings panel (4 slots)
+- **Defeat screen handling** with Try Again functionality
 
 **Encounter Loading Pattern:**
 - Props: `encounter: CombatEncounter` (initial encounter from route)
@@ -1671,6 +1769,19 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Auto-refreshes metadata after each save
 - Uses `slotToLoadRef` to coordinate with `handleLoadReady()` callback
 - Displays in error message if load fails
+
+**Defeat Screen Handling:**
+- Creates DefeatPhaseHandler when combatState.phase === 'defeat'
+- Renders defeat modal AFTER all other UI (full-screen overlay on top)
+- Defeat modal rendered separately to ensure it covers entire canvas
+- Handles Try Again button: Resets combat state to deployment phase
+- **Try Again Flow:**
+  1. DefeatPhaseHandler creates fresh CombatState with phase='deployment'
+  2. Returns PhaseEventResult with newState and data.playCinematic=true
+  3. CombatView clears combat log and resets initialization flags
+  4. Plays ScreenFadeInSequence (2.0s duration) for smooth transition
+  5. Cinematic completes, deployment phase starts fresh
+- Exposes window.forceDefeat() for testing (DEV mode only)
 
 **Dependencies:** Nearly all combat model files, LoadingView, CombatEncounter registry, combatStorage utilities
 **Used By:** CombatViewRoute
@@ -1922,14 +2033,14 @@ Per GeneralGuidelines.md, components with state are cached:
 
 ---
 
-## File Count: 73 Core Files (70 from Phase 1 + 3 Phase 2 AI Behaviors)
+## File Count: 75 Core Files (70 from Phase 1 + 3 Phase 2 AI Behaviors + 2 Defeat Screen)
 
 **Components:** 3 files (CombatView, LoadingView, CombatViewRoute)
 **Core State:** 7 files
-**Phase Handlers:** 6 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, PhaseBase, CombatPhaseHandler)
+**Phase Handlers:** 7 files (DeploymentPhaseHandler, EnemyDeploymentPhaseHandler, ActionTimerPhaseHandler, UnitTurnPhaseHandler, DefeatPhaseHandler, PhaseBase, CombatPhaseHandler)
 **Turn Strategies:** 3 files (TurnStrategy, PlayerTurnStrategy, EnemyTurnStrategy)
 **AI Behavior System:** 8 files (AIBehavior.ts, AIContext.ts, DefaultBehavior.ts, AttackNearestOpponent.ts, DefeatNearbyOpponent.ts, MoveTowardNearestOpponent.ts, BehaviorRegistry.ts, index.ts)
-**Rendering:** 2 files
+**Rendering:** 3 files (CombatRenderer, CombatMapRenderer, DefeatModalRenderer)
 **Layout & UI:** 18 files (ActionsMenuContent, AttackMenuContent, AbilityInfoContent, EquipmentInfoContent, colors.ts, UnitInfoContent, PartyMembersContent, EmptyContent, PanelButton, PanelContent, InfoPanelManager, TopPanelManager, TopPanelRenderer, TurnOrderRenderer, DeploymentHeaderRenderer, CombatLayoutManager, CombatLayoutRenderer, HorizontalVerticalLayout)
 **Deployment:** 3 files (DeploymentUI, DeploymentZoneRenderer, UnitDeploymentManager)
 **Cinematics & Animation:** 9 files (includes UnitMovementSequence, AttackAnimationSequence, and 7 cinematic sequences)
