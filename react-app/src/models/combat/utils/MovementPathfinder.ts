@@ -57,10 +57,18 @@ export class MovementPathfinder {
         if (!map.isInBounds(neighbor)) continue;
         if (!map.isWalkable(neighbor)) continue;
 
-        // Unit collision (can path through friendlies, cannot through enemies)
+        // Unit collision (can path through friendlies and KO'd units)
         const unitAtPosition = unitManifest.getUnitAtPosition(neighbor);
-        if (unitAtPosition && !this.isFriendly(activeUnit, unitAtPosition)) {
-          continue; // Cannot path through enemies
+        if (unitAtPosition) {
+          // Block pathing through active enemy units only
+          // Allow through: friendly units OR KO'd units (any team)
+          const canPathThrough =
+            this.isFriendly(activeUnit, unitAtPosition) ||
+            unitAtPosition.isKnockedOut;
+
+          if (!canPathThrough) {
+            continue; // Cannot path through active enemies
+          }
         }
 
         visited.add(key);

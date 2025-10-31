@@ -375,7 +375,7 @@ None - this feature builds entirely on existing systems.
 **Detailed Phase Guides**:
 - ✅ **Phase 1**: [Visual Representation](./01-VisualRepresentation.md) - COMPLETED (2025-10-31)
 - ✅ **Phase 2**: [Turn Order and Action Timer](./02-TurnOrderAndActionTimer.md) - COMPLETED (2025-10-31)
-- 📋 **Phase 3**: [Movement and Pathfinding](./03-MovementAndPathfinding.md) - READY FOR IMPLEMENTATION
-- ⏳ **Phase 4**: Attack Range and AI Integration - TBD
+- ✅ **Phase 3**: [Movement and Pathfinding](./03-MovementAndPathfinding.md) - COMPLETED (2025-10-31)
+- 📋 **Phase 4**: Attack Range and AI Integration - READY FOR IMPLEMENTATION
 
-**Progress**: 2 of 4 phases complete (~50% done)
+**Progress**: 3 of 4 phases complete (~75% done)

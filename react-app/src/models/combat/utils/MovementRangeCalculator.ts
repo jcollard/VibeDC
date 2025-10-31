@@ -60,8 +60,13 @@ export class MovementRangeCalculator {
         const unitAtPosition = unitManifest.getUnitAtPosition(neighbor);
 
         if (unitAtPosition) {
-          // Can path through friendly units, but cannot stop on them
-          if (this.isFriendly(activeUnit, unitAtPosition)) {
+          // Can path through friendly units OR KO'd units (any team)
+          // But cannot stop on them
+          const canPathThrough =
+            this.isFriendly(activeUnit, unitAtPosition) ||
+            unitAtPosition.isKnockedOut;
+
+          if (canPathThrough) {
             // Mark as visited to continue pathfinding through this tile
             visited.add(key);
             queue.push({
@@ -70,6 +75,7 @@ export class MovementRangeCalculator {
             });
           }
           // Skip adding to reachable (cannot end movement here)
+          // This applies to ALL occupied tiles (friendly, enemy, KO'd)
           continue;
         }
 
