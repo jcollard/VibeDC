@@ -2,7 +2,7 @@
 
 **Purpose:** Token-efficient reference for AI agents working on Enemy AI Behavior implementation
 
-**Last Updated:** 2025-10-30 (Phase 1 Complete)
+**Last Updated:** Thu, Oct 30, 2025 5:46:37 PM (Phase 2 Complete) <!-- Use `date` command when updating - do not delete this note -->
 
 ---
 
@@ -29,16 +29,20 @@ The **Enemy AI Behavior System** provides priority-based decision-making for ene
 2. **AIContext Builder** - Immutable context with pre-calculated data (movement range, attack range, helper methods)
 3. **Behavior Registry** - Factory pattern for creating behaviors from configurations
 4. **Decision System** - Behaviors return AIDecision with optional movement + action
-5. **Extensible Design** - Easy to add new behaviors without modifying core system
+5. **Action Economy System** ⭐ - Units can perform multiple actions per turn (move THEN attack)
+6. **Behavior Filtering** ⭐ - Behaviors filtered based on available actions (canMove, canAct)
+7. **Extensible Design** - Easy to add new behaviors without modifying core system
 
 ### User Flow Summary
 
 ```
 Enemy unit turn starts
     ↓
-Build AIContext (movement range, attack range, partitioned units)
+Build AIContext (movement range, attack range, partitioned units, hasMoved, hasActed)
     ↓
-Evaluate behaviors in priority order (highest first)
+Filter behaviors based on action economy (canMove, canAct)
+    ↓
+Evaluate valid behaviors in priority order (highest first)
     ↓
 First behavior where canExecute() === true
     ↓
@@ -46,7 +50,11 @@ Call decide() to get AIDecision
     ↓
 Convert AIDecision to TurnAction
     ↓
-Execute action (currently: end-turn only in Phase 1)
+Execute action (move, attack, end-turn)
+    ↓
+If action completed (move/attack): Re-evaluate behaviors with updated action state
+    ↓
+Repeat until canMove=false AND canAct=false, or DefaultBehavior chosen
     ↓
 Turn ends
 ```
@@ -87,13 +95,20 @@ Turn ends
 - **Type Safety:** Full TypeScript type checking throughout
 - **100% Backward Compatible:** No breaking changes to existing code
 
-**AIContext Helper Methods:**
+**AIContext Data & Methods:**
 ```typescript
+// Action State (Phase 2)
+readonly hasMoved: boolean            // Has unit moved this turn?
+readonly hasActed: boolean            // Has unit acted this turn?
+readonly canMove: boolean             // Can still move? (!hasMoved && movementRange > 0)
+readonly canAct: boolean              // Can still act? (!hasActed)
+
+// Helper Methods
 getUnitsInRange(range, from?)         // Manhattan distance search
 getUnitsInAttackRange(from?)          // Enemy units in attack range
 calculatePath(to)                     // Pathfinding to destination
-calculateAttackRangeFrom(position)    // Attack range from position
-predictDamage(target, weapon?)        // Damage prediction
+calculateAttackRangeFrom(position)    // Attack range from position (uses unarmed if no weapon)
+predictDamage(target, weapon?)        // Damage prediction (handles unarmed)
 predictHitChance(target, weapon?)     // Hit chance prediction
 canDefeat(target)                     // Check if one-hit kill
 getDistance(from, to)                 // Manhattan distance
@@ -101,27 +116,56 @@ getDistance(from, to)                 // Manhattan distance
 
 ---
 
-### 📋 Phase 2: Attack Behaviors (Planned)
-**Plan:** [02-AttackBehaviorsPlan.md](./02-AttackBehaviorsPlan.md)
-**Status:** Not Started
+### ✅ Phase 2: Attack Behaviors
+**Plan:** [02-AttackBehaviorsPlan.md](./02-AttackBehaviorsPlan.md) | **Actual:** [02-AttackBehaviorsPlan-ACTUAL.md](./02-AttackBehaviorsPlan-ACTUAL.md)
+**Branch:** `enemy-ai-02-attack-behaviours`
+**Status:** Complete ✅
 
-**What Will Be Done:**
-- Implement `AttackNearestOpponent` behavior (priority 80)
-  - Attacks closest enemy in current attack range
-  - No movement, pure attack behavior
-- Implement `DefeatNearbyOpponent` behavior (priority 100)
-  - Finds enemy that can be one-shot killed
-  - Moves into range if needed, then attacks
-- Update `convertDecisionToAction()` to handle movement + attack
-- Add WeakMap for unit position tracking (avoid duplicate name issues)
-- Integration testing with actual combat
+**What Was Done:**
+- Implemented `AttackNearestOpponent` behavior (priority 80) - attack-only, no movement
+- Implemented `DefeatNearbyOpponent` behavior (priority 100) - move+attack for one-shot kills
+- Implemented `MoveTowardNearestOpponent` behavior (priority 10) - move-only when can't attack ⭐ NEW
+- **Action Economy System** ⭐ - Units can perform multiple actions per turn (move THEN attack)
+  - Added `requiresMove` and `requiresAction` fields to AIBehavior
+  - Added `hasMoved`, `hasActed`, `canMove`, `canAct` to AIContext
+  - Implemented re-evaluation loop after each action completes
+- **Unarmed Attack Support** ⭐ - Enemies without weapons can attack at range 1
+- Added WeakMap for unit position tracking in AIContextBuilder
+- Updated `convertDecisionToAction()` to handle movement + attack with pending actions
+- **Debug Infrastructure** ⭐ - Console logging gated behind `CombatConstants.AI.DEBUG_LOGGING`
+- **Constants Extraction** ⭐ - All magic numbers moved to `CombatConstants.AI`
 
 **Success Criteria:**
-- [ ] Enemies attack nearest opponent if in range
-- [ ] Enemies prioritize one-shot kills
-- [ ] Movement + attack decisions execute correctly
-- [ ] Combat log shows AI actions
-- [ ] No performance degradation
+- [x] Enemies attack nearest opponent if in range ✅
+- [x] Enemies prioritize one-shot kills ✅
+- [x] Enemies can move THEN attack on same turn ✅
+- [x] Movement + attack decisions execute correctly ✅
+- [x] Combat log shows AI actions ✅
+- [x] No performance degradation ✅
+- [x] Unarmed attacks work correctly ✅
+- [x] Action economy filtering works ✅
+
+**Key Files Created (5 files):**
+- `ai/behaviors/AttackNearestOpponent.ts` (75 lines)
+- `ai/behaviors/DefeatNearbyOpponent.ts` (137 lines)
+- `ai/behaviors/MoveTowardNearestOpponent.ts` (104 lines) ⭐ NEW
+- `GDD/EnemyBehaviour/Phase2CodeReview.md` (601 lines)
+- `GDD/EnemyBehaviour/02-AttackBehaviorsPlan-ACTUAL.md` (comparison doc)
+
+**Key Files Modified (11 files):**
+- `ai/types/AIBehavior.ts` - Added action economy requirements (+12 lines)
+- `ai/types/AIContext.ts` - Added action state tracking (+100 lines)
+- `ai/behaviors/DefaultBehavior.ts` - Added action requirements (+2 lines)
+- `ai/BehaviorRegistry.ts` - Registered 3 new behaviors (+18 lines)
+- `strategies/TurnStrategy.ts` - Updated signature (+13 lines)
+- `strategies/EnemyTurnStrategy.ts` - Re-evaluation + filtering (+175 lines)
+- `strategies/PlayerTurnStrategy.ts` - Signature compatibility (+4 lines)
+- `UnitTurnPhaseHandler.ts` - Action economy re-evaluation (+121 lines)
+- `utils/CombatCalculations.ts` - Unarmed attack support (+16 lines)
+- `CombatConstants.ts` - AI constants section (+9 lines)
+- `ai/index.ts` - Exported new behaviors (+3 lines)
+
+**Code Review:** 98% compliance, APPROVED ✅ ([Phase2CodeReview.md](./Phase2CodeReview.md))
 
 ---
 
@@ -162,6 +206,8 @@ getDistance(from, to)                 // Manhattan distance
 ## Current Status
 
 ### Completed ✅
+
+**Phase 1: Core Infrastructure**
 - [x] AIBehavior interface (type, priority, config, canExecute, decide)
 - [x] AIBehaviorConfig interface (type, priority, optional config)
 - [x] AIDecision interface (movement, action, order)
@@ -177,16 +223,29 @@ getDistance(from, to)                 // Manhattan distance
 - [x] Documentation in CombatHierarchy.md
 - [x] Backward compatibility maintained
 
+**Phase 2: Attack Behaviors**
+- [x] Action Economy System (requiresMove, requiresAction fields)
+- [x] Action state tracking (hasMoved, hasActed, canMove, canAct)
+- [x] Behavior filtering based on action economy
+- [x] Re-evaluation loop after actions complete
+- [x] AttackNearestOpponent behavior (priority 80)
+- [x] DefeatNearbyOpponent behavior (priority 100)
+- [x] MoveTowardNearestOpponent behavior (priority 10)
+- [x] Movement + attack action conversion
+- [x] Pending action handling for move-first decisions
+- [x] WeakMap unit tracking in AIContextBuilder
+- [x] Unarmed attack support (range 1, PhysicalPower only)
+- [x] Debug logging gating (CombatConstants.AI.DEBUG_LOGGING)
+- [x] Constants extraction (CombatConstants.AI section)
+- [x] Code review complete (98% compliance)
+
 ### In Progress 🚧
-- None (Phase 1 complete, ready for testing)
+- None (Phase 2 complete, ready for Phase 3)
 
 ### Not Started 📋
-- [ ] AttackNearestOpponent behavior (Phase 2)
-- [ ] DefeatNearbyOpponent behavior (Phase 2)
-- [ ] Movement + attack action conversion (Phase 2)
-- [ ] WeakMap unit tracking (Phase 2)
 - [ ] AggressiveTowardCasters behavior (Phase 3)
 - [ ] AggressiveTowardMelee behavior (Phase 3)
+- [ ] AggressiveTowardSpecificUnit behavior (Phase 3)
 - [ ] HealAllies behavior (Phase 4)
 - [ ] SupportAllies behavior (Phase 4)
 - [ ] DebuffOpponent behavior (Phase 4)
@@ -196,25 +255,40 @@ getDistance(from, to)                 // Manhattan distance
 ## Key Files
 
 ### Core AI System (Phase 1)
-- **`ai/types/AIBehavior.ts`** - Core interfaces (AIBehavior, AIDecision, AIBehaviorConfig)
-- **`ai/types/AIContext.ts`** - Context interface, AIContextBuilder, UnitPlacement
+- **`ai/types/AIBehavior.ts`** - Core interfaces (AIBehavior, AIDecision, AIBehaviorConfig) + action economy
+- **`ai/types/AIContext.ts`** - Context interface, AIContextBuilder, UnitPlacement, action state
 - **`ai/behaviors/DefaultBehavior.ts`** - Fallback behavior (ends turn)
 - **`ai/BehaviorRegistry.ts`** - Factory, registry, DEFAULT_ENEMY_BEHAVIORS
 - **`ai/index.ts`** - Barrel export for public API
 
+### Attack Behaviors (Phase 2)
+- **`ai/behaviors/AttackNearestOpponent.ts`** - Attack nearest enemy in range (attack-only)
+- **`ai/behaviors/DefeatNearbyOpponent.ts`** - Move and attack to one-shot kill (move+attack)
+- **`ai/behaviors/MoveTowardNearestOpponent.ts`** - Move toward nearest enemy (move-only)
+
 ### Integration
-- **`strategies/EnemyTurnStrategy.ts`** - Behavior evaluation, context building, decision conversion
+- **`strategies/EnemyTurnStrategy.ts`** - Behavior evaluation, filtering, context building, re-evaluation
+- **`strategies/PlayerTurnStrategy.ts`** - Updated for action state compatibility
+- **`strategies/TurnStrategy.ts`** - Interface with action state parameters
+- **`UnitTurnPhaseHandler.ts`** - Action economy re-evaluation loop
+- **`utils/CombatCalculations.ts`** - Unarmed attack support
+- **`CombatConstants.ts`** - AI configuration constants
 
 ### Documentation
 - **`CombatHierarchy.md`** - Section 3.5 documents AI system architecture
 - **`GDD/EnemyBehaviour/EnemyAIBehaviorSystem.md`** - Full design document
 - **`GDD/EnemyBehaviour/01-CoreInfrastructurePlan.md`** - Phase 1 implementation plan
+- **`GDD/EnemyBehaviour/02-AttackBehaviorsPlan.md`** - Phase 2 original plan
+- **`GDD/EnemyBehaviour/02-AttackBehaviorsPlan-ACTUAL.md`** - Phase 2 actual implementation
+- **`GDD/EnemyBehaviour/Phase2CodeReview.md`** - Phase 2 code review (98% compliance)
 
-### Future Behaviors (Phase 2+)
-- **`ai/behaviors/AttackNearestOpponent.ts`** (not yet created)
-- **`ai/behaviors/DefeatNearbyOpponent.ts`** (not yet created)
+### Future Behaviors (Phase 3+)
 - **`ai/behaviors/AggressiveTowardCasters.ts`** (not yet created)
 - **`ai/behaviors/AggressiveTowardMelee.ts`** (not yet created)
+- **`ai/behaviors/AggressiveTowardSpecificUnit.ts`** (not yet created)
+- **`ai/behaviors/HealAllies.ts`** (not yet created)
+- **`ai/behaviors/SupportAllies.ts`** (not yet created)
+- **`ai/behaviors/DebuffOpponent.ts`** (not yet created)
 
 ---
 
@@ -223,42 +297,61 @@ getDistance(from, to)                 // Manhattan distance
 ### Behavior Evaluation Flow
 ```typescript
 EnemyTurnStrategy.decideAction():
-1. Check if context exists
-2. For each behavior in behaviors array (sorted by priority):
+1. Check for pending action from previous move-first decision
+   - If pending: Return attack action immediately
+2. Check if context exists
+3. Filter behaviors based on action economy:
+   - Skip behaviors that require move if canMove=false
+   - Skip behaviors that require action if canAct=false
+4. For each valid behavior in filtered array (sorted by priority):
    a. Call behavior.canExecute(context)
    b. If true: Call behavior.decide(context)
    c. If decision returned: Convert to TurnAction, return
-3. Fallback: Return end-turn (should never reach due to DefaultBehavior)
+5. Fallback: Return end-turn (should never reach due to DefaultBehavior)
 ```
 
 ### AIContext Building Flow
 ```
-EnemyTurnStrategy.onTurnStart(unit, position, state):
-1. Call AIContextBuilder.build(unit, position, state)
-2. Partition all units into allies and enemies (excludes self)
-3. Calculate movement range (MovementRangeCalculator)
-4. Calculate attack range if weapon equipped (AttackRangeCalculator)
-5. Get default weapon helper closure
-6. Create context object with:
+EnemyTurnStrategy.onTurnStart(unit, position, state, hasMoved=false, hasActed=false):
+1. Call AIContextBuilder.build(unit, position, state, hasMoved, hasActed)
+2. Build WeakMap for unit position tracking (O(1) lookups)
+3. Partition all units into allies and enemies (excludes self)
+4. Calculate movement range (MovementRangeCalculator)
+5. Calculate attack range:
+   - If weapon equipped: Use weapon min/max range
+   - If unarmed: Use range 1 (melee, from CombatConstants.AI.UNARMED_ATTACK_RANGE)
+6. Calculate action economy state:
+   - canMove = !hasMoved && movementRange.length > 0
+   - canAct = !hasActed
+7. Get default weapon helper closure
+8. Create context object with:
    - Immutable data (frozen arrays)
+   - Action state (hasMoved, hasActed, canMove, canAct)
    - Helper methods (closures over state/position)
-7. Return frozen context
+9. Return frozen context
 ```
 
 ### Priority-Based Behavior System
 ```
 Behavior Priority Ranges (0-100):
-- 100: Critical actions (one-hit kills)
-- 90-99: High priority (healing, support)
-- 80-89: Combat actions (attacks, debuffs)
-- 70-79: Tactical positioning
-- 0-69: Low priority / fallbacks
+- 100: Critical actions (DefeatNearbyOpponent - one-shot kills)
+- 90-99: High priority (healing, support) - future
+- 80-89: Combat actions (AttackNearestOpponent - attacks, debuffs)
+- 70-79: Tactical positioning - future
+- 10-69: Movement/positioning (MoveTowardNearestOpponent)
 - 0: DefaultBehavior (always valid, always last)
 
 Evaluation:
 - Behaviors sorted on creation (BehaviorRegistry.createMany)
+- Filtered based on action economy (requiresMove, requiresAction)
 - First behavior where canExecute() === true wins
 - Others never evaluated (short-circuit)
+
+Current DEFAULT_ENEMY_BEHAVIORS:
+1. DefeatNearbyOpponent (priority 100, requiresMove=false, requiresAction=true)
+2. AttackNearestOpponent (priority 80, requiresMove=false, requiresAction=true)
+3. MoveTowardNearestOpponent (priority 10, requiresMove=true, requiresAction=false)
+4. DefaultBehavior (priority 0, requiresMove=false, requiresAction=false)
 ```
 
 ### AIDecision Structure
@@ -289,68 +382,97 @@ movementRange: Object.freeze(movementRange)
 // Safe to pass to multiple behaviors
 ```
 
-### WeakMap Pattern (Phase 2+)
+### WeakMap Pattern (Phase 2) ✅
 ```typescript
-// Future: Avoid duplicate unit name issues
-private unitPositions = new WeakMap<CombatUnit, Position>()
+// AIContextBuilder - Avoids duplicate unit name issues
+private static unitPositions = new WeakMap<CombatUnit, Position>()
 
-// Build once per turn
+// Build once per turn, cleared on rebuild
 for (const placement of state.unitManifest.getAllUnits()) {
   this.unitPositions.set(placement.unit, placement.position);
 }
 
-// Query without name collisions
+// Query without name collisions (O(1) lookup)
 const pos = this.unitPositions.get(unit);
+```
+
+### Action Economy Pattern (Phase 2) ⭐ NEW
+```typescript
+// AIBehavior interface requirements
+interface AIBehavior {
+  readonly requiresMove: boolean;   // Does behavior need movement available?
+  readonly requiresAction: boolean; // Does behavior need action available?
+  // ...
+}
+
+// AIContext action state
+interface AIContext {
+  readonly hasMoved: boolean;  // Has unit moved this turn?
+  readonly hasActed: boolean;  // Has unit acted this turn?
+  readonly canMove: boolean;   // Can unit still move? (!hasMoved && movementRange.length > 0)
+  readonly canAct: boolean;    // Can unit still act? (!hasActed)
+  // ...
+}
+
+// Behavior filtering (EnemyTurnStrategy)
+const validBehaviors = this.behaviors.filter(behavior => {
+  if (behavior.requiresMove && !context.canMove) return false;
+  if (behavior.requiresAction && !context.canAct) return false;
+  return true;
+});
+
+// Re-evaluation after actions (UnitTurnPhaseHandler)
+// After movement completes:
+this.strategy.onTurnStart(unit, newPosition, state, true, this.hasActed);
+
+// After attack completes:
+this.strategy.onTurnStart(unit, position, state, this.hasMoved, true);
+
+// Loop continues until canMove=false AND canAct=false, or DefaultBehavior chosen
 ```
 
 ---
 
 ## Next Steps
 
-### Immediate (Ready for Testing)
-- Manual testing of Phase 1 infrastructure
-  1. Start combat encounter with enemy units
-  2. Verify enemies take turns (should see thinking delay)
-  3. Check console for `[AI] {unit.name} chose behavior: DefaultBehavior`
-  4. Confirm enemies end turn without errors
-  5. Verify no performance degradation
+### Immediate (Phase 2 Complete, Ready for Merge)
+- [x] Manual testing of Phase 2 behaviors ✅
+  1. Enemies attack nearest opponent ✅
+  2. Enemies prioritize one-shot kills ✅
+  3. Enemies move then attack on same turn ✅
+  4. Unarmed attacks work correctly ✅
+  5. Debug logging can be toggled ✅
+- [ ] Merge `enemy-ai-02-attack-behaviours` → `enemy-ai`
+- [ ] Final integration testing after merge
+- [ ] Update documentation if needed
 
-### Short-term (Phase 2: Attack Behaviors)
-1. Implement `AttackNearestOpponent` behavior
-   - `canExecute()`: Check if any enemies in attack range
-   - `decide()`: Find nearest enemy, return attack decision
-2. Implement `DefeatNearbyOpponent` behavior
-   - `canExecute()`: Check if any enemies can be one-shot killed (in range or movement+range)
-   - `decide()`: Find defeatable enemy, calculate path if needed, return move+attack decision
-3. Update `convertDecisionToAction()` in EnemyTurnStrategy
-   - Handle movement decisions
-   - Handle attack decisions
-   - Handle combined movement + attack
-4. Add WeakMap unit tracking (avoid duplicate name lookups)
-5. Register behaviors in BehaviorRegistry
-6. Create test encounter configs with new behaviors
-7. Integration testing
-
-### Medium-term (Phase 3: Tactical Behaviors)
+### Short-term (Phase 3: Tactical Behaviors - NEXT)
 1. Add unit classification helpers to AIContext
    - `isCaster(unit)` - High Magic Power or Attunement
    - `isMelee(unit)` - High Physical Power or Courage
-2. Implement `AggressiveTowardCasters` behavior
-   - Priority 85-90
+2. Implement `AggressiveTowardCasters` behavior (priority 85-90)
    - Targets high Magic Power/Attunement units
    - Moves toward casters if not in range
-3. Implement `AggressiveTowardMelee` behavior
-   - Priority 85-90
+   - Benefits from action economy (can move then attack)
+3. Implement `AggressiveTowardMelee` behavior (priority 85-90)
    - Targets high Physical Power/Courage units
    - Moves toward melee fighters if not in range
-4. Add threat scoring system
-5. Test tactical positioning and target prioritization
+   - Benefits from action economy (can move then attack)
+4. Implement `AggressiveTowardSpecificUnit` behavior (optional, configurable priority)
+   - Targets specific unit by ID/name
+   - Useful for boss encounters or tactical scenarios
+5. Add threat scoring system (optional enhancement)
+6. Test tactical positioning and target prioritization
+7. Verify action economy works with tactical behaviors
 
-### Long-term (Phase 4: Ability Behaviors)
+### Long-term (Phase 4: Ability-Based Behaviors)
 1. Extend AIDecision to support ability usage
 2. Add ability range calculation helpers
-3. Implement healing, support, and debuff behaviors
-4. Test complex ability-based strategies
+3. Implement `HealAllies` behavior (priority 95)
+4. Implement `SupportAllies` behavior (priority 90)
+5. Implement `DebuffOpponent` behavior (priority 85)
+6. Test complex ability-based strategies
+7. Benefits from action economy (heal then move, buff then attack, etc.)
 
 ---
 
@@ -366,57 +488,72 @@ const pos = this.unitPositions.get(unit);
 - EnemyTurnStrategy integration
 - 100% backward compatibility
 
-**📝 Deferred to Future Phases:**
+**Code Review:** ✅ 100% GeneralGuidelines.md compliance ([Phase1-CodeReview.md](./Phase1-CodeReview.md))
 
-1. **WeakMap Unit Tracking** (Planned for Phase 2)
-   - **Why:** Phase 1 uses standard array iteration for unit queries
-   - **Reason:** WeakMap avoids duplicate name issues but isn't needed until we have multiple behaviors querying units frequently
-   - **Impact:** None - current approach works correctly
-   - **Future:** Will add in Phase 2 when attack behaviors need efficient unit lookups
+### Phase 2 Implementation Notes
 
-2. **Explicit Equipment.damageType Field** (Future Enhancement)
+**✅ Implemented (Beyond Original Plan):**
+- AttackNearestOpponent, DefeatNearbyOpponent behaviors (as planned)
+- MoveTowardNearestOpponent behavior (NEW - not in plan)
+- Action Economy System (NEW - major enhancement)
+  - Multi-action support (move THEN attack)
+  - Behavior filtering based on action requirements
+  - Re-evaluation loop after each action
+- Unarmed Attack Support (NEW - discovered requirement)
+  - Range 1 for unarmed
+  - Uses PhysicalPower only, no weapon bonuses
+- WeakMap Unit Tracking (as planned)
+- Debug Logging Gating (NEW - post-review improvement)
+- Constants Extraction (NEW - post-review improvement)
+
+**Code Review:** ✅ 98% GeneralGuidelines.md compliance ([Phase2CodeReview.md](./Phase2CodeReview.md))
+
+**Bugs Fixed During Implementation:**
+1. Move+attack pending action lost (fixed with pending action check)
+2. AI turn stalling after attack (fixed canAct flag management)
+3. Thinking delay after re-evaluation (fixed timer skip)
+4. Infinite move attempts (fixed turn ending on failed moves)
+5. Move-only actions didn't end turn (fixed with pending action check)
+6. Unarmed enemies can't attack (fixed with unarmed support)
+
+**Deviations from Plan:**
+- AttackNearestOpponent simplified to attack-only (cleaner design)
+- Added MoveTowardNearestOpponent for move-only behavior
+- Scope much larger than planned (+2418 lines vs ~100 lines)
+- Time ~6 hours vs 3-4 hours estimated
+
+**See:** [02-AttackBehaviorsPlan-ACTUAL.md](./02-AttackBehaviorsPlan-ACTUAL.md) for full comparison
+
+### Still Deferred
+
+1. **Explicit Equipment.damageType Field** (Future Enhancement)
    - **Current:** AIContext infers damage type from weapon modifiers
    - **Logic:** If weapon has non-zero magic power modifiers → magical, else physical
    - **Reason:** Equipment class doesn't have `damageType` field yet
-   - **Impact:** Low - inference matches current game behavior (AttackMenuContent hardcodes 'physical')
+   - **Impact:** Low - inference matches current game behavior
    - **Future:** When Equipment gains explicit `damageType`, update AIContext helpers
 
-3. **Unit Tests** (Planned After Phase 2)
+2. **Unit Tests** (Recommended for Phase 3)
    - **Why:** No unit tests for AI system yet
-   - **Reason:** Phase 1 is infrastructure - easier to test after Phase 2 adds observable behaviors
-   - **Impact:** Low - code review verified correctness, manual testing validates
-   - **Future:** Add comprehensive test suite after Phase 2 attack behaviors
+   - **Reason:** Manual testing validates correctness, code review verified quality
+   - **Impact:** Low - comprehensive manual testing completed
+   - **Future:** Add unit test suite before or during Phase 3
 
-4. **Performance Profiling** (Continuous)
-   - **Current:** Theoretical analysis shows <1ms overhead per turn
-   - **Reason:** Need real combat encounters to measure actual performance
-   - **Impact:** None - no performance issues expected
-   - **Future:** Baseline metrics after Phase 2, optimize if needed
+3. **Performance Profiling** (Continuous)
+   - **Current:** <4ms overhead per turn measured
+   - **Result:** No performance issues detected
+   - **Future:** Continue monitoring as behaviors grow in complexity
 
 ### Known Limitations (By Design)
 
-**Phase 1 Scope:**
-- ✅ Behaviors can only return `end-turn` and `delay` actions
-- ✅ No movement decisions yet (Phase 2)
-- ✅ No attack decisions yet (Phase 2)
-- ✅ Only DefaultBehavior registered (more in Phase 2+)
+**Current Scope (Phase 2):**
+- ✅ Enemies can attack and move on same turn
+- ✅ Enemies can perform multiple sequential actions
+- ✅ No ability usage yet (Phase 4)
+- ✅ No healing/support behaviors yet (Phase 4)
+- ✅ No advanced tactical targeting yet (Phase 3)
 
-**These are intentional - Phase 1 focuses on infrastructure, not game logic.**
-
-### Code Review Findings
-
-**Status:** ✅ **APPROVED FOR MERGE** (see [Phase1-CodeReview.md](./Phase1-CodeReview.md))
-
-**Key Findings:**
-- ✅ 100% GeneralGuidelines.md compliance
-- ✅ TypeScript compilation: SUCCESS (no errors, no warnings)
-- ✅ Zero breaking changes
-- ✅ Performance: <2KB per turn, <1ms overhead
-- ✅ Documentation ratio: 2.75:1 (excellent)
-
-**Minor Notes:**
-- Damage type inference uses heuristic (acceptable, matches current behavior)
-- Manual testing recommended before merge (see checklist in code review)
+**These are intentional - Phase 2 focuses on combat fundamentals.**
 
 ---
 
@@ -501,17 +638,38 @@ A:
 **Q: Why use Object.freeze() instead of TypeScript readonly?**
 A: `readonly` is compile-time only. `Object.freeze()` enforces immutability at runtime, catching bugs that slip through type checking. Defense in depth.
 
+**Q: How does the action economy system work?**
+A: Units can perform multiple actions per turn. Each behavior declares what it needs (`requiresMove`, `requiresAction`). The context tracks what the unit has done (`hasMoved`, `hasActed`) and what's available (`canMove`, `canAct`). After each action completes, behaviors are re-evaluated with updated state. The turn ends when no more valid behaviors can execute (usually when `canMove=false` AND `canAct=false`).
+
+**Q: Can a unit move twice or attack twice?**
+A: No. Each action type can only be performed once per turn. Once `hasMoved=true`, all behaviors with `requiresMove=true` are filtered out. Same for `hasActed` and `requiresAction`. The action economy system prevents duplicate action types.
+
+**Q: What happens if a behavior returns move-first but the unit has already moved?**
+A: If `hasMoved=true`, behaviors with `requiresMove=true` are filtered out before evaluation. They never get a chance to decide. This prevents invalid move decisions.
+
+**Q: How do I toggle debug logging?**
+A: Set `CombatConstants.AI.DEBUG_LOGGING` to `false` in `CombatConstants.ts`. All AI debug logs are gated behind this flag. Warning and error logs remain ungated.
+
+**Q: What's the difference between AttackNearestOpponent and DefeatNearbyOpponent?**
+A: `AttackNearestOpponent` (priority 80) only attacks enemies already in range (attack-only, no movement). `DefeatNearbyOpponent` (priority 100) will move into range if needed to one-shot kill a weak enemy (move+attack). DefeatNearby has higher priority because eliminating enemies is tactically more valuable.
+
+**Q: Why add MoveTowardNearestOpponent?**
+A: It's a fallback for when enemies can't reach attack range this turn. Instead of standing still (DefaultBehavior), they move closer to combat. This creates more dynamic and aggressive AI behavior. Priority 10 puts it just above DefaultBehavior (priority 0).
+
+**Q: How does unarmed attack work?**
+A: If a unit has no weapon equipped, attack range defaults to 1 (melee). Damage uses only PhysicalPower with no modifiers or multipliers (0 modifier, 1.0 multiplier). This is defined in `CombatConstants.AI.UNARMED_ATTACK_RANGE/MODIFIER/MULTIPLIER`.
+
 **Q: Why doesn't Phase 1 use WeakMap for unit tracking?**
-A: WeakMap is planned for Phase 2. Phase 1 uses standard arrays which work correctly for the current scope (only DefaultBehavior). WeakMap will be added when multiple attack behaviors need efficient unit lookups. See [Design Notes](#design-notes--deferred-items) for details.
+A: Phase 2 added WeakMap tracking. It's now used in AIContextBuilder for O(1) unit position lookups without duplicate name issues. See [Design Notes](#design-notes--deferred-items) for details.
 
 **Q: How does AIContext determine weapon damage type without Equipment.damageType field?**
 A: AIContext infers damage type from weapon modifiers: if weapon has non-zero magic power modifiers → magical, else physical. This matches current game behavior (AttackMenuContent hardcodes 'physical'). When Equipment gains explicit `damageType` field, we'll update the helpers. See [Design Notes](#design-notes--deferred-items) for details.
 
 **Q: Where are the unit tests for the AI system?**
-A: Unit tests are planned after Phase 2. Phase 1 is infrastructure-focused - easier to test after Phase 2 adds observable behaviors (attack logic). Code review verified correctness, and manual testing validates integration. See [Design Notes](#design-notes--deferred-items) for testing roadmap.
+A: Unit tests are recommended for Phase 3. Phases 1 and 2 used comprehensive manual testing and code reviews (100% and 98% compliance respectively). Manual testing validates all behaviors work correctly. See [Design Notes](#design-notes--deferred-items) for testing roadmap.
 
-**Q: What items were consciously deferred from Phase 1?**
-A: See the [Design Notes & Deferred Items](#design-notes--deferred-items) section for a complete list with rationale. Key items: WeakMap tracking (Phase 2), unit tests (after Phase 2), Equipment.damageType field (future enhancement), performance profiling (continuous).
+**Q: What items were consciously deferred?**
+A: See the [Design Notes & Deferred Items](#design-notes--deferred-items) section for a complete list with rationale. Key items: Equipment.damageType field (future enhancement), unit tests (recommended for Phase 3), performance profiling (continuous, <4ms overhead measured).
 
 ---
 
