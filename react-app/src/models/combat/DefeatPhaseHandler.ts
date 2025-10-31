@@ -102,11 +102,12 @@ export class DefeatPhaseHandler extends PhaseBase {
 
     // Check if Try Again button clicked
     if (this.isPointInBounds(context.canvasX, context.canvasY, buttonBounds.tryAgain)) {
-      const newState = this.handleTryAgain(state);
-      if (newState) {
+      const result = this.handleTryAgain(state);
+      if (result) {
         return {
           handled: true,
-          newState,
+          newState: result.newState,
+          data: { playCinematic: result.playCinematic },
         };
       }
       return { handled: true };
@@ -135,7 +136,7 @@ export class DefeatPhaseHandler extends PhaseBase {
     return { handled: false };
   }
 
-  private handleTryAgain(state: CombatState): CombatState | null {
+  private handleTryAgain(state: CombatState): { newState: CombatState; playCinematic: boolean } | null {
     // Check if initial state snapshot exists
     if (!state.initialStateSnapshot) {
       console.error("[DefeatPhaseHandler] No initial state snapshot available for retry");
@@ -153,7 +154,8 @@ export class DefeatPhaseHandler extends PhaseBase {
       }
 
       console.log("[DefeatPhaseHandler] Combat state restored from initial snapshot");
-      return restoredState;
+      // Return both the new state and a flag indicating that a cinematic should play
+      return { newState: restoredState, playCinematic: true };
     } catch (error) {
       console.error("[DefeatPhaseHandler] Failed to restore initial state:", error);
       // TODO: Show error message to player (future enhancement)

@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { CombatState, CombatPhase } from '../../models/combat/CombatState';
+import { serializeCombatState } from '../../models/combat/CombatState';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import type { CombatPhaseHandler } from '../../models/combat/CombatPhaseHandler';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
@@ -104,6 +105,27 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Add other phase handlers as needed (victory)
   }, [combatState.phase, uiStateManager, phaseHandlerVersion]);
 
+  // Create initial state snapshot on mount (for "Try Again" functionality)
+  useEffect(() => {
+    setCombatState(prevState => {
+      // Only create snapshot if it doesn't exist
+      if (prevState.initialStateSnapshot) {
+        return prevState;
+      }
+
+      try {
+        // Serialize initial state (excluding snapshot field to avoid recursion)
+        const stateForSnapshot = { ...prevState, initialStateSnapshot: null };
+        const snapshot = serializeCombatState(stateForSnapshot);
+        console.log('[CombatView] Initial state snapshot created for Try Again functionality');
+        return { ...prevState, initialStateSnapshot: snapshot };
+      } catch (error) {
+        console.error('[CombatView] Failed to serialize initial combat state:', error);
+        return prevState;
+      }
+    });
+  }, []); // Empty dependency array = run once on mount
+
   // Expose developer mode functions to window (for testing)
   useEffect(() => {
     // Expose setHitRate function
@@ -124,10 +146,30 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     // Expose forceDefeat function (for testing defeat screen)
     (window as any).forceDefeat = () => {
       console.log('[DEV] Forcing defeat screen transition...');
-      setCombatState(prevState => ({
-        ...prevState,
-        phase: 'defeat' as const
-      }));
+      setCombatState(prevState => {
+        // If no snapshot exists yet, create one from current state
+        let snapshot = prevState.initialStateSnapshot;
+        if (!snapshot) {
+          try {
+            const { serializeCombatState } = require('../../models/combat/CombatState');
+            const stateForSnapshot = {
+              ...prevState,
+              initialStateSnapshot: null,
+            };
+            snapshot = serializeCombatState(stateForSnapshot);
+            console.log('[DEV] Created initial state snapshot for Try Again functionality');
+          } catch (error) {
+            console.error('[DEV] Failed to create snapshot:', error);
+            snapshot = null;
+          }
+        }
+
+        return {
+          ...prevState,
+          phase: 'defeat' as const,
+          initialStateSnapshot: snapshot,
+        };
+      });
     };
 
     // Cleanup on unmount
@@ -1027,11 +1069,30 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
 
     // Delegate mouse down to phase handler
     if (phaseHandlerRef.current.handleMouseDown) {
-      phaseHandlerRef.current.handleMouseDown(
+      const phaseResult = phaseHandlerRef.current.handleMouseDown(
         { canvasX, canvasY },
         combatState,
         activeEncounter
       );
+
+      // Process phase event result
+      if (phaseResult.handled) {
+        // Update state if provided
+        if (phaseResult.newState) {
+          setCombatState(phaseResult.newState);
+        }
+
+        // Check if we should play a cinematic (e.g., for Try Again)
+        if (phaseResult.data && typeof phaseResult.data === 'object' && 'playCinematic' in phaseResult.data) {
+          const data = phaseResult.data as { playCinematic: boolean };
+          if (data.playCinematic) {
+            // Play screen fade-in animation
+            const fadeInSequence = new ScreenFadeInSequence(2.0);
+            cinematicManagerRef.current.play(fadeInSequence, phaseResult.newState || combatState, activeEncounter);
+            console.log('[CombatView] Playing fade-in cinematic for Try Again');
+          }
+        }
+      }
     }
   }, [combatState, activeEncounter, layoutRenderer, startContinuousScroll, topPanelManager, renderFrame]);
 
