@@ -22,7 +22,8 @@
       "Bash(grep -n \"^#### \\`managers/panels/ActionsMenuContent\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
       "Bash(grep -n \"^#### \\`ActionTimerPhaseHandler\" c:/Users/User/git/CaptainCoderOrg/VibeDC/CombatHierarchy.md)",
       "Bash(npm test -- HumanoidUnit.test.ts)",
-      "Bash(grep:*)"
+      "Bash(grep:*)",
+      "Bash(npm test:*)"
     ],
     "deny": [
       "Bash(npm run dev)"

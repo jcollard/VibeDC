@@ -24,6 +24,6 @@ General improvments
  - It would be great to have developer tools to easiliy filter logs when debugging.
  - Show animation of attack THEN show KO (or don't show numbers if unit is KO'd, or remove KO text from map)
  - Update weapons to have an "Attack Power" and "Attack Multiplier" rather than Physical Power / Physical Multiplier
- 
+ - Throughout we are missing a setter for wounds and the AI added a cast to any to set the private property. We should add a setter and refactor throughout
  
  
