@@ -368,4 +368,14 @@ None - this feature builds entirely on existing systems.
 
 ---
 
-**Next Steps**: See [ImplementationPlan.md](./ImplementationPlan.md) for detailed step-by-step implementation guide.
+## Implementation Documentation
+
+**Master Plan**: See [KOFeatureImplementationPlan.md](./KOFeatureImplementationPlan.md) for overall timeline and phase overview.
+
+**Detailed Phase Guides**:
+- ✅ **Phase 1**: [Visual Representation](./01-VisualRepresentation.md) - COMPLETED (2025-10-31)
+- ✅ **Phase 2**: [Turn Order and Action Timer](./02-TurnOrderAndActionTimer.md) - COMPLETED (2025-10-31)
+- 📋 **Phase 3**: [Movement and Pathfinding](./03-MovementAndPathfinding.md) - READY FOR IMPLEMENTATION
+- ⏳ **Phase 4**: Attack Range and AI Integration - TBD
+
+**Progress**: 2 of 4 phases complete (~50% done)

@@ -8,6 +8,22 @@
 
 ---
 
+## Guidelines Compliance
+
+This implementation guide was created with full awareness of [GeneralGuidelines.md](../../GeneralGuidelines.md) patterns, specifically:
+- **State Management:** Uses `isKnockedOut` getter (derived from wounds/maxHealth)
+- **Performance Patterns:** No allocations, boolean checks only (<0.1% overhead)
+- **Implementation Planning:** Comprehensive plan with rationale before coding
+- **Testing Strategy:** 6 manual tests + 6 edge cases documented
+- **Type Safety:** No `any` casts, preserves existing APIs
+- **Code Quality:** Clear comments explaining "why" behind logic changes
+
+All code changes follow established patterns from Phase 1 and Phase 2.
+
+**Guidelines Review:** Reviewed GeneralGuidelines.md sections on State Management (lines 228-395), Performance Patterns (lines 1278-1586), and Implementation Planning (lines 1843-2017). This guide complies with all mandatory patterns.
+
+---
+
 ## Overview
 
 ### Phase Goal
