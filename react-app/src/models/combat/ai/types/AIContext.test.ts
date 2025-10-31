@@ -522,10 +522,10 @@ describe('AIContextBuilder - KO Unit Filtering', () => {
       expect(distance).toBe(2); // Can go straight through ally
     });
 
-    it('getPathDistance should route around enemy units', () => {
+    it('getPathDistance should path through enemy units', () => {
       // Setup: AI at (2,2), enemy blocking at (3,2), destination at (4,2)
       manifest.addUnit(aiUnit, { x: 2, y: 2 });
-      manifest.addUnit(enemyUnit1, { x: 3, y: 2 }); // Enemy unit blocking
+      manifest.addUnit(enemyUnit1, { x: 3, y: 2 }); // Enemy unit in the path
       state = createMockCombatState(map, manifest);
 
       const context = AIContextBuilder.build(
@@ -536,10 +536,10 @@ describe('AIContextBuilder - KO Unit Filtering', () => {
         false
       );
 
-      // Should route around enemy (if possible)
+      // Pathfinding now ignores all units (only considers walls)
+      // So path goes straight through the enemy unit
       const distance = context.getPathDistance({ x: 2, y: 2 }, { x: 4, y: 2 });
-      // Path should be longer than 2 (need to go around enemy)
-      expect(distance).toBeGreaterThan(2);
+      expect(distance).toBe(2); // Straight path through enemy
     });
 
     it('getPathDistance should handle paths through KO\'d units', () => {
