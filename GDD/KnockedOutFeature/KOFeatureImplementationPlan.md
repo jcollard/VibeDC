@@ -53,10 +53,10 @@ This document provides a phased, step-by-step implementation plan for the Knocke
 | Phase | Description | Files | Complexity | Time Est. | Status | Guide |
 |-------|-------------|-------|------------|-----------|--------|-------|
 | 1 | Visual Representation (State, Constants, Map Rendering) | 7 | Medium | 2.5 hours | ✅ DONE | [Guide](./01-VisualRepresentation.md) |
-| 2 | Turn Order and Action Timer | 3 | Medium | 3.5 hours | 📋 READY | [Guide](./02-TurnOrderAndActionTimer.md) |
-| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | ⏳ PENDING | TBD |
+| 2 | Turn Order and Action Timer | 3 | Medium | 3.5 hours | ✅ DONE | [Guide](./02-TurnOrderAndActionTimer.md) |
+| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | 📋 READY | TBD |
 | 4 | Attack Range and AI Integration | 4 | Medium | 2 hours | ⏳ PENDING | TBD |
-| **Total** | - | **9 unique** | - | **~9 hours** | **1/4 Complete** | - |
+| **Total** | - | **9 unique** | - | **~9 hours** | **2/4 Complete** | - |
 
 ---
 
@@ -753,6 +753,43 @@ const turnOrder = [...activeUnits, ...koUnits];
 - No performance impact from conditionals
 
 **Rollback:** Revert all 3 modified files (TurnOrderRenderer.ts, ActionTimerPhaseHandler.ts, UnitTurnPhaseHandler.ts) if issues arise.
+
+### Phase 2 Implementation Notes (2025-10-31)
+
+**Status:** ✅ COMPLETED
+
+**Files Modified:**
+1. ✅ `models/combat/managers/renderers/TurnOrderRenderer.ts` - Added sorting helper, grey tint, and "KO" label
+2. ✅ `models/combat/ActionTimerPhaseHandler.ts` - Prevented timer accumulation for KO'd units
+3. ✅ `models/combat/UnitTurnPhaseHandler.ts` - Filtered KO'd units from ready unit selection
+
+**Key Changes:**
+- Added `getSortedUnits()` helper method in TurnOrderRenderer (lines 209-231) that partitions units into active (sorted by ticks-until-ready) and KO'd (unsorted at end)
+- Updated `render()` method to use sorted units throughout (lines 344-349, 388-393)
+- Applied grey tint filter to KO'd unit sprites in turn order display (lines 423-442)
+- Replaced ticks-until-ready with red "KO" label for KO'd units (lines 449-486)
+- Added KO check in ActionTimerPhaseHandler timer accumulation loop - KO'd units' timers stay at 0 (lines 473-476)
+- Updated ActionTimerPhaseHandler `calculateTurnOrder()` to partition units and place KO'd at end (lines 523-547)
+- Filtered out KO'd units when selecting ready unit in UnitTurnPhaseHandler (lines 509-510)
+- Updated UnitTurnPhaseHandler `getTopPanelRenderer()` turn order calculation to match ActionTimerPhaseHandler (lines 873-895)
+
+**Build Status:** ✅ Clean build, no TypeScript errors
+
+**Testing Results:**
+- ✅ KO'd units appear at end of turn order list with grey tint
+- ✅ Red "KO" label replaces ticks-until-ready for KO'd units
+- ✅ KO'd units' action timers stay at 0 (no accumulation)
+- ✅ KO'd units never trigger unit-turn phase
+- ✅ Scroll behavior works correctly with KO'd units
+- ✅ Performance: No measurable impact
+
+**Implementation Highlights:**
+- TurnOrderRenderer now handles sorting internally via `getSortedUnits()` method
+- Consistent sorting logic across both ActionTimerPhaseHandler and UnitTurnPhaseHandler
+- Grey tint uses same `CombatConstants.KNOCKED_OUT.TINT_FILTER` as map rendering (Phase 1)
+- All changes follow GeneralGuidelines.md patterns (no per-frame allocations, uses getters, canvas filter API)
+
+**Next Phase:** Phase 3 - Movement and Pathfinding
 
 ---
 

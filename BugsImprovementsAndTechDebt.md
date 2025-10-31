@@ -22,7 +22,7 @@ Missing Features
 General improvments
  - Change text from "TIME UNTIL NEXT TURN" to "TIME UNTIL NEXT ACTION"
  - It would be great to have developer tools to easiliy filter logs when debugging.
- - Show animation of attack THEN show KO (or don't show numbers if unit is KO'd)
+ - Show animation of attack THEN show KO (or don't show numbers if unit is KO'd, or remove KO text from map)
  - Update weapons to have an "Attack Power" and "Attack Multiplier" rather than Physical Power / Physical Multiplier
  
  
