@@ -45,10 +45,13 @@ export class VictoryModalRenderer {
     this.renderPanelBackground(ctx, modalX, modalY, modalWidth, modalHeight);
 
     // 4. Render title
-    const contentY = this.renderTitle(ctx, modalX, modalY, modalWidth, fonts);
+    let contentY = this.renderTitle(ctx, modalX, modalY, modalWidth, fonts);
 
-    // 5. Render XP and Gold sections
-    let currentY = this.renderXPGold(ctx, modalX, contentY, rewards, fonts);
+    // 5. Render header (subtitle)
+    contentY = this.renderHeader(ctx, modalX, contentY, modalWidth, fonts);
+
+    // 6. Render XP and Gold sections (same row)
+    let currentY = this.renderXPGold(ctx, modalX, contentY, modalWidth, rewards, fonts);
 
     // 7. Render items section if any items exist
     if (rewards.items.length > 0) {
@@ -132,10 +135,48 @@ export class VictoryModalRenderer {
     return titleY + titleFont.charHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
   }
 
+  private renderHeader(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    startY: number,
+    modalWidth: number,
+    fonts: Map<string, HTMLImageElement>
+  ): number {
+    const headerFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.HEADER_FONT_ID);
+    const headerFontImage = fonts.get(CombatConstants.VICTORY_SCREEN.HEADER_FONT_ID);
+
+    if (!headerFont || !headerFontImage) {
+      console.warn("[VictoryModalRenderer] Victory header font not loaded");
+      return startY + 7;
+    }
+
+    const headerText = CombatConstants.VICTORY_SCREEN.HEADER_TEXT;
+    const headerWidth = FontAtlasRenderer.measureText(headerText, headerFont);
+
+    // Center horizontally within modal
+    const headerX = Math.floor(modalX + (modalWidth - headerWidth) / 2);
+    const headerY = startY;
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      headerText,
+      headerX,
+      headerY,
+      CombatConstants.VICTORY_SCREEN.HEADER_FONT_ID,
+      headerFontImage,
+      1,
+      'left',
+      CombatConstants.VICTORY_SCREEN.HEADER_COLOR
+    );
+
+    return headerY + headerFont.charHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
+  }
+
   private renderXPGold(
     ctx: CanvasRenderingContext2D,
     modalX: number,
     startY: number,
+    modalWidth: number,
     rewards: VictoryRewards,
     fonts: Map<string, HTMLImageElement>
   ): number {
@@ -148,14 +189,24 @@ export class VictoryModalRenderer {
     }
 
     const leftMargin = modalX + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
-    let currentY = startY;
+    const currentY = startY;
 
-    // Render XP line: "XP: 150"
+    // Render XP and Gold on the same row with 24px spacing
     const xpText = `XP: ${rewards.xp}`;
+    const goldText = `Gold: ${rewards.gold}`;
+
+    const xpWidth = FontAtlasRenderer.measureText(xpText, sectionFont);
+    const goldWidth = FontAtlasRenderer.measureText(goldText, sectionFont);
+    const totalWidth = xpWidth + CombatConstants.VICTORY_SCREEN.XP_GOLD_SPACING + goldWidth;
+
+    // Center the group horizontally
+    const startX = Math.floor(modalX + (modalWidth - totalWidth) / 2);
+
+    // Render XP
     FontAtlasRenderer.renderText(
       ctx,
       xpText,
-      leftMargin,
+      startX,
       currentY,
       CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID,
       sectionFontImage,
@@ -164,14 +215,11 @@ export class VictoryModalRenderer {
       CombatConstants.VICTORY_SCREEN.SECTION_VALUE_COLOR
     );
 
-    currentY += sectionFont.charHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
-
-    // Render Gold line: "Gold: 50"
-    const goldText = `Gold: ${rewards.gold}`;
+    // Render Gold (24px to the right of XP)
     FontAtlasRenderer.renderText(
       ctx,
       goldText,
-      leftMargin,
+      startX + xpWidth + CombatConstants.VICTORY_SCREEN.XP_GOLD_SPACING,
       currentY,
       CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID,
       sectionFontImage,
@@ -180,9 +228,7 @@ export class VictoryModalRenderer {
       CombatConstants.VICTORY_SCREEN.SECTION_VALUE_COLOR
     );
 
-    currentY += sectionFont.charHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
-
-    return currentY;
+    return currentY + sectionFont.charHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
   }
 
   private renderItemsSection(
@@ -373,16 +419,18 @@ export class VictoryModalRenderer {
     const modalY = CombatConstants.VICTORY_SCREEN.MODAL_Y;
 
     const titleFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.TITLE_FONT_ID);
+    const headerFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.HEADER_FONT_ID);
     const sectionFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID);
 
     const titleHeight = titleFont ? titleFont.charHeight : 15;
+    const headerHeight = headerFont ? headerFont.charHeight : 7;
     const sectionHeight = sectionFont ? sectionFont.charHeight : 7;
 
     // Calculate starting Y for items (same as render logic)
     let currentY = modalY + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
-    currentY += titleHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
-    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // XP
-    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Gold
+    currentY += titleHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Title
+    currentY += headerHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Header
+    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // XP/Gold row
     currentY += sectionHeight + 4; // Items label + gap
 
     const leftMargin = modalX + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
@@ -420,16 +468,18 @@ export class VictoryModalRenderer {
     }
 
     const titleFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.TITLE_FONT_ID);
+    const headerFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.HEADER_FONT_ID);
     const sectionFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID);
 
     const titleHeight = titleFont ? titleFont.charHeight : 15;
+    const headerHeight = headerFont ? headerFont.charHeight : 7;
     const sectionHeight = sectionFont ? sectionFont.charHeight : 7;
 
     // Calculate button Y (same as render logic)
     let currentY = modalY + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
-    currentY += titleHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING;
-    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // XP
-    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Gold
+    currentY += titleHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Title
+    currentY += headerHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Header
+    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // XP/Gold row
 
     if (rewards.items.length > 0) {
       currentY += sectionHeight + 4; // Items label + gap

@@ -233,11 +233,17 @@ export const CombatConstants = {
     TITLE_FONT_ID: '15px-dungeonslant' as const,
     TITLE_COLOR: '#00ff00' as const,  // Green
 
+    // Header (subtitle)
+    HEADER_TEXT: 'To the victor goes the spoils' as const,
+    HEADER_FONT_ID: '7px-04b03' as const,
+    HEADER_COLOR: '#ffffff' as const,  // White
+
     // Content sections
     SECTION_FONT_ID: '7px-04b03' as const,
     SECTION_LABEL_COLOR: '#ffff00' as const,  // Yellow
     SECTION_VALUE_COLOR: '#ffffff' as const,  // White
     SECTION_SPACING: 8 as const,
+    XP_GOLD_SPACING: 24 as const,  // Spacing between XP and Gold on same row
 
     // Item grid
     ITEM_GRID_COLUMNS: 3 as const,
