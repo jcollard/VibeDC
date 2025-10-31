@@ -6,7 +6,7 @@
 
 ## Purpose
 
-This document provides a phased, step-by-step implementation plan for the Knocked Out (KO) feature, organized into 8 independent phases that can be tested incrementally. Each phase builds on the previous one and follows all patterns from GeneralGuidelines.md.
+This document provides a phased, step-by-step implementation plan for the Knocked Out (KO) feature, organized into 4 logical phases that can be tested incrementally. Each phase builds on the previous one and follows all patterns from GeneralGuidelines.md.
 
 ---
 
@@ -14,14 +14,10 @@ This document provides a phased, step-by-step implementation plan for the Knocke
 
 - [Implementation Philosophy](#implementation-philosophy)
 - [Phase Overview](#phase-overview)
-- [Phase 1: Core KO State Detection](#phase-1-core-ko-state-detection)
-- [Phase 2: Visual Constants](#phase-2-visual-constants)
-- [Phase 3: Map Rendering (Grey Tint)](#phase-3-map-rendering-grey-tint)
-- [Phase 4: Map Rendering (KO Text Overlay)](#phase-4-map-rendering-ko-text-overlay)
-- [Phase 5: Turn Order Display](#phase-5-turn-order-display)
-- [Phase 6: Action Timer Integration](#phase-6-action-timer-integration)
-- [Phase 7: Movement and Pathfinding](#phase-7-movement-and-pathfinding)
-- [Phase 8: Attack Range and AI Integration](#phase-8-attack-range-and-ai-integration)
+- [Phase 1: Visual Representation](#phase-1-visual-representation)
+- [Phase 2: Turn Order and Action Timer](#phase-2-turn-order-and-action-timer)
+- [Phase 3: Movement and Pathfinding](#phase-3-movement-and-pathfinding)
+- [Phase 4: Attack Range and AI Integration](#phase-4-attack-range-and-ai-integration)
 - [Testing Strategy](#testing-strategy)
 - [Guidelines Compliance Checklist](#guidelines-compliance-checklist)
 - [Performance Considerations](#performance-considerations)
@@ -56,33 +52,33 @@ This document provides a phased, step-by-step implementation plan for the Knocke
 
 | Phase | Description | Files | Complexity | Time Est. | Dependencies |
 |-------|-------------|-------|------------|-----------|--------------|
-| 1 | Core KO State Detection | 3 | Low | 30 min | None |
-| 2 | Visual Constants | 1 | Low | 15 min | None |
-| 3 | Map Rendering (Grey Tint) | 1 | Low | 45 min | 1, 2 |
-| 4 | Map Rendering (KO Text) | 1 | Medium | 45 min | 1, 2, 3 |
-| 5 | Turn Order Display | 1 | Medium | 2 hours | 1, 2 |
-| 6 | Action Timer Integration | 2 | Medium | 1.5 hours | 1, 5 |
-| 7 | Movement and Pathfinding | 2 | Medium | 1 hour | 1 |
-| 8 | Attack Range and AI | 4 | Medium | 2 hours | 1, 7 |
+| 1 | Visual Representation (State, Constants, Map Rendering) | 5 | Medium | 2.5 hours | None |
+| 2 | Turn Order and Action Timer | 3 | Medium | 3.5 hours | 1 |
+| 3 | Movement and Pathfinding | 2 | Medium | 1 hour | 1 |
+| 4 | Attack Range and AI Integration | 4 | Medium | 2 hours | 1, 3 |
 | **Total** | - | **9 unique** | - | **~9 hours** | - |
 
 ---
 
-## Phase 1: Core KO State Detection
+## Phase 1: Visual Representation
 
 ### Goal
-Add `isKnockedOut` getter to the unit system as single source of truth.
+Establish the complete visual representation of knocked out units: add `isKnockedOut` getter, configure visual constants, and render KO units with grey tint and "KO" text overlay on the battle map.
 
 ### Rationale
-- Establishes derived state pattern (no serialization needed)
-- All other phases depend on this interface
-- Simplest possible foundation
-- Testable immediately via browser console
+- Creates a cohesive, immediately visible feature
+- All visual components work together as a unit
+- Establishes the foundation for all mechanical changes
+- Simpler to test as a complete visual package
+- Reduces administrative overhead of multiple small phases
 
 ### Files to Modify
 1. `models/combat/CombatUnit.ts`
 2. `models/combat/HumanoidUnit.ts`
 3. `models/combat/MonsterUnit.ts`
+4. `models/combat/CombatConstants.ts`
+5. `models/combat/rendering/CombatRenderer.ts`
+6. `models/combat/phases/UnitTurnPhaseHandler.ts`
 
 ### Implementation Steps
 
@@ -131,59 +127,7 @@ get isKnockedOut(): boolean {
 
 **Rationale:** Identical logic for consistency.
 
-### Testing Phase 1
-
-**Build Test:**
-```bash
-npm run build
-```
-**Expected:** No TypeScript errors
-
-**Manual Test (Browser Console):**
-```javascript
-// Get any unit from manifest
-const units = window.combatState.unitManifest.getAllUnits();
-const unit = units[0].unit;
-
-// Check healthy unit
-console.log(unit.isKnockedOut);  // Should be false
-
-// KO the unit
-unit.wounds = unit.maxHealth;
-console.log(unit.isKnockedOut);  // Should be true
-
-// Revive the unit
-unit.wounds = 0;
-console.log(unit.isKnockedOut);  // Should be false
-```
-
-**Acceptance Criteria:**
-- [x] TypeScript compiles without errors
-- [x] `isKnockedOut` returns `false` for healthy units
-- [x] `isKnockedOut` returns `true` when `wounds >= maxHealth`
-- [x] Getter works for both HumanoidUnit and MonsterUnit
-
-**Rollback:** Revert all 3 files if issues arise.
-
----
-
-## Phase 2: Visual Constants
-
-### Goal
-Add all KO-related constants to CombatConstants for consistency and easy tuning.
-
-### Rationale
-- Centralized configuration (per GeneralGuidelines.md)
-- Easy to adjust colors, text, filters
-- Documents design decisions in code
-- No runtime impact (just constants)
-
-### Files to Modify
-1. `models/combat/CombatConstants.ts`
-
-### Implementation Steps
-
-#### Step 2.1: Add KNOCKED_OUT Section
+#### Step 1.4: Add KNOCKED_OUT Constants Section
 **File:** `models/combat/CombatConstants.ts`
 
 **Location:** After the `AI` section (around line 300)
@@ -215,48 +159,7 @@ Add all KO-related constants to CombatConstants for consistency and easy tuning.
 - Canvas filter API string for consistent grey tint (70% brightness, 0% saturation)
 - `as const` for literal types and immutability
 
-### Testing Phase 2
-
-**Build Test:**
-```bash
-npm run build
-```
-**Expected:** No TypeScript errors
-
-**Manual Test (Browser Console):**
-```javascript
-// Access constants
-console.log(CombatConstants.KNOCKED_OUT.MAP_TEXT);          // "KO"
-console.log(CombatConstants.KNOCKED_OUT.MAP_TEXT_COLOR);    // "#ff0000"
-console.log(CombatConstants.KNOCKED_OUT.TINT_FILTER);       // "saturate(0%) brightness(70%)"
-```
-
-**Acceptance Criteria:**
-- [x] TypeScript compiles without errors
-- [x] Constants accessible via CombatConstants.KNOCKED_OUT
-- [x] All values are correct types (strings with `as const`)
-
-**Rollback:** Revert CombatConstants.ts if issues arise.
-
----
-
-## Phase 3: Map Rendering (Grey Tint)
-
-### Goal
-Apply grey tint to KO'd unit sprites on the battle map.
-
-### Rationale
-- Immediate visual feedback
-- Uses Canvas Filter API (hardware-accelerated, per GeneralGuidelines.md)
-- Tests Phase 1 integration in rendering pipeline
-- No text rendering complexity yet
-
-### Files to Modify
-1. `models/combat/rendering/CombatRenderer.ts`
-
-### Implementation Steps
-
-#### Step 3.1: Update renderUnits() Method
+#### Step 1.5: Update CombatRenderer renderUnits() Method
 **File:** `models/combat/rendering/CombatRenderer.ts`
 
 **Location:** In `renderUnits()` method, in the unit rendering loop
@@ -320,50 +223,7 @@ for (const placement of allUnits) {
 
 **Note:** Verify that `CombatRenderer` constructor sets `this.ctx.imageSmoothingEnabled = false` globally. If not already set, add this to the constructor per GeneralGuidelines.md lines 86-89.
 
-### Testing Phase 3
-
-**Manual Test:**
-1. Open combat encounter
-2. Open browser console
-3. KO a unit:
-   ```javascript
-   const units = window.combatState.unitManifest.getAllUnits();
-   units[0].unit.wounds = units[0].unit.maxHealth;
-   ```
-4. Observe unit sprite on map
-
-**Acceptance Criteria:**
-- [x] KO'd unit sprite appears grey/desaturated on map
-- [x] Healthy units render with normal colors
-- [x] No visual artifacts or filter bleeding to other sprites
-- [x] No performance degradation (60 FPS maintained)
-
-**Visual Reference:**
-- Grey tint: 0% saturation, 70% brightness
-- Should be clearly distinguishable from healthy units
-- Should still be recognizable (not too dark)
-
-**Rollback:** Revert CombatRenderer.ts if visual issues arise.
-
----
-
-## Phase 4: Map Rendering (KO Text Overlay)
-
-### Goal
-Render "KO" text centered on KO'd unit tiles on the battle map.
-
-### Rationale
-- Clear indication of KO status (even for color-blind players)
-- Tests FontAtlasRenderer integration
-- Completes map visual representation
-- More complex than Phase 3 (text positioning, font loading)
-
-### Files to Modify
-1. `models/combat/phases/UnitTurnPhaseHandler.ts`
-
-### Implementation Steps
-
-#### Step 4.1: Add KO Text Rendering in renderUI()
+#### Step 1.6: Add KO Text Rendering in UnitTurnPhaseHandler
 **File:** `models/combat/phases/UnitTurnPhaseHandler.ts`
 
 **Location:** In `renderUI()` method, at the END (after attack animations, before method closes)
@@ -428,59 +288,89 @@ Render "KO" text centered on KO'd unit tiles on the battle map.
 - ✅ Renders in renderUI() for correct Z-order
 - ✅ No per-frame allocations (just stack variables)
 
-### Testing Phase 4
+### Testing Phase 1
 
-**Manual Test:**
-1. Open combat encounter, start unit-turn phase
-2. KO a unit via console:
-   ```javascript
-   const units = window.combatState.unitManifest.getAllUnits();
-   units[0].unit.wounds = units[0].unit.maxHealth;
-   ```
-3. Observe unit on map
+**Build Test:**
+```bash
+npm run build
+```
+**Expected:** No TypeScript errors
+
+**Manual Test (Browser Console):**
+```javascript
+// Get any unit from manifest
+const units = window.combatState.unitManifest.getAllUnits();
+const unit = units[0].unit;
+
+// Test 1: Check healthy unit
+console.log(unit.isKnockedOut);  // Should be false
+
+// Test 2: Check constants are accessible
+console.log(CombatConstants.KNOCKED_OUT.MAP_TEXT);          // "KO"
+console.log(CombatConstants.KNOCKED_OUT.MAP_TEXT_COLOR);    // "#ff0000"
+console.log(CombatConstants.KNOCKED_OUT.TINT_FILTER);       // "saturate(0%) brightness(70%)"
+
+// Test 3: KO a unit and observe visual changes
+units[0].unit.wounds = units[0].unit.maxHealth;
+// Observe on the map:
+// - Unit sprite should appear grey/desaturated
+// - Red "KO" text should appear centered on the unit's tile
+// - Text should have shadow for visibility
+
+// Test 4: Revive the unit
+units[0].unit.wounds = 0;
+// Observe: Grey tint and "KO" text should disappear
+```
 
 **Acceptance Criteria:**
+- [x] TypeScript compiles without errors
+- [x] `isKnockedOut` getter works correctly for both unit types
+- [x] Constants accessible via CombatConstants.KNOCKED_OUT
+- [x] KO'd unit sprite appears with grey tint on map (0% saturation, 70% brightness)
 - [x] "KO" text appears centered on KO'd unit tiles
-- [x] Text is red (#ff0000) and readable
-- [x] Text has shadow for visibility on any background
+- [x] Text is red (#ff0000) with shadow for visibility
 - [x] Text appears ON TOP of unit sprite (not under)
-- [x] Text does not appear on healthy units
-- [x] No performance degradation
+- [x] Healthy units render with normal colors and no text
+- [x] No visual artifacts or filter bleeding
+- [x] No performance degradation (60 FPS maintained)
 
 **Visual Reference:**
-- Text should be centered both horizontally and vertically
-- Font size: 7px-04b03
-- Color: Red (#ff0000)
-- Shadow: Black for contrast
+- Grey tint: Clearly distinguishable from healthy units but still recognizable
+- "KO" text: Centered both horizontally and vertically on tile
+- Font: 7px-04b03
+- Color: Red with black shadow
 
 **Edge Cases:**
 - KO'd unit at edge of map (text still visible)
-- Multiple KO'd units (all show "KO" text)
-- Font not loaded (gracefully skips)
+- Multiple KO'd units (all show grey tint + "KO" text)
+- Font not loaded (gracefully skips text rendering)
 
 **Font Pre-loading:** Verify that the font `7px-04b03` is pre-loaded during CombatView initialization. If the font is not loaded, KO text will fail silently (graceful degradation).
 
-**Rollback:** Revert UnitTurnPhaseHandler.ts if visual issues arise.
+**Rollback:** Revert all 6 modified files if issues arise.
 
 ---
 
-## Phase 5: Turn Order Display
+## Phase 2: Turn Order and Action Timer
 
 ### Goal
-Update TurnOrderRenderer to show KO'd units at the end with grey tint and "KO" label.
+Update turn order display to show KO'd units at the end with grey tint and "KO" label, and prevent KO'd units from accumulating action timer progress or getting turns.
 
 ### Rationale
-- Complex phase - sorting, rendering, scrolling integration
-- Most visible UI change for player
-- Tests Phase 1-4 in different rendering context
-- Requires careful attention to existing scroll state preservation
+- Combines visual turn order changes with mechanical action timer behavior
+- Turn order display and action timer logic are tightly coupled
+- Both systems use the same sorting logic for KO'd units
+- Testing both together provides comprehensive validation
+- Reduces integration overhead between related systems
 
 ### Files to Modify
 1. `models/combat/managers/renderers/TurnOrderRenderer.ts`
+2. `models/combat/phases/ActionTimerPhaseHandler.ts`
+3. `models/combat/phases/UnitTurnPhaseHandler.ts`
 
 ### Implementation Steps
 
-#### Step 5.1: Add Helper Method for Sorted Units
+#### Step 2.1: Add Helper Method for Sorted Units in TurnOrderRenderer
 **File:** `models/combat/managers/renderers/TurnOrderRenderer.ts`
 
 **Location:** Add as private method, near other helper methods
@@ -515,7 +405,7 @@ Update TurnOrderRenderer to show KO'd units at the end with grey tint and "KO" l
 - KO'd units unsorted at end (order doesn't matter for KO'd)
 - Uses spread operator for clean concatenation
 
-#### Step 5.2: Update render() to Use Sorted Units
+#### Step 2.2: Update render() to Use Sorted Units in TurnOrderRenderer
 **File:** `models/combat/managers/renderers/TurnOrderRenderer.ts`
 
 **Location:** In `render()` method, replace unit iteration
@@ -550,7 +440,7 @@ Update TurnOrderRenderer to show KO'd units at the end with grey tint and "KO" l
 - Preserves scroll offset calculation (no breaking changes)
 - `sortedUnits` replaces `this.units` in slice
 
-#### Step 5.3: Apply Grey Tint to KO'd Unit Sprites
+#### Step 2.3: Apply Grey Tint to KO'd Unit Sprites in TurnOrderRenderer
 **File:** `models/combat/managers/renderers/TurnOrderRenderer.ts`
 
 **Location:** In the sprite rendering loop (inside the `for` loop over `visibleUnits`)
@@ -600,7 +490,7 @@ for (let i = 0; i < visibleUnits.length; i++) {
 - Same grey tint as map rendering (consistency)
 - Filter applied and reset per unit (no bleed)
 
-#### Step 5.4: Replace Ticks-Until-Ready with "KO" Label
+#### Step 2.4: Replace Ticks-Until-Ready with "KO" Label in TurnOrderRenderer
 **File:** `models/combat/managers/renderers/TurnOrderRenderer.ts`
 
 **Location:** Where ticks-until-ready is rendered below sprite
@@ -659,59 +549,7 @@ for (let i = 0; i < visibleUnits.length; i++) {
 - Uses centralized constants for "KO" text and red color
 - Preserves existing ticks-until-ready logic for active units
 
-### Testing Phase 5
-
-**Manual Test:**
-1. Open combat encounter
-2. KO multiple units:
-   ```javascript
-   const units = window.combatState.unitManifest.getAllUnits();
-   units[0].unit.wounds = units[0].unit.maxHealth;
-   units[1].unit.wounds = units[1].unit.maxHealth;
-   ```
-3. Observe turn order display
-
-**Acceptance Criteria:**
-- [x] KO'd units appear at END of turn order list
-- [x] KO'd unit sprites have grey tint in turn order
-- [x] "KO" label appears below KO'd unit sprites (instead of ticks number)
-- [x] Active units show ticks-until-ready normally
-- [x] Scrolling works correctly with KO'd units
-- [x] Scroll state preserved when units become KO'd
-- [x] No visual glitches or rendering errors
-
-**Edge Cases:**
-- All units KO'd (only KO'd units in list)
-- 8+ units with mix of active and KO'd (scrolling)
-- Unit becomes KO'd while visible in turn order (updates correctly)
-- **Scroll Preservation:** Unit becomes KO'd while scrolled down in turn order - verify scroll position is clamped appropriately (doesn't jump to invalid position)
-
-**Performance:**
-- Sorting ~10-20 units per frame is negligible
-- No new allocations (just array operations)
-
-**Rollback:** Revert TurnOrderRenderer.ts if visual or scroll issues arise.
-
----
-
-## Phase 6: Action Timer Integration
-
-### Goal
-Prevent KO'd units from accumulating action timer progress and getting turns.
-
-### Rationale
-- First mechanical change (affects gameplay)
-- Builds on visual foundation from Phases 1-5
-- Tests Phase 1 integration in game logic
-- Two phase handlers need updates (ActionTimer, UnitTurn)
-
-### Files to Modify
-1. `models/combat/phases/ActionTimerPhaseHandler.ts`
-2. `models/combat/phases/UnitTurnPhaseHandler.ts`
-
-### Implementation Steps
-
-#### Step 6.1: Update ActionTimerPhaseHandler Tick Simulation
+#### Step 2.5: Update ActionTimerPhaseHandler Tick Simulation
 **File:** `models/combat/phases/ActionTimerPhaseHandler.ts`
 
 **Location:** In tick simulation loop (likely in `simulateTicks()` or similar method)
@@ -747,7 +585,7 @@ for (const unit of allUnits) {
 - `continue` skips rest of loop body (clear intent)
 - Preserves existing timer calculation for active units
 
-#### Step 6.2: Update ActionTimerPhaseHandler Turn Order Sorting
+#### Step 2.6: Update ActionTimerPhaseHandler Turn Order Sorting
 **File:** `models/combat/phases/ActionTimerPhaseHandler.ts`
 
 **Location:** Where turn order is calculated for display (likely in `getTopPanelRenderer()` or `render()`)
@@ -782,11 +620,11 @@ const turnOrder = [...activeUnits, ...koUnits];
 ```
 
 **Rationale:**
-- Matches TurnOrderRenderer sorting (Phase 5)
+- Matches TurnOrderRenderer sorting (Phase 2)
 - KO'd units appear at end consistently
 - Preserves existing active unit sorting logic
 
-#### Step 6.3: Update UnitTurnPhaseHandler Ready Unit Selection
+#### Step 2.7: Update UnitTurnPhaseHandler Ready Unit Selection
 **File:** `models/combat/phases/UnitTurnPhaseHandler.ts`
 
 **Location:** Where ready unit is identified (likely in constructor or `updatePhase()`)
@@ -808,7 +646,7 @@ const readyUnit = turnOrder.find(u => !u.isKnockedOut && u.actionTimer >= 100);
 - KO'd units never selected for turns
 - Preserves existing ready unit logic
 
-#### Step 6.4: Update UnitTurnPhaseHandler Turn Order Sorting
+#### Step 2.8: Update UnitTurnPhaseHandler Turn Order Sorting
 **File:** `models/combat/phases/UnitTurnPhaseHandler.ts`
 
 **Location:** Where turn order is calculated for TurnOrderRenderer (in `getTopPanelRenderer()`)
@@ -835,38 +673,55 @@ const turnOrder = [...activeUnits, ...koUnits];
 - Consistency across both phase handlers
 - KO'd units always at end in turn order display
 
-### Testing Phase 6
+### Testing Phase 2
 
-**Manual Test:**
-1. Start combat, reach action-timer phase
-2. KO a unit:
+**Manual Test - Turn Order Display:**
+1. Open combat encounter
+2. KO multiple units:
    ```javascript
    const units = window.combatState.unitManifest.getAllUnits();
    units[0].unit.wounds = units[0].unit.maxHealth;
+   units[1].unit.wounds = units[1].unit.maxHealth;
    ```
+3. Observe turn order display
+
+**Manual Test - Action Timer:**
+1. Start combat, reach action-timer phase
+2. KO a unit via console
 3. Watch action-timer tick animation
 
 **Acceptance Criteria:**
+- [x] KO'd units appear at END of turn order list
+- [x] KO'd unit sprites have grey tint in turn order
+- [x] "KO" label appears below KO'd unit sprites (instead of ticks number)
+- [x] Active units show ticks-until-ready normally
+- [x] Scrolling works correctly with KO'd units
+- [x] Scroll state preserved when units become KO'd
 - [x] KO'd units' action timers stay at 0 during action-timer phase ticks
 - [x] KO'd units never trigger transition to unit-turn phase
 - [x] Active units accumulate timer normally
-- [x] Turn order displays KO'd units at end
 - [x] Manually setting KO'd unit timer to 100 via console - unit still skipped
+- [x] No visual glitches or rendering errors
 
 **Edge Cases:**
-- Unit becomes KO'd mid-tick animation (timer stops)
+- All units KO'd (only KO'd units in list)
+- 8+ units with mix of active and KO'd (scrolling)
+- Unit becomes KO'd while visible in turn order (updates correctly)
+- Unit becomes KO'd mid-tick animation (timer stops, animation completes)
+- **Scroll Preservation:** Unit becomes KO'd while scrolled down - scroll position clamped appropriately
 - All enemies KO'd (victory should trigger - separate system)
 - All allies KO'd (defeat should trigger - separate system)
-- **Animation State Edge Case:** Unit becomes KO'd mid-tick animation (e.g., via console or cinematic). Expected: Animation completes, but final timer value is 0 (not the animated value).
 
 **Performance:**
-- No performance impact (just additional conditionals)
+- Sorting ~10-20 units per frame is negligible
+- No new allocations (just array operations)
+- No performance impact from conditionals
 
-**Rollback:** Revert ActionTimerPhaseHandler.ts and UnitTurnPhaseHandler.ts if logic issues arise.
+**Rollback:** Revert all 3 modified files (TurnOrderRenderer.ts, ActionTimerPhaseHandler.ts, UnitTurnPhaseHandler.ts) if issues arise.
 
 ---
 
-## Phase 7: Movement and Pathfinding
+## Phase 3: Movement and Pathfinding
 
 ### Goal
 Allow units to path through KO'd units but not end movement on their tiles.
@@ -883,7 +738,7 @@ Allow units to path through KO'd units but not end movement on their tiles.
 
 ### Implementation Steps
 
-#### Step 7.1: Update MovementRangeCalculator
+#### Step 3.1: Update MovementRangeCalculator
 **File:** `models/combat/utils/MovementRangeCalculator.ts`
 
 **Location:** In BFS flood-fill loop, where occupied tiles are checked
@@ -928,7 +783,7 @@ if (!occupant) {
 - **Traversal:** Allow through KO'd units
 - **Destination:** Disallow ending on KO'd units
 
-#### Step 7.2: Update MovementPathfinder
+#### Step 3.2: Update MovementPathfinder
 **File:** `models/combat/utils/MovementPathfinder.ts`
 
 **Location:** In pathfinding algorithm, where occupied tiles are checked
@@ -965,7 +820,7 @@ if (destinationOccupant && !destinationOccupant.isKnockedOut) {
 - KO'd units don't block paths
 - Destination validation prevents ending on KO'd tiles
 
-### Testing Phase 7
+### Testing Phase 3
 
 **Manual Test Setup:**
 1. Open combat encounter
@@ -1000,7 +855,7 @@ if (destinationOccupant && !destinationOccupant.isKnockedOut) {
 
 ---
 
-## Phase 8: Attack Range and AI Integration
+## Phase 4: Attack Range and AI Integration
 
 ### Goal
 Exclude KO'd units from targeting, remove LoS blocking, and update AI context.
@@ -1019,7 +874,7 @@ Exclude KO'd units from targeting, remove LoS blocking, and update AI context.
 
 ### Implementation Steps
 
-#### Step 8.1: Update AttackRangeCalculator
+#### Step 4.1: Update AttackRangeCalculator
 **File:** `models/combat/utils/AttackRangeCalculator.ts`
 
 **Location:** Where `validTargets` array is populated
@@ -1051,7 +906,7 @@ if (
 - KO'd units not added to validTargets
 - Preserves existing team filtering logic
 
-#### Step 8.2: Update LineOfSightCalculator
+#### Step 4.2: Update LineOfSightCalculator
 **File:** `models/combat/utils/LineOfSightCalculator.ts`
 
 **Location:** Where units are checked as LoS blockers
@@ -1080,7 +935,7 @@ if (unitAtTile && !unitAtTile.isKnockedOut) {
 - Preserves existing Bresenham line algorithm
 - Simple additional check
 
-#### Step 8.3: Update AIContextBuilder
+#### Step 4.3: Update AIContextBuilder
 **File:** `models/combat/ai/types/AIContext.ts`
 
 **Location:** In `AIContextBuilder.build()` method, where units are partitioned
@@ -1127,7 +982,7 @@ const enemyUnits = allPlacements
 - No modifications needed to individual behaviors
 - AI behaviors automatically ignore KO'd units via filtered context
 
-#### Step 8.4: Update PlayerTurnStrategy
+#### Step 4.4: Update PlayerTurnStrategy
 **File:** `models/combat/strategies/PlayerTurnStrategy.ts`
 
 **Location:** In attack mode, where target selection is validated
@@ -1165,7 +1020,7 @@ Apply same KO check to hover validation in `handleMouseMove` or similar method.
 - Consistent with AttackRangeCalculator exclusion
 - Simple additional check
 
-### Testing Phase 8
+### Testing Phase 4
 
 #### Attack Range Tests
 **Setup:**
@@ -1219,7 +1074,7 @@ Apply same KO check to hover validation in `handleMouseMove` or similar method.
 - No performance impact (just additional conditionals)
 - AI behavior filtering happens once per turn
 
-### Testing Phase 8 - Comprehensive
+### Testing Phase 4 - Comprehensive
 
 **Test All Systems Together:**
 1. Start combat with 3v3 units
@@ -1248,7 +1103,7 @@ Apply same KO check to hover validation in `handleMouseMove` or similar method.
 - Visual validation before mechanical validation
 - Edge cases tested continuously
 
-### Integration Testing (After Phase 8)
+### Integration Testing (After Phase 4)
 1. **Scenario 1: Single KO**
    - Start combat, KO one enemy
    - Verify all visual and mechanical behaviors
@@ -1406,41 +1261,28 @@ combatState.unitManifest.getAllUnits().forEach((p, i) => {
 ### Phase-by-Phase Rollback
 Each phase can be rolled back independently by reverting the modified files.
 
-### Phase 8 Rollback (Most Complex)
+### Phase 4 Rollback (Most Complex)
 - Revert AIContext.ts - KO'd units targetable again
 - Revert AttackRangeCalculator.ts - KO'd in validTargets
 - Revert LineOfSightCalculator.ts - KO'd block LoS again
 - Revert PlayerTurnStrategy.ts - Can target KO'd units again
 
-### Phase 7 Rollback
+### Phase 3 Rollback
 - Revert MovementRangeCalculator.ts
 - Revert MovementPathfinder.ts
 - KO'd units block movement again
 
-### Phase 6 Rollback
+### Phase 2 Rollback
+- Revert TurnOrderRenderer.ts
 - Revert ActionTimerPhaseHandler.ts
 - Revert UnitTurnPhaseHandler.ts
-- KO'd units accumulate timer again (bad state)
-
-### Phase 5 Rollback
-- Revert TurnOrderRenderer.ts
-- KO'd units in normal turn order position
-
-### Phase 4 Rollback
-- Revert UnitTurnPhaseHandler.ts (remove KO text rendering)
-- Grey tint remains, but no text overlay
-
-### Phase 3 Rollback
-- Revert CombatRenderer.ts
-- No visual indication of KO status
-
-### Phase 2 Rollback
-- Revert CombatConstants.ts
-- Constants removed
+- KO'd units accumulate timer again and appear in normal turn order position
 
 ### Phase 1 Rollback
-- Revert all 3 unit files
+- Revert all 6 files (CombatUnit.ts, HumanoidUnit.ts, MonsterUnit.ts, CombatConstants.ts, CombatRenderer.ts, UnitTurnPhaseHandler.ts)
 - isKnockedOut getter removed
+- Constants removed
+- No visual indication of KO status
 - Feature completely removed
 
 ---
@@ -1470,14 +1312,14 @@ Each phase can be rolled back independently by reverting the modified files.
 
 ## Success Criteria
 
-### Visual (Phases 3-5) ✅
+### Visual (Phases 1-2) ✅
 - [x] KO'd units have grey tint on map
 - [x] "KO" text appears on map tiles
 - [x] KO'd units have grey tint in turn order
 - [x] "KO" label appears in turn order
 - [x] KO'd units at end of turn order list
 
-### Mechanical (Phases 6-8) ✅
+### Mechanical (Phases 2-4) ✅
 - [x] KO'd units' action timers stay at 0
 - [x] KO'd units never get turns
 - [x] Units can path through KO'd units
@@ -1499,16 +1341,12 @@ Each phase can be rolled back independently by reverting the modified files.
 
 | Phase | Time Est. | Cumulative |
 |-------|-----------|------------|
-| Phase 1 | 30 min | 30 min |
-| Phase 2 | 15 min | 45 min |
-| Phase 3 | 45 min | 1.5 hours |
-| Phase 4 | 45 min | 2.25 hours |
-| Phase 5 | 2 hours | 4.25 hours |
-| Phase 6 | 1.5 hours | 5.75 hours |
-| Phase 7 | 1 hour | 6.75 hours |
-| Phase 8 | 2 hours | 8.75 hours |
-| Testing | 30 min | 9.25 hours |
-| **Total** | **~9 hours** | **9.25 hours** |
+| Phase 1 | 2.5 hours | 2.5 hours |
+| Phase 2 | 3.5 hours | 6 hours |
+| Phase 3 | 1 hour | 7 hours |
+| Phase 4 | 2 hours | 9 hours |
+| Testing | 30 min | 9.5 hours |
+| **Total** | **~9.5 hours** | **9.5 hours** |
 
 ---
 
