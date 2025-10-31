@@ -141,6 +141,16 @@ export const CombatConstants = {
 
   /**
    * Constants for knocked-out unit rendering and behavior
+   *
+   * Units are considered KO'd when wounds >= maxHealth (via isKnockedOut getter).
+   * KO'd units:
+   * - Display with grey tint on map and in turn order
+   * - Show red "KO" text overlay on their tile
+   * - Don't accumulate action timer (stay at 0)
+   * - Never get turns
+   * - Allow traversal but not as movement destinations
+   * - Cannot be targeted for attacks
+   * - Are invisible to AI decision-making
    */
   KNOCKED_OUT: {
     // Map overlay text
@@ -154,6 +164,11 @@ export const CombatConstants = {
     TURN_ORDER_FONT_ID: '7px-04b03' as const,
 
     // Grey tint settings (for canvas filter)
+    // Example usage: ctx.filter = CombatConstants.KNOCKED_OUT.TINT_FILTER;
+    // Always reset after use: ctx.filter = 'none';
     TINT_FILTER: 'saturate(0%) brightness(70%)' as const,
+
+    // Revival mechanics (future feature)
+    REVIVAL_ENABLED: false as const,        // Not yet implemented
   } as const,
 } as const;

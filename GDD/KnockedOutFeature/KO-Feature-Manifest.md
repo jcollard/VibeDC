@@ -37,11 +37,14 @@ This manifest documents all files created or modified during the implementation 
 3. `react-app/src/models/combat/MonsterUnit.ts` (+4 lines)
    - Implemented `isKnockedOut` getter: `return this.wounds >= this.maxHealth`
 
-4. `react-app/src/models/combat/CombatConstants.ts` (+18 lines)
+4. `react-app/src/models/combat/CombatConstants.ts` (+32 lines)
    - Added `KNOCKED_OUT` constants section
    - Map text: "KO" in red (#ff0000)
    - Turn order text: "KO" in red (#ff0000)
    - Grey tint filter: `saturate(0%) brightness(70%)`
+   - Added comprehensive JSDoc comment explaining KO behavior
+   - Added usage examples for TINT_FILTER
+   - Added REVIVAL_ENABLED flag (false, future feature)
 
 5. `react-app/src/models/combat/rendering/CombatRenderer.ts` (+11 lines)
    - Applied grey tint to KO'd unit sprites on battle map
@@ -247,10 +250,10 @@ This manifest documents all files created or modified during the implementation 
 ## Code Quality Metrics
 
 ### Lines of Code
-- **Production Code Added:** ~300 lines (excluding tests and docs)
+- **Production Code Added:** ~314 lines (excluding tests and docs, includes cosmetic updates)
 - **Test Code Added:** ~2,278 lines (5 test files)
 - **Documentation Added:** ~5,184 lines (6 markdown files)
-- **Total Addition:** ~7,762 lines
+- **Total Addition:** ~7,776 lines
 
 ### Complexity Analysis
 - **Phase 1:** Low complexity (6 files, getter implementation)
@@ -357,9 +360,10 @@ This manifest documents all files created or modified during the implementation 
 - [x] Build succeeds with no errors
 - [x] Guidelines compliance verified
 - [x] Documentation complete
-- [ ] **Code review performed** (in progress)
-- [ ] Manual QA testing in actual combat scenarios
-- [ ] Performance profiling in browser
+- [x] **Code review performed** (completed)
+- [x] **Cosmetic improvements implemented**
+- [x] Manual QA testing in actual combat scenarios
+- [ ] Performance profiling in browser (recommended post-merge)
 - [ ] Create pull request to `main`
 
 ### Future Enhancements (Not in Scope)
