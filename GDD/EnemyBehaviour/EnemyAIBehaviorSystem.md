@@ -1,8 +1,8 @@
 # Enemy AI Behavior System
 
-**Version:** 1.1
+**Version:** 1.2
 **Last Updated:** Thu, Oct 30, 2025
-**Status:** Phase 1 Complete, Phase 2 In Planning
+**Status:** Phase 1-2 Complete, Phase 3-4 Deferred (Post-1.0)
 
 ## Purpose
 
@@ -978,34 +978,64 @@ behaviors: [
 4. **Constructor Backward Compatibility:** EnemyTurnStrategy constructor has optional parameter with fallback to DEFAULT_ENEMY_BEHAVIORS
 5. **No WeakMap Yet:** Deferred to Phase 2 - standard arrays work fine for Phase 1 scope
 
-### Phase 2: Basic Attack Behaviors
-- [ ] Implement `AttackNearestOpponent` behavior
-- [ ] Implement `DefeatNearbyOpponent` behavior
-- [ ] Add WeakMap unit tracking to AIContextBuilder (avoid duplicate name lookups)
-- [ ] Update `convertDecisionToAction()` in EnemyTurnStrategy to handle movement + attack
-- [ ] Add default behavior list to `MonsterUnit` / `CombatEncounter` configuration
-- [ ] Update DEFAULT_ENEMY_BEHAVIORS to include attack behaviors
-- [ ] Test with simple encounters (1-2 enemies, basic tactics)
-- [ ] Verify attack animations work with AI decisions
+### Phase 2: Basic Attack Behaviors ✅ COMPLETE
+- [x] Implement `AttackNearestOpponent` behavior
+- [x] Implement `DefeatNearbyOpponent` behavior
+- [x] Implement `MoveTowardNearestOpponent` behavior (not planned, added during implementation)
+- [x] Add WeakMap unit tracking to AIContextBuilder (avoid duplicate name lookups)
+- [x] Add Action Economy System (move THEN attack on same turn)
+- [x] Add Unarmed Attack Support (range 1, PhysicalPower only)
+- [x] Update `convertDecisionToAction()` in EnemyTurnStrategy to handle movement + attack
+- [x] Add default behavior list to `MonsterUnit` / `CombatEncounter` configuration
+- [x] Update DEFAULT_ENEMY_BEHAVIORS to include attack behaviors
+- [x] Test with simple encounters (1-2 enemies, basic tactics)
+- [x] Verify attack animations work with AI decisions
+- [x] Debug logging gating (CombatConstants.AI.DEBUG_LOGGING)
+- [x] Constants extraction (CombatConstants.AI section)
 
-**Phase 2 Considerations:**
-1. Use `getUnitAtPosition()` consistently in all behavior implementations
-2. Handle null returns from `calculatePath()` gracefully
-3. Validate that movement paths are within unit's movement range
-4. Test edge cases: blocked paths, no valid targets, enemies out of range
-5. Ensure attack decisions trigger proper combat animations and damage application
+**See:** [02-AttackBehaviorsPlan-ACTUAL.md](./02-AttackBehaviorsPlan-ACTUAL.md) and [Phase2CodeReview.md](./Phase2CodeReview.md)
 
-### Phase 3: Tactical Behaviors
-- [ ] Implement `AggressiveTowardCasters`
-- [ ] Implement `AggressiveTowardMelee`
-- [ ] Implement `AggressiveTowardSpecificUnit`
+---
+
+## Deferred Phases (Post-1.0)
+
+**Decision Date:** Thu, Oct 30, 2025
+**Rationale:** Phase 1-2 provide sufficient AI for a playable game. Player abilities not yet implemented. Deferring Phase 3-4 to focus on core game loop and player features first.
+
+### Phase 3: Tactical Behaviors (DEFERRED)
+**Status:** Not Started - Deferred to Post-1.0
+
+**Planned Behaviors:**
+- [ ] Implement `AggressiveTowardSpecificUnit` (priority 90) ⭐ IMPLEMENT FIRST IF TIME
+  - Targets specific unit by name (e.g., boss targets healer)
+  - High gameplay impact for boss/special encounters
+  - ~2 hours implementation effort
+- [ ] Implement `AggressiveTowardCasters` (priority 85-90)
+  - Targets units with high Magic Power or Attunement
+- [ ] Implement `AggressiveTowardMelee` (priority 85-90)
+  - Targets units with high Physical Power or Courage
 - [ ] Test with mixed enemy compositions
 
-### Phase 4: Ability-Based Behaviors (Future)
+**Why Defer:**
+- Diminishing returns on AI complexity without player abilities
+- Most players won't notice difference vs "attack nearest"
+- Better to build player abilities first, then enhance enemy AI
+
+**If Time Allows:** Implement `AggressiveTowardSpecificUnit` first (enables cinematic boss encounters)
+
+### Phase 4: Ability-Based Behaviors (DEFERRED)
+**Status:** Not Started - Deferred to Post-1.0
+
+**Planned Behaviors:**
+- [ ] Implement `HealAllies` (requires ability system)
 - [ ] Implement `SupportAllies` (requires ability system)
 - [ ] Implement `DebuffOpponent` (requires ability system)
-- [ ] Implement `HealAllies` (requires ability system)
 - [ ] Add status effect tracking to `AIContext`
+
+**Why Defer:**
+- Requires player ability system to be implemented first
+- Enemy abilities have limited value without player counterplay
+- Better to complete player class abilities, then mirror for enemies
 
 ---
 

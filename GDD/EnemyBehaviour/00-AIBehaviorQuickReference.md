@@ -2,7 +2,7 @@
 
 **Purpose:** Token-efficient reference for AI agents working on Enemy AI Behavior implementation
 
-**Last Updated:** Thu, Oct 30, 2025 5:46:37 PM (Phase 2 Complete) <!-- Use `date` command when updating - do not delete this note -->
+**Last Updated:** Thu, Oct 30, 2025 (Phase 2 Complete, Phase 3-4 Deferred) <!-- Use `date` command when updating - do not delete this note -->
 
 ---
 
@@ -169,35 +169,46 @@ getDistance(from, to)                 // Manhattan distance
 
 ---
 
-### 📋 Phase 3: Tactical Behaviors (Planned)
+### 🚫 Phase 3: Tactical Behaviors (DEFERRED - Post-1.0)
 **Plan:** [03-TacticalBehaviorsPlan.md](./03-TacticalBehaviorsPlan.md)
-**Status:** Not Started
+**Status:** Deferred to Post-1.0
+**Decision Date:** Thu, Oct 30, 2025
 
-**What Will Be Done:**
-- Implement `AggressiveTowardCasters` behavior (priority 85-90)
+**Rationale for Deferral:**
+- Phase 1-2 provide sufficient AI for playable game
+- Diminishing returns on AI complexity without player abilities
+- Better to focus on core game loop and player features first
+- Can revisit after first playable build
+
+**Planned Behaviors (If Time Allows):**
+- **⭐ PRIORITY:** `AggressiveTowardSpecificUnit` behavior (priority 90)
+  - Targets specific unit by name (e.g., boss targets healer)
+  - High gameplay impact for boss/special encounters
+  - ~2 hours implementation effort
+  - **Implement this first if adding any Phase 3 behaviors**
+- `AggressiveTowardCasters` behavior (priority 85-90)
   - Targets units with high Magic Power or Attunement
-  - Moves toward casters if not in range
-- Implement `AggressiveTowardMelee` behavior (priority 85-90)
+- `AggressiveTowardMelee` behavior (priority 85-90)
   - Targets units with high Physical Power or Courage
-  - Moves toward melee fighters if not in range
-- Add unit type classification helpers in AIContext
-- Add threat scoring system
-
-**Success Criteria:**
-- [ ] Enemies prioritize targeting casters or melee based on config
-- [ ] Enemies move strategically toward high-value targets
-- [ ] Behavior priority balances with attack behaviors
+- Unit type classification helpers in AIContext
+- Threat scoring system
 
 ---
 
-### 📋 Phase 4: Ability-Based Behaviors (Future)
+### 🚫 Phase 4: Ability-Based Behaviors (DEFERRED - Post-1.0)
 **Plan:** [04-AbilityBehaviorsPlan.md](./04-AbilityBehaviorsPlan.md) (not yet written)
-**Status:** Not Started
+**Status:** Deferred to Post-1.0
+**Decision Date:** Thu, Oct 30, 2025
 
-**What Will Be Done:**
-- Implement `HealAllies` behavior (priority 95)
-- Implement `SupportAllies` behavior (priority 90)
-- Implement `DebuffOpponent` behavior (priority 85)
+**Rationale for Deferral:**
+- Requires player ability system to be implemented first
+- Enemy abilities have limited value without player counterplay
+- Better to complete player class abilities, then mirror for enemies
+
+**Planned Behaviors:**
+- `HealAllies` behavior (priority 95)
+- `SupportAllies` behavior (priority 90)
+- `DebuffOpponent` behavior (priority 85)
 - Extend AIDecision to support ability usage
 - Add ability range calculation helpers
 
@@ -240,12 +251,12 @@ getDistance(from, to)                 // Manhattan distance
 - [x] Code review complete (98% compliance)
 
 ### In Progress 🚧
-- None (Phase 2 complete, ready for Phase 3)
+- None (Phase 2 complete, Phase 3-4 deferred)
 
-### Not Started 📋
+### Deferred (Post-1.0) 🚫
+- [ ] AggressiveTowardSpecificUnit behavior (Phase 3) ⭐ IMPLEMENT FIRST IF TIME
 - [ ] AggressiveTowardCasters behavior (Phase 3)
 - [ ] AggressiveTowardMelee behavior (Phase 3)
-- [ ] AggressiveTowardSpecificUnit behavior (Phase 3)
 - [ ] HealAllies behavior (Phase 4)
 - [ ] SupportAllies behavior (Phase 4)
 - [ ] DebuffOpponent behavior (Phase 4)
@@ -435,44 +446,65 @@ this.strategy.onTurnStart(unit, position, state, this.hasMoved, true);
 
 ## Next Steps
 
-### Immediate (Phase 2 Complete, Ready for Merge)
+### Immediate (Current Work)
 - [x] Manual testing of Phase 2 behaviors ✅
   1. Enemies attack nearest opponent ✅
   2. Enemies prioritize one-shot kills ✅
   3. Enemies move then attack on same turn ✅
   4. Unarmed attacks work correctly ✅
   5. Debug logging can be toggled ✅
-- [ ] Merge `enemy-ai-02-attack-behaviours` → `enemy-ai`
-- [ ] Final integration testing after merge
-- [ ] Update documentation if needed
+- [x] Phase 2 complete and working ✅
+- [x] Documentation updated to reflect deferral decision ✅
 
-### Short-term (Phase 3: Tactical Behaviors - NEXT)
+### Short-term (Core Game Features - NEXT)
+**Focus on making the game playable before enhancing AI further:**
+
+1. **Player Class Abilities** (High Priority)
+   - Implement basic player attacks, heals, buffs
+   - Unlocks strategic depth for player
+   - Can be mirrored for enemy abilities later
+
+2. **Combat Balance** (High Priority)
+   - Enemy stat tuning
+   - Damage/health balance
+   - Difficulty curve across encounters
+
+3. **Win/Loss Conditions** (Essential)
+   - Victory detection
+   - Game over handling
+   - Reward/progression system
+
+4. **Core Game Loop** (Essential)
+   - Encounter flow (setup → combat → rewards → next)
+   - Save/load system completeness
+   - Basic UI polish
+
+5. **Playtesting** (Critical)
+   - Get feedback on what's fun
+   - Identify what's actually missing vs nice-to-have
+
+### Long-term (Post-1.0 AI Enhancements)
+**Only after core game is playable:**
+
+**If Time Allows - Quick Win:**
+- Implement `AggressiveTowardSpecificUnit` behavior (~2 hours)
+  - Enables boss/special enemy scenarios
+  - High gameplay impact for low effort
+  - Creates memorable scripted encounters
+
+**Phase 3: Tactical Behaviors (Deferred)**
 1. Add unit classification helpers to AIContext
-   - `isCaster(unit)` - High Magic Power or Attunement
-   - `isMelee(unit)` - High Physical Power or Courage
 2. Implement `AggressiveTowardCasters` behavior (priority 85-90)
-   - Targets high Magic Power/Attunement units
-   - Moves toward casters if not in range
-   - Benefits from action economy (can move then attack)
 3. Implement `AggressiveTowardMelee` behavior (priority 85-90)
-   - Targets high Physical Power/Courage units
-   - Moves toward melee fighters if not in range
-   - Benefits from action economy (can move then attack)
-4. Implement `AggressiveTowardSpecificUnit` behavior (optional, configurable priority)
-   - Targets specific unit by ID/name
-   - Useful for boss encounters or tactical scenarios
-5. Add threat scoring system (optional enhancement)
-6. Test tactical positioning and target prioritization
-7. Verify action economy works with tactical behaviors
+4. Test tactical positioning and target prioritization
 
-### Long-term (Phase 4: Ability-Based Behaviors)
+**Phase 4: Ability-Based Behaviors (Deferred)**
 1. Extend AIDecision to support ability usage
 2. Add ability range calculation helpers
 3. Implement `HealAllies` behavior (priority 95)
 4. Implement `SupportAllies` behavior (priority 90)
 5. Implement `DebuffOpponent` behavior (priority 85)
-6. Test complex ability-based strategies
-7. Benefits from action economy (heal then move, buff then attack, etc.)
+6. Benefits from action economy (heal then move, buff then attack, etc.)
 
 ---
 
@@ -540,6 +572,35 @@ this.strategy.onTurnStart(unit, position, state, this.hasMoved, true);
 - Time ~6 hours vs 3-4 hours estimated
 
 **See:** [02-AttackBehaviorsPlan-ACTUAL.md](./02-AttackBehaviorsPlan-ACTUAL.md) for full comparison
+
+### Phase 3-4 Deferral Decision
+
+**Date:** Thu, Oct 30, 2025
+**Decision:** Defer Phase 3 (Tactical Behaviors) and Phase 4 (Ability-Based Behaviors) to Post-1.0
+
+**Rationale:**
+1. **Playable game NOW** - Phase 1-2 provide sufficient AI for engaging combat
+2. **Diminishing returns** - Advanced targeting has minimal impact without player abilities
+3. **Missing player features** - Enemy abilities need player counterplay to be meaningful
+4. **Scope management** - Better to ship complete, simpler game than incomplete, complex one
+5. **Strong foundation** - Action economy system ready for future complex behaviors
+
+**Current AI Capabilities (Sufficient for 1.0):**
+- ✅ Enemies attack intelligently (nearest target, hit chance tie-breaker)
+- ✅ Enemies prioritize one-shot kills (tactical feel)
+- ✅ Enemies move and attack on same turn (action economy)
+- ✅ Enemies advance toward combat (not passive)
+
+**If Time Allows:**
+- Implement `AggressiveTowardSpecificUnit` only (~2 hours)
+- Enables boss/special encounters with targeted AI
+- High gameplay impact, low implementation cost
+
+**Next Priorities:**
+1. Player class abilities (attacks, heals, buffs)
+2. Combat balance and difficulty tuning
+3. Win/loss conditions and game loop
+4. Playtesting and feedback
 
 ### Still Deferred
 
