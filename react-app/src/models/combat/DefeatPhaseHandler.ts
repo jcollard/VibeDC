@@ -153,6 +153,10 @@ export class DefeatPhaseHandler extends PhaseBase {
         return null;
       }
 
+      // IMPORTANT: Preserve the initialStateSnapshot so "Try Again" can be used multiple times
+      // The snapshot was excluded during serialization to avoid recursion, so we need to restore it
+      restoredState.initialStateSnapshot = state.initialStateSnapshot;
+
       console.log("[DefeatPhaseHandler] Combat state restored from initial snapshot");
       // Return both the new state and a flag indicating that a cinematic should play
       return { newState: restoredState, playCinematic: true };

@@ -147,27 +147,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     (window as any).forceDefeat = () => {
       console.log('[DEV] Forcing defeat screen transition...');
       setCombatState(prevState => {
-        // If no snapshot exists yet, create one from current state
-        let snapshot = prevState.initialStateSnapshot;
-        if (!snapshot) {
-          try {
-            const { serializeCombatState } = require('../../models/combat/CombatState');
-            const stateForSnapshot = {
-              ...prevState,
-              initialStateSnapshot: null,
-            };
-            snapshot = serializeCombatState(stateForSnapshot);
-            console.log('[DEV] Created initial state snapshot for Try Again functionality');
-          } catch (error) {
-            console.error('[DEV] Failed to create snapshot:', error);
-            snapshot = null;
-          }
+        // Snapshot should already exist from combat initialization
+        if (!prevState.initialStateSnapshot) {
+          console.warn('[DEV] No initial state snapshot found! This should have been created on combat initialization.');
         }
 
         return {
           ...prevState,
           phase: 'defeat' as const,
-          initialStateSnapshot: snapshot,
         };
       });
     };
