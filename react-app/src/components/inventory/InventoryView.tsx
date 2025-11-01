@@ -575,13 +575,29 @@ export const InventoryView: React.FC = () => {
 
     // Calculate disabled items (when equipment slot is selected, incompatible items are disabled)
     let disabledItemIds: Set<string> | undefined;
+    let classRestrictedItemIds: Set<string> | undefined;
     const selectedSlot = selectedEquipmentRef.current;
     if (selectedSlot && selectedSlot.type === 'equipment' && selectedSlot.slotLabel && isEquipmentSlot(selectedSlot.slotLabel)) {
       disabledItemIds = new Set<string>();
-      // Mark all incompatible items as disabled
+      classRestrictedItemIds = new Set<string>();
+
+      // Get current party member to check class restrictions
+      const partyMemberConfigs = PartyMemberRegistry.getAll();
+      const selectedMember = partyMemberConfigs[selectedPartyMemberIndex];
+      const currentUnit = selectedMember ? PartyMemberRegistry.createPartyMember(selectedMember.id) : null;
+
+      // Mark all incompatible items as disabled or class-restricted
       for (const item of currentPageItems) {
+        // Check slot type compatibility first
         if (!isEquipmentCompatibleWithSlot(item.equipment, selectedSlot.slotLabel)) {
           disabledItemIds.add(item.equipmentId);
+        }
+        // Check class restrictions (only for slot-compatible items)
+        else if (currentUnit && 'unitClass' in currentUnit) {
+          const humanoid = currentUnit as any;
+          if (!item.equipment.canBeEquippedBy(humanoid.unitClass)) {
+            classRestrictedItemIds.add(item.equipmentId);
+          }
         }
       }
     }
@@ -594,7 +610,8 @@ export const InventoryView: React.FC = () => {
       totalPages,
       mainPanelBounds,
       fontAtlas,
-      disabledItemIds
+      disabledItemIds,
+      classRestrictedItemIds
     );
 
     // Check if we're in debug log-only mode

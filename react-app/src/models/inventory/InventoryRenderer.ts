@@ -72,6 +72,7 @@ export class InventoryRenderer {
    * @param panelBounds - Panel region bounds
    * @param fontAtlas - Font atlas image
    * @param disabledItemIds - Optional set of equipment IDs to render as disabled (dark grey)
+   * @param classRestrictedItemIds - Optional set of equipment IDs to render as class-restricted (orange)
    */
   render(
     ctx: CanvasRenderingContext2D,
@@ -80,7 +81,8 @@ export class InventoryRenderer {
     totalPages: number,
     panelBounds: Bounds,
     fontAtlas: HTMLImageElement,
-    disabledItemIds?: Set<string>
+    disabledItemIds?: Set<string>,
+    classRestrictedItemIds?: Set<string>
   ): void {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -102,7 +104,8 @@ export class InventoryRenderer {
       state.category,
       itemListBounds,
       fontAtlas,
-      disabledItemIds
+      disabledItemIds,
+      classRestrictedItemIds
     );
 
     // Render pagination at bottom (only if totalPages > 1)
@@ -156,7 +159,8 @@ export class InventoryRenderer {
     activeCategory: string,
     bounds: Bounds,
     fontAtlas: HTMLImageElement,
-    disabledItemIds?: Set<string>
+    disabledItemIds?: Set<string>,
+    classRestrictedItemIds?: Set<string>
   ): void {
     const { ITEM_LIST } = this.constants.MAIN_PANEL;
 
@@ -184,11 +188,14 @@ export class InventoryRenderer {
       const isHovered = item.equipmentId === hoveredItemId;
       const isQuestItem = item.equipment.typeTags?.includes('quest-item') ?? false;
       const isDisabled = disabledItemIds?.has(item.equipmentId) ?? false;
+      const isClassRestricted = classRestrictedItemIds?.has(item.equipmentId) ?? false;
 
       // Determine text color
       let nameColor: string = ITEM_LIST.ITEM_NAME_COLOR;
       if (isDisabled) {
-        nameColor = '#666666'; // Dark grey for disabled items
+        nameColor = '#666666'; // Dark grey for slot-incompatible items
+      } else if (isClassRestricted) {
+        nameColor = isHovered ? ITEM_LIST.HOVER_COLOR : '#ff8800'; // Orange for class-restricted, yellow when hovered
       } else if (isHovered) {
         nameColor = ITEM_LIST.HOVER_COLOR;
       } else if (isQuestItem) {
