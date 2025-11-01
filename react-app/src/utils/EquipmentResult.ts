@@ -32,7 +32,8 @@ export type EquipmentFailureReason =
   | 'two-handed-needs-both-hands'
   | 'cannot-dual-wield'
   | 'dual-wield-range-mismatch'
-  | 'slot-type-mismatch';
+  | 'slot-type-mismatch'
+  | 'class-restriction';
 
 /**
  * Helper class for creating equipment operation results with proper messages
@@ -192,6 +193,20 @@ export class EquipmentResultFactory {
       success: false,
       message: `Cannot equip ${equipment.name} in ${slot} slot`,
       reason: 'slot-type-mismatch',
+    };
+  }
+
+  /**
+   * Unit's class cannot equip this item
+   */
+  static classRestriction(
+    unit: HumanoidUnit,
+    equipment: Equipment
+  ): EquipmentResult {
+    return {
+      success: false,
+      message: `${unit.unitClass.name} cannot equip ${equipment.name}`,
+      reason: 'class-restriction',
     };
   }
 }

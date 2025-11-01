@@ -274,6 +274,11 @@ export class HumanoidUnit implements CombatUnit {
       return { success: true, message: 'Left hand unequipped' };
     }
 
+    // Validate class restrictions (only check primary class)
+    if (!equipment.canBeEquippedBy(this._unitClass)) {
+      return EquipmentResultFactory.classRestriction(this, equipment);
+    }
+
     // Validate against TwoHandedWeapon in right hand
     if (this._rightHand !== null && this._rightHand.type === 'TwoHandedWeapon') {
       return EquipmentResultFactory.twoHandedBlocksLeft(this, equipment, this._rightHand);
@@ -321,6 +326,11 @@ export class HumanoidUnit implements CombatUnit {
       return { success: true, message: 'Right hand unequipped' };
     }
 
+    // Validate class restrictions (only check primary class)
+    if (!equipment.canBeEquippedBy(this._unitClass)) {
+      return EquipmentResultFactory.classRestriction(this, equipment);
+    }
+
     // Validate against TwoHandedWeapon in left hand
     if (this._leftHand !== null && this._leftHand.type === 'TwoHandedWeapon') {
       return EquipmentResultFactory.twoHandedBlocksRight(this, equipment, this._leftHand);
@@ -358,15 +368,22 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   equipHead(equipment: Equipment | null): EquipmentResult {
-    const oldEquipment = this._head;
-    this._head = equipment;
-
     if (equipment === null) {
+      const oldEquipment = this._head;
+      this._head = null;
       if (oldEquipment) {
         return EquipmentResultFactory.successUnequip(this, oldEquipment);
       }
       return { success: true, message: 'Head unequipped' };
     }
+
+    // Validate class restrictions (only check primary class)
+    if (!equipment.canBeEquippedBy(this._unitClass)) {
+      return EquipmentResultFactory.classRestriction(this, equipment);
+    }
+
+    const oldEquipment = this._head;
+    this._head = equipment;
 
     if (oldEquipment) {
       return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
@@ -375,15 +392,22 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   equipBody(equipment: Equipment | null): EquipmentResult {
-    const oldEquipment = this._body;
-    this._body = equipment;
-
     if (equipment === null) {
+      const oldEquipment = this._body;
+      this._body = null;
       if (oldEquipment) {
         return EquipmentResultFactory.successUnequip(this, oldEquipment);
       }
       return { success: true, message: 'Body unequipped' };
     }
+
+    // Validate class restrictions (only check primary class)
+    if (!equipment.canBeEquippedBy(this._unitClass)) {
+      return EquipmentResultFactory.classRestriction(this, equipment);
+    }
+
+    const oldEquipment = this._body;
+    this._body = equipment;
 
     if (oldEquipment) {
       return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
@@ -392,15 +416,22 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   equipAccessory(equipment: Equipment | null): EquipmentResult {
-    const oldEquipment = this._accessory;
-    this._accessory = equipment;
-
     if (equipment === null) {
+      const oldEquipment = this._accessory;
+      this._accessory = null;
       if (oldEquipment) {
         return EquipmentResultFactory.successUnequip(this, oldEquipment);
       }
       return { success: true, message: 'Accessory unequipped' };
     }
+
+    // Validate class restrictions (only check primary class)
+    if (!equipment.canBeEquippedBy(this._unitClass)) {
+      return EquipmentResultFactory.classRestriction(this, equipment);
+    }
+
+    const oldEquipment = this._accessory;
+    this._accessory = equipment;
 
     if (oldEquipment) {
       return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
