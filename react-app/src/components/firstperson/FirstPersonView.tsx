@@ -10,11 +10,10 @@ import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/FirstPersonLayoutManager';
 import { UISettings } from '../../config/UISettings';
-// TEMPORARILY DISABLED FOR TESTING
-// import { ThreeJSViewport } from './ThreeJSViewport';
-// import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
-// import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
-// import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { ThreeJSViewport } from './ThreeJSViewport';
+import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
+import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface FirstPersonViewProps {
@@ -204,9 +203,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     loadAssets().catch(console.error);
   }, [areaMap, spriteLoader, fontLoader]);
 
-  // TEMPORARILY DISABLED FOR TESTING
   // 3D viewport container ref
-  // const viewportContainerRef = useRef<HTMLDivElement>(null);
+  const viewportContainerRef = useRef<HTMLDivElement>(null);
 
   // Render frame function
   const renderFrame = useCallback(() => {
@@ -232,10 +230,70 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     ctx.imageSmoothingEnabled = false;
 
     // Clear canvas
-    ctx.fillStyle = '#ff00ff'; // Bright magenta to see if canvas is rendering
+    ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // TEST: Render ONLY layout overlay (dividers, borders)
+    // Get layout regions
+    const topPanelRegion = layoutManager.getTurnOrderPanelRegion();
+    const combatLogRegion = layoutManager.getCombatLogPanelRegion();
+    const topInfoRegion = layoutManager.getTopInfoPanelRegion();
+    const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+
+    // Render top panel (location name)
+    if (fontAtlasRef.current) {
+      FontAtlasRenderer.renderText(
+        ctx,
+        firstPersonState.map.name || 'Unknown Location',
+        topPanelRegion.x + 8,
+        topPanelRegion.y + 8,
+        '7px-04b03',
+        fontAtlasRef.current,
+        1,
+        'left',
+        '#ffffff'
+      );
+    }
+
+    // Render minimap in top info panel
+    MinimapRenderer.render(
+      ctx,
+      firstPersonState.map,
+      firstPersonState.playerX,
+      firstPersonState.playerY,
+      firstPersonState.direction,
+      firstPersonState.exploredTiles,
+      topInfoRegion.x,
+      topInfoRegion.y,
+      topInfoRegion.width,
+      topInfoRegion.height
+    );
+
+    // Render party member stats in bottom info panel
+    PartyMemberStatsPanel.render(
+      ctx,
+      firstPersonState.partyMember,
+      bottomInfoRegion.x,
+      bottomInfoRegion.y,
+      bottomInfoRegion.width,
+      bottomInfoRegion.height,
+      '7px-04b03',
+      fontAtlasRef.current
+    );
+
+    // Render combat log
+    if (fontAtlasRef.current) {
+      combatLogManager.render(
+        ctx,
+        combatLogRegion.x,
+        combatLogRegion.y,
+        combatLogRegion.width,
+        combatLogRegion.height,
+        '7px-04b03',
+        fontAtlasRef.current
+      );
+    }
+
+    // Render layout overlay (dividers, borders) on top
     layoutManager.renderLayout({
       ctx,
       canvasWidth: CANVAS_WIDTH,
@@ -247,67 +305,6 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       currentUnit: null,
       targetUnit: null,
     });
-
-    // TEMPORARILY DISABLED FOR TESTING
-    // Get layout regions
-    // const topPanelRegion = layoutManager.getTurnOrderPanelRegion();
-    // const combatLogRegion = layoutManager.getCombatLogPanelRegion();
-    // const topInfoRegion = layoutManager.getTopInfoPanelRegion();
-    // const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
-
-    // // Render top panel (location name)
-    // if (fontAtlasRef.current) {
-    //   FontAtlasRenderer.renderText(
-    //     ctx,
-    //     firstPersonState.map.name || 'Unknown Location',
-    //     topPanelRegion.x + 8,
-    //     topPanelRegion.y + 8,
-    //     '7px-04b03',
-    //     fontAtlasRef.current,
-    //     1,
-    //     'left',
-    //     '#ffffff'
-    //   );
-    // }
-
-    // // Render minimap in top info panel
-    // MinimapRenderer.render(
-    //   ctx,
-    //   firstPersonState.map,
-    //   firstPersonState.playerX,
-    //   firstPersonState.playerY,
-    //   firstPersonState.direction,
-    //   firstPersonState.exploredTiles,
-    //   topInfoRegion.x,
-    //   topInfoRegion.y,
-    //   topInfoRegion.width,
-    //   topInfoRegion.height
-    // );
-
-    // // Render party member stats in bottom info panel
-    // PartyMemberStatsPanel.render(
-    //   ctx,
-    //   firstPersonState.partyMember,
-    //   bottomInfoRegion.x,
-    //   bottomInfoRegion.y,
-    //   bottomInfoRegion.width,
-    //   bottomInfoRegion.height,
-    //   '7px-04b03',
-    //   fontAtlasRef.current
-    // );
-
-    // // Render combat log
-    // if (fontAtlasRef.current) {
-    //   combatLogManager.render(
-    //     ctx,
-    //     combatLogRegion.x,
-    //     combatLogRegion.y,
-    //     combatLogRegion.width,
-    //     combatLogRegion.height,
-    //     '7px-04b03',
-    //     fontAtlasRef.current
-    //   );
-    // }
 
     // Copy buffer to display
     const displayCtx = displayCanvas.getContext('2d');
@@ -423,9 +420,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     );
   }
 
-  // TEMPORARILY DISABLED FOR TESTING
   // Calculate 3D viewport position within the scaled canvas
-  // const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
+  const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
 
   return (
     <div
@@ -456,8 +452,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
           justifyContent: 'center',
         }}
       >
-        {/* TEMPORARILY DISABLED FOR TESTING - 3D viewport (behind canvas) */}
-        {/* {spritesLoaded && firstPersonState && (
+        {/* 3D viewport (behind canvas) */}
+        {spritesLoaded && firstPersonState && (
           <div
             ref={viewportContainerRef}
             style={{
@@ -480,7 +476,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               onAnimationComplete={() => inputHandler.unblockInput()}
             />
           </div>
-        )} */}
+        )}
 
         {/* Canvas with 2D UI elements (on top) */}
         <canvas
