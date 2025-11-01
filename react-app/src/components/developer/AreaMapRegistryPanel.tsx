@@ -4,10 +4,14 @@ import type { AreaMapJSON } from '../../models/area/AreaMap';
 import type { InteractiveObject, CardinalDirection } from '../../models/area/InteractiveObject';
 import { InteractiveObjectType, ObjectState } from '../../models/area/InteractiveObject';
 import type { EncounterZone } from '../../models/area/EncounterZone';
+import type { EventArea, AreaEvent } from '../../models/area/EventArea';
+import { PreconditionFactory } from '../../models/area/preconditions/PreconditionFactory';
+import { ActionFactory } from '../../models/area/actions/ActionFactory';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
 import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { AreaMapTileSetEditorPanel } from './AreaMapTileSetEditorPanel';
+import { EventEditorModal } from './EventEditorModal';
 import * as yaml from 'js-yaml';
 
 // Helper component to render a sprite on a canvas
@@ -52,11 +56,17 @@ const SpriteCanvas: React.FC<{ spriteSheet: string; spriteX: number; spriteY: nu
   return <canvas ref={canvasRef} style={{ imageRendering: 'pixelated' }} />;
 };
 
-type EditorTool = 'paint' | 'object' | 'spawn' | 'encounter';
+type EditorTool = 'paint' | 'object' | 'spawn' | 'encounter' | 'events';
 
 interface AreaMapRegistryPanelProps {
   onClose?: () => void;
 }
+
+// Hybrid type for editedMap - allows EventArea with class instances (during editing)
+// but maintains compatibility with AreaMapJSON structure
+type EditableAreaMapJSON = Omit<AreaMapJSON, 'eventAreas'> & {
+  eventAreas?: EventArea[];
+};
 
 /**
  * Developer panel for browsing and editing area maps.
@@ -66,7 +76,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [areaMaps, setAreaMaps] = useState<AreaMap[]>([]);
   const [selectedMap, setSelectedMap] = useState<AreaMap | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [editedMap, setEditedMap] = useState<AreaMapJSON | null>(null);
+  const [editedMap, setEditedMap] = useState<EditableAreaMapJSON | null>(null);
   const [currentTool, setCurrentTool] = useState<EditorTool>('paint');
   const [selectedTileChar, setSelectedTileChar] = useState<string>('#');
   const [selectedObjectType, setSelectedObjectType] = useState<InteractiveObjectType>(InteractiveObjectType.ClosedDoor);
@@ -77,6 +87,13 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [pendingHeight, setPendingHeight] = useState<number>(0);
   const [isDragging, setIsDragging] = useState(false);
   const [lastDragPos, setLastDragPos] = useState<{ x: number; y: number } | null>(null);
+
+  // Event editing state
+  const [selectedEventArea, setSelectedEventArea] = useState<string | null>(null);
+  const [isCreatingEventArea, setIsCreatingEventArea] = useState(false);
+  const [eventAreaStartPos, setEventAreaStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [eventEditorVisible, setEventEditorVisible] = useState(false);
+  const [editingEventId, setEditingEventId] = useState<string | null>(null);
 
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
@@ -102,12 +119,69 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
 
     const json = selectedMap.toJSON();
     originalMapRef.current = JSON.parse(JSON.stringify(json));
-    setEditedMap(json);
+
+    // Convert eventAreas from JSON to class instances for editing
+    const editableMap: EditableAreaMapJSON = {
+      ...json,
+      eventAreas: json.eventAreas ? deserializeEventAreas(json.eventAreas) : undefined,
+    };
+
+    setEditedMap(editableMap);
     setIsEditing(true);
 
     // Initialize pending dimensions with current dimensions
     setPendingWidth(json.grid[0]?.length || 0);
     setPendingHeight(json.grid.length);
+  };
+
+  // Helper to deserialize event areas from JSON to class instances
+  const deserializeEventAreas = (eventAreasJSON: import('../../models/area/EventArea').EventAreaJSON[]): EventArea[] => {
+    return eventAreasJSON.map(areaJson => ({
+      id: areaJson.id,
+      x: areaJson.x,
+      y: areaJson.y,
+      width: areaJson.width,
+      height: areaJson.height,
+      events: areaJson.events.map(eventJson => ({
+        id: eventJson.id,
+        trigger: eventJson.trigger,
+        preconditions: eventJson.preconditions.map(p => PreconditionFactory.fromJSON(p)),
+        actions: eventJson.actions.map(a => ActionFactory.fromJSON(a)),
+        oneTime: eventJson.oneTime,
+        triggered: eventJson.triggered,
+        description: eventJson.description,
+      } as AreaEvent)),
+      description: areaJson.description,
+    }));
+  };
+
+  // Helper to serialize event areas from class instances to JSON
+  const serializeEventAreas = (eventAreas: EventArea[]): import('../../models/area/EventArea').EventAreaJSON[] => {
+    return eventAreas.map(area => ({
+      id: area.id,
+      x: area.x,
+      y: area.y,
+      width: area.width,
+      height: area.height,
+      events: area.events.map(event => ({
+        id: event.id,
+        trigger: event.trigger,
+        preconditions: event.preconditions.map(p => p.toJSON()),
+        actions: event.actions.map(a => a.toJSON()),
+        oneTime: event.oneTime,
+        triggered: event.triggered,
+        description: event.description,
+      })),
+      description: area.description,
+    }));
+  };
+
+  // Convert EditableAreaMapJSON to AreaMapJSON for saving
+  const toAreaMapJSON = (editable: EditableAreaMapJSON): AreaMapJSON => {
+    return {
+      ...editable,
+      eventAreas: editable.eventAreas ? serializeEventAreas(editable.eventAreas) : undefined,
+    };
   };
 
   const handleCancelEdit = () => {
@@ -125,8 +199,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         AreaMapRegistry.unregister(selectedMap.id);
       }
 
-      // Create new map from edited JSON
-      const updatedMap = AreaMap.fromJSON(editedMap);
+      // Create new map from edited JSON (convert to AreaMapJSON first)
+      const updatedMap = AreaMap.fromJSON(toAreaMapJSON(editedMap));
 
       // Register the new map
       AreaMapRegistry.register(updatedMap);
@@ -178,7 +252,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     const mapsData = {
       areas: areaMaps.map(map => {
         const json = map.toJSON();
-        return {
+        const exportData: Record<string, unknown> = {
           id: json.id,
           name: json.name,
           description: json.description,
@@ -189,6 +263,13 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
           npcSpawns: json.npcSpawns,
           encounterZones: json.encounterZones,
         };
+
+        // Add eventAreas if they exist (json.eventAreas is already in JSON format)
+        if (json.eventAreas && json.eventAreas.length > 0) {
+          exportData.eventAreas = json.eventAreas;
+        }
+
+        return exportData;
       })
     };
 
@@ -384,7 +465,83 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         ...editedMap,
         encounterZones: [...(editedMap.encounterZones || []), newZone],
       });
+    } else if (currentTool === 'events') {
+      handleEventAreaClick(x, y);
     }
+  };
+
+  const handleEventAreaClick = (x: number, y: number) => {
+    if (!editedMap) return;
+
+    if (!isCreatingEventArea) {
+      // Start creating a new event area
+      setIsCreatingEventArea(true);
+      setEventAreaStartPos({ x, y });
+    } else if (eventAreaStartPos) {
+      // Finish creating the event area
+      const minX = Math.min(eventAreaStartPos.x, x);
+      const minY = Math.min(eventAreaStartPos.y, y);
+      const maxX = Math.max(eventAreaStartPos.x, x);
+      const maxY = Math.max(eventAreaStartPos.y, y);
+
+      const newArea: EventArea = {
+        id: `area-${Date.now()}`,
+        x: minX,
+        y: minY,
+        width: maxX - minX + 1,
+        height: maxY - minY + 1,
+        description: 'New event area',
+        events: [],
+      };
+
+      setEditedMap({
+        ...editedMap,
+        eventAreas: [...(editedMap.eventAreas || []), newArea],
+      });
+
+      // Reset creation state
+      setIsCreatingEventArea(false);
+      setEventAreaStartPos(null);
+      setSelectedEventArea(newArea.id);
+    }
+  };
+
+  const handleRemoveEventArea = (areaId: string) => {
+    if (!editedMap) return;
+    setEditedMap({
+      ...editedMap,
+      eventAreas: (editedMap.eventAreas || []).filter(area => area.id !== areaId),
+    });
+    if (selectedEventArea === areaId) {
+      setSelectedEventArea(null);
+    }
+  };
+
+  const handleSaveEvent = (event: AreaEvent) => {
+    if (!editedMap || !selectedEventArea) return;
+
+    setEditedMap({
+      ...editedMap,
+      eventAreas: editedMap.eventAreas?.map(area => {
+        if (area.id !== selectedEventArea) return area;
+
+        // Check if we're editing an existing event or adding a new one
+        const existingEventIndex = area.events.findIndex(e => e.id === editingEventId);
+
+        if (existingEventIndex >= 0) {
+          // Update existing event
+          const updatedEvents = [...area.events];
+          updatedEvents[existingEventIndex] = event;
+          return { ...area, events: updatedEvents };
+        } else {
+          // Add new event
+          return { ...area, events: [...area.events, event] };
+        }
+      }),
+    });
+
+    setEventEditorVisible(false);
+    setEditingEventId(null);
   };
 
   const handleRemoveObject = (objectId: string) => {
@@ -669,7 +826,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
 
   // Render the grid
   const renderGrid = () => {
-    const map = isEditing && editedMap ? AreaMap.fromJSON(editedMap) : selectedMap;
+    const map = isEditing && editedMap ? AreaMap.fromJSON(toAreaMapJSON(editedMap)) : selectedMap;
     if (!map) return null;
 
     const CELL_SIZE = 32;
@@ -793,6 +950,77 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
           </div>
         );
       }
+    }
+
+    // Render event areas (only in events mode)
+    if (currentTool === 'events' && editedMap?.eventAreas) {
+      for (const area of editedMap.eventAreas) {
+        const isSelected = selectedEventArea === area.id;
+
+        cells.push(
+          <div
+            key={`event-area-${area.id}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              setSelectedEventArea(area.id);
+            }}
+            style={{
+              position: 'absolute',
+              left: area.x * CELL_SIZE,
+              top: area.y * CELL_SIZE,
+              width: area.width * CELL_SIZE,
+              height: area.height * CELL_SIZE,
+              background: isSelected ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 255, 0, 0.1)',
+              border: isSelected ? '3px solid green' : '2px solid yellow',
+              pointerEvents: 'auto',
+              cursor: 'pointer',
+            }}
+          >
+            <div style={{
+              position: 'absolute',
+              top: 2,
+              left: 2,
+              fontSize: '10px',
+              backgroundColor: 'rgba(0, 0, 0, 0.7)',
+              color: 'white',
+              padding: '2px 4px',
+              borderRadius: '2px',
+            }}>
+              {area.id} ({area.events.length} events)
+            </div>
+          </div>
+        );
+      }
+    }
+
+    // Show preview while creating event area
+    if (isCreatingEventArea && eventAreaStartPos && currentTool === 'events') {
+      cells.push(
+        <div
+          key="event-area-preview"
+          style={{
+            position: 'absolute',
+            left: eventAreaStartPos.x * CELL_SIZE,
+            top: eventAreaStartPos.y * CELL_SIZE,
+            width: CELL_SIZE,
+            height: CELL_SIZE,
+            background: 'rgba(255, 255, 0, 0.5)',
+            border: '2px dashed yellow',
+            pointerEvents: 'none',
+          }}
+        >
+          <div style={{
+            position: 'absolute',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            fontSize: '16px',
+            color: 'white',
+          }}>
+            +
+          </div>
+        </div>
+      );
     }
 
     return (
@@ -1248,6 +1476,21 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                     >
                       Encounters
                     </button>
+                    <button
+                      onClick={() => setCurrentTool('events')}
+                      style={{
+                        padding: '6px 12px',
+                        background: currentTool === 'events' ? 'rgba(156, 39, 176, 0.5)' : 'rgba(255,255,255,0.1)',
+                        border: currentTool === 'events' ? '2px solid purple' : '1px solid #666',
+                        borderRadius: '4px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      Events
+                    </button>
                   </div>
                 </div>
               )}
@@ -1386,6 +1629,161 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                 </div>
               </>
             )}
+
+            {currentTool === 'events' && (
+              <>
+                <div style={{ fontWeight: 'bold', marginBottom: '12px', fontSize: '14px' }}>Event Areas</div>
+
+                {isCreatingEventArea && (
+                  <div style={{
+                    padding: '12px',
+                    background: 'rgba(255, 255, 0, 0.2)',
+                    border: '1px solid yellow',
+                    borderRadius: '4px',
+                    marginBottom: '12px',
+                    fontSize: '10px'
+                  }}>
+                    Click another tile to finish creating event area
+                  </div>
+                )}
+
+                {selectedEventArea && editedMap?.eventAreas && (
+                  <>
+                    <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Selected Area</div>
+                    {(() => {
+                      const area = editedMap.eventAreas.find(a => a.id === selectedEventArea);
+                      if (!area) return null;
+
+                      return (
+                        <div style={{
+                          padding: '12px',
+                          background: 'rgba(0, 255, 0, 0.1)',
+                          border: '2px solid green',
+                          borderRadius: '4px',
+                          marginBottom: '12px'
+                        }}>
+                          <div style={{ fontSize: '11px', marginBottom: '8px' }}>
+                            <div style={{ fontWeight: 'bold' }}>{area.id}</div>
+                            <div style={{ color: '#aaa', fontSize: '10px', marginTop: '4px' }}>
+                              Position: ({area.x}, {area.y})
+                            </div>
+                            <div style={{ color: '#aaa', fontSize: '10px' }}>
+                              Size: {area.width}x{area.height}
+                            </div>
+                            <div style={{ color: '#aaa', fontSize: '10px' }}>
+                              Events: {area.events.length}
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                            <button
+                              onClick={() => {
+                                setEventEditorVisible(true);
+                                setEditingEventId(null);
+                              }}
+                              style={{
+                                flex: 1,
+                                padding: '6px 8px',
+                                background: 'rgba(76, 175, 80, 0.3)',
+                                border: '1px solid rgba(76, 175, 80, 0.6)',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                fontSize: '9px',
+                                cursor: 'pointer',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              Add Event
+                            </button>
+                            <button
+                              onClick={() => handleRemoveEventArea(area.id)}
+                              style={{
+                                flex: 1,
+                                padding: '6px 8px',
+                                background: 'rgba(244, 67, 54, 0.3)',
+                                border: '1px solid rgba(244, 67, 54, 0.6)',
+                                borderRadius: '3px',
+                                color: '#fff',
+                                fontSize: '9px',
+                                cursor: 'pointer',
+                                fontFamily: 'monospace',
+                              }}
+                            >
+                              Delete Area
+                            </button>
+                          </div>
+
+                          {area.events.length > 0 && (
+                            <div style={{ marginTop: '12px' }}>
+                              <div style={{ fontSize: '10px', fontWeight: 'bold', marginBottom: '6px' }}>Events:</div>
+                              {area.events.map(event => (
+                                <div
+                                  key={event.id}
+                                  style={{
+                                    padding: '8px',
+                                    background: 'rgba(255,255,255,0.1)',
+                                    border: '1px solid #666',
+                                    borderRadius: '4px',
+                                    fontSize: '9px',
+                                    marginBottom: '6px',
+                                  }}
+                                >
+                                  <div style={{ fontWeight: 'bold' }}>{event.id}</div>
+                                  <div style={{ color: '#aaa' }}>Trigger: {event.trigger}</div>
+                                  <div style={{ color: '#aaa' }}>Actions: {event.actions.length}</div>
+                                  <button
+                                    onClick={() => {
+                                      setEditingEventId(event.id);
+                                      setEventEditorVisible(true);
+                                    }}
+                                    style={{
+                                      marginTop: '4px',
+                                      padding: '4px 8px',
+                                      background: 'rgba(33, 150, 243, 0.3)',
+                                      border: '1px solid rgba(33, 150, 243, 0.6)',
+                                      borderRadius: '3px',
+                                      color: '#fff',
+                                      fontSize: '8px',
+                                      cursor: 'pointer',
+                                      fontFamily: 'monospace',
+                                    }}
+                                  >
+                                    Edit
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })()}
+                  </>
+                )}
+
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>All Event Areas</div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  {editedMap?.eventAreas?.map(area => (
+                    <div
+                      key={area.id}
+                      onClick={() => setSelectedEventArea(area.id)}
+                      style={{
+                        padding: '8px',
+                        background: selectedEventArea === area.id ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255,255,255,0.1)',
+                        border: selectedEventArea === area.id ? '2px solid green' : '1px solid #666',
+                        borderRadius: '4px',
+                        fontSize: '10px',
+                        cursor: 'pointer',
+                      }}
+                    >
+                      <div style={{ fontWeight: 'bold' }}>{area.id}</div>
+                      <div style={{ color: '#aaa' }}>Position: ({area.x}, {area.y})</div>
+                      <div style={{ color: '#aaa' }}>Size: {area.width}x{area.height}</div>
+                      <div style={{ color: '#aaa' }}>Events: {area.events.length}</div>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1399,6 +1797,22 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             setEditingTilesetId(null);
           }}
           onSave={handleTilesetSaved}
+        />
+      )}
+
+      {/* Event editor modal */}
+      {eventEditorVisible && selectedEventArea && editedMap && (
+        <EventEditorModal
+          event={
+            editingEventId
+              ? editedMap.eventAreas?.find(a => a.id === selectedEventArea)?.events.find(e => e.id === editingEventId) || null
+              : null
+          }
+          onSave={handleSaveEvent}
+          onCancel={() => {
+            setEventEditorVisible(false);
+            setEditingEventId(null);
+          }}
         />
       )}
     </div>
