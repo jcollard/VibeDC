@@ -165,11 +165,11 @@ export class InventoryTopPanelContent implements PanelContent {
     currentX += itemsValueWidth;
 
     // Second row: Category tabs
-    const secondRowY = firstRowY + 7; // 7px line height
+    const secondRowY = firstRowY + 8; // 8px spacing (7px line height + 1px extra)
     this.renderCategoryTabs(ctx, leftX, secondRowY, fontAtlasImage);
 
     // Third row: Sort options
-    const thirdRowY = secondRowY + 7; // 7px line height
+    const thirdRowY = secondRowY + 8; // 8px spacing (7px line height + 1px extra)
     this.renderSortOptions(ctx, leftX, thirdRowY, fontAtlasImage);
 
     ctx.restore();
@@ -305,8 +305,8 @@ export class InventoryTopPanelContent implements PanelContent {
     const leftX = region.x + padding;
     const firstRowY = region.y + padding;
 
-    // Category tabs are now on second row (7px below first row)
-    const secondRowY = firstRowY + 7;
+    // Category tabs are now on second row (8px below first row)
+    const secondRowY = firstRowY + 8;
 
     // Starting X position is at left edge (no offset needed)
     let tabX = leftX;
@@ -351,7 +351,7 @@ export class InventoryTopPanelContent implements PanelContent {
   getSortBounds(region: PanelRegion): { x: number; y: number; width: number; height: number } {
     const padding = 4;
     const leftX = region.x + padding;
-    const sortY = region.y + padding + 14; // Third row (14px below first row: 7px for row 1->2, 7px for row 2->3)
+    const sortY = region.y + padding + 16; // Third row (16px below first row: 8px for row 1->2, 8px for row 2->3)
 
     const labelWidth = FontAtlasRenderer.measureTextByFontId(this.textConstants.SORT_LABEL, this.sortConstants.FONT_ID);
 
