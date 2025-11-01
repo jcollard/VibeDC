@@ -17,9 +17,26 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { EventProcessor } from '../../utils/EventProcessor';
 import type { GameState } from '../../models/area/EventPrecondition';
+import type { ExplorationState, PartyState } from '../../models/game/GameState';
+import type { ResourceManager } from '../../services/ResourceManager';
 
 interface FirstPersonViewProps {
   mapId: string; // AreaMap ID to load
+
+  // NEW: Callback when combat encounter is triggered
+  onStartCombat?: (encounterId: string) => void;
+
+  // NEW: Shared resource manager from GameView
+  resourceManager?: ResourceManager;
+
+  // NEW: Optional initial exploration state (for loading saves)
+  initialState?: ExplorationState;
+
+  // NEW: Party state from GameView
+  partyState?: PartyState;
+
+  // NEW: Game state for event system
+  gameState?: GameState;
 }
 
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom'
 import { Game } from './components/Game'
+import { GameView } from './components/game/GameView'
 import { CombatViewRoute } from './components/combat/CombatViewRoute'
 import { TitleScreen } from './components/TitleScreen'
 import { DevRoute } from './components/DevRoute'
@@ -28,8 +29,19 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
-        {/* Main game route */}
-        <Route path="/" element={<Game />} />
+        {/* Main game route - now using GameView orchestrator */}
+        <Route path="/" element={
+          <GameView
+            initialMapId="event-demo-map"
+            autoLoadSave={true}
+            onGameReady={() => console.log('[App] Game ready')}
+          />
+        } />
+
+        {/* Legacy Game component (for backwards compatibility during migration) */}
+        {import.meta.env.DEV && (
+          <Route path="/legacy" element={<Game />} />
+        )}
 
         {/* Development-only routes */}
         {import.meta.env.DEV && (

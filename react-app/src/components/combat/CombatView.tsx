@@ -44,9 +44,24 @@ import {
 import { LoadingView, type LoadResult } from './LoadingView';
 import { CombatCalculations } from '../../models/combat/utils/CombatCalculations';
 import { CombatDeveloperPanel } from './CombatDeveloperPanel';
+import type { PartyState } from '../../models/game/GameState';
+import type { ResourceManager } from '../../services/ResourceManager';
 
 interface CombatViewProps {
-  encounter: CombatEncounter;
+  // EXISTING: encounter (legacy)
+  encounter?: CombatEncounter;
+
+  // NEW: Combat state from GameView
+  combatState?: CombatState;
+
+  // NEW: Callback when combat ends
+  onCombatEnd?: (victory: boolean) => void;
+
+  // NEW: Shared resource manager from GameView
+  resourceManager?: ResourceManager;
+
+  // NEW: Party state to initialize combat units
+  partyState?: PartyState;
 }
 
 // Canvas dimensions - now using base resolution without internal scaling
@@ -59,15 +74,32 @@ const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216 pixels (18 tiles)
  * CombatView is the main view for displaying and interacting with combat encounters.
  * This is a placeholder component that will be expanded as the combat system is implemented.
  */
-export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
-  // Initialize combat state from the encounter
-  const [combatState, setCombatState] = useState<CombatState>({
-    turnNumber: 0,
-    map: encounter.map,
-    tilesetId: encounter.tilesetId || 'default',
-    phase: 'deployment', // Start in deployment phase
-    unitManifest: new CombatUnitManifest(),
-  });
+export const CombatView: React.FC<CombatViewProps> = ({
+  encounter,
+  combatState: externalCombatState,
+  onCombatEnd: _onCombatEnd, // TODO: Phase 2 - Wire up combat end callback
+  resourceManager: _resourceManager, // TODO: Phase 1 - Use shared resource manager
+  partyState: _partyState // TODO: Phase 4 - Initialize units from party state
+}) => {
+  // Guard: Require either encounter or combatState
+  if (!encounter && !externalCombatState) {
+    return (
+      <div style={{ color: 'white', padding: '20px' }}>
+        Error: CombatView requires either 'encounter' or 'combatState' prop
+      </div>
+    );
+  }
+
+  // Initialize combat state from the encounter (activeEncounter is defined later after loadedEncounterRef)
+  const [combatState, setCombatState] = useState<CombatState>(
+    externalCombatState || {
+      turnNumber: 0,
+      map: encounter!.map,
+      tilesetId: encounter!.tilesetId || 'default',
+      phase: 'deployment', // Start in deployment phase
+      unitManifest: new CombatUnitManifest(),
+    }
+  );
 
   // Phase handler reset version (increments when loading saves to force recreation)
   const [phaseHandlerVersion, setPhaseHandlerVersion] = useState(0);
@@ -85,7 +117,8 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
   const loadedEncounterRef = useRef<CombatEncounter | null>(null);
 
   // Get active encounter (loaded encounter takes precedence over prop)
-  const activeEncounter = loadedEncounterRef.current ?? encounter;
+  // We know encounter exists because of the guard above
+  const activeEncounter = (loadedEncounterRef.current ?? encounter)!;
 
   // Switch phase handler when phase changes or version increments (on load)
   useEffect(() => {
