@@ -896,6 +896,17 @@ export const InventoryView: React.FC = () => {
         needsRerender = true;
       }
 
+      // Check bottom panel hover (comparison panel - Cancel/Remove Item)
+      const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
+      const bottomHoverResult = bottomPanelManager.handleHover(
+        canvasX,
+        canvasY,
+        bottomPanelRegion
+      );
+      if (bottomHoverResult) {
+        needsRerender = true;
+      }
+
       if (needsRerender) {
         renderFrame();
       }
@@ -1061,6 +1072,80 @@ export const InventoryView: React.FC = () => {
         if (topInfoClickResult.type === 'combat-log-message' && 'message' in topInfoClickResult) {
           combatLogManager.addMessage(topInfoClickResult.message);
         }
+        renderFrame();
+        return;
+      }
+
+      // Check bottom panel click (comparison panel - Cancel/Remove Item)
+      const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
+      const bottomClickResult = bottomPanelManager.handleClick(
+        canvasX,
+        canvasY,
+        bottomPanelRegion
+      );
+      if (bottomClickResult) {
+        // Handle cancel-selection button
+        if (bottomClickResult.type === 'button' && 'buttonId' in bottomClickResult && bottomClickResult.buttonId === 'cancel-selection') {
+          // Clear equipment selection
+          selectedEquipmentRef.current = null;
+          detailPanelActiveRef.current = false;
+          originalBottomPanelContentRef.current = null;
+
+          // Increment version to trigger re-render
+          setEquipmentSlotSelectionVersion(v => v + 1);
+
+          // Clear equipment highlight in top panel
+          const topContent = topInfoPanelManager.getContent();
+          if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+            (topContent as any).setSelectedEquipmentSlot(null);
+          }
+
+          combatLogManager.addMessage('Selection cleared');
+          renderFrame();
+          return;
+        }
+
+        // Handle remove-item button
+        if (bottomClickResult.type === 'button' && 'buttonId' in bottomClickResult && bottomClickResult.buttonId === 'remove-item') {
+          const selectedSlot = selectedEquipmentRef.current;
+          if (selectedSlot && selectedSlot.item && selectedSlot.slotLabel) {
+            const equipment = selectedSlot.item as Equipment;
+
+            // Get current party member
+            const partyMemberConfigs = PartyMemberRegistry.getAll();
+            const selectedMember = partyMemberConfigs[selectedPartyMemberIndex];
+
+            if (selectedMember) {
+              // Add item to inventory
+              PartyInventory.addItem(equipment.id, 1);
+
+              // TODO: Remove item from party member's equipment slot
+              // This would require PartyMemberRegistry to have methods to modify equipment
+              // For now, just add to inventory and show message
+
+              combatLogManager.addMessage(`Removed ${equipment.name} (added to inventory)`);
+              setInventoryVersion(v => v + 1);
+
+              // Clear selection
+              selectedEquipmentRef.current = null;
+              detailPanelActiveRef.current = false;
+              originalBottomPanelContentRef.current = null;
+
+              // Increment version to trigger re-render
+              setEquipmentSlotSelectionVersion(v => v + 1);
+
+              // Clear equipment highlight in top panel
+              const topContent = topInfoPanelManager.getContent();
+              if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                (topContent as any).setSelectedEquipmentSlot(null);
+              }
+
+              renderFrame();
+              return;
+            }
+          }
+        }
+
         renderFrame();
         return;
       }

@@ -14,6 +14,9 @@ import type { Equipment } from '../../combat/Equipment';
 export class EquipmentComparisonContent implements PanelContent {
   private currentItem: Equipment | null; // null means empty slot
   private comparisonItem: Equipment | null; // null means no item to compare (show "??")
+  private hoveredOption: 'cancel' | 'remove' | null = null;
+  private cancelBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private removeBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor(currentItem: Equipment | null, comparisonItem: Equipment | null) {
     this.currentItem = currentItem;
@@ -94,41 +97,131 @@ export class EquipmentComparisonContent implements PanelContent {
       y += lineSpacing + 2; // Extra spacing after title
     }
 
-    // If no comparison item, show helper text (wrapped)
+    // Render Cancel and Remove Item options (below title, above helper text)
+    const normalColor = '#ffffff';
+    const hoverColor = '#ffff00'; // Yellow for hover
+
+    // Render "Cancel" option
+    const cancelText = 'Cancel';
+    const cancelColor = this.hoveredOption === 'cancel' ? hoverColor : normalColor;
+    const cancelX = region.x + padding;
+    FontAtlasRenderer.renderText(
+      ctx,
+      cancelText,
+      cancelX,
+      y,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      cancelColor
+    );
+
+    // Store cancel bounds for hit detection (panel-relative)
+    const cancelWidth = FontAtlasRenderer.measureText(cancelText, font);
+    this.cancelBounds = {
+      x: padding,
+      y: y - region.y,
+      width: cancelWidth,
+      height: lineSpacing
+    };
+
+    // Render "Remove Item" option if currentItem exists
+    if (this.currentItem) {
+      const removeText = 'Remove Item';
+      const removeColor = this.hoveredOption === 'remove' ? hoverColor : normalColor;
+
+      // Position to the right of Cancel with some spacing
+      const removeX = cancelX + cancelWidth + 8;
+      FontAtlasRenderer.renderText(
+        ctx,
+        removeText,
+        removeX,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        removeColor
+      );
+
+      // Store remove bounds for hit detection (panel-relative)
+      const removeWidth = FontAtlasRenderer.measureText(removeText, font);
+      this.removeBounds = {
+        x: padding + cancelWidth + 8,
+        y: y - region.y,
+        width: removeWidth,
+        height: lineSpacing
+      };
+    } else {
+      this.removeBounds = null;
+    }
+
+    y += lineSpacing + 2; // Extra spacing after options
+
+    // Render helper text based on hover state or default
+    const helperColor = '#888888'; // Grey for helper text
+    let helperText = 'Select an item to equip.';
+
+    if (this.hoveredOption === 'cancel') {
+      helperText = 'Clear equipment selection';
+    } else if (this.hoveredOption === 'remove') {
+      helperText = 'Remove item and add to inventory';
+    }
+
+    // Helper text might be too wide, wrap if necessary
+    const helperWidth = FontAtlasRenderer.measureText(helperText, font);
+    const helperAvailableWidth = region.width - (padding * 2);
+
+    if (helperWidth <= helperAvailableWidth) {
+      // Fits on one line
+      FontAtlasRenderer.renderText(
+        ctx,
+        helperText,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        helperColor
+      );
+    } else {
+      // Need to wrap - split into lines
+      if (this.hoveredOption === 'remove') {
+        // "Remove item and add to inventory" -> "Remove item and" / "add to inventory"
+        const line1 = 'Remove item and';
+        const line2 = 'add to inventory';
+
+        FontAtlasRenderer.renderText(ctx, line1, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+        y += lineSpacing;
+        FontAtlasRenderer.renderText(ctx, line2, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+      } else if (this.hoveredOption === 'cancel') {
+        // "Clear equipment selection" -> "Clear equipment" / "selection"
+        const line1 = 'Clear equipment';
+        const line2 = 'selection';
+
+        FontAtlasRenderer.renderText(ctx, line1, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+        y += lineSpacing;
+        FontAtlasRenderer.renderText(ctx, line2, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+      } else {
+        // "Select an item to equip." -> "Select an item" / "to equip."
+        const line1 = 'Select an item';
+        const line2 = 'to equip.';
+
+        FontAtlasRenderer.renderText(ctx, line1, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+        y += lineSpacing;
+        FontAtlasRenderer.renderText(ctx, line2, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+      }
+    }
+
+    // If no comparison item, don't render stats
     if (!this.comparisonItem) {
-      const helperColor = '#888888'; // Grey for helper text
-      const helperLine1 = 'Hover over an';
-      const helperLine2 = 'item to compare';
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        helperLine1,
-        region.x + padding,
-        y,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        helperColor
-      );
-
-      y += lineSpacing;
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        helperLine2,
-        region.x + padding,
-        y,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        helperColor
-      );
-
       ctx.restore();
       return;
     }
+
+    y += lineSpacing + 2; // Extra spacing before stats
 
     // Get non-default properties from comparison item
     const comparisonStats = this.getNonDefaultProperties(this.comparisonItem);
@@ -415,5 +508,85 @@ export class EquipmentComparisonContent implements PanelContent {
       case 'Attunement': return mods.attunementModifier;
       default: return 0;
     }
+  }
+
+  /**
+   * Handle hover events to detect option hover
+   */
+  handleHover(relativeX: number, relativeY: number): unknown {
+    // Check if hovering over Cancel option
+    if (this.cancelBounds) {
+      const bounds = this.cancelBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        if (this.hoveredOption !== 'cancel') {
+          this.hoveredOption = 'cancel';
+          return { type: 'option-hover', option: 'cancel' };
+        }
+        return null;
+      }
+    }
+
+    // Check if hovering over Remove Item option
+    if (this.removeBounds) {
+      const bounds = this.removeBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        if (this.hoveredOption !== 'remove') {
+          this.hoveredOption = 'remove';
+          return { type: 'option-hover', option: 'remove' };
+        }
+        return null;
+      }
+    }
+
+    // Clear hover if not over any option
+    if (this.hoveredOption !== null) {
+      this.hoveredOption = null;
+      return { type: 'option-hover', option: null };
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle click events to detect option clicks
+   */
+  handleClick(relativeX: number, relativeY: number): import('../../combat/managers/panels/PanelContent').PanelClickResult {
+    // Check if clicking on Cancel option
+    if (this.cancelBounds) {
+      const bounds = this.cancelBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        return { type: 'button', buttonId: 'cancel-selection' };
+      }
+    }
+
+    // Check if clicking on Remove Item option
+    if (this.removeBounds) {
+      const bounds = this.removeBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        return { type: 'button', buttonId: 'remove-item' };
+      }
+    }
+
+    return null;
   }
 }
