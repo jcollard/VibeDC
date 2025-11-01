@@ -23,7 +23,9 @@ import { EquipmentInfoContent } from '../../models/combat/managers/panels/Equipm
 import { AbilityInfoContent } from '../../models/combat/managers/panels/AbilityInfoContent';
 import { InventoryUnitInfoContent } from '../../models/inventory/panels/InventoryUnitInfoContent';
 import { EmptySlotInfoContent } from '../../models/inventory/panels/EmptySlotInfoContent';
+import { EquipmentComparisonContent } from '../../models/inventory/panels/EquipmentComparisonContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
+import { isEquipmentCompatibleWithSlot, isEquipmentSlot } from '../../utils/EquipmentSlotUtil';
 import { UISettings } from '../../config/UISettings';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
@@ -391,10 +393,30 @@ export const InventoryView: React.FC = () => {
 
   // Update bottom panel when hovered item changes
   useEffect(() => {
+    // Check if an equipment slot is selected
+    const selectedSlot = selectedEquipmentRef.current;
+    const isEquipmentSlotSelected = selectedSlot &&
+                                    selectedSlot.type === 'equipment' &&
+                                    selectedSlot.slotLabel &&
+                                    isEquipmentSlot(selectedSlot.slotLabel);
+
     if (viewState.hoveredItemId) {
-      const equipment = Equipment.getById(viewState.hoveredItemId);
-      if (equipment) {
-        bottomPanelManager.setContent(new EquipmentInfoContent(equipment));
+      const hoveredEquipment = Equipment.getById(viewState.hoveredItemId);
+      if (hoveredEquipment) {
+        // If equipment slot is selected and hovered item is compatible, show comparison
+        if (isEquipmentSlotSelected && selectedSlot.slotLabel) {
+          if (isEquipmentCompatibleWithSlot(hoveredEquipment, selectedSlot.slotLabel)) {
+            // Show comparison panel
+            const currentEquipment = selectedSlot.item; // Can be null for empty slot
+            bottomPanelManager.setContent(new EquipmentComparisonContent(currentEquipment, hoveredEquipment));
+          } else {
+            // Incompatible item - shouldn't happen due to hover filter, but keep regular info as fallback
+            bottomPanelManager.setContent(new EquipmentInfoContent(hoveredEquipment));
+          }
+        } else {
+          // No equipment slot selected - show regular equipment info
+          bottomPanelManager.setContent(new EquipmentInfoContent(hoveredEquipment));
+        }
       }
     } else {
       bottomPanelManager.setContent(new EmptyPanelContent());
@@ -725,6 +747,13 @@ export const InventoryView: React.FC = () => {
       }
 
       // Check item hover
+      // Filter by slot compatibility if an equipment slot is selected
+      const selectedSlot = selectedEquipmentRef.current;
+      const isEquipmentSlotSelected = selectedSlot &&
+                                      selectedSlot.type === 'equipment' &&
+                                      selectedSlot.slotLabel &&
+                                      isEquipmentSlot(selectedSlot.slotLabel);
+
       const itemRows = renderer.getItemRowBounds(currentPageItems, mainPanelBounds);
       let newHoveredItemId: string | null = null;
       for (const row of itemRows) {
@@ -734,7 +763,17 @@ export const InventoryView: React.FC = () => {
           canvasY >= row.bounds.y &&
           canvasY <= row.bounds.y + row.bounds.height
         ) {
-          newHoveredItemId = row.equipmentId;
+          // If equipment slot is selected, only allow hovering compatible items
+          if (isEquipmentSlotSelected) {
+            const equipment = Equipment.getById(row.equipmentId);
+            if (equipment && selectedSlot.slotLabel && isEquipmentCompatibleWithSlot(equipment, selectedSlot.slotLabel)) {
+              newHoveredItemId = row.equipmentId;
+            }
+            // Otherwise, don't set hovered item (incompatible item)
+          } else {
+            // No filter - allow hovering all items
+            newHoveredItemId = row.equipmentId;
+          }
           break;
         }
       }
