@@ -18,7 +18,7 @@ import { CombatLayoutManager } from '../../models/combat/layouts/CombatLayoutMan
 import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
-import { InventoryStatsContent, type InventoryStats } from '../../models/inventory/panels/InventoryStatsContent';
+import { InventoryTopPanelContent, type InventoryStats } from '../../models/inventory/panels/InventoryTopPanelContent';
 import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { UISettings } from '../../config/UISettings';
@@ -112,17 +112,17 @@ export const InventoryView: React.FC = () => {
 
   // Initialize panel content
   useEffect(() => {
-    // Top panel: Inventory stats
+    // Top panel: Inventory stats and category tabs
     const stats: InventoryStats = {
       totalItems: PartyInventory.getTotalItemCount(),
       uniqueItems: PartyInventory.getTotalUniqueItems(),
       gold: PartyInventory.getGold(),
     };
-    topPanelManager.setContent(new InventoryStatsContent(stats));
+    topPanelManager.setContent(new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory));
 
     // Bottom panel: Item details (initially empty)
     bottomPanelManager.setContent(new EmptyPanelContent());
-  }, [topPanelManager, bottomPanelManager]);
+  }, [topPanelManager, bottomPanelManager, viewState.category, viewState.hoveredCategory]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -288,8 +288,8 @@ export const InventoryView: React.FC = () => {
       uniqueItems: PartyInventory.getTotalUniqueItems(),
       gold: PartyInventory.getGold(),
     };
-    topPanelManager.setContent(new InventoryStatsContent(stats));
-  }, [filteredAndSortedItems, topPanelManager]);
+    topPanelManager.setContent(new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory));
+  }, [filteredAndSortedItems, topPanelManager, viewState.category, viewState.hoveredCategory]);
 
   // Render frame
   const renderFrame = useCallback(() => {
@@ -329,7 +329,7 @@ export const InventoryView: React.FC = () => {
       fontAtlas
     );
 
-    // Render top info panel (inventory stats)
+    // Render top panel (inventory stats and category tabs)
     const topPanelRegion = layoutManager.getTopInfoPanelRegion();
     topPanelManager.render(
       bufferCtx,
@@ -482,18 +482,23 @@ export const InventoryView: React.FC = () => {
 
       let needsRerender = false;
 
-      // Check category tab hover
-      const categoryTabs = renderer.getCategoryTabBounds(mainPanelBounds);
+      // Check category tab hover (now in top info panel)
+      const topPanelRegion = layoutManager.getTopInfoPanelRegion();
+      const topPanelContent = topPanelManager.getContent();
       let newHoveredCategory: InventoryCategory | null = null;
-      for (const tab of categoryTabs) {
-        if (
-          canvasX >= tab.bounds.x &&
-          canvasX <= tab.bounds.x + tab.bounds.width &&
-          canvasY >= tab.bounds.y &&
-          canvasY <= tab.bounds.y + tab.bounds.height
-        ) {
-          newHoveredCategory = tab.category;
-          break;
+
+      if (topPanelContent instanceof InventoryTopPanelContent) {
+        const categoryTabs = topPanelContent.getCategoryTabBounds(topPanelRegion);
+        for (const tab of categoryTabs) {
+          if (
+            canvasX >= tab.bounds.x &&
+            canvasX <= tab.bounds.x + tab.bounds.width &&
+            canvasY >= tab.bounds.y &&
+            canvasY <= tab.bounds.y + tab.bounds.height
+          ) {
+            newHoveredCategory = tab.category;
+            break;
+          }
         }
       }
 
@@ -568,19 +573,24 @@ export const InventoryView: React.FC = () => {
       const canvasX = (event.clientX - rect.left) * scaleX;
       const canvasY = (event.clientY - rect.top) * scaleY;
 
-      // Check category tab click
-      const categoryTabs = renderer.getCategoryTabBounds(mainPanelBounds);
-      for (const tab of categoryTabs) {
-        if (
-          canvasX >= tab.bounds.x &&
-          canvasX <= tab.bounds.x + tab.bounds.width &&
-          canvasY >= tab.bounds.y &&
-          canvasY <= tab.bounds.y + tab.bounds.height
-        ) {
-          setViewState((prev) => ({ ...prev, category: tab.category, currentPage: 0 }));
-          combatLogManager.addMessage(`Filtered by ${tab.category}`);
-          renderFrame();
-          return;
+      // Check category tab click (now in top info panel)
+      const topPanelRegion = layoutManager.getTopInfoPanelRegion();
+      const topPanelContent = topPanelManager.getContent();
+
+      if (topPanelContent instanceof InventoryTopPanelContent) {
+        const categoryTabs = topPanelContent.getCategoryTabBounds(topPanelRegion);
+        for (const tab of categoryTabs) {
+          if (
+            canvasX >= tab.bounds.x &&
+            canvasX <= tab.bounds.x + tab.bounds.width &&
+            canvasY >= tab.bounds.y &&
+            canvasY <= tab.bounds.y + tab.bounds.height
+          ) {
+            setViewState((prev) => ({ ...prev, category: tab.category, currentPage: 0 }));
+            combatLogManager.addMessage(`Filtered by ${tab.category}`);
+            renderFrame();
+            return;
+          }
         }
       }
 

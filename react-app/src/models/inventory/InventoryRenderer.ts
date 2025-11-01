@@ -6,7 +6,7 @@
 
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { CombatConstants } from '../combat/CombatConstants';
-import type { InventoryViewState, InventoryCategory, InventorySortMode } from './InventoryViewState';
+import type { InventoryViewState, InventorySortMode } from './InventoryViewState';
 import type { Equipment } from '../combat/Equipment';
 
 /**
@@ -42,7 +42,6 @@ export class InventoryRenderer {
    */
   calculateItemsPerPage(panelHeight: number): number {
     const {
-      CATEGORY_TABS,
       SORT_DROPDOWN,
       ITEM_LIST,
       PAGINATION,
@@ -51,12 +50,12 @@ export class InventoryRenderer {
     } = this.constants.MAIN_PANEL;
 
     // Calculate reserved height (everything except item list)
-    const categoryTabsHeight = CATEGORY_TABS.HEIGHT;
+    // Note: Category tabs moved to top panel, no longer rendered here
     const sortDropdownHeight = SORT_DROPDOWN.HEIGHT;
     const paginationHeight = PAGINATION.HEIGHT; // Always reserve space for pagination
     const paddingHeight = PADDING_TOP + PADDING_BOTTOM;
 
-    const reservedHeight = categoryTabsHeight + sortDropdownHeight + paginationHeight + paddingHeight;
+    const reservedHeight = sortDropdownHeight + paginationHeight + paddingHeight;
     const availableHeight = panelHeight - reservedHeight;
 
     // Calculate how many rows fit
@@ -86,22 +85,15 @@ export class InventoryRenderer {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    // Render category tabs at top
-    const categoryTabsBounds = this.renderCategoryTabs(
-      ctx,
-      state.category,
-      state.hoveredCategory,
-      panelBounds,
-      fontAtlas
-    );
+    // Note: Category tabs now rendered in top panel, not here
 
-    // Render sort dropdown below category tabs
+    // Render sort dropdown at top
     const sortDropdownBounds = this.renderSortDropdown(
       ctx,
       state.sortMode,
       state.hoveredSort,
       panelBounds,
-      categoryTabsBounds.y + categoryTabsBounds.height,
+      panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP,
       fontAtlas
     );
 
@@ -135,128 +127,6 @@ export class InventoryRenderer {
     }
 
     ctx.restore();
-  }
-
-  /**
-   * Render category tabs
-   * @returns Bounds of the category tabs region
-   */
-  private renderCategoryTabs(
-    ctx: CanvasRenderingContext2D,
-    activeCategory: InventoryCategory,
-    hoveredCategory: InventoryCategory | null,
-    panelBounds: Bounds,
-    fontAtlas: HTMLImageElement
-  ): Bounds {
-    const { CATEGORY_TABS } = this.constants.MAIN_PANEL;
-    const { CATEGORIES } = this.constants.TEXT;
-
-    const tabY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP;
-    const tabHeight = 7; // Single row height
-    let tabX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-
-    // Define tab labels
-    const tabs: Array<{ category: InventoryCategory; label: string }> = [
-      { category: 'all', label: CATEGORIES.ALL },
-      { category: 'weapons', label: CATEGORIES.WEAPONS },
-      { category: 'shields', label: CATEGORIES.SHIELDS },
-      { category: 'armor', label: CATEGORIES.ARMOR },
-      { category: 'accessories', label: CATEGORIES.ACCESSORIES },
-      { category: 'held', label: CATEGORIES.HELD },
-      { category: 'quest-items', label: CATEGORIES.QUEST_ITEMS },
-    ];
-
-    // Render tabs in two rows (first 4 tabs, then remaining 3)
-    const firstRowTabs = tabs.slice(0, 4);
-    const secondRowTabs = tabs.slice(4);
-
-    // First row
-    tabX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-    for (const tab of firstRowTabs) {
-      const isActive = tab.category === activeCategory;
-      const isHovered = tab.category === hoveredCategory;
-
-      const color = isActive
-        ? CATEGORY_TABS.ACTIVE_COLOR
-        : isHovered
-          ? CATEGORY_TABS.HOVER_COLOR
-          : CATEGORY_TABS.INACTIVE_COLOR;
-
-      // Render background for active tab
-      if (isActive) {
-        ctx.fillStyle = CATEGORY_TABS.BACKGROUND_ACTIVE;
-        const textWidth = FontAtlasRenderer.measureTextByFontId(tab.label, CATEGORY_TABS.FONT_ID);
-        ctx.fillRect(
-          Math.round(tabX - CATEGORY_TABS.TAB_PADDING),
-          Math.round(tabY - 1),
-          Math.round(textWidth + CATEGORY_TABS.TAB_PADDING * 2),
-          Math.round(tabHeight + 2)
-        );
-      }
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        tab.label,
-        Math.round(tabX),
-        Math.round(tabY),
-        CATEGORY_TABS.FONT_ID,
-        fontAtlas,
-        1,
-        'left',
-        color
-      );
-
-      const textWidth = FontAtlasRenderer.measureTextByFontId(tab.label, CATEGORY_TABS.FONT_ID);
-      tabX += textWidth + CATEGORY_TABS.TAB_SPACING + CATEGORY_TABS.TAB_PADDING * 2;
-    }
-
-    // Second row
-    tabX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-    const secondRowY = tabY + tabHeight;
-    for (const tab of secondRowTabs) {
-      const isActive = tab.category === activeCategory;
-      const isHovered = tab.category === hoveredCategory;
-
-      const color = isActive
-        ? CATEGORY_TABS.ACTIVE_COLOR
-        : isHovered
-          ? CATEGORY_TABS.HOVER_COLOR
-          : CATEGORY_TABS.INACTIVE_COLOR;
-
-      // Render background for active tab
-      if (isActive) {
-        ctx.fillStyle = CATEGORY_TABS.BACKGROUND_ACTIVE;
-        const textWidth = FontAtlasRenderer.measureTextByFontId(tab.label, CATEGORY_TABS.FONT_ID);
-        ctx.fillRect(
-          Math.round(tabX - CATEGORY_TABS.TAB_PADDING),
-          Math.round(secondRowY - 1),
-          Math.round(textWidth + CATEGORY_TABS.TAB_PADDING * 2),
-          Math.round(tabHeight + 2)
-        );
-      }
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        tab.label,
-        Math.round(tabX),
-        Math.round(secondRowY),
-        CATEGORY_TABS.FONT_ID,
-        fontAtlas,
-        1,
-        'left',
-        color
-      );
-
-      const textWidth = FontAtlasRenderer.measureTextByFontId(tab.label, CATEGORY_TABS.FONT_ID);
-      tabX += textWidth + CATEGORY_TABS.TAB_SPACING + CATEGORY_TABS.TAB_PADDING * 2;
-    }
-
-    return {
-      x: panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT,
-      y: tabY,
-      width: panelBounds.width - this.constants.MAIN_PANEL.PADDING_LEFT - this.constants.MAIN_PANEL.PADDING_RIGHT,
-      height: CATEGORY_TABS.HEIGHT,
-    };
   }
 
   /**
@@ -494,76 +364,14 @@ export class InventoryRenderer {
   }
 
   /**
-   * Get bounds for all category tabs (for hit testing)
-   * @returns Array of bounds with associated category
-   */
-  getCategoryTabBounds(panelBounds: Bounds): Array<{ category: InventoryCategory; bounds: Bounds }> {
-    const { CATEGORY_TABS } = this.constants.MAIN_PANEL;
-    const { CATEGORIES } = this.constants.TEXT;
-
-    const tabY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP;
-    const tabHeight = 7;
-    const result: Array<{ category: InventoryCategory; bounds: Bounds }> = [];
-
-    // Define tab labels
-    const tabs: Array<{ category: InventoryCategory; label: string }> = [
-      { category: 'all', label: CATEGORIES.ALL },
-      { category: 'weapons', label: CATEGORIES.WEAPONS },
-      { category: 'shields', label: CATEGORIES.SHIELDS },
-      { category: 'armor', label: CATEGORIES.ARMOR },
-      { category: 'accessories', label: CATEGORIES.ACCESSORIES },
-      { category: 'held', label: CATEGORIES.HELD },
-      { category: 'quest-items', label: CATEGORIES.QUEST_ITEMS },
-    ];
-
-    // First row
-    const firstRowTabs = tabs.slice(0, 4);
-    const secondRowTabs = tabs.slice(4);
-
-    let tabX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-    for (const tab of firstRowTabs) {
-      const textWidth = FontAtlasRenderer.measureTextByFontId(tab.label, CATEGORY_TABS.FONT_ID);
-      result.push({
-        category: tab.category,
-        bounds: {
-          x: Math.round(tabX - CATEGORY_TABS.TAB_PADDING),
-          y: Math.round(tabY - 1),
-          width: Math.round(textWidth + CATEGORY_TABS.TAB_PADDING * 2),
-          height: Math.round(tabHeight + 2),
-        },
-      });
-      tabX += textWidth + CATEGORY_TABS.TAB_SPACING + CATEGORY_TABS.TAB_PADDING * 2;
-    }
-
-    // Second row
-    tabX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-    const secondRowY = tabY + tabHeight;
-    for (const tab of secondRowTabs) {
-      const textWidth = FontAtlasRenderer.measureTextByFontId(tab.label, CATEGORY_TABS.FONT_ID);
-      result.push({
-        category: tab.category,
-        bounds: {
-          x: Math.round(tabX - CATEGORY_TABS.TAB_PADDING),
-          y: Math.round(secondRowY - 1),
-          width: Math.round(textWidth + CATEGORY_TABS.TAB_PADDING * 2),
-          height: Math.round(tabHeight + 2),
-        },
-      });
-      tabX += textWidth + CATEGORY_TABS.TAB_SPACING + CATEGORY_TABS.TAB_PADDING * 2;
-    }
-
-    return result;
-  }
-
-  /**
    * Get bounds for sort dropdown (for hit testing)
    */
   getSortDropdownBounds(panelBounds: Bounds): Bounds {
-    const { CATEGORY_TABS, SORT_DROPDOWN } = this.constants.MAIN_PANEL;
+    const { SORT_DROPDOWN } = this.constants.MAIN_PANEL;
     const { SORT_LABEL } = this.constants.TEXT;
 
-    const categoryTabsHeight = CATEGORY_TABS.HEIGHT;
-    const sortY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP + categoryTabsHeight + 2;
+    // Category tabs now in top panel, so sort dropdown is at the top
+    const sortY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP;
     const sortX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
 
     const labelWidth = FontAtlasRenderer.measureTextByFontId(SORT_LABEL, SORT_DROPDOWN.FONT_ID);
@@ -583,11 +391,11 @@ export class InventoryRenderer {
     items: InventoryItemWithQuantity[],
     panelBounds: Bounds
   ): Array<{ equipmentId: string; bounds: Bounds }> {
-    const { CATEGORY_TABS, SORT_DROPDOWN, ITEM_LIST } = this.constants.MAIN_PANEL;
+    const { SORT_DROPDOWN, ITEM_LIST } = this.constants.MAIN_PANEL;
 
-    const categoryTabsHeight = CATEGORY_TABS.HEIGHT;
+    // Category tabs now in top panel, so item list starts after sort dropdown only
     const sortDropdownHeight = SORT_DROPDOWN.HEIGHT;
-    const listStartY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP + categoryTabsHeight + sortDropdownHeight + 2;
+    const listStartY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP + sortDropdownHeight;
 
     const result: Array<{ equipmentId: string; bounds: Bounds }> = [];
     let itemY = listStartY;
