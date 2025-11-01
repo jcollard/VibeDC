@@ -20,6 +20,7 @@ import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { InventoryTopPanelContent, type InventoryStats } from '../../models/inventory/panels/InventoryTopPanelContent';
 import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
+import { AbilityInfoContent } from '../../models/combat/managers/panels/AbilityInfoContent';
 import { InventoryUnitInfoContent } from '../../models/inventory/panels/InventoryUnitInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { UISettings } from '../../config/UISettings';
@@ -136,6 +137,10 @@ export const InventoryView: React.FC = () => {
 
   // Track selected party member index for top info panel
   const [selectedPartyMemberIndex, setSelectedPartyMemberIndex] = useState(0);
+
+  // Track ability/equipment detail panel state (for swapping bottom panel on hover)
+  const detailPanelActiveRef = useRef(false);
+  const originalBottomPanelContentRef = useRef<PanelContent | null>(null);
 
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -745,6 +750,52 @@ export const InventoryView: React.FC = () => {
         needsRerender = true;
       }
 
+      // Handle ability/equipment detail panel swapping (similar to CombatView)
+      if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
+          canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
+
+        // Check if hover result is detail info
+        if (topInfoHoverResult && typeof topInfoHoverResult === 'object' && 'type' in topInfoHoverResult && 'item' in topInfoHoverResult) {
+          if (topInfoHoverResult.type === 'ability-detail') {
+            // Cache original bottom panel content if not already cached
+            if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+              originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+            }
+
+            // Show ability details in bottom panel
+            bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any));
+            detailPanelActiveRef.current = true;
+            needsRerender = true;
+          } else if (topInfoHoverResult.type === 'equipment-detail') {
+            // Cache original bottom panel content if not already cached
+            if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+              originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+            }
+
+            // Show equipment details in bottom panel
+            bottomPanelManager.setContent(new EquipmentInfoContent(topInfoHoverResult.item as any));
+            detailPanelActiveRef.current = true;
+            needsRerender = true;
+          }
+        } else {
+          // Not hovering detail item - restore original panel if needed
+          if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
+            bottomPanelManager.setContent(originalBottomPanelContentRef.current);
+            detailPanelActiveRef.current = false;
+            originalBottomPanelContentRef.current = null;
+            needsRerender = true;
+          }
+        }
+      } else {
+        // Mouse outside top panel - restore original panel if needed
+        if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
+          bottomPanelManager.setContent(originalBottomPanelContentRef.current);
+          detailPanelActiveRef.current = false;
+          originalBottomPanelContentRef.current = null;
+          needsRerender = true;
+        }
+      }
+
       // Check pagination hover
       const paginationBounds = renderer.getPaginationButtonBounds(mainPanelBounds, totalPages);
       let newHoveredPagination: 'prev' | 'next' | null = null;
@@ -763,7 +814,7 @@ export const InventoryView: React.FC = () => {
         renderFrame();
       }
     },
-    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, layoutManager, topInfoPanelManager]
+    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, layoutManager, topInfoPanelManager, bottomPanelManager]
   );
 
   // Handle mouse click
