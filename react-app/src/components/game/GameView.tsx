@@ -134,7 +134,29 @@ export const GameView: React.FC<GameViewProps> = ({
     setIsTransitioning(false);
   };
 
-  // 🛠️ DEVELOPER: Expose combat transition function for testing
+  // Helper for transitioning to exploration view
+  const handleStartExploration = useCallback(async () => {
+    console.log('[GameView] Transitioning to exploration view');
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'exploration',
+      () => {
+        // ✅ GUIDELINE: Immutable state update
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'exploration',
+          combatState: undefined,
+        }));
+        // Clear active encounter
+        setActiveEncounterId(null);
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager]);
+
+  // 🛠️ DEVELOPER: Expose view transition functions for testing
   useEffect(() => {
     if (import.meta.env.DEV) {
       (window as any).startEncounter = (encounterId: string) => {
@@ -142,13 +164,21 @@ export const GameView: React.FC<GameViewProps> = ({
         handleStartCombat(encounterId);
       };
 
-      console.log('[DEV] Developer function available: startEncounter(id)');
+      (window as any).startFirstPersonView = () => {
+        console.log('[DEV] Transitioning to first-person exploration view');
+        handleStartExploration();
+      };
+
+      console.log('[DEV] Developer functions available:');
+      console.log('  - startEncounter(id): Start combat with encounter ID');
+      console.log('  - startFirstPersonView(): Return to exploration view');
 
       return () => {
         delete (window as any).startEncounter;
+        delete (window as any).startFirstPersonView;
       };
     }
-  }, [handleStartCombat]);
+  }, [handleStartCombat, handleStartExploration]);
 
   // Render loading screen
   if (!resourcesLoaded) {
