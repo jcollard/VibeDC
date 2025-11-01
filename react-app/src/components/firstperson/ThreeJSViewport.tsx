@@ -194,10 +194,10 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
         />
 
         <CameraLights
-          lightIntensity={2.0}
-          lightDistance={4}
+          lightIntensity={3.0}
+          lightDistance={6}
           lightYOffset={0}
-          lightDecay={2}
+          lightDecay={0.5}
           lightColor="#ffddaa"
         />
 
