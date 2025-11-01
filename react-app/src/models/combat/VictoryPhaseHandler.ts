@@ -29,8 +29,8 @@ export class VictoryPhaseHandler extends PhaseBase {
     this.renderer = new VictoryModalRenderer();
     this.rewards = rewards;
 
-    // Note: Ensure canvas context has imageSmoothingEnabled = false
-    // This should already be set globally in CombatRenderer constructor (per GeneralGuidelines.md)
+    // Note: imageSmoothingEnabled = false is set globally in CombatView/CombatRenderer
+    // per GeneralGuidelines.md (no need to set here)
   }
 
   getRequiredSprites(_state: CombatState, _encounter: CombatEncounter): PhaseSprites {

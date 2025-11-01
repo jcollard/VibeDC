@@ -165,8 +165,8 @@ describe('CombatEncounter', () => {
         []
       );
 
-      // AllEnemiesDefeatedPredicate returns false (not implemented yet)
-      expect(encounter.isVictory(createMockState(1))).toBe(false);
+      // AllEnemiesDefeatedPredicate returns true when there are no enemies (victory by default)
+      expect(encounter.isVictory(createMockState(1))).toBe(true);
     });
 
     it('should check defeat conditions (any can be true)', () => {
