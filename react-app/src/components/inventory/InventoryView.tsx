@@ -29,6 +29,48 @@ const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
 const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216 pixels (18 tiles)
 
 /**
+ * Get custom title panel region for inventory view
+ * (8px taller and 4px wider than combat layout)
+ */
+function getInventoryTitlePanelRegion(layoutManager: CombatLayoutManager): PanelRegion {
+  const baseRegion = layoutManager.getTurnOrderPanelRegion();
+  return {
+    x: baseRegion.x,
+    y: baseRegion.y,
+    width: baseRegion.width + 4, // 4px wider
+    height: baseRegion.height + 8, // 8px taller
+  };
+}
+
+/**
+ * Get custom log panel region for inventory view
+ * (8px shorter than combat layout, aligned to bottom)
+ */
+function getInventoryLogPanelRegion(layoutManager: CombatLayoutManager): PanelRegion {
+  const baseRegion = layoutManager.getCombatLogPanelRegion();
+  return {
+    x: baseRegion.x,
+    y: baseRegion.y + 8, // Move down 8px (stays aligned to bottom)
+    width: baseRegion.width,
+    height: baseRegion.height - 8, // 8px shorter
+  };
+}
+
+/**
+ * Get custom main panel bounds for inventory view
+ * (8px lower and 4px shorter than combat layout)
+ */
+function getInventoryMainPanelBounds(layoutManager: CombatLayoutManager, canvasWidth: number, canvasHeight: number): { x: number; y: number; width: number; height: number } {
+  const baseViewport = layoutManager.getMapViewport(canvasWidth, canvasHeight);
+  return {
+    x: baseViewport.x,
+    y: baseViewport.y + 8, // Move down 8px
+    width: baseViewport.width,
+    height: baseViewport.height - 4, // 4px shorter
+  };
+}
+
+/**
  * Empty panel content for when no item is selected
  */
 class EmptyPanelContent implements PanelContent {
@@ -287,7 +329,7 @@ export const InventoryView: React.FC = () => {
   }, [viewState.category, viewState.sortMode, inventoryVersion]);
 
   // Calculate pagination
-  const mainPanelBounds = useMemo(() => layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT), [layoutManager]);
+  const mainPanelBounds = useMemo(() => getInventoryMainPanelBounds(layoutManager, CANVAS_WIDTH, CANVAS_HEIGHT), [layoutManager]);
   const itemsPerPage = useMemo(() => renderer.calculateItemsPerPage(mainPanelBounds.height), [renderer, mainPanelBounds.height]);
   const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredAndSortedItems.length / itemsPerPage)), [filteredAndSortedItems.length, itemsPerPage]);
 
@@ -366,7 +408,7 @@ export const InventoryView: React.FC = () => {
     );
 
     // Render title panel (inventory stats, category tabs, and sort options)
-    const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
+    const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
     titlePanelManager.render(
       bufferCtx,
       titlePanelRegion,
@@ -384,7 +426,7 @@ export const InventoryView: React.FC = () => {
     );
 
     // Render combat log panel (inventory actions)
-    const logPanelRegion = layoutManager.getCombatLogPanelRegion();
+    const logPanelRegion = getInventoryLogPanelRegion(layoutManager);
     const logFontAtlas = fontAtlasImagesRef.current.get(CombatConstants.COMBAT_LOG.FONT_ID);
     if (logFontAtlas) {
       combatLogManager.render(
@@ -587,7 +629,7 @@ export const InventoryView: React.FC = () => {
       let needsRerender = false;
 
       // Check category tab hover (now in title panel)
-      const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
+      const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
       const titlePanelContent = titlePanelManager.getContent();
       let newHoveredCategory: InventoryCategory | null = null;
 
@@ -681,7 +723,7 @@ export const InventoryView: React.FC = () => {
       const canvasY = (event.clientY - rect.top) * scaleY;
 
       // Check category tab click (now in title panel)
-      const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
+      const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
       const titlePanelContent = titlePanelManager.getContent();
 
       if (titlePanelContent instanceof InventoryTopPanelContent) {
