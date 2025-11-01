@@ -11,9 +11,9 @@ import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/FirstPersonLayoutManager';
 import { UISettings } from '../../config/UISettings';
 import { ThreeJSViewport, type ThreeJSViewportHandle } from './ThreeJSViewport';
-// import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
-// import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
-// import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
+import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
+import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface FirstPersonViewProps {
@@ -243,6 +243,73 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
     const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // Render 3D viewport to map region
+    const viewportCanvas = viewportRef.current?.getCanvas();
+    if (viewportCanvas) {
+      ctx.drawImage(
+        viewportCanvas,
+        0, 0, viewportCanvas.width, viewportCanvas.height, // source
+        mapRegion.x, mapRegion.y, mapRegion.width, mapRegion.height // destination
+      );
+    }
+
+    // Render top panel content (location name)
+    if (fontAtlasRef.current) {
+      const locationText = firstPersonState.map.name || 'Unknown Location';
+      FontAtlasRenderer.renderText(
+        ctx,
+        locationText,
+        topPanelRegion.x + 8,
+        topPanelRegion.y + 8,
+        '7px-04b03',
+        fontAtlasRef.current,
+        1,
+        'left',
+        '#ffffff'
+      );
+    }
+
+    // Render minimap in top info panel
+    MinimapRenderer.render(
+      ctx,
+      firstPersonState.map,
+      firstPersonState.playerX,
+      firstPersonState.playerY,
+      firstPersonState.direction,
+      firstPersonState.exploredTiles,
+      topInfoRegion.x,
+      topInfoRegion.y,
+      topInfoRegion.width,
+      topInfoRegion.height
+    );
+
+    // Render party member stats in bottom info panel
+    if (fontAtlasRef.current) {
+      PartyMemberStatsPanel.render(
+        ctx,
+        firstPersonState.partyMember,
+        bottomInfoRegion.x,
+        bottomInfoRegion.y,
+        bottomInfoRegion.width,
+        bottomInfoRegion.height,
+        '7px-04b03',
+        fontAtlasRef.current
+      );
+    }
+
+    // Render combat log
+    if (fontAtlasRef.current) {
+      combatLogManager.render(
+        ctx,
+        combatLogRegion.x + 4,
+        combatLogRegion.y + 4,
+        combatLogRegion.width - 8,
+        combatLogRegion.height - 8,
+        '7px-04b03',
+        fontAtlasRef.current
+      );
+    }
+
     // DEBUG: Draw colored boxes for each panel region (toggle with F3)
     if (showDebugRectangles) {
       // Top panel - Red
@@ -336,38 +403,100 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       if (!command) return;
 
       if (command === InputCommand.MoveForward || command === InputCommand.MoveBackward) {
-        // Validate movement
-        const result = MovementValidator.validateMovement(
-          firstPersonState.map,
+        // Calculate target position based on forward/backward
+        const targetPos = FirstPersonInputHandler.calculateTargetPosition(
           firstPersonState.playerX,
           firstPersonState.playerY,
-          firstPersonState.direction
+          firstPersonState.direction,
+          command === InputCommand.MoveForward
         );
 
-        if (result.success && result.finalX !== undefined && result.finalY !== undefined) {
+        // For backward movement, just check if target tile is passable (no door auto-continuation)
+        if (command === InputCommand.MoveBackward) {
+          const targetTile = firstPersonState.map.getTile(targetPos.x, targetPos.y);
+          if (targetTile && targetTile.passable && targetTile.walkable) {
+            // Block input during animation
+            inputHandler.blockInput();
+
+            // Update state
+            setFirstPersonState(prev => ({
+              ...prev!,
+              playerX: targetPos.x,
+              playerY: targetPos.y,
+              exploredTiles: new Set([...prev!.exploredTiles, `${targetPos.x},${targetPos.y}`])
+            }));
+
+            combatLogManager.addMessage('You step backward.');
+
+            // Unblock input after animation completes
+            setTimeout(() => inputHandler.unblockInput(), 200);
+          } else {
+            combatLogManager.addMessage('You cannot move that way.');
+          }
+        } else {
+          // Forward movement - use MovementValidator for door auto-continuation
+          const result = MovementValidator.validateMovement(
+            firstPersonState.map,
+            firstPersonState.playerX,
+            firstPersonState.playerY,
+            firstPersonState.direction
+          );
+
+          if (result.success && result.finalX !== undefined && result.finalY !== undefined) {
+            // Block input during animation
+            inputHandler.blockInput();
+
+            // Update state
+            setFirstPersonState(prev => ({
+              ...prev!,
+              playerX: result.finalX!,
+              playerY: result.finalY!,
+              exploredTiles: new Set([...prev!.exploredTiles, `${result.finalX},${result.finalY}`])
+            }));
+
+            // Log movement
+            if (result.passThroughDoor) {
+              combatLogManager.addMessage('You pass through the doorway.');
+            } else {
+              combatLogManager.addMessage('You move forward.');
+            }
+
+            // Unblock input after animation completes (handled in ThreeJSViewport callback)
+            setTimeout(() => inputHandler.unblockInput(), 200);
+          } else {
+            // Movement blocked
+            combatLogManager.addMessage(result.reason || 'You cannot move that way.');
+          }
+        }
+      } else if (command === InputCommand.StrafeLeft || command === InputCommand.StrafeRight) {
+        // Calculate strafe target position
+        const targetPos = FirstPersonInputHandler.calculateStrafePosition(
+          firstPersonState.playerX,
+          firstPersonState.playerY,
+          firstPersonState.direction,
+          command === InputCommand.StrafeLeft
+        );
+
+        // Check if target position is passable
+        const targetTile = firstPersonState.map.getTile(targetPos.x, targetPos.y);
+        if (targetTile && targetTile.passable && targetTile.walkable) {
           // Block input during animation
           inputHandler.blockInput();
 
           // Update state
           setFirstPersonState(prev => ({
             ...prev!,
-            playerX: result.finalX!,
-            playerY: result.finalY!,
-            exploredTiles: new Set([...prev!.exploredTiles, `${result.finalX},${result.finalY}`])
+            playerX: targetPos.x,
+            playerY: targetPos.y,
+            exploredTiles: new Set([...prev!.exploredTiles, `${targetPos.x},${targetPos.y}`])
           }));
 
-          // Log movement
-          if (result.passThroughDoor) {
-            combatLogManager.addMessage('You pass through the doorway.');
-          } else {
-            combatLogManager.addMessage('You move forward.');
-          }
+          combatLogManager.addMessage('You sidestep.');
 
-          // Unblock input after animation completes (handled in ThreeJSViewport callback)
+          // Unblock input after animation completes
           setTimeout(() => inputHandler.unblockInput(), 200);
         } else {
-          // Movement blocked
-          combatLogManager.addMessage(result.reason || 'You cannot move that way.');
+          combatLogManager.addMessage('You cannot move that way.');
         }
       } else if (command === InputCommand.TurnLeft || command === InputCommand.TurnRight) {
         // Calculate new direction
