@@ -1383,47 +1383,41 @@ export const InventoryView: React.FC = () => {
               }
 
               // Try to equip the item (this will validate dual-wield rules for hands)
-              let equipSuccess = false;
-              let removedEquipment: Equipment | null = null;
+              let equipResult;
+              const oldEquipment = humanoid[registrySlot];
 
               // Get currently equipped item before attempting to equip
               switch (registrySlot) {
                 case 'leftHand':
-                  removedEquipment = humanoid.leftHand;
-                  equipSuccess = humanoid.equipLeftHand(clickedEquipment);
+                  equipResult = humanoid.equipLeftHand(clickedEquipment);
                   break;
                 case 'rightHand':
-                  removedEquipment = humanoid.rightHand;
-                  equipSuccess = humanoid.equipRightHand(clickedEquipment);
+                  equipResult = humanoid.equipRightHand(clickedEquipment);
                   break;
                 case 'head':
-                  removedEquipment = humanoid.head;
-                  humanoid.equipHead(clickedEquipment);
-                  equipSuccess = true;
+                  equipResult = humanoid.equipHead(clickedEquipment);
                   break;
                 case 'body':
-                  removedEquipment = humanoid.body;
-                  humanoid.equipBody(clickedEquipment);
-                  equipSuccess = true;
+                  equipResult = humanoid.equipBody(clickedEquipment);
                   break;
                 case 'accessory':
-                  removedEquipment = humanoid.accessory;
-                  humanoid.equipAccessory(clickedEquipment);
-                  equipSuccess = true;
+                  equipResult = humanoid.equipAccessory(clickedEquipment);
                   break;
+                default:
+                  equipResult = { success: false, message: 'Invalid slot' };
               }
 
-              if (equipSuccess) {
+              if (equipResult.success) {
                 // Remove the new item from inventory
                 PartyInventory.removeItem(clickedEquipment.id, 1);
 
                 // Add the removed item to inventory (if there was one)
-                if (removedEquipment) {
-                  PartyInventory.addItem(removedEquipment.id, 1);
-                  addLogMessage(`${selectedMember.name} equipped ${clickedEquipment.name}, removed ${removedEquipment.name}`);
-                } else {
-                  addLogMessage(`${selectedMember.name} equipped ${clickedEquipment.name}`);
+                if (oldEquipment) {
+                  PartyInventory.addItem(oldEquipment.id, 1);
                 }
+
+                // Show success message from EquipmentResult
+                addLogMessage(equipResult.message);
 
                 // Update party member definition in registry
                 PartyMemberRegistry.updateEquipment(selectedMember.id, registrySlot, clickedEquipment.id);
@@ -1449,8 +1443,8 @@ export const InventoryView: React.FC = () => {
                 renderFrame();
                 return;
               } else {
-                // Equipment validation failed (e.g., dual-wield rules)
-                addLogMessage(`Cannot equip ${clickedEquipment.name} (equipment restrictions)`);
+                // Equipment validation failed - show the detailed error message from EquipmentResult
+                addLogMessage(equipResult.message);
                 renderFrame();
                 return;
               }

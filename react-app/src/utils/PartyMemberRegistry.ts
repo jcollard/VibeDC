@@ -198,32 +198,62 @@ export class PartyMemberRegistry {
     // Equip items
     if (definition.leftHandId) {
       const equipment = Equipment.getById(definition.leftHandId);
-      if (equipment) unit.equipLeftHand(equipment);
-      else console.warn(`Left hand equipment '${definition.leftHandId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipLeftHand(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip left hand for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Left hand equipment '${definition.leftHandId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.rightHandId) {
       const equipment = Equipment.getById(definition.rightHandId);
-      if (equipment) unit.equipRightHand(equipment);
-      else console.warn(`Right hand equipment '${definition.rightHandId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipRightHand(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip right hand for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Right hand equipment '${definition.rightHandId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.headId) {
       const equipment = Equipment.getById(definition.headId);
-      if (equipment) unit.equipHead(equipment);
-      else console.warn(`Head equipment '${definition.headId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipHead(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip head for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Head equipment '${definition.headId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.bodyId) {
       const equipment = Equipment.getById(definition.bodyId);
-      if (equipment) unit.equipBody(equipment);
-      else console.warn(`Body equipment '${definition.bodyId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipBody(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip body for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Body equipment '${definition.bodyId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.accessoryId) {
       const equipment = Equipment.getById(definition.accessoryId);
-      if (equipment) unit.equipAccessory(equipment);
-      else console.warn(`Accessory equipment '${definition.accessoryId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipAccessory(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip accessory for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Accessory equipment '${definition.accessoryId}' not found for party member '${id}'`);
+      }
     }
 
     // Add experience if specified

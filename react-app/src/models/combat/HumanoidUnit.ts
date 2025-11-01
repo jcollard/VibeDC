@@ -2,6 +2,8 @@ import type { CombatUnit } from './CombatUnit';
 import { Equipment } from './Equipment';
 import { UnitClass } from './UnitClass';
 import { CombatAbility } from './CombatAbility';
+import type { EquipmentResult } from '../../utils/EquipmentResult';
+import { EquipmentResultFactory } from '../../utils/EquipmentResult';
 
 /**
  * JSON representation of a HumanoidUnit for serialization
@@ -261,22 +263,26 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   // Equipment management methods
-  equipLeftHand(equipment: Equipment | null): boolean {
+  equipLeftHand(equipment: Equipment | null): EquipmentResult {
     // Allow unequipping
     if (equipment === null) {
+      const oldEquipment = this._leftHand;
       this._leftHand = null;
-      return true;
+      if (oldEquipment) {
+        return EquipmentResultFactory.successUnequip(this, oldEquipment);
+      }
+      return { success: true, message: 'Left hand unequipped' };
     }
 
     // Validate against TwoHandedWeapon in right hand
     if (this._rightHand !== null && this._rightHand.type === 'TwoHandedWeapon') {
-      return false; // Cannot equip anything when right hand has two-handed weapon
+      return EquipmentResultFactory.twoHandedBlocksLeft(this, equipment, this._rightHand);
     }
 
     // Validate TwoHandedWeapon: right hand must be empty
     if (equipment.type === 'TwoHandedWeapon') {
       if (this._rightHand !== null) {
-        return false; // Cannot equip two-handed weapon with something in right hand
+        return EquipmentResultFactory.twoHandedNeedsEmptyRight(this, equipment, this._rightHand);
       }
     }
 
@@ -285,36 +291,45 @@ export class HumanoidUnit implements CombatUnit {
       if (this._rightHand !== null && this._rightHand.isWeapon()) {
         // Right hand has a weapon
         if (!this._canDualWield) {
-          return false; // Cannot dual-wield
+          return EquipmentResultFactory.cannotDualWield(this, equipment, this._rightHand);
         }
         // Can dual-wield, check range compatibility
         if (equipment.minRange !== this._rightHand.minRange ||
             equipment.maxRange !== this._rightHand.maxRange) {
-          return false; // Ranges must match
+          return EquipmentResultFactory.dualWieldRangeMismatch(this, equipment, this._rightHand);
         }
       }
     }
 
+    const oldEquipment = this._leftHand;
     this._leftHand = equipment;
-    return true;
+
+    if (oldEquipment) {
+      return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
+    }
+    return EquipmentResultFactory.success(this, equipment, 'Left Hand');
   }
 
-  equipRightHand(equipment: Equipment | null): boolean {
+  equipRightHand(equipment: Equipment | null): EquipmentResult {
     // Allow unequipping
     if (equipment === null) {
+      const oldEquipment = this._rightHand;
       this._rightHand = null;
-      return true;
+      if (oldEquipment) {
+        return EquipmentResultFactory.successUnequip(this, oldEquipment);
+      }
+      return { success: true, message: 'Right hand unequipped' };
     }
 
     // Validate against TwoHandedWeapon in left hand
     if (this._leftHand !== null && this._leftHand.type === 'TwoHandedWeapon') {
-      return false; // Cannot equip anything when left hand has two-handed weapon
+      return EquipmentResultFactory.twoHandedBlocksRight(this, equipment, this._leftHand);
     }
 
     // Validate TwoHandedWeapon: left hand must be empty
     if (equipment.type === 'TwoHandedWeapon') {
       if (this._leftHand !== null) {
-        return false; // Cannot equip two-handed weapon with something in left hand
+        return EquipmentResultFactory.twoHandedNeedsEmptyLeft(this, equipment, this._leftHand);
       }
     }
 
@@ -323,30 +338,74 @@ export class HumanoidUnit implements CombatUnit {
       if (this._leftHand !== null && this._leftHand.isWeapon()) {
         // Left hand has a weapon
         if (!this._canDualWield) {
-          return false; // Cannot dual-wield
+          return EquipmentResultFactory.cannotDualWield(this, equipment, this._leftHand);
         }
         // Can dual-wield, check range compatibility
         if (equipment.minRange !== this._leftHand.minRange ||
             equipment.maxRange !== this._leftHand.maxRange) {
-          return false; // Ranges must match
+          return EquipmentResultFactory.dualWieldRangeMismatch(this, equipment, this._leftHand);
         }
       }
     }
 
+    const oldEquipment = this._rightHand;
     this._rightHand = equipment;
-    return true;
+
+    if (oldEquipment) {
+      return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
+    }
+    return EquipmentResultFactory.success(this, equipment, 'Right Hand');
   }
 
-  equipHead(equipment: Equipment | null): void {
+  equipHead(equipment: Equipment | null): EquipmentResult {
+    const oldEquipment = this._head;
     this._head = equipment;
+
+    if (equipment === null) {
+      if (oldEquipment) {
+        return EquipmentResultFactory.successUnequip(this, oldEquipment);
+      }
+      return { success: true, message: 'Head unequipped' };
+    }
+
+    if (oldEquipment) {
+      return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
+    }
+    return EquipmentResultFactory.success(this, equipment, 'Head');
   }
 
-  equipBody(equipment: Equipment | null): void {
+  equipBody(equipment: Equipment | null): EquipmentResult {
+    const oldEquipment = this._body;
     this._body = equipment;
+
+    if (equipment === null) {
+      if (oldEquipment) {
+        return EquipmentResultFactory.successUnequip(this, oldEquipment);
+      }
+      return { success: true, message: 'Body unequipped' };
+    }
+
+    if (oldEquipment) {
+      return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
+    }
+    return EquipmentResultFactory.success(this, equipment, 'Body');
   }
 
-  equipAccessory(equipment: Equipment | null): void {
+  equipAccessory(equipment: Equipment | null): EquipmentResult {
+    const oldEquipment = this._accessory;
     this._accessory = equipment;
+
+    if (equipment === null) {
+      if (oldEquipment) {
+        return EquipmentResultFactory.successUnequip(this, oldEquipment);
+      }
+      return { success: true, message: 'Accessory unequipped' };
+    }
+
+    if (oldEquipment) {
+      return EquipmentResultFactory.successSwap(this, equipment, oldEquipment);
+    }
+    return EquipmentResultFactory.success(this, equipment, 'Accessory');
   }
 
   unequipLeftHand(): Equipment | null {

@@ -42,8 +42,26 @@ export class EquipmentComparisonContent implements PanelContent {
     let y = region.y + padding;
 
     // Render title: "{CURRENT} vs {COMPARISON}"
-    const currentName = this.currentItem?.name ?? 'Empty';
-    const comparisonName = this.comparisonItem?.name ?? '??';
+    // Add type indicator for weapons/held items
+    const getItemLabel = (item: Equipment | null): string => {
+      if (!item) return 'Empty';
+
+      // Check if it's a weapon (has range)
+      const isWeapon = item.minRange !== undefined && item.maxRange !== undefined;
+      if (isWeapon) {
+        return `${item.name} [Wpn]`;
+      }
+
+      // Check if it's a held item (non-weapon that goes in hand slots)
+      if (item.type === 'Held') {
+        return `${item.name} [Held]`;
+      }
+
+      return item.name;
+    };
+
+    const currentName = getItemLabel(this.currentItem);
+    const comparisonName = this.comparisonItem ? getItemLabel(this.comparisonItem) : '??';
     const titleText = `${currentName} vs ${comparisonName}`;
     const titleColor = '#ffff00'; // Yellow for title
 
@@ -474,6 +492,30 @@ export class EquipmentComparisonContent implements PanelContent {
     addStatIfRelevant('Move', mods.movementModifier);
     addStatIfRelevant('Courage', mods.courageModifier);
     addStatIfRelevant('Attunement', mods.attunementModifier);
+
+    // Add weapon range if either item has range (is a weapon)
+    const currentMinRange = this.currentItem?.minRange ?? 0;
+    const currentMaxRange = this.currentItem?.maxRange ?? 0;
+    const comparisonMinRange = equipment.minRange ?? 0;
+    const comparisonMaxRange = equipment.maxRange ?? 0;
+
+    // Add min range if either has it
+    if (currentMinRange !== 0 || comparisonMinRange !== 0) {
+      stats.push({
+        statName: 'Min Rng',
+        comparisonValue: comparisonMinRange,
+        difference: comparisonMinRange - currentMinRange
+      });
+    }
+
+    // Add max range if either has it
+    if (currentMaxRange !== 0 || comparisonMaxRange !== 0) {
+      stats.push({
+        statName: 'Max Rng',
+        comparisonValue: comparisonMaxRange,
+        difference: comparisonMaxRange - currentMaxRange
+      });
+    }
 
     return stats;
   }
