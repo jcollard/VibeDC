@@ -133,102 +133,262 @@ export class EquipmentComparisonContent implements PanelContent {
     // Get non-default properties from comparison item
     const comparisonStats = this.getNonDefaultProperties(this.comparisonItem);
 
-    // Render each stat with difference
-    for (const [statName, comparisonValue] of Object.entries(comparisonStats)) {
-      const currentValue = this.getPropertyValue(this.currentItem, statName);
-      const difference = comparisonValue - currentValue;
+    if (comparisonStats.length > 0) {
+      // Render stats grid (two columns) - same layout as EquipmentInfoContent
+      const statsAreaWidth = region.width - (padding * 2);
+      const columnGap = 8;
+      const columnWidth = (statsAreaWidth - columnGap) / 2;
+      const leftColumnX = region.x + padding;
+      const rightColumnX = leftColumnX + columnWidth + columnGap;
 
-      // Format the line: "StatName: ComparisonValue (±Difference)"
-      let lineText = `${statName}: ${comparisonValue}`;
+      // Separate stats into those that fit in columns and those that need full width
+      const twoColumnStats: Array<{ statName: string; comparisonValue: number; difference: number }> = [];
+      const fullWidthStats: Array<{ statName: string; comparisonValue: number; difference: number }> = [];
 
-      if (difference !== 0) {
-        const diffText = difference > 0 ? `(+${difference})` : `(${difference})`;
-        const diffColor = difference > 0 ? '#00ff00' : '#ff0000'; // Green for positive, red for negative
-
-        // Render stat name and value in white
-        FontAtlasRenderer.renderText(
-          ctx,
-          lineText,
-          region.x + padding,
-          y,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
-
-        // Render difference in color
-        const lineWidth = FontAtlasRenderer.measureText(lineText, font);
-        FontAtlasRenderer.renderText(
-          ctx,
-          ` ${diffText}`,
-          region.x + padding + lineWidth,
-          y,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          diffColor
-        );
-      } else {
-        // No difference, render in white
-        FontAtlasRenderer.renderText(
-          ctx,
-          lineText,
-          region.x + padding,
-          y,
-          fontId,
-          fontAtlasImage,
-          1,
-          'left',
-          '#ffffff'
-        );
+      for (const stat of comparisonStats) {
+        // Check if stat fits in a column
+        if (this.statFitsInColumn(stat, columnWidth, font)) {
+          twoColumnStats.push(stat);
+        } else {
+          fullWidthStats.push(stat);
+        }
       }
 
-      y += lineSpacing;
+      // Render two-column stats
+      if (twoColumnStats.length > 0) {
+        const leftColumn = twoColumnStats.filter((_, idx) => idx % 2 === 0);
+        const rightColumn = twoColumnStats.filter((_, idx) => idx % 2 === 1);
+
+        const maxRows = Math.max(leftColumn.length, rightColumn.length);
+
+        for (let i = 0; i < maxRows; i++) {
+          // Stop if we exceed panel height
+          if (y + lineSpacing > region.y + region.height - padding) {
+            break;
+          }
+
+          // Render left column stat
+          if (i < leftColumn.length) {
+            const stat = leftColumn[i];
+            this.renderStatWithDifference(
+              ctx,
+              stat,
+              leftColumnX,
+              columnWidth,
+              y,
+              fontId,
+              fontAtlasImage,
+              font
+            );
+          }
+
+          // Render right column stat
+          if (i < rightColumn.length) {
+            const stat = rightColumn[i];
+            this.renderStatWithDifference(
+              ctx,
+              stat,
+              rightColumnX,
+              columnWidth,
+              y,
+              fontId,
+              fontAtlasImage,
+              font
+            );
+          }
+
+          y += lineSpacing;
+        }
+      }
+
+      // Render full-width stats (with more space for the label)
+      if (fullWidthStats.length > 0) {
+        const fullWidth = statsAreaWidth;
+
+        for (const stat of fullWidthStats) {
+          // Stop if we exceed panel height
+          if (y + lineSpacing > region.y + region.height - padding) {
+            break;
+          }
+
+          this.renderStatWithDifference(
+            ctx,
+            stat,
+            leftColumnX,
+            fullWidth,
+            y,
+            fontId,
+            fontAtlasImage,
+            font
+          );
+
+          y += lineSpacing;
+        }
+      }
     }
 
     ctx.restore();
   }
 
   /**
-   * Get all non-default properties from equipment
+   * Check if a stat fits in a column width
    */
-  private getNonDefaultProperties(equipment: Equipment): Record<string, number> {
-    const stats: Record<string, number> = {};
+  private statFitsInColumn(
+    stat: { statName: string; comparisonValue: number; difference: number },
+    columnWidth: number,
+    font: any
+  ): boolean {
+    // Calculate total width needed: label + value
+    const labelWidth = FontAtlasRenderer.measureText(stat.statName, font);
+    const valueText = stat.difference !== 0
+      ? `${stat.comparisonValue} (${stat.difference > 0 ? '+' : ''}${stat.difference})`
+      : `${stat.comparisonValue}`;
+    const valueWidth = FontAtlasRenderer.measureText(valueText, font);
+
+    // Add small buffer (4px) for spacing between label and value
+    const totalWidth = labelWidth + valueWidth + 4;
+
+    return totalWidth <= columnWidth;
+  }
+
+  /**
+   * Render a stat with its difference in two-column format
+   */
+  private renderStatWithDifference(
+    ctx: CanvasRenderingContext2D,
+    stat: { statName: string; comparisonValue: number; difference: number },
+    columnX: number,
+    columnWidth: number,
+    y: number,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement,
+    font: any
+  ): void {
+    // Render stat label on the left
+    FontAtlasRenderer.renderText(
+      ctx,
+      stat.statName,
+      columnX,
+      y,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      '#ffffff'
+    );
+
+    // Format the value with difference
+    const valueText = stat.difference !== 0
+      ? `${stat.comparisonValue} (${stat.difference > 0 ? '+' : ''}${stat.difference})`
+      : `${stat.comparisonValue}`;
+
+    // Measure and right-align the value
+    const valueWidth = FontAtlasRenderer.measureText(valueText, font);
+    const valueX = columnX + columnWidth - valueWidth;
+
+    // Determine color based on difference
+    const valueColor = stat.difference > 0 ? '#00ff00' : stat.difference < 0 ? '#ff0000' : '#ffffff';
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      valueText,
+      valueX,
+      y,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      valueColor
+    );
+  }
+
+  /**
+   * Get all non-default properties from equipment with differences
+   */
+  private getNonDefaultProperties(equipment: Equipment): Array<{ statName: string; comparisonValue: number; difference: number }> {
+    const stats: Array<{ statName: string; comparisonValue: number; difference: number }> = [];
     const mods = equipment.modifiers;
 
     // Check each possible stat modifier
     if (mods.physicalPowerModifier !== 0) {
-      stats['P.Pow'] = mods.physicalPowerModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'P.Pow');
+      stats.push({
+        statName: 'P.Pow',
+        comparisonValue: mods.physicalPowerModifier,
+        difference: mods.physicalPowerModifier - currentValue
+      });
     }
     if (mods.magicPowerModifier !== 0) {
-      stats['M.Pow'] = mods.magicPowerModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'M.Pow');
+      stats.push({
+        statName: 'M.Pow',
+        comparisonValue: mods.magicPowerModifier,
+        difference: mods.magicPowerModifier - currentValue
+      });
     }
     if (mods.physicalEvadeModifier !== 0) {
-      stats['P.Evd'] = mods.physicalEvadeModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'P.Evd');
+      stats.push({
+        statName: 'P.Evd',
+        comparisonValue: mods.physicalEvadeModifier,
+        difference: mods.physicalEvadeModifier - currentValue
+      });
     }
     if (mods.magicEvadeModifier !== 0) {
-      stats['M.Evd'] = mods.magicEvadeModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'M.Evd');
+      stats.push({
+        statName: 'M.Evd',
+        comparisonValue: mods.magicEvadeModifier,
+        difference: mods.magicEvadeModifier - currentValue
+      });
     }
     if (mods.healthModifier !== 0) {
-      stats['HP'] = mods.healthModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'HP');
+      stats.push({
+        statName: 'HP',
+        comparisonValue: mods.healthModifier,
+        difference: mods.healthModifier - currentValue
+      });
     }
     if (mods.manaModifier !== 0) {
-      stats['MP'] = mods.manaModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'MP');
+      stats.push({
+        statName: 'MP',
+        comparisonValue: mods.manaModifier,
+        difference: mods.manaModifier - currentValue
+      });
     }
     if (mods.speedModifier !== 0) {
-      stats['Speed'] = mods.speedModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'Speed');
+      stats.push({
+        statName: 'Speed',
+        comparisonValue: mods.speedModifier,
+        difference: mods.speedModifier - currentValue
+      });
     }
     if (mods.movementModifier !== 0) {
-      stats['Move'] = mods.movementModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'Move');
+      stats.push({
+        statName: 'Move',
+        comparisonValue: mods.movementModifier,
+        difference: mods.movementModifier - currentValue
+      });
     }
     if (mods.courageModifier !== 0) {
-      stats['Courage'] = mods.courageModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'Courage');
+      stats.push({
+        statName: 'Courage',
+        comparisonValue: mods.courageModifier,
+        difference: mods.courageModifier - currentValue
+      });
     }
     if (mods.attunementModifier !== 0) {
-      stats['Attunement'] = mods.attunementModifier;
+      const currentValue = this.getPropertyValue(this.currentItem, 'Attunement');
+      stats.push({
+        statName: 'Attunement',
+        comparisonValue: mods.attunementModifier,
+        difference: mods.attunementModifier - currentValue
+      });
     }
 
     return stats;
