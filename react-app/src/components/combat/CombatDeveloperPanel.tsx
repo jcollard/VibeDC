@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import type { SaveSlotMetadata } from '../../utils/combatStorage';
 
 interface CombatDeveloperPanelProps {
@@ -27,9 +27,12 @@ interface CombatDeveloperPanelProps {
   onLoadFromSlot: (index: number) => void;
 }
 
+const STORAGE_KEY = 'vibedc_dev_panel_expanded';
+
 /**
  * Developer settings panel for CombatView
  * Provides controls for display settings, debugging, and save/load functionality
+ * Collapsible with persistent state
  */
 export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
   integerScalingEnabled,
@@ -51,6 +54,21 @@ export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
   onSaveToSlot,
   onLoadFromSlot,
 }) => {
+  // Load expanded state from localStorage (default: collapsed)
+  const [isExpanded, setIsExpanded] = useState<boolean>(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    return stored === 'true';
+  });
+
+  // Persist expanded state to localStorage
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEY, String(isExpanded));
+  }, [isExpanded]);
+
+  const toggleExpanded = () => {
+    setIsExpanded(!isExpanded);
+  };
+
   // Format slot metadata for display
   const formatSlotMetadata = (metadata: SaveSlotMetadata | null): string => {
     if (!metadata) {
@@ -77,9 +95,29 @@ export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
         fontFamily: 'monospace',
         fontSize: '12px',
         zIndex: 4000,
+        minWidth: isExpanded ? '220px' : 'auto',
       }}
     >
-      <div style={{ marginBottom: '12px', fontWeight: 'bold' }}>Developer Settings</div>
+      {/* Collapsible Title */}
+      <div
+        onClick={toggleExpanded}
+        style={{
+          marginBottom: isExpanded ? '12px' : '0',
+          fontWeight: 'bold',
+          cursor: 'pointer',
+          userSelect: 'none',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+        }}
+      >
+        <span style={{ fontSize: '14px' }}>{isExpanded ? '▼' : '▶'}</span>
+        <span>Developer Settings</span>
+      </div>
+
+      {/* Collapsible Content */}
+      {isExpanded && (
+        <div>
 
       {/* Integer Scaling Toggle */}
       <label style={{ display: 'flex', alignItems: 'center', marginBottom: '16px', cursor: 'pointer' }}>
@@ -351,6 +389,8 @@ export const CombatDeveloperPanel: React.FC<CombatDeveloperPanelProps> = ({
           })}
         </div>
       </div>
+        </div>
+      )}
     </div>
   );
 };
