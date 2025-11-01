@@ -80,6 +80,11 @@ export interface EventArea {
    * Optional human-readable description
    */
   description?: string;
+
+  /**
+   * Optional color for visual identification (hex color code)
+   */
+  color?: string;
 }
 
 /**
@@ -93,6 +98,7 @@ export interface EventAreaJSON {
   height: number;
   events: AreaEventJSON[];
   description?: string;
+  color?: string;
 }
 
 /**

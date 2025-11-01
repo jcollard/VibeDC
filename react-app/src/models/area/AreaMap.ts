@@ -322,6 +322,7 @@ export class AreaMap {
         description: event.description,
       })),
       description: area.description,
+      color: area.color,
     }));
   }
 
@@ -365,6 +366,7 @@ export class AreaMap {
         description: eventJson.description,
       } as AreaEvent)),
       description: areaJson.description,
+      color: areaJson.color,
     }));
   }
 }

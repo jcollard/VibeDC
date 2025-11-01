@@ -159,6 +159,26 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     }));
   };
 
+  // Helper to generate a random color for event areas
+  const generateRandomColor = (): string => {
+    // Generate vibrant, distinguishable colors
+    const colors = [
+      '#FF6B6B', // Red
+      '#4ECDC4', // Teal
+      '#45B7D1', // Blue
+      '#FFA07A', // Light Salmon
+      '#98D8C8', // Mint
+      '#F7DC6F', // Yellow
+      '#BB8FCE', // Purple
+      '#85C1E2', // Sky Blue
+      '#F8B739', // Orange
+      '#52D017', // Green
+      '#FF69B4', // Pink
+      '#20B2AA', // Light Sea Green
+    ];
+    return colors[Math.floor(Math.random() * colors.length)];
+  };
+
   // Helper to serialize event areas from class instances to JSON
   const serializeEventAreas = (eventAreas: EventArea[]): import('../../models/area/EventArea').EventAreaJSON[] => {
     return eventAreas.map(area => ({
@@ -177,6 +197,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         description: event.description,
       })),
       description: area.description,
+      color: area.color,
     }));
   };
 
@@ -618,6 +639,21 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     });
   };
 
+  const handleUpdateEventAreaColor = (areaId: string, color: string) => {
+    if (!editedMap) return;
+
+    setEditedMap({
+      ...editedMap,
+      eventAreas: editedMap.eventAreas?.map(area => {
+        if (area.id !== areaId) return area;
+        return {
+          ...area,
+          color,
+        };
+      }),
+    });
+  };
+
   const handleAddEventArea = () => {
     if (!editedMap) return;
 
@@ -629,6 +665,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
       height: 1,
       description: 'New event area',
       events: [],
+      color: generateRandomColor(),
     };
 
     setEditedMap({
@@ -1051,6 +1088,21 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     if (currentTool === 'events' && editedMap?.eventAreas) {
       for (const area of editedMap.eventAreas) {
         const isSelected = selectedEventArea === area.id;
+        const areaColor = area.color || '#a020f0'; // Default to purple if no color set
+
+        // Helper function to convert hex to rgba
+        const hexToRgba = (hex: string, alpha: number) => {
+          const r = parseInt(hex.slice(1, 3), 16);
+          const g = parseInt(hex.slice(3, 5), 16);
+          const b = parseInt(hex.slice(5, 7), 16);
+          return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+        };
+
+        // Create semi-transparent background and solid border
+        const backgroundColor = isSelected
+          ? hexToRgba(areaColor, 0.4)
+          : hexToRgba(areaColor, 0.2);
+        const borderColor = areaColor;
 
         cells.push(
           <div
@@ -1065,25 +1117,12 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
               top: area.y * CELL_SIZE,
               width: area.width * CELL_SIZE,
               height: area.height * CELL_SIZE,
-              background: isSelected ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255, 255, 0, 0.1)',
-              border: isSelected ? '3px solid green' : '2px solid yellow',
+              background: backgroundColor,
+              border: isSelected ? `3px solid ${borderColor}` : `2px solid ${borderColor}`,
               pointerEvents: 'auto',
               cursor: 'pointer',
             }}
-          >
-            <div style={{
-              position: 'absolute',
-              top: 2,
-              left: 2,
-              fontSize: '10px',
-              backgroundColor: 'rgba(0, 0, 0, 0.7)',
-              color: 'white',
-              padding: '2px 4px',
-              borderRadius: '2px',
-            }}>
-              {area.id} ({area.events.length} events)
-            </div>
-          </div>
+          />
         );
       }
     }
@@ -2084,6 +2123,39 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                                   {area.height}
                                 </div>
                               )}
+                            </div>
+                          </div>
+
+                          <div style={{ marginBottom: '8px' }}>
+                            <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Color:</div>
+                            <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                              <input
+                                type="color"
+                                value={area.color || '#a020f0'}
+                                onChange={(e) => handleUpdateEventAreaColor(area.id, e.target.value)}
+                                style={{
+                                  width: '40px',
+                                  height: '24px',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  cursor: 'pointer',
+                                  background: 'transparent',
+                                }}
+                              />
+                              <div
+                                style={{
+                                  flex: 1,
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              >
+                                {area.color || '#a020f0'}
+                              </div>
                             </div>
                           </div>
 
