@@ -426,12 +426,10 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               exploredTiles: new Set([...prev!.exploredTiles, `${targetPos.x},${targetPos.y}`])
             }));
 
-            combatLogManager.addMessage('You step backward.');
-
             // Unblock input after animation completes
             setTimeout(() => inputHandler.unblockInput(), 200);
           } else {
-            combatLogManager.addMessage('You cannot move that way.');
+            combatLogManager.addMessage('Ouch!');
           }
         } else {
           // Forward movement - use MovementValidator for door auto-continuation
@@ -454,18 +452,11 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               exploredTiles: new Set([...prev!.exploredTiles, `${result.finalX},${result.finalY}`])
             }));
 
-            // Log movement
-            if (result.passThroughDoor) {
-              combatLogManager.addMessage('You pass through the doorway.');
-            } else {
-              combatLogManager.addMessage('You move forward.');
-            }
-
             // Unblock input after animation completes (handled in ThreeJSViewport callback)
             setTimeout(() => inputHandler.unblockInput(), 200);
           } else {
             // Movement blocked
-            combatLogManager.addMessage(result.reason || 'You cannot move that way.');
+            combatLogManager.addMessage('Ouch!');
           }
         }
       } else if (command === InputCommand.StrafeLeft || command === InputCommand.StrafeRight) {
@@ -491,12 +482,10 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
             exploredTiles: new Set([...prev!.exploredTiles, `${targetPos.x},${targetPos.y}`])
           }));
 
-          combatLogManager.addMessage('You sidestep.');
-
           // Unblock input after animation completes
           setTimeout(() => inputHandler.unblockInput(), 200);
         } else {
-          combatLogManager.addMessage('You cannot move that way.');
+          combatLogManager.addMessage('Ouch!');
         }
       } else if (command === InputCommand.TurnLeft || command === InputCommand.TurnRight) {
         // Calculate new direction
