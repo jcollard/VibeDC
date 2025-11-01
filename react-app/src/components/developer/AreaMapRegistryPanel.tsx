@@ -73,6 +73,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [tilesetEditorVisible, setTilesetEditorVisible] = useState(false);
   const [editingTilesetId, setEditingTilesetId] = useState<string | null>(null);
   const [tilesetRefreshKey, setTilesetRefreshKey] = useState(0);
+  const [pendingWidth, setPendingWidth] = useState<number>(0);
+  const [pendingHeight, setPendingHeight] = useState<number>(0);
 
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
@@ -100,6 +102,10 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     originalMapRef.current = JSON.parse(JSON.stringify(json));
     setEditedMap(json);
     setIsEditing(true);
+
+    // Initialize pending dimensions with current dimensions
+    setPendingWidth(json.grid[0]?.length || 0);
+    setPendingHeight(json.grid.length);
   };
 
   const handleCancelEdit = () => {
@@ -353,6 +359,78 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
       ...editedMap,
       encounterZones: (editedMap.encounterZones || []).filter(zone => zone.id !== zoneId),
     });
+  };
+
+  const handleChangeDimensions = (newWidth: number, newHeight: number) => {
+    if (!editedMap) return;
+
+    const oldWidth = editedMap.grid[0]?.length || 0;
+    const oldHeight = editedMap.grid.length;
+
+    // Create new grid with new dimensions
+    const newGrid: any[][] = [];
+    const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
+    if (!tileset) return;
+
+    // Find a default floor tile
+    const defaultTile = tileset.tileTypes.find(tt => tt.behavior === 'floor') || tileset.tileTypes[0];
+
+    for (let y = 0; y < newHeight; y++) {
+      const row: any[] = [];
+      for (let x = 0; x < newWidth; x++) {
+        // Copy existing tile if within old bounds, otherwise use default
+        if (y < oldHeight && x < oldWidth) {
+          row.push(editedMap.grid[y][x]);
+        } else {
+          row.push({
+            behavior: defaultTile.behavior,
+            walkable: defaultTile.walkable,
+            passable: defaultTile.passable,
+            spriteId: defaultTile.spriteId,
+            terrainType: defaultTile.terrainType,
+          });
+        }
+      }
+      newGrid.push(row);
+    }
+
+    // Filter out objects and spawn points that are now out of bounds
+    const filteredObjects = editedMap.interactiveObjects.filter(
+      obj => obj.x < newWidth && obj.y < newHeight
+    );
+
+    const filteredNpcSpawns = (editedMap.npcSpawns || []).filter(
+      spawn => spawn.x < newWidth && spawn.y < newHeight
+    );
+
+    const filteredEncounterZones = (editedMap.encounterZones || []).filter(
+      zone => zone.x < newWidth && zone.y < newHeight
+    );
+
+    // Adjust player spawn if out of bounds
+    let playerSpawn = editedMap.playerSpawn;
+    if (playerSpawn.x >= newWidth || playerSpawn.y >= newHeight) {
+      playerSpawn = {
+        ...playerSpawn,
+        x: Math.min(playerSpawn.x, newWidth - 1),
+        y: Math.min(playerSpawn.y, newHeight - 1),
+      };
+    }
+
+    setEditedMap({
+      ...editedMap,
+      width: newWidth,
+      height: newHeight,
+      grid: newGrid,
+      interactiveObjects: filteredObjects,
+      npcSpawns: filteredNpcSpawns,
+      encounterZones: filteredEncounterZones,
+      playerSpawn: playerSpawn,
+    });
+
+    // Update pending dimensions to match the applied dimensions
+    setPendingWidth(newWidth);
+    setPendingHeight(newHeight);
   };
 
   const handleChangeTileset = (newTilesetId: string) => {
@@ -957,6 +1035,73 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                   >
                     Cancel
                   </button>
+                </div>
+              )}
+
+              {/* Map dimensions */}
+              {isEditing && (
+                <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #666' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Dimensions</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                    <div style={{ width: '80px' }}>
+                      <div style={{ fontSize: '9px', color: '#888', marginBottom: '2px' }}>Width</div>
+                      <input
+                        type="number"
+                        min="3"
+                        max="100"
+                        value={pendingWidth}
+                        onChange={(e) => setPendingWidth(Math.max(3, Math.min(100, parseInt(e.target.value) || 3)))}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid #666',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      />
+                    </div>
+                    <div style={{ color: '#666', fontSize: '14px', paddingBottom: '6px' }}>×</div>
+                    <div style={{ width: '80px' }}>
+                      <div style={{ fontSize: '9px', color: '#888', marginBottom: '2px' }}>Height</div>
+                      <input
+                        type="number"
+                        min="3"
+                        max="100"
+                        value={pendingHeight}
+                        onChange={(e) => setPendingHeight(Math.max(3, Math.min(100, parseInt(e.target.value) || 3)))}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(255,255,255,0.1)',
+                          border: '1px solid #666',
+                          borderRadius: '4px',
+                          color: '#fff',
+                          fontSize: '11px',
+                          fontFamily: 'monospace',
+                        }}
+                      />
+                    </div>
+                    <button
+                      onClick={() => handleChangeDimensions(pendingWidth, pendingHeight)}
+                      style={{
+                        padding: '6px 12px',
+                        background: 'rgba(33, 150, 243, 0.3)',
+                        border: '1px solid rgba(33, 150, 243, 0.6)',
+                        borderRadius: '4px',
+                        color: '#fff',
+                        fontSize: '11px',
+                        cursor: 'pointer',
+                        fontFamily: 'monospace',
+                        fontWeight: 'bold',
+                        whiteSpace: 'nowrap',
+                      }}
+                    >
+                      Apply
+                    </button>
+                  </div>
                 </div>
               )}
 
