@@ -75,6 +75,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [tilesetRefreshKey, setTilesetRefreshKey] = useState(0);
   const [pendingWidth, setPendingWidth] = useState<number>(0);
   const [pendingHeight, setPendingHeight] = useState<number>(0);
+  const [isDragging, setIsDragging] = useState(false);
+  const [lastDragPos, setLastDragPos] = useState<{ x: number; y: number } | null>(null);
 
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
@@ -280,19 +282,51 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   //   });
   // };
 
-  const handleTileClick = (x: number, y: number) => {
+  // Helper function to get all grid cells between two points (Bresenham's line algorithm)
+  const getLineBetween = (x0: number, y0: number, x1: number, y1: number): Array<{ x: number; y: number }> => {
+    const points: Array<{ x: number; y: number }> = [];
+    const dx = Math.abs(x1 - x0);
+    const dy = Math.abs(y1 - y0);
+    const sx = x0 < x1 ? 1 : -1;
+    const sy = y0 < y1 ? 1 : -1;
+    let err = dx - dy;
+
+    let x = x0;
+    let y = y0;
+
+    while (true) {
+      points.push({ x, y });
+
+      if (x === x1 && y === y1) break;
+
+      const e2 = 2 * err;
+      if (e2 > -dy) {
+        err -= dy;
+        x += sx;
+      }
+      if (e2 < dx) {
+        err += dx;
+        y += sy;
+      }
+    }
+
+    return points;
+  };
+
+  const paintTile = (x: number, y: number) => {
     if (!isEditing || !editedMap || !selectedMap) return;
 
-    if (currentTool === 'paint') {
-      // Paint a tile
-      const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
-      if (!tileset) return;
+    const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
+    if (!tileset) return;
 
-      const tileType = tileset.tileTypes.find(tt => tt.char === selectedTileChar);
-      if (!tileType) return;
+    const tileType = tileset.tileTypes.find(tt => tt.char === selectedTileChar);
+    if (!tileType) return;
 
-      // Update the grid
-      const newGrid = [...editedMap.grid];
+    // Update the grid using functional state update to ensure we get the latest state
+    setEditedMap(prevMap => {
+      if (!prevMap) return prevMap;
+
+      const newGrid = [...prevMap.grid];
       newGrid[y] = [...newGrid[y]];
       newGrid[y][x] = {
         behavior: tileType.behavior,
@@ -302,10 +336,18 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         terrainType: tileType.terrainType,
       };
 
-      setEditedMap({
-        ...editedMap,
+      return {
+        ...prevMap,
         grid: newGrid,
-      });
+      };
+    });
+  };
+
+  const handleTileClick = (x: number, y: number) => {
+    if (!isEditing || !editedMap || !selectedMap) return;
+
+    if (currentTool === 'paint') {
+      paintTile(x, y);
     } else if (currentTool === 'object') {
       // Place an interactive object
       const newObject: InteractiveObject = {
@@ -359,6 +401,37 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
       ...editedMap,
       encounterZones: (editedMap.encounterZones || []).filter(zone => zone.id !== zoneId),
     });
+  };
+
+  const handleMouseDown = (x: number, y: number) => {
+    if (!isEditing || currentTool !== 'paint') return;
+    setIsDragging(true);
+    setLastDragPos({ x, y });
+    paintTile(x, y);
+  };
+
+  const handleMouseEnter = (x: number, y: number) => {
+    if (!isDragging || !lastDragPos || currentTool !== 'paint') return;
+
+    // Get all points between last position and current position
+    const points = getLineBetween(lastDragPos.x, lastDragPos.y, x, y);
+
+    // Paint all tiles along the line
+    for (const point of points) {
+      paintTile(point.x, point.y);
+    }
+
+    setLastDragPos({ x, y });
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+    setLastDragPos(null);
+  };
+
+  const handleMouseLeave = () => {
+    setIsDragging(false);
+    setLastDragPos(null);
   };
 
   const handleChangeDimensions = (newWidth: number, newHeight: number) => {
@@ -615,6 +688,9 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
           <div
             key={`tile-${x}-${y}`}
             onClick={() => handleTileClick(x, y)}
+            onMouseDown={() => handleMouseDown(x, y)}
+            onMouseEnter={() => handleMouseEnter(x, y)}
+            onMouseUp={handleMouseUp}
             style={{
               position: 'absolute',
               left: x * CELL_SIZE,
@@ -722,6 +798,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     return (
       <div
         key={`grid-${tilesetRefreshKey}`}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
         style={{
           position: 'relative',
           width: map.width * CELL_SIZE,
