@@ -239,15 +239,11 @@ export const CombatView: React.FC<CombatViewProps> = ({
     UISettings.isIntegerScalingEnabled()
   );
 
-  // Track manual scale factor - default to 3x
+  // Track manual scale factor - use current settings or default to 3x for local state only
   const [manualScale, setManualScale] = useState<number>(() => {
     const savedScale = UISettings.getManualScale();
-    // If no saved scale, default to 3x
-    if (savedScale === 0) {
-      UISettings.setManualScale(3);
-      return 3;
-    }
-    return savedScale;
+    // If no saved scale, default to 3x for combat view (but don't modify global settings)
+    return savedScale === 0 ? 3 : savedScale;
   });
 
   // Track max FPS setting
