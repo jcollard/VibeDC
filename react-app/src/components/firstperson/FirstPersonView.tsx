@@ -24,6 +24,26 @@ const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384
 const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216
 
 /**
+ * Helper function to get tiles to reveal (player tile + all 8 adjacent tiles)
+ */
+function getRevealedTiles(x: number, y: number): string[] {
+  const tiles: string[] = [];
+
+  // Add player's tile
+  tiles.push(`${x},${y}`);
+
+  // Add all 8 adjacent tiles
+  for (let dy = -1; dy <= 1; dy++) {
+    for (let dx = -1; dx <= 1; dx++) {
+      if (dx === 0 && dy === 0) continue; // Skip center (already added)
+      tiles.push(`${x + dx},${y + dy}`);
+    }
+  }
+
+  return tiles;
+}
+
+/**
  * First Person View component for dungeon exploration
  * Uses same UI layout as CombatView but with 3D viewport in map panel
  */
@@ -59,7 +79,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       playerY: areaMap.playerSpawn.y,
       direction: areaMap.playerSpawn.direction,
       map: areaMap,
-      exploredTiles: new Set([`${areaMap.playerSpawn.x},${areaMap.playerSpawn.y}`]),
+      exploredTiles: new Set(getRevealedTiles(areaMap.playerSpawn.x, areaMap.playerSpawn.y)),
       partyMember: defaultPartyMember,
       targetedObject: null,
     };
@@ -91,6 +111,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
   const [spritesLoaded, setSpritesLoaded] = useState(false);
   const fontAtlasRef = useRef<HTMLImageElement | null>(null);
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+  const tilesSpriteSheetRef = useRef<HTMLImageElement | null>(null);
 
   // Animation timing
   const lastFrameTimeRef = useRef<number>(performance.now());
@@ -193,6 +214,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       spriteImagesRef.current = spriteImages;
       console.log(`[FirstPersonView] Loaded ${spriteImages.size} sprite sheets`);
 
+      // Load tiles sprite sheet for minimap
+      const tilesSpriteSheet = new Image();
+      tilesSpriteSheet.src = '/tiles/world-tiles.png';
+      await new Promise<void>((resolve) => {
+        tilesSpriteSheet.onload = () => {
+          tilesSpriteSheetRef.current = tilesSpriteSheet;
+          console.log('[FirstPersonView] Loaded tiles sprite sheet for minimap');
+          resolve();
+        };
+        tilesSpriteSheet.onerror = () => {
+          console.warn('[FirstPersonView] Failed to load tiles sprite sheet');
+          resolve();
+        };
+      });
+
       // Load fonts
       await fontLoader.loadAll(['7px-04b03', '15px-dungeonslant']);
       fontAtlasRef.current = fontLoader.get('7px-04b03');
@@ -280,7 +316,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       topInfoRegion.x,
       topInfoRegion.y,
       topInfoRegion.width,
-      topInfoRegion.height
+      topInfoRegion.height,
+      tilesSpriteSheetRef.current
     );
 
     // Render party member stats in bottom info panel
@@ -423,7 +460,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               ...prev!,
               playerX: targetPos.x,
               playerY: targetPos.y,
-              exploredTiles: new Set([...prev!.exploredTiles, `${targetPos.x},${targetPos.y}`])
+              exploredTiles: new Set([...prev!.exploredTiles, ...getRevealedTiles(targetPos.x, targetPos.y)])
             }));
 
             // Unblock input after animation completes
@@ -449,7 +486,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               ...prev!,
               playerX: result.finalX!,
               playerY: result.finalY!,
-              exploredTiles: new Set([...prev!.exploredTiles, `${result.finalX},${result.finalY}`])
+              exploredTiles: new Set([...prev!.exploredTiles, ...getRevealedTiles(result.finalX!, result.finalY!)])
             }));
 
             // Unblock input after animation completes (handled in ThreeJSViewport callback)
@@ -479,7 +516,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
             ...prev!,
             playerX: targetPos.x,
             playerY: targetPos.y,
-            exploredTiles: new Set([...prev!.exploredTiles, `${targetPos.x},${targetPos.y}`])
+            exploredTiles: new Set([...prev!.exploredTiles, ...getRevealedTiles(targetPos.x, targetPos.y)])
           }));
 
           // Unblock input after animation completes
