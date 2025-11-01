@@ -78,6 +78,75 @@ function getInventoryMainPanelBounds(layoutManager: CombatLayoutManager, canvasW
 }
 
 /**
+ * Wraps a message into multiple lines if it exceeds the available width.
+ * Returns an array of messages that fit within the width constraint.
+ *
+ * @param message The message to wrap
+ * @param maxWidth Maximum width in pixels
+ * @param fontId Font ID to use for measurement
+ * @returns Array of wrapped message lines
+ */
+function wrapMessage(message: string, maxWidth: number, fontId: string): string[] {
+  // Measure the full message
+  const fullWidth = FontAtlasRenderer.measureTextByFontId(message, fontId);
+
+  // If it fits, return as-is
+  if (fullWidth <= maxWidth) {
+    return [message];
+  }
+
+  // Split into words
+  const words = message.split(' ');
+  const lines: string[] = [];
+  let currentLine = '';
+
+  for (let i = 0; i < words.length; i++) {
+    const word = words[i];
+    const testLine = currentLine === '' ? word : `${currentLine} ${word}`;
+    const testWidth = FontAtlasRenderer.measureTextByFontId(testLine, fontId);
+
+    if (testWidth <= maxWidth) {
+      currentLine = testLine;
+    } else {
+      // Word doesn't fit - push current line and start new one
+      if (currentLine !== '') {
+        lines.push(currentLine);
+      }
+
+      // Check if single word is too long
+      const wordWidth = FontAtlasRenderer.measureTextByFontId(word, fontId);
+      if (wordWidth > maxWidth) {
+        // Split the word by characters
+        let charLine = '';
+        for (const char of word) {
+          const charTestLine = charLine + char;
+          const charTestWidth = FontAtlasRenderer.measureTextByFontId(charTestLine, fontId);
+
+          if (charTestWidth <= maxWidth) {
+            charLine = charTestLine;
+          } else {
+            if (charLine !== '') {
+              lines.push(charLine);
+            }
+            charLine = char;
+          }
+        }
+        currentLine = charLine;
+      } else {
+        currentLine = word;
+      }
+    }
+  }
+
+  // Push remaining line
+  if (currentLine !== '') {
+    lines.push(currentLine);
+  }
+
+  return lines.length > 0 ? lines : [message];
+}
+
+/**
  * Empty panel content for when no item is hovered
  */
 class EmptyPanelContent implements PanelContent {
@@ -182,6 +251,18 @@ export const InventoryView: React.FC = () => {
 
   // Combat log manager (reuse for inventory action messages)
   const combatLogManager = useMemo(() => new CombatLogManager(), []);
+
+  // Helper function to add messages with automatic line wrapping
+  const addLogMessage = useCallback((message: string) => {
+    const logPanelRegion = getInventoryLogPanelRegion(layoutManager);
+    const maxWidth = logPanelRegion.width - 4; // Account for padding
+    const wrappedLines = wrapMessage(message, maxWidth, CombatConstants.COMBAT_LOG.FONT_ID);
+
+    // Add each wrapped line as a separate message
+    for (const line of wrappedLines) {
+      combatLogManager.addMessage(line);
+    }
+  }, [combatLogManager, layoutManager]);
 
   // Panel managers for title/bottom info panels and top info panel
   const titlePanelManager = useMemo(() => new InfoPanelManager(), []);
@@ -688,7 +769,7 @@ export const InventoryView: React.FC = () => {
       const success = PartyInventory.addItem(itemId, quantity);
       if (success) {
         console.log(`[DEV] Added ${quantity}x ${equipment.name} (${itemId}) to inventory`);
-        combatLogManager.addMessage(`Added ${quantity}x ${equipment.name}`);
+        addLogMessage(`Added ${quantity}x ${equipment.name}`);
         setInventoryVersion(v => v + 1);
       } else {
         console.error(`[DEV] Failed to add ${equipment.name} to inventory`);
@@ -698,14 +779,14 @@ export const InventoryView: React.FC = () => {
     (window as any).giveGold = (amount: number = 100) => {
       PartyInventory.addGold(amount);
       console.log(`[DEV] Added ${amount} gold to party inventory`);
-      combatLogManager.addMessage(`Added ${amount} gold`);
+      addLogMessage(`Added ${amount} gold`);
       setInventoryVersion(v => v + 1);
     };
 
     (window as any).clearInventory = () => {
       PartyInventory.clear();
       console.log('[DEV] Cleared party inventory');
-      combatLogManager.addMessage('Inventory cleared');
+      addLogMessage('Inventory cleared');
       setInventoryVersion(v => v + 1);
     };
 
@@ -731,7 +812,7 @@ export const InventoryView: React.FC = () => {
 
     (window as any).addLogMessage = (message?: string) => {
       const msg = message || `Test message ${Date.now()}`;
-      combatLogManager.addMessage(msg);
+      addLogMessage(msg);
       console.log(`[DEV] Added log message: ${msg}`);
       // No need to call renderFrame() - animation loop handles it
     };
@@ -761,7 +842,7 @@ export const InventoryView: React.FC = () => {
       delete (window as any).showOnlyLog;
       delete (window as any).restoreLayout;
     };
-  }, [combatLogManager, setInventoryVersion, renderFrame, layoutManager]);
+  }, [addLogMessage, setInventoryVersion, renderFrame, layoutManager]);
 
   // Render on state changes
   useEffect(() => {
@@ -1030,7 +1111,6 @@ export const InventoryView: React.FC = () => {
             canvasY <= tab.bounds.y + tab.bounds.height
           ) {
             setViewState((prev) => ({ ...prev, category: tab.category, currentPage: 0 }));
-            combatLogManager.addMessage(`Filtered by ${tab.category}`);
             renderFrame();
             return;
           }
@@ -1050,7 +1130,6 @@ export const InventoryView: React.FC = () => {
           const currentIndex = sortModes.indexOf(viewState.sortMode);
           const nextIndex = (currentIndex + 1) % sortModes.length;
           setViewState((prev) => ({ ...prev, sortMode: sortModes[nextIndex] }));
-          combatLogManager.addMessage(`Sort changed to ${sortModes[nextIndex]}`);
           renderFrame();
           return;
         }
@@ -1162,7 +1241,7 @@ export const InventoryView: React.FC = () => {
         }
         // If click result contains a message, add it to combat log
         if (topInfoClickResult.type === 'combat-log-message' && 'message' in topInfoClickResult) {
-          combatLogManager.addMessage(topInfoClickResult.message);
+          addLogMessage(topInfoClickResult.message);
         }
         renderFrame();
         return;
@@ -1192,7 +1271,7 @@ export const InventoryView: React.FC = () => {
             (topContent as any).setSelectedEquipmentSlot(null);
           }
 
-          combatLogManager.addMessage('Selection cleared');
+          addLogMessage('Selection cleared');
           renderFrame();
           return;
         }
@@ -1229,7 +1308,7 @@ export const InventoryView: React.FC = () => {
                 setPartyMemberVersion(v => v + 1);
               }
 
-              combatLogManager.addMessage(`${selectedMember.name} removed ${equipment.name}`);
+              addLogMessage(`${selectedMember.name} removed ${equipment.name}`);
               setInventoryVersion(v => v + 1);
 
               // Clear selection
@@ -1298,7 +1377,7 @@ export const InventoryView: React.FC = () => {
               // Check if the item is compatible with the slot (using EquipmentSlotUtil)
               const isCompatible = isEquipmentCompatibleWithSlot(clickedEquipment, selectedSlot.slotLabel);
               if (!isCompatible) {
-                combatLogManager.addMessage(`Cannot equip ${clickedEquipment.name} in ${selectedSlot.slotLabel} slot`);
+                addLogMessage(`Cannot equip ${clickedEquipment.name} in ${selectedSlot.slotLabel} slot`);
                 renderFrame();
                 return;
               }
@@ -1341,9 +1420,9 @@ export const InventoryView: React.FC = () => {
                 // Add the removed item to inventory (if there was one)
                 if (removedEquipment) {
                   PartyInventory.addItem(removedEquipment.id, 1);
-                  combatLogManager.addMessage(`${selectedMember.name} equipped ${clickedEquipment.name}, removed ${removedEquipment.name}`);
+                  addLogMessage(`${selectedMember.name} equipped ${clickedEquipment.name}, removed ${removedEquipment.name}`);
                 } else {
-                  combatLogManager.addMessage(`${selectedMember.name} equipped ${clickedEquipment.name}`);
+                  addLogMessage(`${selectedMember.name} equipped ${clickedEquipment.name}`);
                 }
 
                 // Update party member definition in registry
@@ -1371,7 +1450,7 @@ export const InventoryView: React.FC = () => {
                 return;
               } else {
                 // Equipment validation failed (e.g., dual-wield rules)
-                combatLogManager.addMessage(`Cannot equip ${clickedEquipment.name} (equipment restrictions)`);
+                addLogMessage(`Cannot equip ${clickedEquipment.name} (equipment restrictions)`);
                 renderFrame();
                 return;
               }
@@ -1393,7 +1472,6 @@ export const InventoryView: React.FC = () => {
             }
 
             setViewState((prev) => ({ ...prev, selectedItemId: row.equipmentId }));
-            combatLogManager.addMessage(`Selected: ${clickedEquipment.name}`);
             renderFrame();
             return;
           }
