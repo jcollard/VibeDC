@@ -2,12 +2,13 @@ import type { AreaMap } from '../../area/AreaMap';
 import type { CardinalDirection } from '../../../types';
 import { TileBehavior } from '../../area/TileBehavior';
 import { SpriteRegistry } from '../../../utils/SpriteRegistry';
+import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 
 /**
  * Renders top-down minimap with fog of war
  */
 export class MinimapRenderer {
-  private static readonly TILE_SIZE = 6; // 6x6 pixels per tile
+  private static readonly TILE_SIZE = 12; // 12x12 pixels per tile
   private static readonly SPRITE_SIZE = 12; // Source sprite size in sheet
 
   /**
@@ -24,7 +25,7 @@ export class MinimapRenderer {
     regionY: number,
     regionWidth: number,
     regionHeight: number,
-    tilesSpriteSheet?: HTMLImageElement | null
+    spriteImages: Map<string, HTMLImageElement>
   ): void {
     ctx.save();
 
@@ -32,100 +33,87 @@ export class MinimapRenderer {
     ctx.fillStyle = '#0a0a0a';
     ctx.fillRect(regionX, regionY, regionWidth, regionHeight);
 
-    // Calculate minimap dimensions
-    const mapWidth = areaMap.width;
-    const mapHeight = areaMap.height;
-    const mapPixelWidth = mapWidth * this.TILE_SIZE;
-    const mapPixelHeight = mapHeight * this.TILE_SIZE;
+    // Player arrow is centered in the panel
+    const centerX = regionX + Math.floor((regionWidth - this.TILE_SIZE) / 2);
+    const centerY = regionY + Math.floor((regionHeight - this.TILE_SIZE) / 2);
 
-    // Center the map in the region
-    const offsetX = regionX + Math.floor((regionWidth - mapPixelWidth) / 2);
-    const offsetY = regionY + Math.floor((regionHeight - mapPixelHeight) / 2);
+    // Calculate how many tiles fit in the panel
+    const tilesWide = Math.floor(regionWidth / this.TILE_SIZE);
+    const tilesHigh = Math.floor(regionHeight / this.TILE_SIZE);
+    const halfWide = Math.floor(tilesWide / 2);
+    const halfHigh = Math.floor(tilesHigh / 2);
 
-    // Render explored tiles
-    for (let y = 0; y < mapHeight; y++) {
-      for (let x = 0; x < mapWidth; x++) {
-        const tileKey = `${x},${y}`;
+    // Render tiles relative to player position
+    ctx.imageSmoothingEnabled = false;
+
+    for (let dy = -halfHigh; dy <= halfHigh; dy++) {
+      for (let dx = -halfWide; dx <= halfWide; dx++) {
+        // Skip the center tile (player position)
+        if (dx === 0 && dy === 0) continue;
+
+        const mapX = playerX + dx;
+        const mapY = playerY + dy;
+        const tileKey = `${mapX},${mapY}`;
 
         // Only render explored tiles
         if (!exploredTiles.has(tileKey)) {
           continue; // Fog of war - leave black
         }
 
-        const tile = areaMap.getTile(x, y);
+        const tile = areaMap.getTile(mapX, mapY);
         if (!tile) continue;
 
-        const pixelX = offsetX + (x * this.TILE_SIZE);
-        const pixelY = offsetY + (y * this.TILE_SIZE);
+        // Calculate pixel position relative to center
+        const pixelX = centerX + (dx * this.TILE_SIZE);
+        const pixelY = centerY + (dy * this.TILE_SIZE);
 
-        // Render sprite if available, otherwise fallback to colored rectangles
-        if (tilesSpriteSheet) {
-          // Get sprite definition from registry using tile's spriteId
-          const spriteDef = SpriteRegistry.getById(tile.spriteId);
+        // Render sprite using SpriteRenderer
+        const rendered = SpriteRenderer.renderSpriteById(
+          ctx,
+          tile.spriteId,
+          spriteImages,
+          this.SPRITE_SIZE,
+          pixelX,
+          pixelY,
+          this.TILE_SIZE,
+          this.TILE_SIZE
+        );
 
-          if (spriteDef) {
-            // Calculate sprite position in sheet (assumes grid layout)
-            const spriteX = spriteDef.x;
-            const spriteY = spriteDef.y;
-
-            // Draw scaled sprite (12x12 → 6x6)
-            ctx.imageSmoothingEnabled = false;
-            ctx.drawImage(
-              tilesSpriteSheet,
-              spriteX, // source x (already in pixels)
-              spriteY, // source y (already in pixels)
-              this.SPRITE_SIZE, // source width
-              this.SPRITE_SIZE, // source height
-              pixelX, // dest x
-              pixelY, // dest y
-              this.TILE_SIZE, // dest width (scaled down)
-              this.TILE_SIZE  // dest height (scaled down)
-            );
-          } else {
-            // Sprite not found, use fallback rectangle
-            this.renderFallbackTile(ctx, tile, pixelX, pixelY);
-          }
-        } else {
-          // Sprite sheet not loaded, use fallback rectangles
+        // If sprite failed to render, use fallback colored rectangle
+        if (!rendered) {
           this.renderFallbackTile(ctx, tile, pixelX, pixelY);
         }
       }
     }
 
-    // Render player icon (triangle pointing in facing direction)
-    const playerPixelX = offsetX + (playerX * this.TILE_SIZE) + Math.floor(this.TILE_SIZE / 2);
-    const playerPixelY = offsetY + (playerY * this.TILE_SIZE) + Math.floor(this.TILE_SIZE / 2);
-
-    ctx.fillStyle = '#00ff00'; // Green
-    ctx.beginPath();
-
-    const arrowSize = Math.max(2, Math.floor(this.TILE_SIZE / 2));
-
+    // Select arrow sprite based on direction
+    let arrowSpriteId: string;
     switch (direction) {
       case 'North':
-        ctx.moveTo(playerPixelX, playerPixelY - arrowSize);
-        ctx.lineTo(playerPixelX - arrowSize, playerPixelY + arrowSize);
-        ctx.lineTo(playerPixelX + arrowSize, playerPixelY + arrowSize);
+        arrowSpriteId = 'minimap-7'; // up-north
         break;
       case 'South':
-        ctx.moveTo(playerPixelX, playerPixelY + arrowSize);
-        ctx.lineTo(playerPixelX - arrowSize, playerPixelY - arrowSize);
-        ctx.lineTo(playerPixelX + arrowSize, playerPixelY - arrowSize);
+        arrowSpriteId = 'minimap-9'; // down-south
         break;
       case 'East':
-        ctx.moveTo(playerPixelX + arrowSize, playerPixelY);
-        ctx.lineTo(playerPixelX - arrowSize, playerPixelY - arrowSize);
-        ctx.lineTo(playerPixelX - arrowSize, playerPixelY + arrowSize);
+        arrowSpriteId = 'minimap-6'; // right-east
         break;
       case 'West':
-        ctx.moveTo(playerPixelX - arrowSize, playerPixelY);
-        ctx.lineTo(playerPixelX + arrowSize, playerPixelY - arrowSize);
-        ctx.lineTo(playerPixelX + arrowSize, playerPixelY + arrowSize);
+        arrowSpriteId = 'minimap-8'; // left-west
         break;
     }
 
-    ctx.closePath();
-    ctx.fill();
+    // Render player arrow sprite in center (on top of tiles)
+    SpriteRenderer.renderSpriteById(
+      ctx,
+      arrowSpriteId,
+      spriteImages,
+      this.SPRITE_SIZE,
+      centerX,
+      centerY,
+      this.TILE_SIZE,
+      this.TILE_SIZE
+    );
 
     ctx.restore();
   }

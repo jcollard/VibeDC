@@ -111,7 +111,6 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
   const [spritesLoaded, setSpritesLoaded] = useState(false);
   const fontAtlasRef = useRef<HTMLImageElement | null>(null);
   const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
-  const tilesSpriteSheetRef = useRef<HTMLImageElement | null>(null);
 
   // Animation timing
   const lastFrameTimeRef = useRef<number>(performance.now());
@@ -214,21 +213,6 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       spriteImagesRef.current = spriteImages;
       console.log(`[FirstPersonView] Loaded ${spriteImages.size} sprite sheets`);
 
-      // Load tiles sprite sheet for minimap
-      const tilesSpriteSheet = new Image();
-      tilesSpriteSheet.src = '/tiles/world-tiles.png';
-      await new Promise<void>((resolve) => {
-        tilesSpriteSheet.onload = () => {
-          tilesSpriteSheetRef.current = tilesSpriteSheet;
-          console.log('[FirstPersonView] Loaded tiles sprite sheet for minimap');
-          resolve();
-        };
-        tilesSpriteSheet.onerror = () => {
-          console.warn('[FirstPersonView] Failed to load tiles sprite sheet');
-          resolve();
-        };
-      });
-
       // Load fonts
       await fontLoader.loadAll(['7px-04b03', '15px-dungeonslant']);
       fontAtlasRef.current = fontLoader.get('7px-04b03');
@@ -317,7 +301,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       topInfoRegion.y,
       topInfoRegion.width,
       topInfoRegion.height,
-      tilesSpriteSheetRef.current
+      spriteImagesRef.current
     );
 
     // Render party member stats in bottom info panel
