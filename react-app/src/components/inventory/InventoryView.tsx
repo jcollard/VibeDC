@@ -485,7 +485,7 @@ export const InventoryView: React.FC = () => {
     bufferCtx.imageSmoothingEnabled = false;
 
     // Fill background
-    bufferCtx.fillStyle = '#1a1a1a';
+    bufferCtx.fillStyle = '#000000';
     bufferCtx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
     // Get font atlas
