@@ -1,12 +1,21 @@
 # First Person View - Design Overview
 
-**Version:** 1.0
+**Version:** 1.1
 **Created:** 2025-11-01
-**Related:** [CombatHierarchy.md](../../CombatHierarchy.md), FirstPersonView.tsx (prototype)
+**Last Updated:** 2025-11-01
+**Related:** [CombatHierarchy.md](../../CombatHierarchy.md), [AreaMap System](AreaMap/), FirstPersonView.tsx (prototype)
 
 ## Purpose
 
 This document describes the First Person View system for world navigation outside of combat. The player navigates a grid-based dungeon in first-person perspective, with the same UI layout structure as the combat system (top panel, map panel, combat log, info panels) but with the 3D first-person viewport replacing the tactical map.
+
+## Related Systems
+
+The First Person View depends on the **Area Map System** for grid-based dungeon navigation:
+- 📖 **[Area Map System Documentation](AreaMap/)** - Complete GDD for tilesets, maps, and interactive objects
+- ✅ **Implementation Status**: Core system and developer tools are complete
+- 🎮 **What's Ready**: Tilesets, maps, YAML parsers, registries, visual editors
+- 🚧 **What's Next**: Integration with 3D viewport and movement validation
 
 ## Feature Summary
 
@@ -411,57 +420,85 @@ Similar structure to CombatLayoutManager but customized for first-person:
 
 ### 13. Dungeon Data Format
 
-#### Grid Representation
-```typescript
-// Example 10x10 dungeon room
-const dungeonGrid = [
-  "##########",  // Row 0 (North wall)
-  "#........#",  // Row 1
-  "#........#",  // Row 2
-  "#...D....#",  // Row 3 (Door at X=4)
-  "#........#",  // Row 4
-  "#........#",  // Row 5
-  "#....C...#",  // Row 6 (Chest at X=5)
-  "#........#",  // Row 7
-  "#........#",  // Row 8
-  "##########",  // Row 9 (South wall)
-];
+**Note:** The dungeon data format is fully defined in the **[Area Map System](AreaMap/AreaMapSystemOverview.md)**. This section provides a high-level overview for reference.
 
-// Starting position: X=5, Y=8, facing North
+#### Using the Area Map System
+
+The First Person View will use the **AreaMap** class and **AreaMapRegistry** for level data:
+
+```typescript
+// Load an area map from the registry
+const areaMap = AreaMapRegistry.getById("dungeon-room-1");
+
+// Get tile information
+const tile = areaMap.getTile(x, y);
+const isWalkable = areaMap.isWalkable(x, y);
+const isDoor = areaMap.isDoorTile(x, y);
+
+// Get interactive objects
+const object = areaMap.getInteractiveObjectAt(x, y);
 ```
 
-#### Tile Type Registry
+#### Grid Representation (Example)
 ```typescript
-const TILE_TYPES = {
-  '#': { type: 'wall', walkable: false, sprite: 'wall-1' },
-  '.': { type: 'floor', walkable: true, sprite: 'floor-1' },
-  'D': { type: 'door', walkable: false, sprite: 'door-closed', interactive: true },
-  'd': { type: 'door', walkable: true, sprite: 'door-open', interactive: true },
-  'C': { type: 'chest', walkable: false, sprite: 'chest-closed', interactive: true },
-  'c': { type: 'chest', walkable: false, sprite: 'chest-open', interactive: true },
-  'S': { type: 'stairs', walkable: true, sprite: 'stairs-up', interactive: true },
-  'N': { type: 'npc', walkable: false, sprite: 'npc-idle', interactive: true },
-  'E': { type: 'enemy', walkable: false, sprite: 'enemy-idle', encounter: true },
-  ' ': { type: 'void', walkable: false, sprite: 'void' },
-};
+// Example from area-map-database.yaml
+const areaMapYAML = `
+areas:
+  - id: dungeon-room-1
+    name: "Dark Chamber"
+    description: "A small stone chamber"
+    tilesetId: dungeon-grey-stone
+    grid: |-
+      ##########
+      ####D#####
+      ##........
+      #.........
+      #.........
+      ##########
+    playerSpawn:
+      x: 5
+      y: 4
+      direction: North
+`;
 ```
 
-#### Level Metadata
-```typescript
-interface DungeonLevel {
-  id: string;                  // "dungeon-1-floor-1"
-  name: string;                // "The Dark Depths - Level 1"
-  grid: string[];              // Tile grid
-  width: number;               // Grid width
-  height: number;              // Grid height
-  startX: number;              // Player spawn X
-  startY: number;              // Player spawn Y
-  startDirection: CardinalDirection; // Player spawn facing
-  interactiveObjects: InteractiveObject[]; // Doors, chests, NPCs, etc.
-  encounters: EncounterZone[]; // Encounter trigger zones
-  tilesetId: string;           // Which tileset to use for rendering
-}
-```
+#### Tile Behaviors
+
+The Area Map System defines three tile behaviors:
+- **Wall** (`#`): `walkable: false, passable: false` - Blocks movement
+- **Floor** (`.`): `walkable: true, passable: true` - Normal walkable tile
+- **Door** (`D`): `walkable: false, passable: true` - Auto-continue through (prevents standing in doorway)
+
+See [AreaMapSystemOverview.md](AreaMap/AreaMapSystemOverview.md) for full documentation on tile behaviors.
+
+#### Tileset System
+
+Maps reference tilesets from the **AreaMapTileSetRegistry**:
+- Six pre-built tilesets available (grey-stone, brown-brick, grey-brick, cave, dark, palace)
+- Each tileset defines character-to-tile mappings
+- Tilesets include sprite IDs from the biomes sprite sheet
+- Create custom tilesets using the visual editor (Developer Tools panel)
+
+#### Interactive Objects
+
+Interactive objects are defined in the Area Map data:
+- **Closed Doors**: Can be opened by player interaction
+- **Chests**: Contain loot, may be locked or trapped
+- **NPCs**: Dialogue, shops, quests
+- **Stairs**: Level transitions
+- **Items**: Pickups on the ground
+
+See [InteractiveObject documentation](AreaMap/AreaMapSystemOverview.md#interactive-objects) for details.
+
+#### Developer Tools
+
+Use the **AreaMap Registry Panel** (Developer Tools) to:
+- Create and edit area maps visually
+- Paint tiles with click-and-drag
+- Resize map dimensions
+- Switch tilesets
+- Place interactive objects
+- Export maps to YAML
 
 ### 14. Extension Points
 
