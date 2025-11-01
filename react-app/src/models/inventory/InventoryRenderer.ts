@@ -220,6 +220,8 @@ export class InventoryRenderer {
       if (item.quantity > 1) {
         const quantityText = `x${item.quantity}`;
         const quantityX = bounds.x + bounds.width - ITEM_LIST.ITEM_PADDING;
+        // Use hover color if item is hovered, otherwise use default quantity color
+        const quantityColor = isHovered ? ITEM_LIST.HOVER_COLOR : ITEM_LIST.ITEM_QUANTITY_COLOR;
         FontAtlasRenderer.renderText(
           ctx,
           quantityText,
@@ -229,7 +231,7 @@ export class InventoryRenderer {
           fontAtlas,
           1,
           'right',
-          ITEM_LIST.ITEM_QUANTITY_COLOR
+          quantityColor
         );
       }
 

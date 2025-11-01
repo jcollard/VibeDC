@@ -129,40 +129,7 @@ export class InventoryTopPanelContent implements PanelContent {
     );
 
     const goldValueWidth = FontAtlasRenderer.measureTextByFontId(`${this.stats.gold}`, this.constants.FONT_ID);
-    currentX += goldValueWidth + 8; // Add spacing between sections
-
-    // Render items count
-    const itemsLabel = this.textConstants.ITEMS_LABEL;
-    FontAtlasRenderer.renderText(
-      ctx,
-      itemsLabel,
-      Math.round(currentX),
-      Math.round(firstRowY),
-      this.constants.FONT_ID,
-      fontAtlasImage,
-      1,
-      'left',
-      this.constants.LABEL_COLOR
-    );
-
-    const itemsLabelWidth = FontAtlasRenderer.measureTextByFontId(itemsLabel, this.constants.FONT_ID);
-    currentX += itemsLabelWidth + 2;
-
-    const itemsText = `${this.stats.totalItems} (${this.stats.uniqueItems} types)`;
-    FontAtlasRenderer.renderText(
-      ctx,
-      itemsText,
-      Math.round(currentX),
-      Math.round(firstRowY),
-      this.constants.FONT_ID,
-      fontAtlasImage,
-      1,
-      'left',
-      this.constants.VALUE_COLOR
-    );
-
-    const itemsValueWidth = FontAtlasRenderer.measureTextByFontId(itemsText, this.constants.FONT_ID);
-    currentX += itemsValueWidth;
+    currentX += goldValueWidth;
 
     // Second row: Category tabs
     const secondRowY = firstRowY + 8; // 8px spacing (7px line height + 1px extra)
