@@ -93,8 +93,7 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
 
     // Sprite and text dimensions
     const spriteDisplaySize = 12;
-    const nameHeight = 7; // Font height
-    const memberSpacing = 2; // Spacing between members
+    const memberSpacing = 8; // Spacing between members
     const memberTotalWidth = spriteDisplaySize + memberSpacing;
 
     // Calculate total width and center it (panel-relative)
@@ -112,11 +111,12 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
       const isHovered = i === this.hoveredMemberIndex;
 
       // Store bounds for hit detection (panel-relative coordinates)
+      // Only include sprite in bounds since name only shows on hover
       this.selectorBounds.push({
         x: currentX,
         y: selectorStartY,
         width: spriteDisplaySize,
-        height: spriteDisplaySize + 1 + nameHeight, // sprite + 1px gap + name
+        height: spriteDisplaySize,
       });
 
       // Convert to absolute canvas coordinates for rendering
@@ -141,27 +141,29 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
         spriteDisplaySize
       );
 
-      // Render name below sprite
-      const nameY = selectorStartY + spriteDisplaySize + 1;
-      const absNameY = region.y + nameY;
-      const nameColor = isHovered ? HOVERED_TEXT : '#ffffff';
+      // Only render name if hovered
+      if (isHovered) {
+        const nameY = selectorStartY + spriteDisplaySize + 1;
+        const absNameY = region.y + nameY;
+        const nameColor = HOVERED_TEXT;
 
-      // Measure name width and center it under the sprite
-      const nameWidth = FontAtlasRenderer.measureText(member.name, font);
-      const nameX = currentX + Math.floor((spriteDisplaySize - nameWidth) / 2);
-      const absNameX = region.x + nameX;
+        // Measure name width and center it under the sprite
+        const nameWidth = FontAtlasRenderer.measureText(member.name, font);
+        const nameX = currentX + Math.floor((spriteDisplaySize - nameWidth) / 2);
+        const absNameX = region.x + nameX;
 
-      FontAtlasRenderer.renderText(
-        ctx,
-        member.name,
-        absNameX,
-        absNameY,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        nameColor
-      );
+        FontAtlasRenderer.renderText(
+          ctx,
+          member.name,
+          absNameX,
+          absNameY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          nameColor
+        );
+      }
 
       currentX += memberTotalWidth;
     }
