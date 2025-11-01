@@ -1,92 +1,8 @@
-# Area Map Tileset Database
-# Defines reusable tile type collections for first-person navigation
-
 tilesets:
-  # Grey stone dungeon (classic dungeon crawl aesthetic)
-  - id: dungeon-grey-stone
-    name: Grey Stone Dungeon
-    description: Classic grey stone dungeon with walls, floors, and doorways
-    spriteSheet: biomes
-    tileTypes:
-      # Wall tile - blocks movement completely
-      - char: '#'
-        behavior: wall
-        walkable: false
-        passable: false
-        spriteId: biomes-8
-        name: Grey Stone Wall
-        description: Solid grey stone wall
-
-      # Floor tile - normal walkable floor
-      - char: '.'
-        behavior: floor
-        walkable: true
-        passable: true
-        spriteId: biomes-92
-        terrainType: stone
-        name: Patterned Grey Floor
-        description: Patterned grey stone floor
-
-      # Alternate floor (dark ground/dirt)
-      - char: ','
-        behavior: floor
-        walkable: true
-        passable: true
-        spriteId: biomes-93
-        terrainType: dirt
-        name: Dark Ground
-        description: Dark dirt ground
-
-      # Door tile - passable but not stoppable (auto-continue)
-      - char: 'D'
-        behavior: door
-        walkable: false
-        passable: true
-        spriteId: biomes-21
-        name: Grey Stone Doorway
-        description: Open stone doorway
-
-      # Closed door tile (interactive object replaces this)
-      - char: 'd'
-        behavior: wall
-        walkable: false
-        passable: false
-        spriteId: biomes-21
-        name: Closed Door
-        description: Closed stone door (use interactive object for visual)
-
-      # Stairs down
-      - char: '>'
-        behavior: floor
-        walkable: true
-        passable: true
-        spriteId: biomes-22
-        terrainType: stairs
-        name: Stairs Down
-        description: Grey stone stairs descending
-
-      # Space (for padding shorter rows)
-      - char: ' '
-        behavior: wall
-        walkable: false
-        passable: false
-        spriteId: biomes-8
-        name: Empty Space
-        description: Empty space (treated as wall)
-
-    tags:
-      - dungeon
-      - stone
-      - indoor
-      - grey
-
-  # Brown brick dungeon
   - id: dungeon-brown-brick
     name: Brown Brick Dungeon
     description: Warm brown brick dungeon corridors
-    spriteSheet: biomes
     tileTypes:
-      # Wall variants
       - char: '#'
         behavior: wall
         walkable: false
@@ -94,7 +10,6 @@ tilesets:
         spriteId: biomes-0
         name: Brown Brick Wall
         description: Brown brick wall
-
       - char: '='
         behavior: wall
         walkable: false
@@ -102,9 +17,7 @@ tilesets:
         spriteId: biomes-1
         name: Brown Brick Wall (variant 2)
         description: Brown brick wall variant
-
-      # Floor
-      - char: '.'
+      - char: .
         behavior: floor
         walkable: true
         passable: true
@@ -112,26 +25,20 @@ tilesets:
         terrainType: stone
         name: Dark Floor with Grey Spots
         description: Dark stone floor
-
-      # Door
-      - char: 'D'
+      - char: D
         behavior: door
         walkable: false
         passable: true
         spriteId: biomes-13
         name: Brown Brick Doorway
         description: Open brown brick doorway
-
-      # Dark passage (alternate door style)
-      - char: 'P'
+      - char: P
         behavior: door
         walkable: false
         passable: true
         spriteId: biomes-16
         name: Dark Passage
         description: Dark passage through wall
-
-      # Stairs
       - char: '>'
         behavior: floor
         walkable: true
@@ -140,8 +47,6 @@ tilesets:
         terrainType: stairs
         name: Brown Brick Stairs
         description: Brown brick stairs
-
-      # Space (for padding shorter rows)
       - char: ' '
         behavior: wall
         walkable: false
@@ -149,20 +54,16 @@ tilesets:
         spriteId: biomes-0
         name: Empty Space
         description: Empty space (treated as wall)
-
+    spriteSheet: biomes
     tags:
       - dungeon
       - brick
       - indoor
       - brown
-
-  # Cave dungeon
   - id: dungeon-cave
     name: Natural Cave
     description: Natural cave formations and passages
-    spriteSheet: biomes
     tileTypes:
-      # Wall variants
       - char: '#'
         behavior: wall
         walkable: false
@@ -170,7 +71,6 @@ tilesets:
         spriteId: biomes-58
         name: Cave Wall
         description: Natural cave wall
-
       - char: '='
         behavior: wall
         walkable: false
@@ -178,9 +78,7 @@ tilesets:
         spriteId: biomes-59
         name: Cave Wall (variant 2)
         description: Cave wall variant
-
-      # Floor
-      - char: '.'
+      - char: .
         behavior: floor
         walkable: true
         passable: true
@@ -188,17 +86,13 @@ tilesets:
         terrainType: stone
         name: Cave Floor
         description: Natural cave floor
-
-      # Door (cave passage)
-      - char: 'D'
+      - char: D
         behavior: door
         walkable: false
         passable: true
         spriteId: biomes-71
         name: Cave Passage
         description: Natural cave passage
-
-      # Stairs
       - char: '>'
         behavior: floor
         walkable: true
@@ -207,8 +101,6 @@ tilesets:
         terrainType: stairs
         name: Cave Stairs
         description: Natural cave stairs
-
-      # Space (for padding shorter rows)
       - char: ' '
         behavior: wall
         walkable: false
@@ -216,9 +108,71 @@ tilesets:
         spriteId: biomes-58
         name: Empty Space
         description: Empty space (treated as wall)
-
+    spriteSheet: biomes
     tags:
       - dungeon
       - cave
       - natural
       - indoor
+  - id: dungeon-grey-stone
+    name: Grey Stone Dungeon
+    description: Classic grey stone dungeon with walls, floors, and doorways
+    tileTypes:
+      - char: '#'
+        behavior: wall
+        walkable: false
+        passable: false
+        spriteId: biomes-69
+        name: Grey Stone Wall
+        description: Solid grey stone wall
+      - char: .
+        behavior: floor
+        walkable: true
+        passable: true
+        spriteId: biomes-92
+        terrainType: stone
+        name: Patterned Grey Floor
+        description: Patterned grey stone floor
+      - char: ','
+        behavior: floor
+        walkable: true
+        passable: true
+        spriteId: biomes-93
+        terrainType: dirt
+        name: Dark Ground
+        description: Dark dirt ground
+      - char: D
+        behavior: door
+        walkable: false
+        passable: true
+        spriteId: biomes-21
+        name: Grey Stone Doorway
+        description: Open stone doorway
+      - char: d
+        behavior: wall
+        walkable: false
+        passable: false
+        spriteId: biomes-21
+        name: Closed Door
+        description: Closed stone door (use interactive object for visual)
+      - char: '>'
+        behavior: floor
+        walkable: true
+        passable: true
+        spriteId: biomes-22
+        terrainType: stairs
+        name: Stairs Down
+        description: Grey stone stairs descending
+      - char: ' '
+        behavior: wall
+        walkable: false
+        passable: false
+        spriteId: biomes-8
+        name: Empty Space
+        description: Empty space (treated as wall)
+    spriteSheet: biomes
+    tags:
+      - dungeon
+      - stone
+      - indoor
+      - grey

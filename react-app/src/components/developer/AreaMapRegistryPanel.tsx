@@ -360,19 +360,19 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const handleTilesetSaved = () => {
     // When tileset is saved, we need to update the map's grid to use the new sprite IDs
     // from the updated tileset definitions
-    if (editedMap && isEditing) {
-      const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
+
+    // Helper function to remap a grid based on updated tileset
+    const remapGridForTileset = (grid: any[][], tilesetId: string) => {
+      const tileset = AreaMapTileSetRegistry.getById(tilesetId);
       if (!tileset) {
-        console.warn('[AreaMapRegistryPanel] Tileset not found:', editedMap.tilesetId);
-        setTilesetRefreshKey(prev => prev + 1);
-        return;
+        console.warn('[AreaMapRegistryPanel] Tileset not found:', tilesetId);
+        return grid;
       }
 
       console.log('[AreaMapRegistryPanel] Remapping grid after tileset save');
       console.log('[AreaMapRegistryPanel] Tileset:', tileset);
 
-      // Remap the grid to use updated sprites from the tileset
-      const newGrid = editedMap.grid.map((row, y) =>
+      return grid.map((row, y) =>
         row.map((tile, x) => {
           // Find ALL tileset definitions that match this tile's properties
           const matchingTileDefs = tileset.tileTypes.filter(
@@ -426,11 +426,26 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
           return tile;
         })
       );
+    };
 
+    // Update edited map if in edit mode
+    if (editedMap && isEditing) {
+      const newGrid = remapGridForTileset(editedMap.grid, editedMap.tilesetId);
       setEditedMap({
         ...editedMap,
         grid: newGrid,
       });
+    }
+
+    // Also update selected map if viewing (not editing)
+    if (selectedMap && !isEditing) {
+      const selectedMapJson = selectedMap.toJSON();
+      const newGrid = remapGridForTileset(selectedMapJson.grid, selectedMap.tilesetId);
+      const updatedMap = AreaMap.fromJSON({
+        ...selectedMapJson,
+        grid: newGrid,
+      });
+      setSelectedMap(updatedMap);
     }
 
     // Increment refresh key to force re-render of map preview
