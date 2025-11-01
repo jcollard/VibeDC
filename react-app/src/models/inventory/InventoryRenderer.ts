@@ -6,7 +6,7 @@
 
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { CombatConstants } from '../combat/CombatConstants';
-import type { InventoryViewState, InventorySortMode } from './InventoryViewState';
+import type { InventoryViewState } from './InventoryViewState';
 import type { Equipment } from '../combat/Equipment';
 
 /**
@@ -42,7 +42,6 @@ export class InventoryRenderer {
    */
   calculateItemsPerPage(panelHeight: number): number {
     const {
-      SORT_DROPDOWN,
       ITEM_LIST,
       PAGINATION,
       PADDING_TOP,
@@ -50,12 +49,11 @@ export class InventoryRenderer {
     } = this.constants.MAIN_PANEL;
 
     // Calculate reserved height (everything except item list)
-    // Note: Category tabs moved to top panel, no longer rendered here
-    const sortDropdownHeight = SORT_DROPDOWN.HEIGHT;
+    // Note: Category tabs and sort dropdown moved to top panel, no longer rendered here
     const paginationHeight = PAGINATION.HEIGHT; // Always reserve space for pagination
     const paddingHeight = PADDING_TOP + PADDING_BOTTOM;
 
-    const reservedHeight = sortDropdownHeight + paginationHeight + paddingHeight;
+    const reservedHeight = paginationHeight + paddingHeight;
     const availableHeight = panelHeight - reservedHeight;
 
     // Calculate how many rows fit
@@ -85,24 +83,14 @@ export class InventoryRenderer {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
-    // Note: Category tabs now rendered in top panel, not here
+    // Note: Category tabs and sort dropdown now rendered in top panel, not here
 
-    // Render sort dropdown at top
-    const sortDropdownBounds = this.renderSortDropdown(
-      ctx,
-      state.sortMode,
-      state.hoveredSort,
-      panelBounds,
-      panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP,
-      fontAtlas
-    );
-
-    // Render item list below sort dropdown
+    // Render item list at top (no sort dropdown above it anymore)
     const itemListBounds = {
       x: panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT,
-      y: sortDropdownBounds.y + sortDropdownBounds.height,
+      y: panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP,
       width: panelBounds.width - this.constants.MAIN_PANEL.PADDING_LEFT - this.constants.MAIN_PANEL.PADDING_RIGHT,
-      height: panelBounds.height - (sortDropdownBounds.y + sortDropdownBounds.height - panelBounds.y) - this.constants.MAIN_PANEL.PAGINATION.HEIGHT - this.constants.MAIN_PANEL.PADDING_BOTTOM,
+      height: panelBounds.height - this.constants.MAIN_PANEL.PADDING_TOP - this.constants.MAIN_PANEL.PAGINATION.HEIGHT - this.constants.MAIN_PANEL.PADDING_BOTTOM,
     };
 
     this.renderItemList(
@@ -127,79 +115,6 @@ export class InventoryRenderer {
     }
 
     ctx.restore();
-  }
-
-  /**
-   * Render sort dropdown
-   * @returns Bounds of the sort dropdown region
-   */
-  private renderSortDropdown(
-    ctx: CanvasRenderingContext2D,
-    sortMode: InventorySortMode,
-    hoveredSort: boolean,
-    panelBounds: Bounds,
-    yOffset: number,
-    fontAtlas: HTMLImageElement
-  ): Bounds {
-    const { SORT_DROPDOWN } = this.constants.MAIN_PANEL;
-    const { SORT_LABEL, SORT_OPTIONS } = this.constants.TEXT;
-
-    const sortY = yOffset + 2; // 2px spacing
-    const sortX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-
-    // Render "Sort:" label
-    FontAtlasRenderer.renderText(
-      ctx,
-      SORT_LABEL,
-      Math.round(sortX),
-      Math.round(sortY),
-      SORT_DROPDOWN.FONT_ID,
-      fontAtlas,
-      1,
-      'left',
-      SORT_DROPDOWN.LABEL_COLOR
-    );
-
-    const labelWidth = FontAtlasRenderer.measureTextByFontId(SORT_LABEL, SORT_DROPDOWN.FONT_ID);
-
-    // Render current sort value
-    const sortValueX = sortX + labelWidth + 4; // 4px spacing
-    let sortValueText = '';
-    switch (sortMode) {
-      case 'name-asc':
-        sortValueText = SORT_OPTIONS.NAME_ASC;
-        break;
-      case 'name-desc':
-        sortValueText = SORT_OPTIONS.NAME_DESC;
-        break;
-      case 'type':
-        sortValueText = SORT_OPTIONS.TYPE;
-        break;
-      case 'recently-added':
-        sortValueText = SORT_OPTIONS.RECENTLY_ADDED;
-        break;
-    }
-
-    const valueColor = hoveredSort ? SORT_DROPDOWN.HOVER_COLOR : SORT_DROPDOWN.VALUE_COLOR;
-
-    FontAtlasRenderer.renderText(
-      ctx,
-      sortValueText,
-      Math.round(sortValueX),
-      Math.round(sortY),
-      SORT_DROPDOWN.FONT_ID,
-      fontAtlas,
-      1,
-      'left',
-      valueColor
-    );
-
-    return {
-      x: sortX,
-      y: sortY,
-      width: panelBounds.width - this.constants.MAIN_PANEL.PADDING_LEFT - this.constants.MAIN_PANEL.PADDING_RIGHT,
-      height: SORT_DROPDOWN.HEIGHT,
-    };
   }
 
   /**
@@ -364,38 +279,16 @@ export class InventoryRenderer {
   }
 
   /**
-   * Get bounds for sort dropdown (for hit testing)
-   */
-  getSortDropdownBounds(panelBounds: Bounds): Bounds {
-    const { SORT_DROPDOWN } = this.constants.MAIN_PANEL;
-    const { SORT_LABEL } = this.constants.TEXT;
-
-    // Category tabs now in top panel, so sort dropdown is at the top
-    const sortY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP;
-    const sortX = panelBounds.x + this.constants.MAIN_PANEL.PADDING_LEFT;
-
-    const labelWidth = FontAtlasRenderer.measureTextByFontId(SORT_LABEL, SORT_DROPDOWN.FONT_ID);
-
-    return {
-      x: sortX + labelWidth + 4,
-      y: sortY,
-      width: 60, // Approximate width of sort value text
-      height: 7,
-    };
-  }
-
-  /**
    * Get bounds for all item rows (for hit testing)
    */
   getItemRowBounds(
     items: InventoryItemWithQuantity[],
     panelBounds: Bounds
   ): Array<{ equipmentId: string; bounds: Bounds }> {
-    const { SORT_DROPDOWN, ITEM_LIST } = this.constants.MAIN_PANEL;
+    const { ITEM_LIST } = this.constants.MAIN_PANEL;
 
-    // Category tabs now in top panel, so item list starts after sort dropdown only
-    const sortDropdownHeight = SORT_DROPDOWN.HEIGHT;
-    const listStartY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP + sortDropdownHeight;
+    // Category tabs and sort dropdown now in top panel, so item list starts at top
+    const listStartY = panelBounds.y + this.constants.MAIN_PANEL.PADDING_TOP;
 
     const result: Array<{ equipmentId: string; bounds: Bounds }> = [];
     let itemY = listStartY;

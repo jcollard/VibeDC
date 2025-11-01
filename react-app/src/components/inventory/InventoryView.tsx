@@ -75,6 +75,9 @@ export const InventoryView: React.FC = () => {
   // Track inventory changes (increment to force re-render when inventory data changes)
   const [inventoryVersion, setInventoryVersion] = useState(0);
 
+  // Track debug panel visualization
+  const [showDebugPanels, setShowDebugPanels] = useState(false);
+
   // Track window size for responsive scaling
   const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
 
@@ -112,17 +115,19 @@ export const InventoryView: React.FC = () => {
 
   // Initialize panel content
   useEffect(() => {
-    // Top panel: Inventory stats and category tabs
+    // Top panel: Inventory stats, category tabs, and sort options
     const stats: InventoryStats = {
       totalItems: PartyInventory.getTotalItemCount(),
       uniqueItems: PartyInventory.getTotalUniqueItems(),
       gold: PartyInventory.getGold(),
     };
-    topPanelManager.setContent(new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory));
+    topPanelManager.setContent(
+      new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
+    );
 
     // Bottom panel: Item details (initially empty)
     bottomPanelManager.setContent(new EmptyPanelContent());
-  }, [topPanelManager, bottomPanelManager, viewState.category, viewState.hoveredCategory]);
+  }, [topPanelManager, bottomPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -288,8 +293,10 @@ export const InventoryView: React.FC = () => {
       uniqueItems: PartyInventory.getTotalUniqueItems(),
       gold: PartyInventory.getGold(),
     };
-    topPanelManager.setContent(new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory));
-  }, [filteredAndSortedItems, topPanelManager, viewState.category, viewState.hoveredCategory]);
+    topPanelManager.setContent(
+      new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
+    );
+  }, [filteredAndSortedItems, topPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
 
   // Render frame
   const renderFrame = useCallback(() => {
@@ -329,11 +336,11 @@ export const InventoryView: React.FC = () => {
       fontAtlas
     );
 
-    // Render top panel (inventory stats and category tabs)
-    const topPanelRegion = layoutManager.getTopInfoPanelRegion();
+    // Render title panel (inventory stats, category tabs, and sort options)
+    const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
     topPanelManager.render(
       bufferCtx,
-      topPanelRegion,
+      titlePanelRegion,
       CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
       fontAtlas
     );
@@ -362,21 +369,44 @@ export const InventoryView: React.FC = () => {
       );
     }
 
-    // Render title panel (top-left)
-    const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
-    const titleFontAtlas = fontAtlasImagesRef.current.get(CombatConstants.FONTS.TITLE_FONT_ID);
-    if (titleFontAtlas) {
-      FontAtlasRenderer.renderText(
-        bufferCtx,
-        CombatConstants.INVENTORY_VIEW.TEXT.TITLE,
-        Math.round(titlePanelRegion.x + 4),
-        Math.round(titlePanelRegion.y + 4),
-        CombatConstants.FONTS.TITLE_FONT_ID,
-        titleFontAtlas,
-        1,
-        'left',
-        '#ffff00'
-      );
+    // Top info panel is now unused (content moved to title panel)
+
+    // Debug: Render panel boundaries if enabled
+    if (showDebugPanels) {
+      const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+      const panels = [
+        { name: 'Title Panel (Inventory UI)', region: titlePanelRegion, color: 'rgba(255, 0, 0, 0.3)' },
+        { name: 'Top Info Panel (unused)', region: topInfoPanelRegion, color: 'rgba(128, 128, 128, 0.2)' },
+        { name: 'Main Panel', region: mainPanelBounds, color: 'rgba(0, 0, 255, 0.3)' },
+        { name: 'Log Panel', region: logPanelRegion, color: 'rgba(255, 255, 0, 0.3)' },
+        { name: 'Bottom Info Panel', region: bottomPanelRegion, color: 'rgba(255, 0, 255, 0.3)' },
+      ];
+
+      for (const panel of panels) {
+        // Draw semi-transparent rectangle
+        bufferCtx.fillStyle = panel.color;
+        bufferCtx.fillRect(panel.region.x, panel.region.y, panel.region.width, panel.region.height);
+
+        // Draw border
+        bufferCtx.strokeStyle = panel.color.replace('0.3', '0.8');
+        bufferCtx.lineWidth = 1;
+        bufferCtx.strokeRect(panel.region.x, panel.region.y, panel.region.width, panel.region.height);
+
+        // Draw label
+        if (fontAtlas) {
+          FontAtlasRenderer.renderText(
+            bufferCtx,
+            panel.name,
+            Math.round(panel.region.x + 2),
+            Math.round(panel.region.y + 2),
+            CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID,
+            fontAtlas,
+            1,
+            'left',
+            '#ffffff'
+          );
+        }
+      }
     }
 
     // Copy buffer to display canvas
@@ -397,6 +427,7 @@ export const InventoryView: React.FC = () => {
     topPanelManager,
     bottomPanelManager,
     combatLogManager,
+    showDebugPanels,
   ]);
 
   // Expose developer mode functions to window (for testing)
@@ -455,11 +486,23 @@ export const InventoryView: React.FC = () => {
       console.log(`Total: ${allEquipment.length} items`);
     };
 
+    (window as any).showInventoryPanels = (show: boolean = true) => {
+      setShowDebugPanels(show);
+      console.log(`[DEV] Debug panel visualization: ${show ? 'enabled' : 'disabled'}`);
+      console.log('[DEV] Panel colors:');
+      console.log('  - Title Panel: Red');
+      console.log('  - Top Info Panel: Green');
+      console.log('  - Main Panel: Blue');
+      console.log('  - Log Panel: Yellow');
+      console.log('  - Bottom Info Panel: Magenta');
+    };
+
     return () => {
       delete (window as any).giveItem;
       delete (window as any).giveGold;
       delete (window as any).clearInventory;
       delete (window as any).listEquipment;
+      delete (window as any).showInventoryPanels;
     };
   }, [combatLogManager, setInventoryVersion]);
 
@@ -482,13 +525,13 @@ export const InventoryView: React.FC = () => {
 
       let needsRerender = false;
 
-      // Check category tab hover (now in top info panel)
-      const topPanelRegion = layoutManager.getTopInfoPanelRegion();
+      // Check category tab hover (now in title panel)
+      const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
       const topPanelContent = topPanelManager.getContent();
       let newHoveredCategory: InventoryCategory | null = null;
 
       if (topPanelContent instanceof InventoryTopPanelContent) {
-        const categoryTabs = topPanelContent.getCategoryTabBounds(topPanelRegion);
+        const categoryTabs = topPanelContent.getCategoryTabBounds(titlePanelRegion);
         for (const tab of categoryTabs) {
           if (
             canvasX >= tab.bounds.x &&
@@ -507,13 +550,16 @@ export const InventoryView: React.FC = () => {
         needsRerender = true;
       }
 
-      // Check sort dropdown hover
-      const sortBounds = renderer.getSortDropdownBounds(mainPanelBounds);
-      const sortHovered =
-        canvasX >= sortBounds.x &&
-        canvasX <= sortBounds.x + sortBounds.width &&
-        canvasY >= sortBounds.y &&
-        canvasY <= sortBounds.y + sortBounds.height;
+      // Check sort dropdown hover (now in title panel)
+      let sortHovered = false;
+      if (topPanelContent instanceof InventoryTopPanelContent) {
+        const sortBounds = topPanelContent.getSortBounds(titlePanelRegion);
+        sortHovered =
+          canvasX >= sortBounds.x &&
+          canvasX <= sortBounds.x + sortBounds.width &&
+          canvasY >= sortBounds.y &&
+          canvasY <= sortBounds.y + sortBounds.height;
+      }
 
       if (sortHovered !== viewState.hoveredSort) {
         setViewState((prev) => ({ ...prev, hoveredSort: sortHovered }));
@@ -573,12 +619,12 @@ export const InventoryView: React.FC = () => {
       const canvasX = (event.clientX - rect.left) * scaleX;
       const canvasY = (event.clientY - rect.top) * scaleY;
 
-      // Check category tab click (now in top info panel)
-      const topPanelRegion = layoutManager.getTopInfoPanelRegion();
+      // Check category tab click (now in title panel)
+      const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
       const topPanelContent = topPanelManager.getContent();
 
       if (topPanelContent instanceof InventoryTopPanelContent) {
-        const categoryTabs = topPanelContent.getCategoryTabBounds(topPanelRegion);
+        const categoryTabs = topPanelContent.getCategoryTabBounds(titlePanelRegion);
         for (const tab of categoryTabs) {
           if (
             canvasX >= tab.bounds.x &&
@@ -594,21 +640,23 @@ export const InventoryView: React.FC = () => {
         }
       }
 
-      // Check sort dropdown click (cycle through sort modes)
-      const sortBounds = renderer.getSortDropdownBounds(mainPanelBounds);
-      if (
-        canvasX >= sortBounds.x &&
-        canvasX <= sortBounds.x + sortBounds.width &&
-        canvasY >= sortBounds.y &&
-        canvasY <= sortBounds.y + sortBounds.height
-      ) {
-        const sortModes: InventorySortMode[] = ['name-asc', 'name-desc', 'type', 'recently-added'];
-        const currentIndex = sortModes.indexOf(viewState.sortMode);
-        const nextIndex = (currentIndex + 1) % sortModes.length;
-        setViewState((prev) => ({ ...prev, sortMode: sortModes[nextIndex] }));
-        combatLogManager.addMessage(`Sort changed to ${sortModes[nextIndex]}`);
-        renderFrame();
-        return;
+      // Check sort dropdown click (now in title panel)
+      if (topPanelContent instanceof InventoryTopPanelContent) {
+        const sortBounds = topPanelContent.getSortBounds(titlePanelRegion);
+        if (
+          canvasX >= sortBounds.x &&
+          canvasX <= sortBounds.x + sortBounds.width &&
+          canvasY >= sortBounds.y &&
+          canvasY <= sortBounds.y + sortBounds.height
+        ) {
+          const sortModes: InventorySortMode[] = ['name-asc', 'name-desc', 'type', 'recently-added'];
+          const currentIndex = sortModes.indexOf(viewState.sortMode);
+          const nextIndex = (currentIndex + 1) % sortModes.length;
+          setViewState((prev) => ({ ...prev, sortMode: sortModes[nextIndex] }));
+          combatLogManager.addMessage(`Sort changed to ${sortModes[nextIndex]}`);
+          renderFrame();
+          return;
+        }
       }
 
       // Check item click
