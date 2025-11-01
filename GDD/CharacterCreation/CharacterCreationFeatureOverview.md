@@ -78,10 +78,12 @@ When "Create Character" is clicked, display a centered modal overlay:
 
 #### Class Selection
 - **Label**: "Starting Class:" in `7px-04b03` font, white
-- **Display**: Dropdown-style list of available classes
-- **Options**: Fighter, Apprentice, Rogue (from UnitClass registry)
+- **Display**: Dropdown-style list of available starter classes
+- **Options**: Only classes with NO requirements (from `UnitClass.getAll()` filtered by `requirements.size === 0`)
+- **Examples**: Fighter, Apprentice, Rogue (if they have no requirements)
 - **Selected State**: Highlighted in yellow `#ffff00`
 - **Interaction**: Click to select class
+- **Filtering**: Advanced classes with requirements are NOT shown in character creation
 
 #### Class Info Display
 When a class is selected/hovered, show:
@@ -156,15 +158,19 @@ interface PartyMemberDefinition {
 
 **Character Creation Process:**
 1. Player inputs name, sprite, starting class
-2. Query `UnitClass` registry for class base stats
-3. Query class for starting equipment IDs
-4. Generate full `PartyMemberDefinition` with:
-   - Class base stats
-   - Starting equipment from class
-   - Default abilities from class (if any)
+2. Look up class-specific data from a config/data file or hardcoded defaults
+3. Generate full `PartyMemberDefinition` with:
+   - Base stats appropriate for the selected class
+   - Starting equipment IDs from class configuration
+   - Default abilities from class configuration (if any)
    - totalExperience: 0
    - All other fields initialized to defaults
-5. Store in guild roster with full definition
+4. Store in guild roster with full definition
+
+**Note**: UnitClass currently only stores `modifiers` (stat adjustments) and `learnableAbilities`, not base stats or starting equipment. The character creation system will need to define base stats per class, likely in a separate configuration file or data structure. Alternatively, `UnitClass` could be extended to include:
+- Base stats for each class
+- Starting equipment IDs
+- Default abilities for new characters
 
 ### 4. Party Member Display
 
@@ -244,7 +250,11 @@ When "Remove" is clicked on party member:
 - **Preview**: Update large preview image when sprite clicked
 
 #### Class Selection
-- **Available Classes**: Query `UnitClass.getAll()` for all classes
+- **Available Classes**: Query `UnitClass.getAll()` and filter for starter classes only:
+  ```typescript
+  const starterClasses = UnitClass.getAll().filter(c => c.requirements.size === 0);
+  ```
+- **Rationale**: Advanced classes with requirements can only be unlocked through progression
 - **Default**: None selected (player must choose)
 - **Preview**: Update class info panel when class clicked/hovered
 
@@ -404,7 +414,7 @@ export class GuildRosterManager {
       return null;
     }
 
-    // Get class data for initial stats
+    // Verify class exists
     const unitClass = UnitClass.getById(unitClassId);
     if (!unitClass) {
       console.error(`Unit class '${unitClassId}' not found`);
@@ -414,14 +424,14 @@ export class GuildRosterManager {
     // Generate unique ID
     const id = `character-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
-    // Get base stats from class
-    const baseStats = unitClass.getBaseStats();
-
-    // Get starting equipment from class
-    const startingEquipment = unitClass.getStartingEquipment();
-
-    // Get default abilities from class (if any)
-    const defaultAbilities = unitClass.getDefaultAbilities();
+    // TODO: Get base stats and starting equipment from class configuration
+    // This will need to be defined in a separate data structure or added to UnitClass
+    // For now, using placeholder approach - replace with actual implementation
+    const classConfig = this.getClassStarterConfig(unitClassId);
+    if (!classConfig) {
+      console.error(`No starter config found for class '${unitClassId}'`);
+      return null;
+    }
 
     // Create full PartyMemberDefinition
     const character: PartyMemberDefinition = {
@@ -430,30 +440,30 @@ export class GuildRosterManager {
       unitClassId,
       spriteId,
 
-      // Base stats from class
-      baseHealth: baseStats.health,
-      baseMana: baseStats.mana,
-      basePhysicalPower: baseStats.physicalPower,
-      baseMagicPower: baseStats.magicPower,
-      baseSpeed: baseStats.speed,
-      baseMovement: baseStats.movement,
-      basePhysicalEvade: baseStats.physicalEvade,
-      baseMagicEvade: baseStats.magicEvade,
-      baseCourage: baseStats.courage,
-      baseAttunement: baseStats.attunement,
+      // Base stats from class config
+      baseHealth: classConfig.baseHealth,
+      baseMana: classConfig.baseMana,
+      basePhysicalPower: classConfig.basePhysicalPower,
+      baseMagicPower: classConfig.baseMagicPower,
+      baseSpeed: classConfig.baseSpeed,
+      baseMovement: classConfig.baseMovement,
+      basePhysicalEvade: classConfig.basePhysicalEvade,
+      baseMagicEvade: classConfig.baseMagicEvade,
+      baseCourage: classConfig.baseCourage,
+      baseAttunement: classConfig.baseAttunement,
 
-      // Starting equipment from class
-      leftHandId: startingEquipment.leftHand,
-      rightHandId: startingEquipment.rightHand,
-      headId: startingEquipment.head,
-      bodyId: startingEquipment.body,
-      accessoryId: startingEquipment.accessory,
+      // Starting equipment from class config
+      leftHandId: classConfig.leftHandId,
+      rightHandId: classConfig.rightHandId,
+      headId: classConfig.headId,
+      bodyId: classConfig.bodyId,
+      accessoryId: classConfig.accessoryId,
 
-      // Default abilities from class
-      learnedAbilityIds: defaultAbilities.learned || [],
-      reactionAbilityId: defaultAbilities.reaction,
-      passiveAbilityId: defaultAbilities.passive,
-      movementAbilityId: defaultAbilities.movement,
+      // Default abilities from class config
+      learnedAbilityIds: classConfig.learnedAbilityIds || [],
+      reactionAbilityId: classConfig.reactionAbilityId,
+      passiveAbilityId: classConfig.passiveAbilityId,
+      movementAbilityId: classConfig.movementAbilityId,
 
       // Progression starts at 0
       totalExperience: 0,
@@ -546,6 +556,58 @@ export class GuildRosterManager {
     return true;
   }
 
+  // Helper method to get class starter configuration
+  private getClassStarterConfig(classId: string): ClassStarterConfig | null {
+    // TODO: This should be loaded from a data file or configuration
+    // For now, return hardcoded defaults based on classId
+    // In production, this could come from:
+    // - A separate YAML file (class-starter-configs.yaml)
+    // - Extended UnitClass properties
+    // - A ClassStarterConfigRegistry similar to other registries
+
+    const configs: Record<string, ClassStarterConfig> = {
+      'fighter': {
+        baseHealth: 45,
+        baseMana: 5,
+        basePhysicalPower: 10,
+        baseMagicPower: 5,
+        baseSpeed: 8,
+        baseMovement: 4,
+        basePhysicalEvade: 10,
+        baseMagicEvade: 7,
+        baseCourage: 12,
+        baseAttunement: 6,
+        // Add equipment and abilities as needed
+      },
+      'apprentice': {
+        baseHealth: 25,
+        baseMana: 30,
+        basePhysicalPower: 5,
+        baseMagicPower: 15,
+        baseSpeed: 7,
+        baseMovement: 3,
+        basePhysicalEvade: 8,
+        baseMagicEvade: 14,
+        baseCourage: 8,
+        baseAttunement: 16,
+      },
+      'rogue': {
+        baseHealth: 30,
+        baseMana: 15,
+        basePhysicalPower: 8,
+        baseMagicPower: 7,
+        baseSpeed: 12,
+        baseMovement: 5,
+        basePhysicalEvade: 16,
+        baseMagicEvade: 10,
+        baseCourage: 10,
+        baseAttunement: 10,
+      },
+    };
+
+    return configs[classId] || null;
+  }
+
   // Validation
   isValidName(name: string): boolean {
     if (name.length < 1 || name.length > 12) return false;
@@ -553,6 +615,29 @@ export class GuildRosterManager {
     // ASCII only: letters, numbers, space, hyphen, apostrophe
     const validPattern = /^[A-Za-z0-9 '\-]+$/;
     return validPattern.test(name);
+  }
+
+  // Helper interface for class starter configuration
+  interface ClassStarterConfig {
+    baseHealth: number;
+    baseMana: number;
+    basePhysicalPower: number;
+    baseMagicPower: number;
+    baseSpeed: number;
+    baseMovement: number;
+    basePhysicalEvade: number;
+    baseMagicEvade: number;
+    baseCourage: number;
+    baseAttunement: number;
+    leftHandId?: string;
+    rightHandId?: string;
+    headId?: string;
+    bodyId?: string;
+    accessoryId?: string;
+    learnedAbilityIds?: string[];
+    reactionAbilityId?: string;
+    passiveAbilityId?: string;
+    movementAbilityId?: string;
   }
 
   // Persistence
@@ -778,6 +863,12 @@ export const GuildHallConstants = {
 - `components/guild/RosterCharacterCard.tsx` - Guild roster character card renderer
 - `utils/GuildRosterManager.ts` - Guild roster state management
 - `constants/GuildHallConstants.ts` - Constants for Guild Hall UI
+- `data/class-starter-configs.yaml` (optional) - Base stats and starting equipment per class
+
+**Note on Class Configuration**: The current `UnitClass` system only stores modifiers and learnable abilities, not base stats or starting equipment. Character creation will need class-specific starting data. This can be implemented as:
+1. Hardcoded in `GuildRosterManager.getClassStarterConfig()` (quick implementation)
+2. Separate YAML configuration file loaded at startup (cleaner, more maintainable)
+3. Extension to `UnitClass` to include base stats and starting equipment (structural change)
 
 ## Files to Modify
 
@@ -945,41 +1036,15 @@ export const GuildHallConstants = {
 
 ## Future Extensions
 
-### Character Editing
-- **Rename**: Allow renaming characters (with duplicate check)
-- **Reclass**: Allow changing class (reset stats/equipment)
-- **Resprite**: Allow changing sprite appearance
-
 ### Character Deletion
 - **Delete Button**: Add "Delete" button to roster cards
 - **Confirmation**: Modal confirmation "Delete [Name]?"
 - **Restriction**: Cannot delete if in active party
 
-### Party Reordering
-- **Drag-and-Drop**: Drag party member cards to reorder
-- **Turn Order**: Party order affects combat turn order
-- **Visual Feedback**: Show drag preview and drop zones
-
 ### Character Details View
 - **Full Stats**: Click character to view detailed stats screen
 - **Equipment**: View and manage equipped items
 - **Abilities**: View learned abilities and assigned slots
-- **Biography**: Add custom character description
-
-### Import/Export
-- **Export Character**: Save character as JSON file
-- **Import Character**: Load character from JSON file
-- **Share**: Share characters with other players
-
-### Party Presets
-- **Save Party**: Save current active party as preset
-- **Load Party**: Quick-load a saved party preset
-- **Multiple Presets**: "Tank Squad", "Magic Team", etc.
-
-### Guild Hall Decorations
-- **Unlockables**: Unlock decorations with achievements
-- **Customization**: Change background, banners, furniture
-- **Immersion**: Make Guild Hall feel like home base
 
 ## Estimated Complexity
 
@@ -1015,7 +1080,7 @@ export const GuildHallConstants = {
 
 - **Save/Load**: Guild roster and active party persist in local storage
 - **Existing Features**: No breaking changes to combat system
-- **Future Features**: Designed to support character editing, deletion, party presets
+- **Future Features**: Designed to support character deletion and detailed character view
 
 ---
 
@@ -1026,7 +1091,7 @@ This feature is complete when:
 2. Character creation modal functions with all input validation
 3. Name input accepts ASCII only, max 12 characters
 4. Sprite selection grid shows all character sprites
-5. Class selection shows all available classes with info
+5. Class selection shows only starter classes (no requirements) with info
 6. "Create" button creates character and adds to roster
 7. Character cards display sprite, name, class, level correctly
 8. Add to party validates max 4 members, shows error if full
@@ -1041,8 +1106,10 @@ This feature is complete when:
 ## Notes
 
 - This feature is the foundation for party management and character progression
-- The `CreatedCharacter` structure is intentionally simple (full data generated on-demand)
+- Characters use full `PartyMemberDefinition` structure to preserve all progression data
 - Local storage provides simple persistence without backend complexity
-- Future extensions will add character editing, deletion, and party presets
-- Consider adding visual feedback (animations, sounds) in future iterations
+- Only starter classes (with no requirements) can be selected during character creation
+- Advanced classes are unlocked through progression and class experience
+- Future extensions will add character deletion and detailed character view
 - The 12-character name limit matches the pixel-art aesthetic and display space constraints
+- Party management uses simple click handlers, no drag-and-drop needed
