@@ -31,22 +31,24 @@ Since there is no multi-party system in VibeDC, the inventory is designed as a *
 - Simpler serialization (single inventory state)
 - Easier integration with existing systems
 
-### Equipment vs Consumables
+### Equipment System Integration
 
-**Equipment (Weapons, Armor, Accessories):**
-- Each unique item is stored separately (even duplicates)
-- Reason: Different equipment may have different enhancement levels, durability, etc. (future systems)
-- Stored as: `Equipment` instances
+**All Items are Equipment:**
+- VibeDC uses a unified `Equipment` class for all items
+- No separate "Consumable" or "Item" type exists
+- Equipment types include: `OneHandedWeapon`, `TwoHandedWeapon`, `Shield`, `Held`, `Head`, `Body`, `Accessory`
+- See: `react-app/src/models/combat/Equipment.ts`
 
-**Consumables (Potions, Food, Throwables):**
-- Stackable items with quantity tracking
-- Reason: Consumables are functionally identical (1 health potion = any other health potion)
-- Stored as: `{ itemId: string, quantity: number }`
+**Stacking Strategy:**
+- **All equipment is stackable** by equipment ID
+- Identical equipment (same ID) stored as: `{ equipmentId: string, quantity: number }`
+- Rationale: Simplifies inventory management, reduces UI clutter
+- Future enhancements (durability, enhancement) can be added via item instance wrapper if needed
 
-**Quest Items:**
-- Non-stackable unique items
+**Special Item Categories (Future):**
+- Quest items: Flag on Equipment or special tag (e.g., `typeTags: ["quest-item"]`)
 - Cannot be discarded or sold
-- Special UI treatment (separate category)
+- Special UI treatment (separate category filter)
 
 ## Core Requirements
 
@@ -57,17 +59,11 @@ Since there is no multi-party system in VibeDC, the inventory is designed as a *
 ```typescript
 /**
  * Global singleton managing the player party's shared inventory.
- * Stores equipment, consumables, and quest items.
+ * All items are Equipment instances, stored with quantity tracking.
  */
 class PartyInventory {
-  // Equipment storage (non-stackable)
-  private equipment: Equipment[] = [];
-
-  // Consumables storage (stackable)
-  private consumables: Map<string, number> = new Map(); // itemId -> quantity
-
-  // Quest items (non-stackable, non-discardable)
-  private questItems: Equipment[] = [];
+  // Equipment storage (stackable by equipment ID)
+  private items: Map<string, number> = new Map(); // equipmentId -> quantity
 
   // Gold (currency)
   private gold: number = 0;
@@ -78,18 +74,36 @@ class PartyInventory {
 }
 ```
 
+**Design Rationale:**
+- Single `Map<string, number>` for all equipment (unified storage)
+- Equipment ID as key ensures stacking of identical items
+- Quantity tracking for all items (even "unique" equipment can have duplicates)
+- Simpler than multiple storage arrays
+- Easy to query, filter, and serialize
+
 #### Item Categories
+
+Categories derived from `Equipment.type`:
 
 ```typescript
 enum InventoryCategory {
   ALL = 'all',
-  WEAPONS = 'weapons',
-  ARMOR = 'armor',
-  ACCESSORIES = 'accessories',
-  CONSUMABLES = 'consumables',
-  QUEST_ITEMS = 'quest-items',
+  WEAPONS = 'weapons',           // OneHandedWeapon, TwoHandedWeapon
+  SHIELDS = 'shields',            // Shield
+  ARMOR = 'armor',                // Head, Body
+  ACCESSORIES = 'accessories',    // Accessory
+  HELD = 'held',                  // Held
+  QUEST_ITEMS = 'quest-items',    // Future: typeTags includes "quest-item"
 }
 ```
+
+**Mapping to Equipment.type:**
+- `WEAPONS`: `equipment.type === 'OneHandedWeapon' || equipment.type === 'TwoHandedWeapon'`
+- `SHIELDS`: `equipment.type === 'Shield'`
+- `ARMOR`: `equipment.type === 'Head' || equipment.type === 'Body'`
+- `ACCESSORIES`: `equipment.type === 'Accessory'`
+- `HELD`: `equipment.type === 'Held'`
+- `QUEST_ITEMS`: `equipment.typeTags?.includes('quest-item')` (future)
 
 #### Sorting Options
 
@@ -108,57 +122,89 @@ enum InventorySortMode {
 #### Adding Items
 
 ```typescript
-addEquipment(equipment: Equipment): void
-addConsumable(itemId: string, quantity: number): void
-addQuestItem(questItem: Equipment): void
+addItem(equipmentId: string, quantity: number = 1): void
 addGold(amount: number): void
 ```
 
 **Behavior:**
-- Equipment: Add to `equipment` array
-- Consumables: Increment quantity in `consumables` map (or create entry)
-- Quest Items: Add to `questItems` array
+- Items: Increment quantity in `items` map (or create entry if new)
 - Gold: Add to `gold` counter
 - **Validation**: Check capacity limits before adding (if enabled)
 - **Events**: Trigger "item added" event for UI updates
 
+**Example:**
+```typescript
+// Add 1 Flame Blade
+PartyInventory.addItem('flame-blade-001', 1);
+
+// Add 5 Health Potions (future consumable)
+PartyInventory.addItem('health-potion-001', 5);
+
+// Add 100 gold
+PartyInventory.addGold(100);
+```
+
 #### Removing Items
 
 ```typescript
-removeEquipment(equipment: Equipment): boolean
-removeConsumable(itemId: string, quantity: number): boolean
-removeQuestItem(questItem: Equipment): boolean
+removeItem(equipmentId: string, quantity: number = 1): boolean
 removeGold(amount: number): boolean
 ```
 
 **Behavior:**
-- Equipment: Remove from `equipment` array (by reference or ID)
-- Consumables: Decrement quantity (remove entry if quantity reaches 0)
-- Quest Items: **BLOCKED** - cannot remove quest items
+- Items: Decrement quantity in `items` map (remove entry if quantity reaches 0)
+- Quest Items: Check if item has "quest-item" tag and **BLOCK** removal
 - Gold: Subtract from `gold` counter (fail if insufficient)
-- **Return**: `true` if successful, `false` if item not found or insufficient quantity
+- **Return**: `true` if successful, `false` if item not found, insufficient quantity, or is quest item
 - **Events**: Trigger "item removed" event for UI updates
+
+**Example:**
+```typescript
+// Remove 1 Flame Blade
+const success = PartyInventory.removeItem('flame-blade-001', 1); // true if removed
+
+// Try to remove quest item (blocked)
+const blocked = PartyInventory.removeItem('ancient-key-001', 1); // false (quest item)
+
+// Remove 50 gold
+const goldRemoved = PartyInventory.removeGold(50); // true if sufficient gold
+```
 
 #### Querying Items
 
 ```typescript
-getEquipmentCount(): number
-getConsumableCount(itemId: string): number
-getQuestItemCount(): number
+getItemCount(equipmentId: string): number
 getTotalItemCount(): number
+getTotalUniqueItems(): number
 getGold(): number
 
-hasEquipment(equipmentId: string): boolean
-hasConsumable(itemId: string, quantity: number): boolean
-hasQuestItem(questItemId: string): boolean
+hasItem(equipmentId: string, quantity: number = 1): boolean
 hasGold(amount: number): boolean
 
-getEquipmentByCategory(category: EquipmentCategory): Equipment[]
-getAllConsumables(): Array<{ itemId: string, quantity: number }>
-getAllQuestItems(): Equipment[]
+getItemsByCategory(category: InventoryCategory): Array<{ equipmentId: string, quantity: number }>
+getAllItems(): Array<{ equipmentId: string, quantity: number }>
 
-filterItems(category: InventoryCategory): InventoryItem[]
-sortItems(items: InventoryItem[], mode: InventorySortMode): InventoryItem[]
+filterItems(category: InventoryCategory): Array<{ equipment: Equipment, quantity: number }>
+sortItems(items: Array<{ equipment: Equipment, quantity: number }>, mode: InventorySortMode): Array<{ equipment: Equipment, quantity: number }>
+```
+
+**Helper Methods:**
+```typescript
+// Get Equipment instance from ID
+getEquipment(equipmentId: string): Equipment | undefined {
+  return Equipment.getById(equipmentId);
+}
+
+// Get item with quantity and Equipment data
+getItemDetails(equipmentId: string): { equipment: Equipment, quantity: number } | null {
+  const quantity = this.items.get(equipmentId);
+  if (!quantity) return null;
+
+  const equipment = Equipment.getById(equipmentId);
+  if (!equipment) return null;
+
+  return { equipment, quantity };
+}
 ```
 
 ### 3. Integration with Combat Rewards
@@ -174,7 +220,7 @@ const lootedEquipment = this.rewards.items.filter(item =>
 );
 
 for (const equipment of lootedEquipment) {
-  PartyInventory.addEquipment(equipment);
+  PartyInventory.addItem(equipment.id, 1);
 }
 
 PartyInventory.addGold(this.rewards.gold);
@@ -184,10 +230,15 @@ PartyInventory.addGold(this.rewards.gold);
 **Flow:**
 1. Player selects items in victory screen
 2. Clicks "Exit Encounter"
-3. Selected items added to `PartyInventory`
+3. Selected items added to `PartyInventory` (stacked by equipment ID)
 4. Gold added to `PartyInventory`
 5. Combat view closes, returns to overworld
 6. Inventory UI reflects new items (if open)
+
+**Stacking Example:**
+- Victory 1: Loot "Iron Sword" → Inventory has 1x Iron Sword
+- Victory 2: Loot "Iron Sword" → Inventory has 2x Iron Sword
+- Victory 3: Loot "Flame Blade" → Inventory has 2x Iron Sword, 1x Flame Blade
 
 ### 4. Serialization
 
@@ -195,14 +246,8 @@ PartyInventory.addGold(this.rewards.gold);
 
 ```typescript
 interface PartyInventoryJSON {
-  // Equipment (array of equipment IDs)
-  equipment: string[];
-
-  // Consumables (map of itemId -> quantity)
-  consumables: Record<string, number>;
-
-  // Quest items (array of quest item IDs)
-  questItems: string[];
+  // Items (map of equipmentId -> quantity)
+  items: Record<string, number>;
 
   // Gold
   gold: number;
@@ -213,17 +258,30 @@ interface PartyInventoryJSON {
 }
 ```
 
+**Example:**
+```json
+{
+  "items": {
+    "flame-blade-001": 2,
+    "iron-helmet-001": 1,
+    "leather-armor-001": 3,
+    "health-potion-001": 15
+  },
+  "gold": 450,
+  "maxWeight": null,
+  "currentWeight": 0
+}
+```
+
 #### Serialization Methods
 
 ```typescript
 class PartyInventory {
   toJSON(): PartyInventoryJSON {
     return {
-      equipment: this.equipment.map(eq => eq.id),
-      consumables: Object.fromEntries(this.consumables),
-      questItems: this.questItems.map(item => item.id),
+      items: Object.fromEntries(this.items),
       gold: this.gold,
-      maxWeight: this.maxWeight,
+      maxWeight: this.maxWeight === Infinity ? null : this.maxWeight,
       currentWeight: this.currentWeight,
     };
   }
@@ -232,28 +290,14 @@ class PartyInventory {
     // Clear existing inventory
     PartyInventory.clear();
 
-    // Load equipment
-    for (const equipmentId of json.equipment) {
+    // Load items
+    for (const [equipmentId, quantity] of Object.entries(json.items)) {
+      // Validate that equipment exists in registry
       const equipment = Equipment.getById(equipmentId);
       if (equipment) {
-        PartyInventory.addEquipment(equipment);
+        PartyInventory.addItem(equipmentId, quantity);
       } else {
-        console.warn(`Failed to load equipment: ${equipmentId}`);
-      }
-    }
-
-    // Load consumables
-    for (const [itemId, quantity] of Object.entries(json.consumables)) {
-      PartyInventory.addConsumable(itemId, quantity);
-    }
-
-    // Load quest items
-    for (const questItemId of json.questItems) {
-      const questItem = Equipment.getById(questItemId);
-      if (questItem) {
-        PartyInventory.addQuestItem(questItem);
-      } else {
-        console.warn(`Failed to load quest item: ${questItemId}`);
+        console.warn(`[PartyInventory] Failed to load item: ${equipmentId} (not in Equipment registry)`);
       }
     }
 
@@ -261,7 +305,7 @@ class PartyInventory {
     PartyInventory.addGold(json.gold);
 
     // Load capacity (if present)
-    if (json.maxWeight !== undefined) {
+    if (json.maxWeight !== undefined && json.maxWeight !== null) {
       PartyInventory.setMaxWeight(json.maxWeight);
     }
   }
@@ -278,22 +322,22 @@ While UI implementation is beyond the scope of this document, the inventory syst
 ┌─────────────────────────────────────┐
 │ INVENTORY                   Gold: 450│
 ├─────────────────────────────────────┤
-│ [All] [Weapons] [Armor] [Consumables]│
+│ [All] [Weapons] [Armor] [Accessories]│
 │                                      │
 │ Sort: [Name ▼]                       │
 ├─────────────────────────────────────┤
-│ ☐ Flame Blade          [Equip] [Drop]│
-│ ☐ Iron Helmet          [Equip] [Drop]│
-│ ☐ Health Potion (x5)   [Use]   [Drop]│
-│ ☐ Leather Armor        [Equip] [Drop]│
-│ ⚑ Ancient Key          (Quest Item)  │
+│ ☐ Flame Blade (x2)     [Equip] [Drop]│
+│ ☐ Iron Helmet (x1)     [Equip] [Drop]│
+│ ☐ Leather Armor (x3)   [Equip] [Drop]│
+│ ☐ Swift Boots (x1)     [Equip] [Drop]│
+│ ⚑ Ancient Key (x1)     (Quest Item)  │
 │                                      │
 │ ...                                  │
 ├─────────────────────────────────────┤
 │ [Selected Item Details]              │
-│ Flame Blade                          │
-│ +15 Physical Power                   │
-│ "A blade wreathed in flames"         │
+│ Flame Blade (OneHandedWeapon)        │
+│ +12 Physical Power, +8 Magic Power   │
+│ Range: 1-2, Tags: weapon, medium     │
 └─────────────────────────────────────┘
 ```
 
@@ -501,28 +545,27 @@ export class PartyInventory {
   }
 
   // Public static API
-  static addEquipment(equipment: Equipment): void {
-    return PartyInventory.getInstance().addEquipmentInternal(equipment);
+  static addItem(equipmentId: string, quantity: number = 1): void {
+    return PartyInventory.getInstance().addItemInternal(equipmentId, quantity);
   }
 
-  static getEquipmentCount(): number {
-    return PartyInventory.getInstance().getEquipmentCountInternal();
+  static getItemCount(equipmentId: string): number {
+    return PartyInventory.getInstance().getItemCountInternal(equipmentId);
   }
 
   // ... other static methods
 
   // Private implementation methods
-  private equipment: Equipment[] = [];
-  private consumables: Map<string, number> = new Map();
-  private questItems: Equipment[] = [];
+  private items: Map<string, number> = new Map(); // equipmentId -> quantity
   private gold: number = 0;
 
-  private addEquipmentInternal(equipment: Equipment): void {
-    this.equipment.push(equipment);
+  private addItemInternal(equipmentId: string, quantity: number): void {
+    const current = this.items.get(equipmentId) || 0;
+    this.items.set(equipmentId, current + quantity);
   }
 
-  private getEquipmentCountInternal(): number {
-    return this.equipment.length;
+  private getItemCountInternal(equipmentId: string): number {
+    return this.items.get(equipmentId) || 0;
   }
 
   // ... other private methods
@@ -540,18 +583,17 @@ export class PartyInventory {
 ```typescript
 export class PartyInventory {
   // Direct static storage (simpler than singleton)
-  private static equipment: Equipment[] = [];
-  private static consumables: Map<string, number> = new Map();
-  private static questItems: Equipment[] = [];
+  private static items: Map<string, number> = new Map(); // equipmentId -> quantity
   private static gold: number = 0;
 
   // Static methods operate directly on static fields
-  static addEquipment(equipment: Equipment): void {
-    PartyInventory.equipment.push(equipment);
+  static addItem(equipmentId: string, quantity: number = 1): void {
+    const current = PartyInventory.items.get(equipmentId) || 0;
+    PartyInventory.items.set(equipmentId, current + quantity);
   }
 
-  static getEquipmentCount(): number {
-    return PartyInventory.equipment.length;
+  static getItemCount(equipmentId: string): number {
+    return PartyInventory.items.get(equipmentId) || 0;
   }
 
   // ... other methods
@@ -564,100 +606,24 @@ export class PartyInventory {
 - **Initialization**: State initialized immediately on module load
 - **Recommendation**: Use singleton pattern for better testability
 
-### Item Identity: Reference vs ID
+### Stacking Strategy: ID + Quantity
 
-**Equipment Identity Problem:**
-When storing equipment, we need to decide: store instances or IDs?
+**Why Stack by ID:**
+- Equipment instances from the `Equipment` registry are templates (no unique state)
+- Two "Flame Blade" items are functionally identical
+- Stacking reduces UI clutter and simplifies management
 
-**Option 1: Store Equipment Instances**
+**Implementation:**
 ```typescript
-private equipment: Equipment[] = [];
+private items: Map<string, number> = new Map(); // equipmentId -> quantity
 
-addEquipment(equipment: Equipment): void {
-  this.equipment.push(equipment);
-}
-```
-
-**Pros:**
-- Direct access to item data
-- No registry lookups needed
-- Can store item-specific state (durability, enhancements)
-
-**Cons:**
-- Circular references (equipment → inventory → equipment)
-- Harder to serialize
-- Memory overhead for duplicate items
-
-**Option 2: Store Equipment IDs**
-```typescript
-private equipment: string[] = [];
-
-addEquipment(equipment: Equipment): void {
-  this.equipment.push(equipment.id);
+addItem(equipmentId: string, quantity: number = 1): void {
+  const current = this.items.get(equipmentId) || 0;
+  this.items.set(equipmentId, current + quantity);
 }
 
-getEquipment(): Equipment[] {
-  return this.equipment
-    .map(id => Equipment.getById(id))
-    .filter(eq => eq !== undefined) as Equipment[];
-}
-```
-
-**Pros:**
-- Simple serialization
-- No circular references
-- Small memory footprint
-
-**Cons:**
-- Registry lookups on every access
-- Cannot store item-specific state (durability, enhancements)
-- Duplicate items not distinguished
-
-**Hybrid Approach (Recommended):**
-
-For initial implementation, **store instances** for simplicity:
-```typescript
-private equipment: Equipment[] = [];
-```
-
-For serialization, **convert to IDs**:
-```typescript
-toJSON(): PartyInventoryJSON {
-  return {
-    equipment: this.equipment.map(eq => eq.id),
-    // ...
-  };
-}
-```
-
-**Future Enhancement:**
-If item-specific state is needed (durability, enhancements), create `InventoryItem` wrapper:
-
-```typescript
-interface InventoryItem {
-  equipmentId: string;
-  durability?: number;
-  enhancement?: number;
-  customName?: string;
-}
-
-private equipment: InventoryItem[] = [];
-```
-
-### Consumable Stacking
-
-Consumables use a `Map<string, number>` for efficient stacking:
-
-```typescript
-private consumables: Map<string, number> = new Map();
-
-addConsumable(itemId: string, quantity: number): void {
-  const current = this.consumables.get(itemId) || 0;
-  this.consumables.set(itemId, current + quantity);
-}
-
-removeConsumable(itemId: string, quantity: number): boolean {
-  const current = this.consumables.get(itemId) || 0;
+removeItem(equipmentId: string, quantity: number = 1): boolean {
+  const current = this.items.get(equipmentId) || 0;
 
   if (current < quantity) {
     return false; // Insufficient quantity
@@ -665,16 +631,16 @@ removeConsumable(itemId: string, quantity: number): boolean {
 
   const remaining = current - quantity;
   if (remaining === 0) {
-    this.consumables.delete(itemId); // Remove entry if depleted
+    this.items.delete(equipmentId); // Remove entry when depleted
   } else {
-    this.consumables.set(itemId, remaining);
+    this.items.set(equipmentId, remaining);
   }
 
   return true;
 }
 
-getConsumableCount(itemId: string): number {
-  return this.consumables.get(itemId) || 0;
+getItemCount(equipmentId: string): number {
+  return this.items.get(equipmentId) || 0;
 }
 ```
 
@@ -682,6 +648,70 @@ getConsumableCount(itemId: string): number {
 - O(1) lookup, add, remove
 - Automatic quantity tracking
 - Clean deletion when quantity reaches 0
+- Simple serialization (just save the map)
+
+**Future Enhancement: Item Instances**
+If item-specific state is needed (durability, enhancements), create wrapper:
+
+```typescript
+interface InventoryItem {
+  equipmentId: string;
+  quantity: number;
+  instances?: Array<{
+    durability?: number;
+    enhancement?: number;
+    customName?: string;
+  }>;
+}
+
+private items: Map<string, InventoryItem> = new Map();
+```
+
+This allows both stacking (for identical items) and instance tracking (for modified items).
+
+### Quest Item Protection
+
+Quest items are identified by a special tag in their `typeTags` array:
+
+```typescript
+// In equipment-definitions.yaml (future)
+- id: "ancient-key-001"
+  name: "Ancient Key"
+  type: "Held"
+  modifiers: {}
+  typeTags: ["quest-item", "unique"]
+
+// In PartyInventory
+removeItem(equipmentId: string, quantity: number = 1): boolean {
+  // Check if item is a quest item
+  const equipment = Equipment.getById(equipmentId);
+  if (equipment && equipment.typeTags?.includes('quest-item')) {
+    console.warn(`[PartyInventory] Cannot remove quest item: ${equipmentId}`);
+    return false;
+  }
+
+  // Proceed with normal removal
+  const current = this.items.get(equipmentId) || 0;
+
+  if (current < quantity) {
+    return false;
+  }
+
+  const remaining = current - quantity;
+  if (remaining === 0) {
+    this.items.delete(equipmentId);
+  } else {
+    this.items.set(equipmentId, remaining);
+  }
+
+  return true;
+}
+```
+
+**Benefits:**
+- Prevents accidental quest item loss
+- Uses existing `typeTags` system (no new properties needed)
+- UI can show special icon for quest items
 
 ### Event System Architecture (Optional)
 
@@ -817,30 +847,41 @@ function loadGame(saveData: SaveData): void {
 **Example:**
 ```typescript
 function EquipmentPanel({ unit }: { unit: HumanoidUnit }) {
-  const availableWeapons = PartyInventory.getEquipmentByCategory('weapon');
+  const weaponItems = PartyInventory.getItemsByCategory('weapons');
 
-  const handleEquipWeapon = (weapon: Equipment) => {
-    // Remove weapon from inventory
-    PartyInventory.removeEquipment(weapon);
+  const handleEquipWeapon = (equipmentId: string) => {
+    const equipment = Equipment.getById(equipmentId);
+    if (!equipment) return;
+
+    // Remove 1 weapon from inventory
+    if (!PartyInventory.removeItem(equipmentId, 1)) {
+      alert('Failed to remove item from inventory');
+      return;
+    }
 
     // Equip to unit
     const previousWeapon = unit.leftHand;
-    unit.equipLeftHand(weapon);
+    unit.equipLeftHand(equipment);
 
-    // Add previous weapon back to inventory
+    // Add previous weapon back to inventory (if any)
     if (previousWeapon) {
-      PartyInventory.addEquipment(previousWeapon);
+      PartyInventory.addItem(previousWeapon.id, 1);
     }
   };
 
   return (
     <div>
       <h3>Available Weapons</h3>
-      {availableWeapons.map(weapon => (
-        <button key={weapon.id} onClick={() => handleEquipWeapon(weapon)}>
-          Equip {weapon.name}
-        </button>
-      ))}
+      {weaponItems.map(({ equipmentId, quantity }) => {
+        const equipment = Equipment.getById(equipmentId);
+        if (!equipment) return null;
+
+        return (
+          <button key={equipmentId} onClick={() => handleEquipWeapon(equipmentId)}>
+            Equip {equipment.name} (x{quantity})
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -852,27 +893,47 @@ function EquipmentPanel({ unit }: { unit: HumanoidUnit }) {
 
 **Example:**
 ```typescript
-function ShopPanel({ shopInventory }: { shopInventory: Equipment[] }) {
+interface ShopItem {
+  equipmentId: string;
+  price: number;
+  stock: number; // -1 = infinite
+}
+
+function ShopPanel({ shopItems }: { shopItems: ShopItem[] }) {
   const playerGold = PartyInventory.getGold();
 
-  const handlePurchase = (item: Equipment, price: number) => {
+  const handlePurchase = (equipmentId: string, price: number) => {
     if (!PartyInventory.hasGold(price)) {
       alert('Not enough gold!');
       return;
     }
 
+    const equipment = Equipment.getById(equipmentId);
+    if (!equipment) return;
+
     PartyInventory.removeGold(price);
-    PartyInventory.addEquipment(item);
+    PartyInventory.addItem(equipmentId, 1);
+
+    alert(`Purchased ${equipment.name}!`);
   };
 
   return (
     <div>
       <h3>Shop (Gold: {playerGold})</h3>
-      {shopInventory.map(item => (
-        <button key={item.id} onClick={() => handlePurchase(item, item.value)}>
-          Buy {item.name} ({item.value}g)
-        </button>
-      ))}
+      {shopItems.map(({ equipmentId, price, stock }) => {
+        const equipment = Equipment.getById(equipmentId);
+        if (!equipment) return null;
+
+        return (
+          <button
+            key={equipmentId}
+            onClick={() => handlePurchase(equipmentId, price)}
+            disabled={stock === 0 || playerGold < price}
+          >
+            Buy {equipment.name} ({price}g) {stock >= 0 ? `[${stock} left]` : ''}
+          </button>
+        );
+      })}
     </div>
   );
 }
@@ -887,12 +948,12 @@ function ShopPanel({ shopInventory }: { shopInventory: Equipment[] }) {
 **Solution:**
 ```typescript
 static fromJSON(json: PartyInventoryJSON): void {
-  for (const equipmentId of json.equipment) {
+  for (const [equipmentId, quantity] of Object.entries(json.items)) {
     const equipment = Equipment.getById(equipmentId);
     if (equipment) {
-      PartyInventory.addEquipment(equipment);
+      PartyInventory.addItem(equipmentId, quantity);
     } else {
-      console.warn(`[PartyInventory] Failed to load equipment: ${equipmentId} (not in registry)`);
+      console.warn(`[PartyInventory] Failed to load item: ${equipmentId} x${quantity} (not in Equipment registry)`);
       // Option: Add to "missing items" list for user notification
     }
   }
@@ -901,90 +962,115 @@ static fromJSON(json: PartyInventoryJSON): void {
 
 **User Impact:** Lost items from save data (graceful degradation)
 
-### 2. Duplicate Equipment Instances
+### 2. Stacking Identical Equipment
 
-**Issue:** Adding the same Equipment instance multiple times
+**Issue:** Multiple instances of same equipment (same ID)
 
-**Current Behavior:** Allowed (equipment array stores instances)
+**Current Behavior:** Automatically stacked by equipment ID
 
-**Reasoning:**
-- Two "Flame Blade" items should be distinct (may have different durability/enhancements in future)
-- Inventory shows "Flame Blade (x2)" in UI
-- Serialization saves both as separate entries
-
-**Alternative:** If strict uniqueness needed, check before adding:
+**Implementation:**
 ```typescript
-addEquipment(equipment: Equipment): void {
-  if (this.equipment.includes(equipment)) {
-    console.warn('Equipment already in inventory:', equipment.id);
-    return;
-  }
-  this.equipment.push(equipment);
+addItem(equipmentId: string, quantity: number = 1): void {
+  const current = this.items.get(equipmentId) || 0;
+  this.items.set(equipmentId, current + quantity);
 }
 ```
 
-### 3. Removing Equipped Items
+**Example:**
+- Add "flame-blade-001" → Map has { "flame-blade-001": 1 }
+- Add "flame-blade-001" again → Map has { "flame-blade-001": 2 }
+- UI shows: "Flame Blade (x2)"
+
+**Benefits:**
+- Simpler than tracking individual instances
+- Reduces UI clutter
+- Easy to serialize (just save map)
+
+**Future:** If item-specific state needed (durability, enhancements), use instance wrapper
+
+### 3. Removing Equipped Items (Future Enhancement)
 
 **Issue:** Player tries to remove item that is currently equipped on a unit
 
-**Solution:** Check if equipped before removing:
+**Solution:** Track equipped items separately or check before removing:
+
 ```typescript
-removeEquipment(equipment: Equipment): boolean {
+// Option 1: Prevent removal if equipped
+removeItem(equipmentId: string, quantity: number = 1): boolean {
   // Check if any party member has this equipped
-  for (const member of PartyMemberRegistry.getAll()) {
-    const unit = PartyMemberRegistry.createPartyMember(member.id) as HumanoidUnit;
-    if (unit.isEquipped(equipment)) {
-      console.warn('Cannot remove equipped item:', equipment.id);
-      return false;
-    }
+  const equippedCount = this.getEquippedCount(equipmentId); // Future method
+  const availableCount = this.getItemCount(equipmentId) - equippedCount;
+
+  if (availableCount < quantity) {
+    console.warn(`Cannot remove ${quantity}x ${equipmentId}: only ${availableCount} available (${equippedCount} equipped)`);
+    return false;
   }
 
-  // Safe to remove
-  const index = this.equipment.indexOf(equipment);
-  if (index >= 0) {
-    this.equipment.splice(index, 1);
-    return true;
-  }
+  // Proceed with removal
+  // ...
+}
 
-  return false;
+// Option 2: Allow removal, auto-unequip
+removeItem(equipmentId: string, quantity: number = 1): boolean {
+  // Unequip from units if needed
+  this.unequipFromAllUnits(equipmentId, quantity); // Future method
+
+  // Proceed with removal
+  // ...
 }
 ```
 
-**Note:** This requires `isEquipped()` method on `HumanoidUnit`
+**Note:** Requires tracking which items are equipped on which units (future enhancement)
 
 ### 4. Quest Items
 
 **Issue:** Quest items should not be removable
 
-**Solution:** Separate storage + blocking remove:
+**Solution:** Check `typeTags` for "quest-item" and block removal:
 ```typescript
-removeQuestItem(questItem: Equipment): boolean {
-  console.warn('Cannot remove quest items:', questItem.id);
-  return false;
+removeItem(equipmentId: string, quantity: number = 1): boolean {
+  const equipment = Equipment.getById(equipmentId);
+  if (equipment?.typeTags?.includes('quest-item')) {
+    console.warn(`[PartyInventory] Cannot remove quest item: ${equipmentId}`);
+    return false;
+  }
+
+  // Proceed with normal removal
+  // ...
 }
 ```
 
-**UI:** Quest items shown with special icon, no "Drop" button
+**Equipment Definition:**
+```yaml
+# In equipment-definitions.yaml
+- id: "ancient-key-001"
+  name: "Ancient Key"
+  type: "Held"
+  modifiers: {}
+  typeTags: ["quest-item", "unique"]
+```
 
-### 5. Consumable Over-removal
+**UI:** Quest items shown with ⚑ icon, no "Drop" button
 
-**Issue:** Trying to remove more consumables than available
+### 5. Item Over-removal
+
+**Issue:** Trying to remove more items than available
 
 **Solution:** Check quantity before removing:
 ```typescript
-removeConsumable(itemId: string, quantity: number): boolean {
-  const current = this.consumables.get(itemId) || 0;
+removeItem(equipmentId: string, quantity: number = 1): boolean {
+  const current = this.items.get(equipmentId) || 0;
 
   if (current < quantity) {
-    console.warn(`Insufficient consumables: ${itemId} (have ${current}, need ${quantity})`);
+    console.warn(`[PartyInventory] Insufficient items: ${equipmentId} (have ${current}, need ${quantity})`);
     return false;
   }
 
   const remaining = current - quantity;
   if (remaining === 0) {
-    this.consumables.delete(itemId);
+    this.items.delete(equipmentId); // Remove entry when depleted
   } else {
-    this.consumables.set(itemId, remaining);
+    this.items.set(equipmentId, remaining);
   }
 
   return true;
@@ -993,25 +1079,45 @@ removeConsumable(itemId: string, quantity: number): boolean {
 
 **Return Value:** `false` indicates failure, caller should handle error
 
-### 6. Inventory Full (If Capacity Enabled)
+**Example:**
+```typescript
+// Try to remove 5 Flame Blades when only 2 in inventory
+const removed = PartyInventory.removeItem('flame-blade-001', 5); // false
+console.log(removed); // false - operation failed
+```
+
+### 6. Inventory Full (If Capacity Enabled - Future)
 
 **Issue:** Cannot add item due to weight limit
 
 **Solution:** Check capacity before adding:
 ```typescript
-addEquipment(equipment: Equipment): boolean {
-  if (!this.canAddItem(equipment.weight)) {
-    console.warn('Inventory full, cannot add:', equipment.id);
+addItem(equipmentId: string, quantity: number = 1): boolean {
+  const equipment = Equipment.getById(equipmentId);
+  if (!equipment) {
+    console.warn(`[PartyInventory] Equipment not found: ${equipmentId}`);
     return false;
   }
 
-  this.equipment.push(equipment);
-  this.currentWeight += equipment.weight;
+  // Check weight capacity (future: add weight property to Equipment)
+  const itemWeight = (equipment as any).weight || 0;
+  const totalWeight = itemWeight * quantity;
+
+  if (!this.canAddWeight(totalWeight)) {
+    console.warn(`[PartyInventory] Inventory full, cannot add ${quantity}x ${equipmentId} (${totalWeight} weight)`);
+    return false;
+  }
+
+  const current = this.items.get(equipmentId) || 0;
+  this.items.set(equipmentId, current + quantity);
+  this.currentWeight += totalWeight;
   return true;
 }
 ```
 
 **UI:** Show error message "Inventory full!" and prevent looting
+
+**Note:** Requires adding `weight` property to `Equipment` class
 
 ### 7. Negative Gold
 
@@ -1036,29 +1142,31 @@ removeGold(amount: number): boolean {
 
 ### Unit Tests: Core Operations
 
-- [ ] Adding equipment increases count
-- [ ] Adding consumable increases quantity
-- [ ] Adding consumable to existing stack increments quantity
-- [ ] Adding quest item increases quest item count
+- [ ] Adding item increases quantity
+- [ ] Adding item to existing stack increments quantity
+- [ ] Adding multiple items at once works correctly
 - [ ] Adding gold increases total gold
-- [ ] Removing equipment decreases count
-- [ ] Removing consumable decreases quantity
-- [ ] Removing last consumable removes map entry
+- [ ] Removing item decreases quantity
+- [ ] Removing last item removes map entry
 - [ ] Removing non-existent item returns false
 - [ ] Removing quest item is blocked (returns false)
+- [ ] Removing more items than available returns false
 - [ ] Removing more gold than available returns false
 - [ ] Query methods return correct counts
-- [ ] Check methods (has*) work correctly
+- [ ] Check methods (hasItem, hasGold) work correctly
+- [ ] getTotalItemCount returns sum of all quantities
+- [ ] getTotalUniqueItems returns number of unique equipment IDs
 
 ### Unit Tests: Serialization
 
 - [ ] toJSON() produces valid JSON structure
 - [ ] fromJSON() restores inventory state correctly
-- [ ] Round-trip serialization preserves all data
+- [ ] Round-trip serialization preserves all data (items + quantities)
 - [ ] Missing equipment IDs logged but don't crash
-- [ ] Missing consumable IDs handled gracefully
 - [ ] Empty inventory serializes correctly
-- [ ] Full inventory serializes correctly
+- [ ] Full inventory with multiple stacks serializes correctly
+- [ ] Quantities are preserved through serialization
+- [ ] Gold is preserved through serialization
 
 ### Integration Tests: Combat Victory
 
@@ -1077,60 +1185,74 @@ removeGold(amount: number): boolean {
 
 ### Edge Case Tests
 
-- [ ] Adding duplicate equipment creates separate entries
-- [ ] Removing equipped item is blocked (future)
-- [ ] Removing consumable with insufficient quantity fails
+- [ ] Adding duplicate equipment stacks correctly
+- [ ] Removing equipped item is blocked (future enhancement)
+- [ ] Removing item with insufficient quantity fails
 - [ ] Removing quest item is always blocked
-- [ ] Capacity limit prevents adding items (if enabled)
+- [ ] Capacity limit prevents adding items (if enabled, future)
 - [ ] Negative gold prevented
+- [ ] Adding 0 quantity is no-op
+- [ ] Removing 0 quantity is no-op
+- [ ] Filtering by category returns correct equipment types
+- [ ] Sorting by name works correctly
+- [ ] Equipment with missing registry entries handled gracefully
 
 ## Performance Considerations
 
 ### Memory Usage
 
-**Equipment Storage:**
-- Array of Equipment instances
-- Memory: ~100 bytes per item (estimate)
-- Expected max: ~500 items (50 KB)
+**Item Storage:**
+- Map of equipmentId (string) → quantity (number)
+- Memory: ~50 bytes per unique item type (estimate)
+- Expected max: ~100 unique equipment types (5 KB)
 - **Negligible** for modern systems
 
-**Consumables Storage:**
-- Map of string → number
-- Memory: ~50 bytes per entry (estimate)
-- Expected max: ~50 consumable types (2.5 KB)
-- **Negligible**
+**Equipment Registry Lookups:**
+- Equipment instances stored in global `Equipment.registry`
+- Inventory only stores IDs (small strings)
+- No duplicate Equipment instances in memory
 
-**Total:** < 100 KB for full inventory (acceptable)
+**Total:** < 10 KB for full inventory (very efficient)
 
 ### Query Performance
 
-**getEquipmentByCategory():**
-- Filter operation: O(n) where n = equipment count
-- Expected n: 100-500
+**getItemsByCategory():**
+- Iterate map entries: O(n) where n = unique item types
+- Lookup Equipment from registry: O(1) per item
+- Filter by category: O(n)
+- Expected n: 50-100 unique items
 - Performance: < 1ms (acceptable)
 
 **sortItems():**
+- Convert map to array: O(n)
 - Sort operation: O(n log n)
-- Expected n: 100-500
-- Performance: < 5ms (acceptable)
+- Expected n: 50-100 unique items
+- Performance: < 1ms (very fast)
 
-**Optimization (if needed):**
-- Cache filtered results
-- Invalidate cache on add/remove
-- Only re-filter on category/sort change
+**hasItem():**
+- Map lookup: O(1)
+- Performance: < 0.01ms (instant)
+
+**Optimization (not needed):**
+- Map operations already optimal
+- No caching required for this scale
 
 ### Serialization Performance
 
 **toJSON():**
-- Convert equipment array to ID array: O(n)
-- Convert consumables map to object: O(m)
-- Expected time: < 1ms
-- **Acceptable** for save operation (infrequent)
+- Convert map to object: O(n) where n = unique items
+- Expected time: < 0.1ms
+- **Negligible** for save operation (infrequent)
 
 **fromJSON():**
-- Look up equipment by ID: O(n * k) where k = registry lookup time
-- Expected time: < 10ms (registry lookups are O(1))
-- **Acceptable** for load operation (infrequent)
+- Look up equipment by ID: O(n) where n = unique items
+- Registry lookups are O(1)
+- Expected time: < 1ms
+- **Negligible** for load operation (infrequent)
+
+**JSON Size:**
+- ~50-100 unique items × ~30 bytes/entry = ~1.5-3 KB
+- Very small compared to total save file
 
 ## Future Extensions
 
@@ -1374,9 +1496,10 @@ export const InventoryConstants = {
 
 ## Dependencies
 
-- **Requires**: Equipment system (`Equipment` class, registry)
-- **Integrates With**: Combat victory screen
-- **Future Dependencies**: Save/load system, inventory UI
+- **Requires**: Equipment system (`Equipment` class, `Equipment.registry`)
+- **Requires**: Equipment type definitions (`EquipmentType` enum)
+- **Integrates With**: Combat victory screen (`VictoryPhaseHandler`)
+- **Future Dependencies**: Save/load system, inventory UI, party management
 
 ## Compatibility
 
@@ -1393,17 +1516,18 @@ export const InventoryConstants = {
 This feature is complete when:
 
 1. ✅ `PartyInventory` class implemented with singleton pattern
-2. ✅ Can add equipment, consumables, quest items, and gold
-3. ✅ Can remove equipment, consumables, and gold (quest items blocked)
-4. ✅ Can query item counts and check existence
-5. ✅ Can filter items by category
-6. ✅ Can sort items by various modes
-7. ✅ Serialization works (toJSON / fromJSON)
-8. ✅ Combat victory screen adds looted items to inventory
-9. ✅ Combat victory screen adds gold to inventory
-10. ✅ All unit tests pass
-11. ✅ Integration tests with combat system pass
-12. ✅ Save/load preserves inventory state
+2. ✅ Can add items (by equipment ID) with quantity stacking
+3. ✅ Can remove items with quantity decrement (quest items blocked)
+4. ✅ Can add/remove gold
+5. ✅ Can query item counts and check existence
+6. ✅ Can filter items by category (derived from `Equipment.type`)
+7. ✅ Can sort items by various modes (name, type, recently added)
+8. ✅ Serialization works (toJSON / fromJSON)
+9. ✅ Combat victory screen adds looted items to inventory (stacked by ID)
+10. ✅ Combat victory screen adds gold to inventory
+11. ✅ All unit tests pass (stacking, quest items, serialization)
+12. ✅ Integration tests with combat system pass
+13. ✅ Save/load preserves inventory state (items map + gold)
 
 ---
 
@@ -1411,9 +1535,10 @@ This feature is complete when:
 
 - This is a **data layer only** - no UI implementation
 - Designed for **single-party system** (singleton pattern)
-- **Consumables stack** for convenience
-- **Equipment stored as instances** for future enhancements (durability, etc.)
-- **Quest items protected** from removal
-- **Capacity system optional** (disabled by default)
+- **All items stack by equipment ID** for simplicity
+- **Uses existing Equipment class** - no separate consumable/item type
+- **Quest items protected** via `typeTags` check (tag: "quest-item")
+- **Capacity system optional** (disabled by default, future enhancement)
 - **Event system optional** (enables UI reactivity if needed)
 - **Future-proof** for crafting, shops, trading, rarity systems
+- **Lightweight storage** - only stores IDs + quantities, not Equipment instances
