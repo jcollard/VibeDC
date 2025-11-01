@@ -440,92 +440,40 @@ export class EquipmentComparisonContent implements PanelContent {
 
   /**
    * Get all non-default properties from equipment with differences
+   * Shows ALL stats that are non-zero in EITHER the current item OR the comparison item
    */
   private getNonDefaultProperties(equipment: Equipment): Array<{ statName: string; comparisonValue: number; difference: number }> {
     const stats: Array<{ statName: string; comparisonValue: number; difference: number }> = [];
     const mods = equipment.modifiers;
 
+    // Helper function to add a stat if it's non-zero in either current or comparison item
+    const addStatIfRelevant = (
+      statName: string,
+      comparisonValue: number
+    ) => {
+      const currentValue = this.getPropertyValue(this.currentItem, statName);
+
+      // Add stat if either current or comparison has a non-zero value
+      if (currentValue !== 0 || comparisonValue !== 0) {
+        stats.push({
+          statName,
+          comparisonValue,
+          difference: comparisonValue - currentValue
+        });
+      }
+    };
+
     // Check each possible stat modifier
-    if (mods.physicalPowerModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'P.Pow');
-      stats.push({
-        statName: 'P.Pow',
-        comparisonValue: mods.physicalPowerModifier,
-        difference: mods.physicalPowerModifier - currentValue
-      });
-    }
-    if (mods.magicPowerModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'M.Pow');
-      stats.push({
-        statName: 'M.Pow',
-        comparisonValue: mods.magicPowerModifier,
-        difference: mods.magicPowerModifier - currentValue
-      });
-    }
-    if (mods.physicalEvadeModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'P.Evd');
-      stats.push({
-        statName: 'P.Evd',
-        comparisonValue: mods.physicalEvadeModifier,
-        difference: mods.physicalEvadeModifier - currentValue
-      });
-    }
-    if (mods.magicEvadeModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'M.Evd');
-      stats.push({
-        statName: 'M.Evd',
-        comparisonValue: mods.magicEvadeModifier,
-        difference: mods.magicEvadeModifier - currentValue
-      });
-    }
-    if (mods.healthModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'HP');
-      stats.push({
-        statName: 'HP',
-        comparisonValue: mods.healthModifier,
-        difference: mods.healthModifier - currentValue
-      });
-    }
-    if (mods.manaModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'MP');
-      stats.push({
-        statName: 'MP',
-        comparisonValue: mods.manaModifier,
-        difference: mods.manaModifier - currentValue
-      });
-    }
-    if (mods.speedModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'Speed');
-      stats.push({
-        statName: 'Speed',
-        comparisonValue: mods.speedModifier,
-        difference: mods.speedModifier - currentValue
-      });
-    }
-    if (mods.movementModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'Move');
-      stats.push({
-        statName: 'Move',
-        comparisonValue: mods.movementModifier,
-        difference: mods.movementModifier - currentValue
-      });
-    }
-    if (mods.courageModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'Courage');
-      stats.push({
-        statName: 'Courage',
-        comparisonValue: mods.courageModifier,
-        difference: mods.courageModifier - currentValue
-      });
-    }
-    if (mods.attunementModifier !== 0) {
-      const currentValue = this.getPropertyValue(this.currentItem, 'Attunement');
-      stats.push({
-        statName: 'Attunement',
-        comparisonValue: mods.attunementModifier,
-        difference: mods.attunementModifier - currentValue
-      });
-    }
+    addStatIfRelevant('P.Pow', mods.physicalPowerModifier);
+    addStatIfRelevant('M.Pow', mods.magicPowerModifier);
+    addStatIfRelevant('P.Evd', mods.physicalEvadeModifier);
+    addStatIfRelevant('M.Evd', mods.magicEvadeModifier);
+    addStatIfRelevant('HP', mods.healthModifier);
+    addStatIfRelevant('MP', mods.manaModifier);
+    addStatIfRelevant('Speed', mods.speedModifier);
+    addStatIfRelevant('Move', mods.movementModifier);
+    addStatIfRelevant('Courage', mods.courageModifier);
+    addStatIfRelevant('Attunement', mods.attunementModifier);
 
     return stats;
   }
