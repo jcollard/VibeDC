@@ -97,9 +97,40 @@ export class EquipmentComparisonContent implements PanelContent {
       y += lineSpacing + 2; // Extra spacing after title
     }
 
-    // Render Cancel and Remove Item options (below title, above helper text)
+    // Render Remove Item and Cancel options (below title, above helper text)
     const normalColor = '#ffffff';
     const hoverColor = '#ffff00'; // Yellow for hover
+
+    // Render "Remove Item" option first if currentItem exists
+    if (this.currentItem) {
+      const removeText = 'Remove Item';
+      const removeColor = this.hoveredOption === 'remove' ? hoverColor : normalColor;
+      const removeX = region.x + padding;
+      FontAtlasRenderer.renderText(
+        ctx,
+        removeText,
+        removeX,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        removeColor
+      );
+
+      // Store remove bounds for hit detection (panel-relative)
+      const removeWidth = FontAtlasRenderer.measureText(removeText, font);
+      this.removeBounds = {
+        x: padding,
+        y: y - region.y,
+        width: removeWidth,
+        height: lineSpacing
+      };
+
+      y += lineSpacing; // Move to next line for Cancel
+    } else {
+      this.removeBounds = null;
+    }
 
     // Render "Cancel" option
     const cancelText = 'Cancel';
@@ -126,102 +157,90 @@ export class EquipmentComparisonContent implements PanelContent {
       height: lineSpacing
     };
 
-    // Render "Remove Item" option if currentItem exists
-    if (this.currentItem) {
-      const removeText = 'Remove Item';
-      const removeColor = this.hoveredOption === 'remove' ? hoverColor : normalColor;
+    y += lineSpacing; // Move past Cancel
 
-      // Position to the right of Cancel with some spacing
-      const removeX = cancelX + cancelWidth + 8;
-      FontAtlasRenderer.renderText(
-        ctx,
-        removeText,
-        removeX,
-        y,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        removeColor
-      );
-
-      // Store remove bounds for hit detection (panel-relative)
-      const removeWidth = FontAtlasRenderer.measureText(removeText, font);
-      this.removeBounds = {
-        x: padding + cancelWidth + 8,
-        y: y - region.y,
-        width: removeWidth,
-        height: lineSpacing
-      };
-    } else {
-      this.removeBounds = null;
-    }
-
-    y += lineSpacing + 2; // Extra spacing after options
-
-    // Render helper text based on hover state or default
-    const helperColor = '#888888'; // Grey for helper text
-    let helperText = 'Select an item to equip.';
-
-    if (this.hoveredOption === 'cancel') {
-      helperText = 'Clear equipment selection';
-    } else if (this.hoveredOption === 'remove') {
-      helperText = 'Remove item and add to inventory';
-    }
-
-    // Helper text might be too wide, wrap if necessary
-    const helperWidth = FontAtlasRenderer.measureText(helperText, font);
-    const helperAvailableWidth = region.width - (padding * 2);
-
-    if (helperWidth <= helperAvailableWidth) {
-      // Fits on one line
-      FontAtlasRenderer.renderText(
-        ctx,
-        helperText,
-        region.x + padding,
-        y,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        helperColor
-      );
-    } else {
-      // Need to wrap - split into lines
-      if (this.hoveredOption === 'remove') {
-        // "Remove item and add to inventory" -> "Remove item and" / "add to inventory"
-        const line1 = 'Remove item and';
-        const line2 = 'add to inventory';
-
-        FontAtlasRenderer.renderText(ctx, line1, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
-        y += lineSpacing;
-        FontAtlasRenderer.renderText(ctx, line2, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
-      } else if (this.hoveredOption === 'cancel') {
-        // "Clear equipment selection" -> "Clear equipment" / "selection"
-        const line1 = 'Clear equipment';
-        const line2 = 'selection';
-
-        FontAtlasRenderer.renderText(ctx, line1, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
-        y += lineSpacing;
-        FontAtlasRenderer.renderText(ctx, line2, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
-      } else {
-        // "Select an item to equip." -> "Select an item" / "to equip."
-        const line1 = 'Select an item';
-        const line2 = 'to equip.';
-
-        FontAtlasRenderer.renderText(ctx, line1, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
-        y += lineSpacing;
-        FontAtlasRenderer.renderText(ctx, line2, region.x + padding, y, fontId, fontAtlasImage, 1, 'left', helperColor);
-      }
-    }
-
-    // If no comparison item, don't render stats
+    // Only show helper text if no comparison item
     if (!this.comparisonItem) {
+      y += 12; // 12px spacing before helper text
+
+      // Render helper text based on hover state or default
+      const helperColor = '#888888'; // Grey for helper text
+      let helperText = 'Select an item to equip.';
+
+      if (this.hoveredOption === 'cancel') {
+        helperText = 'Clear equipment selection';
+      } else if (this.hoveredOption === 'remove') {
+        helperText = 'Remove item and add to inventory';
+      }
+
+      // Helper text might be too wide, wrap if necessary
+      const helperWidth = FontAtlasRenderer.measureText(helperText, font);
+      const helperAvailableWidth = region.width - (padding * 2);
+
+      if (helperWidth <= helperAvailableWidth) {
+        // Fits on one line - center it
+        const helperX = region.x + Math.floor((region.width - helperWidth) / 2);
+        FontAtlasRenderer.renderText(
+          ctx,
+          helperText,
+          helperX,
+          y,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          helperColor
+        );
+      } else {
+        // Need to wrap - split into lines and center each
+        if (this.hoveredOption === 'remove') {
+          // "Remove item and add to inventory" -> "Remove item and" / "add to inventory"
+          const line1 = 'Remove item and';
+          const line2 = 'add to inventory';
+
+          const line1Width = FontAtlasRenderer.measureText(line1, font);
+          const line1X = region.x + Math.floor((region.width - line1Width) / 2);
+          FontAtlasRenderer.renderText(ctx, line1, line1X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+          y += lineSpacing;
+
+          const line2Width = FontAtlasRenderer.measureText(line2, font);
+          const line2X = region.x + Math.floor((region.width - line2Width) / 2);
+          FontAtlasRenderer.renderText(ctx, line2, line2X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+        } else if (this.hoveredOption === 'cancel') {
+          // "Clear equipment selection" -> "Clear equipment" / "selection"
+          const line1 = 'Clear equipment';
+          const line2 = 'selection';
+
+          const line1Width = FontAtlasRenderer.measureText(line1, font);
+          const line1X = region.x + Math.floor((region.width - line1Width) / 2);
+          FontAtlasRenderer.renderText(ctx, line1, line1X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+          y += lineSpacing;
+
+          const line2Width = FontAtlasRenderer.measureText(line2, font);
+          const line2X = region.x + Math.floor((region.width - line2Width) / 2);
+          FontAtlasRenderer.renderText(ctx, line2, line2X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+        } else {
+          // "Select an item to equip." -> "Select an item" / "to equip."
+          const line1 = 'Select an item';
+          const line2 = 'to equip.';
+
+          const line1Width = FontAtlasRenderer.measureText(line1, font);
+          const line1X = region.x + Math.floor((region.width - line1Width) / 2);
+          FontAtlasRenderer.renderText(ctx, line1, line1X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+          y += lineSpacing;
+
+          const line2Width = FontAtlasRenderer.measureText(line2, font);
+          const line2X = region.x + Math.floor((region.width - line2Width) / 2);
+          FontAtlasRenderer.renderText(ctx, line2, line2X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
+        }
+      }
+
+      // If no comparison item, don't render stats
       ctx.restore();
       return;
     }
 
-    y += lineSpacing + 2; // Extra spacing before stats
+    y += 2; // Small spacing before stats
 
     // Get non-default properties from comparison item
     const comparisonStats = this.getNonDefaultProperties(this.comparisonItem);
