@@ -388,6 +388,7 @@ export interface SaveSlotInfo {
 import { SpriteAssetLoader } from '../utils/SpriteAssetLoader';
 import { FontAtlasLoader } from '../utils/FontAtlasLoader';
 import { FontRegistry } from '../utils/FontRegistry';
+import { AreaMapRegistry } from '../utils/AreaMapRegistry';
 import type { ExplorationState } from '../models/game/GameState';
 import type { CombatState } from '../models/combat/CombatState';
 
@@ -444,19 +445,82 @@ export class ResourceManager {
 
   /**
    * Load sprites for a specific view
-   * Caches sprites to avoid redundant loading
+   * ✅ GUIDELINE: Cache check to avoid redundant loading (Improvement 2)
+   * Only loads sprites that aren't already cached
    */
   async loadSpritesForView(
     view: 'exploration' | 'combat',
     state: ExplorationState | CombatState
   ): Promise<Map<string, HTMLImageElement>> {
-    // Implementation will delegate to SpriteAssetLoader
-    // Cache results in this.spriteSheets
-    // Return cached sprites if already loaded
+    // Determine required sprites based on view and state
+    const requiredSprites = this.getRequiredSpritesForView(view, state);
 
-    // TODO: Implement sprite loading logic
-    // For now, return existing sprite sheets
-    return this.spriteSheets;
+    // ✅ GUIDELINE: Check cache before loading
+    const missing = requiredSprites.filter(id => !this.spriteSheets.has(id));
+
+    if (missing.length === 0) {
+      console.log(`[ResourceManager] All sprites for ${view} already loaded`);
+      return this.spriteSheets;
+    }
+
+    this.isLoading = true;
+    console.log(`[ResourceManager] Loading ${missing.length} sprites for ${view}...`);
+
+    try {
+      // Load only missing sprites (avoid redundant network requests)
+      await this.spriteLoader.loadSprites(missing);
+
+      // Cache newly loaded sprites
+      missing.forEach(id => {
+        const sprite = this.spriteLoader.get(id);
+        if (sprite) {
+          this.spriteSheets.set(id, sprite);
+        }
+      });
+
+      console.log(`[ResourceManager] Loaded ${missing.length} sprites for ${view}`);
+      return this.spriteSheets;
+    } finally {
+      this.isLoading = false;
+    }
+  }
+
+  /**
+   * Determine which sprites are needed for a given view
+   * Private helper for loadSpritesForView
+   */
+  private getRequiredSpritesForView(
+    view: 'exploration' | 'combat',
+    state: ExplorationState | CombatState
+  ): string[] {
+    if (view === 'exploration') {
+      const explorationState = state as ExplorationState;
+      const map = AreaMapRegistry.getById(explorationState.currentMapId);
+
+      // Return sprite IDs needed for this map
+      // Example: tileset sprites, NPC sprites, object sprites
+      return [
+        'tileset-dungeon',
+        'characters',
+        'objects',
+        // ... map-specific sprites
+      ];
+    } else {
+      const combatState = state as CombatState;
+
+      // Return sprite IDs needed for combat
+      // Example: unit sprites, ability effects, UI elements
+      const unitSpriteIds = combatState.unitManifest
+        .getAllUnits()
+        .map(p => p.unit.spriteId);
+
+      return [
+        ...unitSpriteIds,
+        'particles',
+        'ui-combat',
+        // ... combat-specific sprites
+      ];
+    }
   }
 
   /**
@@ -666,6 +730,64 @@ function createNewGameState(initialMapId: string): CompleteGameState {
 
 ---
 
+#### Task 1.3.1: Phase Handler Lifecycle Management
+
+**Important Note:** Phase handlers are recreated when view changes.
+
+**Guideline Reference:** GeneralGuidelines.md lines 456-551 ("Phase Handler Animation State Management")
+
+**Key Concept:**
+
+Phase handlers contain animation state (progress, timers, flags). When transitioning between views (exploration → combat → exploration), the phase handlers are **recreated**, which automatically resets animation state. This prevents animation state from persisting incorrectly across view transitions.
+
+**Example:**
+
+```typescript
+// In GameView.tsx (already implemented in Task 1.3)
+const currentPhaseHandler = useRef<PhaseHandlerType | null>(null);
+
+useEffect(() => {
+  // Recreate handler when view changes - fresh instance = fresh state
+  if (gameState.currentView === 'exploration' && gameState.explorationState) {
+    // FirstPersonView manages its own phase handlers internally
+    // Each view transition creates a new handler instance
+    currentPhaseHandler.current = null;
+  } else if (gameState.currentView === 'combat' && gameState.combatState) {
+    // CombatView manages its own phase handlers internally
+    // Each view transition creates a new handler instance
+    currentPhaseHandler.current = null;
+  }
+
+  // Note: This pattern ensures animation state resets on view transitions
+  // Instance variables in handlers only exist during current view
+}, [gameState.currentView]);
+```
+
+**Why This Matters:**
+
+- ✅ **Automatic Reset:** Animation state doesn't leak between views
+- ✅ **Clean Transitions:** Each view starts with fresh handler state
+- ✅ **No Manual Cleanup:** View unmounting handles cleanup automatically
+- ✅ **Predictable Behavior:** No unexpected animation states from previous views
+
+**Example Scenario:**
+
+```typescript
+// Scenario: User in exploration, combat starts, combat ends
+// 1. Exploration phase handler created → user explores
+// 2. Combat starts → exploration handler destroyed, combat handler created
+// 3. Combat ends → combat handler destroyed, new exploration handler created
+// Result: Fresh exploration handler with no leftover combat animation state
+```
+
+**Testing Considerations:**
+
+- Verify animation state resets when entering combat from exploration
+- Verify animation state resets when returning to exploration from combat
+- Check that no animation timers/flags persist across view transitions
+
+---
+
 #### Task 1.4: Update FirstPersonView Props
 
 **File:** `react-app/src/components/firstperson/FirstPersonView.tsx` (MODIFY)
@@ -829,15 +951,61 @@ export interface TransitionOptions {
 }
 
 /**
+ * View state data for preservation across transitions
+ */
+export interface ViewState {
+  scrollY?: number;
+  expandedItems?: string[];
+}
+
+/**
  * ViewTransitionManager - Handles smooth transitions between game views
  */
 export class ViewTransitionManager {
   private transitionState: TransitionState;
   private onTransitionComplete?: () => void;
 
+  // ===== State Preservation Pattern =====
+
+  /**
+   * ✅ GUIDELINE: WeakMap for temporary per-view data
+   * (see GeneralGuidelines.md lines 552-695)
+   *
+   * Stores scroll positions, cached layouts, etc. for each view instance
+   * Allows garbage collection when views are destroyed
+   */
+  private viewScrollPositions: WeakMap<object, number> = new WeakMap();
+  private viewExpandedStates: WeakMap<object, Set<string>> = new WeakMap();
+
   constructor() {
     this.transitionState = { type: 'none' };
   }
+
+  /**
+   * Save view state before transitioning away
+   * Call this in view's cleanup/unmount
+   */
+  saveViewState(viewInstance: object, state: ViewState): void {
+    if (state.scrollY !== undefined) {
+      this.viewScrollPositions.set(viewInstance, state.scrollY);
+    }
+    if (state.expandedItems) {
+      this.viewExpandedStates.set(viewInstance, new Set(state.expandedItems));
+    }
+  }
+
+  /**
+   * Restore view state when transitioning back
+   * Call this in view's initialization/mount
+   */
+  restoreViewState(viewInstance: object): ViewState {
+    return {
+      scrollY: this.viewScrollPositions.get(viewInstance) ?? 0,
+      expandedItems: Array.from(this.viewExpandedStates.get(viewInstance) ?? []),
+    };
+  }
+
+  // ===== END State Preservation =====
 
   /**
    * Start a transition to a new view
@@ -996,6 +1164,57 @@ export const GameView: React.FC<GameViewProps> = ({ ... }) => {
 - ✅ Immutable state updates (spread operator)
 - ✅ Minimal useCallback dependencies
 - ✅ Cache transition manager in useMemo
+
+#### Task 2.2.1: Mouse Event Handling Performance
+
+**Important Note:** Mouse events must not call `renderFrame()` directly.
+
+**Guideline Reference:** GeneralGuidelines.md lines 1413-1436 ("Mouse Event Performance")
+
+**Key Concept:**
+
+Mouse move events fire **100+ times per second**. Calling `renderFrame()` synchronously from mouse handlers blocks the animation loop and causes FPS spikes and stuttering.
+
+**Correct Pattern:**
+
+```typescript
+// ✅ CORRECT: Mouse events forward to active view
+const handleMouseMove = useCallback((e: MouseEvent) => {
+  // Views handle their own hover state internally
+  // DON'T: renderFrame(); // ❌ Would cause FPS spikes (100+ calls/sec)!
+
+  // Views will call renderFrame() from their own animation loops
+  // This keeps mouse handling fast and non-blocking
+}, []);
+
+const handleMouseClick = useCallback((e: MouseEvent) => {
+  // Clicks are discrete events (low frequency)
+  // Can trigger immediate render if needed for visual feedback
+  // But views typically handle this internally
+}, []);
+```
+
+**Why This Matters:**
+
+- ✅ **Prevents FPS Drops:** Animation loop stays smooth at 60fps
+- ✅ **Non-Blocking:** Mouse events process quickly without blocking
+- ✅ **Predictable Performance:** No random stutters during mouse movement
+
+**Anti-Pattern (DO NOT DO THIS):**
+
+```typescript
+// ❌ WRONG: Calling renderFrame() in mousemove
+const handleMouseMove = useCallback((e: MouseEvent) => {
+  updateHoverState(e); // OK
+  renderFrame(); // ❌ BAD! Called 100+ times/sec, blocks animation
+}, []);
+```
+
+**Testing Considerations:**
+
+- Move mouse rapidly over game area → verify no FPS drops
+- Check Performance tab → verify no scripting spikes during mouse movement
+- Animation loop should maintain 60fps even during rapid mouse movement
 
 ---
 
@@ -1353,14 +1572,39 @@ export const GameView: React.FC<GameViewProps> = ({
 
 ### Phase 3 Testing Checklist
 
+**Basic Functionality:**
 - [ ] Can save game to localStorage (slot 0)
 - [ ] Can load game from localStorage (slot 0)
 - [ ] Loaded state matches saved state
 - [ ] F5 quick save works
 - [ ] Can export save to file
 - [ ] Can import save from file
+
+**Data Structure Edge Cases:**
 - [ ] Save/load handles Maps and Sets correctly
+- [ ] Save/load with empty Sets/Maps (edge case)
+- [ ] Save/load with large Sets (1000+ items - stress test)
+- [ ] Save/load preserves party member order
+- [ ] Save/load with empty party (edge case)
+- [ ] Save/load with empty messageLog (edge case)
+
+**Error Handling:**
 - [ ] Corrupted save shows error and falls back to new game
+- [ ] Missing save file returns null gracefully
+- [ ] Version mismatch shows clear error message ("Save version 2.0 not supported")
+- [ ] Missing required fields show clear error message ("Invalid save: missing partyState")
+- [ ] Invalid JSON shows clear error message
+- [ ] Partial save data (cut off mid-file) handled gracefully
+
+**Cross-Browser Compatibility:**
+- [ ] localStorage size limits respected (typically 5-10MB)
+- [ ] Works in Chrome, Firefox, Edge, Safari
+- [ ] Handles localStorage quota exceeded gracefully
+
+**Performance:**
+- [ ] Save completes in <200ms (for typical save ~50KB)
+- [ ] Load completes in <200ms
+- [ ] No UI freeze during save/load
 
 ### Phase 3 Validation
 
@@ -1496,19 +1740,33 @@ const handleCombatEnd = useCallback((victory: boolean) => {
   setGameState(prev => {
     if (!prev.combatState) return prev;
 
-    // Copy HP/status from combat units back to party members
+    // ✅ GUIDELINE: Preserve class instances when updating
     const updatedMembers = prev.partyState.members.map(member => {
       const combatUnit = prev.combatState?.unitManifest.getUnitById(member.id);
-      if (combatUnit) {
-        // Create new unit with updated HP/status
-        return {
-          ...member,
-          currentHP: combatUnit.currentHP,
-          statusEffects: combatUnit.statusEffects,
-          // TODO: Copy other changed properties
-        };
+      if (!combatUnit) return member;
+
+      // Preserve HumanoidUnit class methods
+      if (member instanceof HumanoidUnit) {
+        // Option 1: If HumanoidUnit has a clone() method
+        const updated = member.clone();
+        updated.currentHP = combatUnit.currentHP;
+        updated.statusEffects = combatUnit.statusEffects;
+        return updated;
+
+        // Option 2: If no clone() method, create new instance
+        // const updated = HumanoidUnit.fromJSON(member.toJSON());
+        // updated.currentHP = combatUnit.currentHP;
+        // updated.statusEffects = combatUnit.statusEffects;
+        // return updated;
       }
-      return member;
+
+      // Fallback: If member is plain object (shouldn't happen)
+      console.warn('[GameView] Party member is not HumanoidUnit instance:', member);
+      return {
+        ...member,
+        currentHP: combatUnit.currentHP,
+        statusEffects: combatUnit.statusEffects,
+      };
     });
 
     // ✅ GUIDELINE: Immutable state update
@@ -1535,10 +1793,30 @@ const handleCombatEnd = useCallback((victory: boolean) => {
 - Party state updated with post-combat HP/status
 - Knocked out units remain knocked out
 - Equipment changes persist
+- **CRITICAL:** Preserves class instances using `clone()` pattern
+  - Spread operator (`{ ...member }`) creates plain objects, losing methods
+  - Must use `clone()` or `fromJSON()` to preserve `HumanoidUnit` methods
 
 **Guidelines Compliance:**
 - ✅ Immutable state update (spread operator)
 - ✅ No mutations of existing state
+- ✅ Preserve class instances when updating (clone pattern)
+
+**Note:** If `HumanoidUnit` doesn't have a `clone()` method yet, add it:
+
+```typescript
+// In HumanoidUnit.ts
+export class HumanoidUnit extends CombatUnit {
+  /**
+   * Create a deep copy of this unit
+   * Preserves class methods and state
+   */
+  clone(): HumanoidUnit {
+    const json = this.toJSON();
+    return HumanoidUnit.fromJSON(json);
+  }
+}
+```
 
 ---
 
@@ -1769,8 +2047,10 @@ export const GameView: React.FC<GameViewProps> = ({ ... }) => {
   // ... existing code ...
 
   // ✅ GUIDELINE: Developer tools (dev mode only)
+  // Only recreate when setGameState changes (once per component mount)
   useEffect(() => {
     if (process.env.NODE_ENV === 'development') {
+      // Closure captures current gameState via getter
       (window as any).getGameState = () => {
         console.log('[GameView] Current state:', gameState);
         return gameState;
@@ -1782,10 +2062,31 @@ export const GameView: React.FC<GameViewProps> = ({ ... }) => {
       };
 
       console.log('[GameView] Developer tools available:');
-      console.log('  - window.getGameState()');
-      console.log('  - window.setGameState(newState)');
+      console.log('  - window.getGameState() - Get current state snapshot');
+      console.log('  - window.setGameState(newState) - Override state');
+      console.log('  - Example: window.setGameState({ ...window.getGameState(), currentView: "combat" })');
     }
-  }, [gameState]);
+
+    // Cleanup on unmount
+    return () => {
+      if (process.env.NODE_ENV === 'development') {
+        delete (window as any).getGameState;
+        delete (window as any).setGameState;
+        console.log('[GameView] Developer tools removed');
+      }
+    };
+  }, [setGameState]); // ✅ Only recreate if setGameState changes (never in practice)
+
+  // Alternative approach using ref (avoid recreating functions):
+  // const gameStateRef = useRef(gameState);
+  // gameStateRef.current = gameState;
+  //
+  // useEffect(() => {
+  //   if (process.env.NODE_ENV === 'development') {
+  //     (window as any).getGameState = () => gameStateRef.current;
+  //     // ... no need for [gameState] dependency
+  //   }
+  // }, []); // ✅ Create only once
 
   // ... rest of component ...
 };
@@ -1794,10 +2095,15 @@ export const GameView: React.FC<GameViewProps> = ({ ... }) => {
 **Rationale:**
 - Expose state inspection tools in dev mode
 - Allows debugging and manual state manipulation
+- **Fixed:** Avoid recreating functions on every state change (was 60+ times/sec during animations)
+- **Added:** Cleanup to prevent memory leaks on unmount
+- **Added:** Clear usage examples for developers
 
 **Guidelines Compliance:**
 - ✅ Only enabled in development
 - ✅ Console logging for developer experience
+- ✅ Minimal useEffect dependencies (avoids unnecessary recreations)
+- ✅ Proper cleanup on unmount
 
 ---
 
@@ -1941,12 +2247,62 @@ describe('GameSaveManager', () => {
 
 ### Performance Tests
 
-**Metrics to validate:**
+**Performance Budget (Concrete Targets):**
 
-- [ ] Save/load completes in <500ms
-- [ ] View transitions are smooth (60fps)
-- [ ] No memory leaks during view switches
-- [ ] Resource loading completes in <2s
+| Operation | Target | Measurement Method |
+|-----------|--------|-------------------|
+| GameView initial render | <100ms | React DevTools Profiler |
+| Save serialization | <200ms | console.time() in saveToSlot() |
+| Load deserialization | <200ms | console.time() in loadFromSlot() |
+| View transition animation | 60fps (16.67ms/frame) | Chrome DevTools Performance tab |
+| Resource loading (fonts) | <1s | FontAtlasLoader console logs |
+| Resource loading (sprites) | <2s | SpriteAssetLoader console logs |
+| Memory overhead (GameView) | <10MB | Chrome DevTools Memory → Heap Snapshot |
+| GC pause during gameplay | <50ms | Performance tab → GC events |
+
+**Testing Checklist:**
+
+- [ ] Save/load completes in <200ms (for typical save ~50KB)
+- [ ] View transitions maintain stable 60fps
+- [ ] No memory leaks during 10+ view switches
+  - Take heap snapshot → switch views 10x → force GC → compare snapshots
+  - Memory delta should be <5MB
+- [ ] Resource loading completes in <2s total
+- [ ] No frame drops during transitions (check Performance tab)
+- [ ] No GC pauses >50ms during gameplay
+
+**Performance Testing Tools:**
+
+1. **Chrome DevTools Performance Tab**
+   - Record 10-second session
+   - Look for FPS drops (red bars)
+   - Check GC pause times (yellow triangles)
+   - Verify scripting time <16ms per frame
+
+2. **Chrome DevTools Memory Tab**
+   - Heap snapshot before view switches
+   - Force garbage collection (trash icon)
+   - Heap snapshot after view switches
+   - Compare snapshots → look for detached DOM nodes
+
+3. **React DevTools Profiler**
+   - Record GameView mount
+   - Check component render times
+   - Verify no unnecessary re-renders
+
+4. **Console Timing**
+   ```typescript
+   console.time('save');
+   GameSaveManager.saveToSlot(state, 0);
+   console.timeEnd('save'); // Should log <200ms
+   ```
+
+**Performance Regression Prevention:**
+
+- Run performance tests before merge
+- Document any slowdowns with rationale
+- Profile after adding new features
+- Monitor memory usage during development
 
 ---
 
