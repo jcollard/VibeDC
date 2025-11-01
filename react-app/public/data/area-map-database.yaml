@@ -1,0 +1,117 @@
+# Area Map Database
+# Defines navigable dungeon/world areas
+
+areas:
+  # Simple test room
+  - id: test-room
+    name: "Test Chamber"
+    description: "A simple test room for development"
+    tilesetId: dungeon-grey-stone
+    grid: |-
+      #####
+      #...#
+      #.D.#
+      #...#
+      #####
+    playerSpawn:
+      x: 2
+      y: 3
+      direction: North
+
+  # Example dungeon room with interactive objects
+  - id: dungeon-room-1
+    name: "Dark Chamber"
+    description: "A small stone chamber with a single door to the north."
+    tilesetId: dungeon-grey-stone
+    grid: |-
+      ##########
+      ####D#####
+      ##........
+      #.........
+      #.........
+      #.........
+      #.........
+      #.........
+      ##........
+      ##########
+    playerSpawn:
+      x: 5
+      y: 7
+      direction: North
+    interactiveObjects:
+      # Treasure chest in corner
+      - id: chest-1
+        type: chest
+        x: 2
+        y: 2
+        state: closed
+        spriteId: biomes-76
+        data:
+          gold: 50
+          items:
+            - health-potion
+            - rusty-sword
+    encounterZones:
+      - id: goblin-ambush
+        x: 5
+        y: 3
+        encounterId: goblin-patrol
+        triggerType: enter
+        oneTime: true
+
+  # Larger test corridor
+  - id: dungeon-corridor-1
+    name: "Twisting Corridor"
+    description: "A long stone corridor with rooms branching off."
+    tilesetId: dungeon-grey-stone
+    grid: |-
+      #####################
+      #...................#
+      #.###D###...###D####
+      #.#.....#...#......#
+      #.#.....#...#......#
+      #.#.....#...########
+      #.###D###..........#
+      #..................#
+      #.###D###...###D####
+      #.#.....#...#.....##
+      #.#.....#...#.....##
+      #.#######...########
+      #..................#
+      #####################
+    playerSpawn:
+      x: 2
+      y: 1
+      direction: East
+
+  # Brown brick test
+  - id: dungeon-brown-room
+    name: "Brown Brick Chamber"
+    description: "A warm brown brick room"
+    tilesetId: dungeon-brown-brick
+    grid: |-
+      #######
+      #.....#
+      #..D..#
+      #.....#
+      #######
+    playerSpawn:
+      x: 3
+      y: 3
+      direction: North
+
+  # Cave test
+  - id: cave-entrance
+    name: "Cave Entrance"
+    description: "A natural cave entrance"
+    tilesetId: dungeon-cave
+    grid: |-
+      ########
+      #......#
+      #..D...#
+      #......#
+      ########
+    playerSpawn:
+      x: 3
+      y: 3
+      direction: North

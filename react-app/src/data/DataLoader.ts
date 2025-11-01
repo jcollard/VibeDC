@@ -18,6 +18,7 @@ import { FontRegistry } from '../utils/FontRegistry';
 import { loadFontFromYAML } from '../utils/FontLoader';
 import { EquipmentTagRegistry } from '../utils/EquipmentTagRegistry';
 import type { EquipmentTagDefinitionJSON } from '../utils/EquipmentTagRegistry';
+import { AreaMapDataLoader } from '../services/AreaMapDataLoader';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
@@ -298,6 +299,7 @@ export async function loadAllGameData(): Promise<void> {
   // - Equipment must be loaded before party members (they reference equipment)
   // - Enemies and party members should be loaded after classes (they reference unit classes)
   // - Tilesets must be loaded before encounters (encounters reference tilesets)
+  // - Area map tilesets must be loaded before area maps
   loadSprites();
   await loadFonts();
   loadEquipmentTags();
@@ -308,6 +310,14 @@ export async function loadAllGameData(): Promise<void> {
   loadPartyMembers();
   loadTilesets();
   loadEncounters();
+
+  // Load area map data (tilesets and maps for first-person navigation)
+  // Note: This may fail in test environments where fetch is not available
+  try {
+    await AreaMapDataLoader.loadAll();
+  } catch (error) {
+    console.warn('[DataLoader] Failed to load area map data (may be in test environment):', error);
+  }
 
   console.log('Game data loaded successfully');
   console.log(`Total: ${SpriteRegistry.count} sprites, ${FontRegistry.count} fonts, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${TilesetRegistry.count} tilesets, ${CombatEncounter.getAll().length} encounters`);
