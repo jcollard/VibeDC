@@ -3,6 +3,7 @@ import type { InteractiveObject, ObjectState } from './InteractiveObject';
 import { InteractiveObjectType as InteractiveObjectTypeConst, ObjectState as ObjectStateConst } from './InteractiveObject';
 import type { SpawnPoint } from './SpawnPoint';
 import type { EncounterZone } from './EncounterZone';
+import type { EventArea } from './EventArea';
 import { TileBehavior } from './TileBehavior';
 import type { AreaMapTileDefinition } from './AreaMapTileDefinition';
 
@@ -26,6 +27,7 @@ export class AreaMap {
   readonly playerSpawn: SpawnPoint;
   readonly npcSpawns: SpawnPoint[];
   readonly encounterZones?: EncounterZone[];
+  readonly eventAreas?: EventArea[];
 
   constructor(
     id: string,
@@ -38,7 +40,8 @@ export class AreaMap {
     playerSpawn: SpawnPoint,
     interactiveObjects?: InteractiveObject[],
     npcSpawns?: SpawnPoint[],
-    encounterZones?: EncounterZone[]
+    encounterZones?: EncounterZone[],
+    eventAreas?: EventArea[]
   ) {
     this.id = id;
     this.name = name;
@@ -50,6 +53,7 @@ export class AreaMap {
     this.playerSpawn = playerSpawn;
     this.npcSpawns = npcSpawns ?? [];
     this.encounterZones = encounterZones;
+    this.eventAreas = eventAreas;
 
     // Build interactive objects map
     this.interactiveObjects = new Map();
@@ -170,7 +174,8 @@ export class AreaMap {
       this.playerSpawn,
       updatedObjects,
       this.npcSpawns,
-      this.encounterZones
+      this.encounterZones,
+      this.eventAreas
     );
   }
 
@@ -244,7 +249,8 @@ export class AreaMap {
       this.playerSpawn,
       Array.from(mapWithUpdatedObject.interactiveObjects.values()),
       this.npcSpawns,
-      this.encounterZones
+      this.encounterZones,
+      this.eventAreas
     );
   }
 
@@ -264,6 +270,7 @@ export class AreaMap {
       interactiveObjects: Array.from(this.interactiveObjects.values()),
       npcSpawns: this.npcSpawns,
       encounterZones: this.encounterZones,
+      eventAreas: this.eventAreas,
     };
   }
 
@@ -282,7 +289,8 @@ export class AreaMap {
       json.playerSpawn,
       json.interactiveObjects,
       json.npcSpawns,
-      json.encounterZones
+      json.encounterZones,
+      json.eventAreas
     );
   }
 }
@@ -302,4 +310,5 @@ export interface AreaMapJSON {
   interactiveObjects: InteractiveObject[];
   npcSpawns: SpawnPoint[];
   encounterZones?: EncounterZone[];
+  eventAreas?: EventArea[];
 }
