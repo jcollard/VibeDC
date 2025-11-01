@@ -36,6 +36,9 @@ export const InventoryView: React.FC = () => {
     loadInventoryViewStateFromLocalStorage()
   );
 
+  // Track inventory changes (increment to force re-render when inventory data changes)
+  const [inventoryVersion, setInventoryVersion] = useState(0);
+
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -149,7 +152,7 @@ export const InventoryView: React.FC = () => {
     });
 
     return itemsWithEquipment;
-  }, [viewState.category, viewState.sortMode]);
+  }, [viewState.category, viewState.sortMode, inventoryVersion]);
 
   // Calculate pagination
   const mainPanelBounds = useMemo(() => layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT), [layoutManager]);
@@ -298,6 +301,70 @@ export const InventoryView: React.FC = () => {
     bottomPanelManager,
     combatLogManager,
   ]);
+
+  // Expose developer mode functions to window (for testing)
+  useEffect(() => {
+    // Get all equipment IDs from Equipment registry
+    const getAllEquipmentIds = (): string[] => {
+      const allEquipment = Equipment.getAll();
+      return allEquipment.map(eq => eq.id);
+    };
+
+    (window as any).giveItem = (equipmentId?: string, quantity: number = 1) => {
+      let itemId = equipmentId;
+      if (!itemId) {
+        const allIds = getAllEquipmentIds();
+        if (allIds.length === 0) {
+          console.warn('[DEV] No equipment found in registry');
+          return;
+        }
+        itemId = allIds[Math.floor(Math.random() * allIds.length)];
+      }
+      const equipment = Equipment.getById(itemId);
+      if (!equipment) {
+        console.error(`[DEV] Equipment not found: ${itemId}`);
+        return;
+      }
+      const success = PartyInventory.addItem(itemId, quantity);
+      if (success) {
+        console.log(`[DEV] Added ${quantity}x ${equipment.name} (${itemId}) to inventory`);
+        combatLogManager.addMessage(`Added ${quantity}x ${equipment.name}`);
+        setInventoryVersion(v => v + 1);
+      } else {
+        console.error(`[DEV] Failed to add ${equipment.name} to inventory`);
+      }
+    };
+
+    (window as any).giveGold = (amount: number = 100) => {
+      PartyInventory.addGold(amount);
+      console.log(`[DEV] Added ${amount} gold to party inventory`);
+      combatLogManager.addMessage(`Added ${amount} gold`);
+      setInventoryVersion(v => v + 1);
+    };
+
+    (window as any).clearInventory = () => {
+      PartyInventory.clear();
+      console.log('[DEV] Cleared party inventory');
+      combatLogManager.addMessage('Inventory cleared');
+      setInventoryVersion(v => v + 1);
+    };
+
+    (window as any).listEquipment = () => {
+      const allEquipment = Equipment.getAll();
+      console.log('[DEV] Available equipment:');
+      allEquipment.forEach(eq => {
+        console.log(`  - ${eq.id}: ${eq.name} (${eq.type})`);
+      });
+      console.log(`Total: ${allEquipment.length} items`);
+    };
+
+    return () => {
+      delete (window as any).giveItem;
+      delete (window as any).giveGold;
+      delete (window as any).clearInventory;
+      delete (window as any).listEquipment;
+    };
+  }, [combatLogManager, setInventoryVersion]);
 
   // Render on state changes
   useEffect(() => {
