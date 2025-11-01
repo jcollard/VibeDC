@@ -149,6 +149,9 @@ export const InventoryView: React.FC = () => {
   // item can be null for empty slots
   const selectedEquipmentRef = useRef<{ type: 'ability' | 'equipment'; item: any | null; slotLabel: string | null } | null>(null);
 
+  // Track equipment slot selection version to trigger re-renders
+  const [equipmentSlotSelectionVersion, setEquipmentSlotSelectionVersion] = useState(0);
+
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -391,7 +394,7 @@ export const InventoryView: React.FC = () => {
     saveInventoryViewStateToLocalStorage(viewState);
   }, [viewState]);
 
-  // Update bottom panel when hovered item changes
+  // Update bottom panel when hovered item changes or equipment slot selection changes
   useEffect(() => {
     // Check if an equipment slot is selected
     const selectedSlot = selectedEquipmentRef.current;
@@ -400,28 +403,32 @@ export const InventoryView: React.FC = () => {
                                     selectedSlot.slotLabel &&
                                     isEquipmentSlot(selectedSlot.slotLabel);
 
-    if (viewState.hoveredItemId) {
-      const hoveredEquipment = Equipment.getById(viewState.hoveredItemId);
-      if (hoveredEquipment) {
-        // If equipment slot is selected and hovered item is compatible, show comparison
-        if (isEquipmentSlotSelected && selectedSlot.slotLabel) {
-          if (isEquipmentCompatibleWithSlot(hoveredEquipment, selectedSlot.slotLabel)) {
-            // Show comparison panel
-            const currentEquipment = selectedSlot.item; // Can be null for empty slot
-            bottomPanelManager.setContent(new EquipmentComparisonContent(currentEquipment, hoveredEquipment));
-          } else {
-            // Incompatible item - shouldn't happen due to hover filter, but keep regular info as fallback
-            bottomPanelManager.setContent(new EquipmentInfoContent(hoveredEquipment));
-          }
-        } else {
-          // No equipment slot selected - show regular equipment info
-          bottomPanelManager.setContent(new EquipmentInfoContent(hoveredEquipment));
+    // If equipment slot is selected, always show comparison panel
+    if (isEquipmentSlotSelected && selectedSlot.slotLabel) {
+      const currentEquipment = selectedSlot.item; // Can be null for empty slot
+
+      // Get hovered equipment if any
+      let hoveredEquipment: Equipment | null = null;
+      if (viewState.hoveredItemId) {
+        const equipment = Equipment.getById(viewState.hoveredItemId);
+        if (equipment && isEquipmentCompatibleWithSlot(equipment, selectedSlot.slotLabel)) {
+          hoveredEquipment = equipment;
         }
       }
+
+      // Show comparison panel (with "??" if no hovered item)
+      bottomPanelManager.setContent(new EquipmentComparisonContent(currentEquipment, hoveredEquipment));
+    } else if (viewState.hoveredItemId) {
+      // No equipment slot selected - show regular equipment info
+      const hoveredEquipment = Equipment.getById(viewState.hoveredItemId);
+      if (hoveredEquipment) {
+        bottomPanelManager.setContent(new EquipmentInfoContent(hoveredEquipment));
+      }
     } else {
+      // No slot selected and no item hovered
       bottomPanelManager.setContent(new EmptyPanelContent());
     }
-  }, [viewState.hoveredItemId, bottomPanelManager]);
+  }, [viewState.hoveredItemId, bottomPanelManager, equipmentSlotSelectionVersion]);
 
   // Update top panel stats when inventory changes (simplified - just on render)
   useEffect(() => {
@@ -975,6 +982,9 @@ export const InventoryView: React.FC = () => {
                 slotLabel: slotLabel
               };
 
+              // Increment version to trigger re-render
+              setEquipmentSlotSelectionVersion(v => v + 1);
+
               // Update the top info panel to highlight the selected equipment
               if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
                 (topContent as any).setSelectedEquipmentSlot(slotLabel);
@@ -1001,6 +1011,9 @@ export const InventoryView: React.FC = () => {
                 item: null,
                 slotLabel: slotLabel
               };
+
+              // Increment version to trigger re-render
+              setEquipmentSlotSelectionVersion(v => v + 1);
 
               // Update the top info panel to highlight the selected slot
               if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
@@ -1030,6 +1043,9 @@ export const InventoryView: React.FC = () => {
           selectedEquipmentRef.current = null;
           detailPanelActiveRef.current = false;
           originalBottomPanelContentRef.current = null;
+
+          // Increment version to trigger re-render
+          setEquipmentSlotSelectionVersion(v => v + 1);
 
           // Clear equipment highlight in top panel
           const topContent = topInfoPanelManager.getContent();
@@ -1062,6 +1078,9 @@ export const InventoryView: React.FC = () => {
           selectedEquipmentRef.current = null;
           detailPanelActiveRef.current = false;
           originalBottomPanelContentRef.current = null;
+
+          // Increment version to trigger re-render
+          setEquipmentSlotSelectionVersion(v => v + 1);
 
           // Clear equipment highlight in top panel
           const topContent = topInfoPanelManager.getContent();

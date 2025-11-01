@@ -13,9 +13,9 @@ import type { Equipment } from '../../combat/Equipment';
  */
 export class EquipmentComparisonContent implements PanelContent {
   private currentItem: Equipment | null; // null means empty slot
-  private comparisonItem: Equipment;
+  private comparisonItem: Equipment | null; // null means no item to compare (show "??")
 
-  constructor(currentItem: Equipment | null, comparisonItem: Equipment) {
+  constructor(currentItem: Equipment | null, comparisonItem: Equipment | null) {
     this.currentItem = currentItem;
     this.comparisonItem = comparisonItem;
   }
@@ -40,7 +40,8 @@ export class EquipmentComparisonContent implements PanelContent {
 
     // Render title: "{CURRENT} vs {COMPARISON}"
     const currentName = this.currentItem?.name ?? 'Empty';
-    const titleText = `${currentName} vs ${this.comparisonItem.name}`;
+    const comparisonName = this.comparisonItem?.name ?? '??';
+    const titleText = `${currentName} vs ${comparisonName}`;
     const titleColor = '#ffff00'; // Yellow for title
 
     FontAtlasRenderer.renderText(
@@ -56,6 +57,12 @@ export class EquipmentComparisonContent implements PanelContent {
     );
 
     y += lineSpacing + 2; // Extra spacing after title
+
+    // If no comparison item, just show the title with "??"
+    if (!this.comparisonItem) {
+      ctx.restore();
+      return;
+    }
 
     // Get non-default properties from comparison item
     const comparisonStats = this.getNonDefaultProperties(this.comparisonItem);
