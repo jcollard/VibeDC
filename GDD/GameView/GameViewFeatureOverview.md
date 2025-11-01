@@ -1,7 +1,8 @@
 # GameView Feature Overview
 
-**Version:** 1.0
+**Version:** 1.1
 **Created:** 2025-01-31
+**Updated:** 2025-01-31
 **Related:**
 - [FirstPersonView AreaMap System](../FirstPersonView/AreaMap/AreaMapSystemOverview.md)
 - [CombatView System](../../CombatHierarchy.md)
@@ -17,7 +18,7 @@ The **GameView** component serves as the top-level game orchestrator that manage
 
 ## Feature Summary
 
-- **Unified Game State Management**: Maintains a single `GameState` object that persists across all views
+- **Unified Game State Management**: Maintains a single `CompleteGameState` object that persists across all views
 - **View Transition System**: Handles smooth transitions between FirstPersonView, CombatView, and future views
 - **Resource Caching**: Centralizes loading and caching of sprites, fonts, and other assets to avoid redundant loads
 - **Save/Load System**: Provides comprehensive save/load functionality that captures the entire game state
@@ -93,6 +94,7 @@ export interface CompleteGameState {
   /**
    * Combat state (CombatView)
    * Only present when currentView is 'combat'
+   * Already has serialization via CombatState.toJSON/fromJSON
    */
   combatState?: CombatState;
 
@@ -102,22 +104,10 @@ export interface CompleteGameState {
   partyState: PartyState;
 
   /**
-   * Global game variables (quest flags, story progress, etc.)
-   * Managed by event system
+   * Event system game state (already exists in EventPrecondition.ts)
+   * Includes: globalVariables, messageLog, triggeredEventIds, etc.
    */
-  globalVariables: Map<string, number | string | boolean>;
-
-  /**
-   * Triggered event IDs (events that have already fired)
-   * Used by event system to prevent re-triggering
-   */
-  triggeredEventIds: Set<string>;
-
-  /**
-   * Message log visible to player
-   * Includes both exploration and combat messages
-   */
-  messageLog: GameMessage[];
+  gameState: GameState;
 
   /**
    * Current save slot metadata (if loaded from slot)
@@ -151,6 +141,7 @@ export type GameViewType =
 
 /**
  * Exploration state (FirstPersonView)
+ * Extends existing FirstPersonState interface
  */
 export interface ExplorationState {
   /**
@@ -189,9 +180,10 @@ export interface ExplorationState {
 export interface PartyState {
   /**
    * Party members (max 4)
+   * Uses CombatUnit interface (already has toJSON/fromJSON via HumanoidUnit)
    * Includes current HP, status effects, equipment, etc.
    */
-  members: PartyMember[];
+  members: CombatUnit[];
 
   /**
    * Party inventory (items, gold, etc.)
@@ -205,31 +197,6 @@ export interface PartyState {
    * Equipped items per party member
    */
   equipment: Map<string, EquippedItems>; // Key: party member ID
-}
-
-/**
- * Game message for message log
- */
-export interface GameMessage {
-  /**
-   * Message text
-   */
-  text: string;
-
-  /**
-   * Message timestamp
-   */
-  timestamp: number;
-
-  /**
-   * Message source (exploration, combat, system)
-   */
-  source: 'exploration' | 'combat' | 'system';
-
-  /**
-   * Optional text color for colored messages
-   */
-  color?: string;
 }
 
 /**
@@ -257,6 +224,13 @@ export interface EquippedItems {
   accessory2?: string; // Item ID
 }
 ```
+
+**IMPORTANT NOTE**: The following types **already exist** in the codebase and should be reused:
+- `GameState` - Defined in `models/area/EventPrecondition.ts`
+- `CombatState` - Defined in `models/combat/CombatState.ts` (already has `serializeCombatState`/`deserializeCombatState`)
+- `CombatUnit` - Interface in `models/combat/CombatUnit.ts` (implementations: `HumanoidUnit`, `MonsterUnit` with `toJSON`/`fromJSON`)
+- `FirstPersonState` - Defined in `models/firstperson/FirstPersonState.ts`
+- `CardinalDirection` - Type alias in `types.ts`
 
 ### 3. Resource Manager
 
@@ -467,29 +441,43 @@ export interface TransitionOptions {
 
 ### 5. Save/Load System
 
-Complete save/load functionality:
+Complete save/load functionality (extends existing combat save system):
 
 ```typescript
 /**
  * Save/load manager for complete game state
+ * Extends existing combatStorage.ts patterns
  */
 export class GameSaveManager {
   /**
    * Save game state to localStorage
+   * Uses same slot pattern as combat (0-3)
    */
-  static saveToLocalStorage(
+  static saveToSlot(
     state: CompleteGameState,
     slotIndex: number = 0
   ): boolean {
     try {
-      const saveData: GameSaveData = {
+      const saveData: CompleteSaveData = {
         version: '1.0',
         savedAt: new Date().toISOString(),
         state: this.serializeGameState(state),
       };
 
-      const key = `vibedc_save_slot_${slotIndex}`;
+      const key = `vibedc_game_save_slot_${slotIndex}`;
       localStorage.setItem(key, JSON.stringify(saveData));
+
+      // Save metadata for quick display
+      const metadata: SaveSlotMetadata = {
+        slotIndex,
+        timestamp: Date.now(),
+        currentView: state.currentView,
+        currentMapId: state.explorationState?.currentMapId,
+        turnNumber: state.combatState?.turnNumber,
+        phase: state.combatState?.phase,
+      };
+      localStorage.setItem(`${key}-metadata`, JSON.stringify(metadata));
+
       return true;
     } catch (error) {
       console.error('[GameSaveManager] Save failed:', error);
@@ -500,13 +488,13 @@ export class GameSaveManager {
   /**
    * Load game state from localStorage
    */
-  static loadFromLocalStorage(slotIndex: number = 0): CompleteGameState | null {
+  static loadFromSlot(slotIndex: number = 0): CompleteGameState | null {
     try {
-      const key = `vibedc_save_slot_${slotIndex}`;
+      const key = `vibedc_game_save_slot_${slotIndex}`;
       const data = localStorage.getItem(key);
       if (!data) return null;
 
-      const saveData: GameSaveData = JSON.parse(data);
+      const saveData: CompleteSaveData = JSON.parse(data);
       return this.deserializeGameState(saveData.state);
     } catch (error) {
       console.error('[GameSaveManager] Load failed:', error);
@@ -518,7 +506,7 @@ export class GameSaveManager {
    * Export game state to file
    */
   static exportToFile(state: CompleteGameState): void {
-    const saveData: GameSaveData = {
+    const saveData: CompleteSaveData = {
       version: '1.0',
       savedAt: new Date().toISOString(),
       state: this.serializeGameState(state),
@@ -541,7 +529,7 @@ export class GameSaveManager {
   static async importFromFile(file: File): Promise<CompleteGameState | null> {
     try {
       const text = await file.text();
-      const saveData: GameSaveData = JSON.parse(text);
+      const saveData: CompleteSaveData = JSON.parse(text);
       return this.deserializeGameState(saveData.state);
     } catch (error) {
       console.error('[GameSaveManager] Import failed:', error);
@@ -551,6 +539,10 @@ export class GameSaveManager {
 
   /**
    * Serialize game state to JSON
+   * Leverages existing serialization:
+   * - CombatState: uses serializeCombatState() from models/combat/CombatState.ts
+   * - CombatUnit: uses HumanoidUnit.toJSON()
+   * - AreaMap: uses AreaMap.toJSON()
    */
   private static serializeGameState(state: CompleteGameState): any {
     return {
@@ -562,11 +554,21 @@ export class GameSaveManager {
         exploredTiles: Array.from(state.explorationState.exploredTiles),
         targetedObject: state.explorationState.targetedObject,
       } : undefined,
-      combatState: state.combatState ? CombatState.toJSON(state.combatState) : undefined,
+      // Uses existing CombatState serialization
+      combatState: state.combatState ? serializeCombatState(state.combatState) : undefined,
       partyState: this.serializePartyState(state.partyState),
-      globalVariables: Array.from(state.globalVariables.entries()),
-      triggeredEventIds: Array.from(state.triggeredEventIds),
-      messageLog: state.messageLog,
+      // Uses existing GameState from EventPrecondition.ts
+      gameState: {
+        globalVariables: Array.from(state.gameState.globalVariables.entries()),
+        messageLog: state.gameState.messageLog,
+        currentMapId: state.gameState.currentMapId,
+        playerPosition: state.gameState.playerPosition,
+        playerDirection: state.gameState.playerDirection,
+        combatState: state.gameState.combatState,
+        triggeredEventIds: state.gameState.triggeredEventIds
+          ? Array.from(state.gameState.triggeredEventIds)
+          : undefined,
+      },
       saveSlotInfo: state.saveSlotInfo,
       sessionStartTime: state.sessionStartTime,
       totalPlaytime: state.totalPlaytime,
@@ -575,6 +577,10 @@ export class GameSaveManager {
 
   /**
    * Deserialize game state from JSON
+   * Leverages existing deserialization:
+   * - CombatState: uses deserializeCombatState() from models/combat/CombatState.ts
+   * - HumanoidUnit: uses HumanoidUnit.fromJSON()
+   * - AreaMap: uses AreaMap.fromJSON()
    */
   private static deserializeGameState(data: any): CompleteGameState {
     return {
@@ -586,11 +592,20 @@ export class GameSaveManager {
         exploredTiles: new Set(data.explorationState.exploredTiles),
         targetedObject: data.explorationState.targetedObject,
       } : undefined,
-      combatState: data.combatState ? CombatState.fromJSON(data.combatState) : undefined,
+      // Uses existing CombatState deserialization
+      combatState: data.combatState ? deserializeCombatState(data.combatState) : undefined,
       partyState: this.deserializePartyState(data.partyState),
-      globalVariables: new Map(data.globalVariables),
-      triggeredEventIds: new Set(data.triggeredEventIds),
-      messageLog: data.messageLog,
+      gameState: {
+        globalVariables: new Map(data.gameState.globalVariables),
+        messageLog: data.gameState.messageLog,
+        currentMapId: data.gameState.currentMapId,
+        playerPosition: data.gameState.playerPosition,
+        playerDirection: data.gameState.playerDirection,
+        combatState: data.gameState.combatState,
+        triggeredEventIds: data.gameState.triggeredEventIds
+          ? new Set(data.gameState.triggeredEventIds)
+          : undefined,
+      },
       saveSlotInfo: data.saveSlotInfo,
       sessionStartTime: data.sessionStartTime,
       totalPlaytime: data.totalPlaytime,
@@ -599,6 +614,7 @@ export class GameSaveManager {
 
   /**
    * Serialize party state
+   * Uses existing HumanoidUnit.toJSON()
    */
   private static serializePartyState(party: PartyState): any {
     return {
@@ -610,10 +626,11 @@ export class GameSaveManager {
 
   /**
    * Deserialize party state
+   * Uses existing HumanoidUnit.fromJSON()
    */
   private static deserializePartyState(data: any): PartyState {
     return {
-      members: data.members.map((m: any) => PartyMember.fromJSON(m)),
+      members: data.members.map((m: any) => HumanoidUnit.fromJSON(m)),
       inventory: data.inventory,
       equipment: new Map(data.equipment),
     };
@@ -621,14 +638,32 @@ export class GameSaveManager {
 }
 
 /**
- * Save data format
+ * Complete save data format (similar to CombatSaveData)
  */
-export interface GameSaveData {
+export interface CompleteSaveData {
   version: string;
   savedAt: string;
   state: any; // Serialized CompleteGameState
 }
+
+/**
+ * Save slot metadata (extends combat SaveSlotMetadata pattern)
+ */
+export interface SaveSlotMetadata {
+  slotIndex: number;
+  timestamp: number;
+  currentView: GameViewType;
+  currentMapId?: string;
+  turnNumber?: number;
+  phase?: string;
+}
 ```
+
+**IMPORTANT NOTE**: The save/load system leverages **existing serialization methods**:
+- `CombatState`: Already has `serializeCombatState()` and `deserializeCombatState()` in `models/combat/CombatState.ts`
+- `CombatUnit`: Interface with `toJSON()` method, implementations in `HumanoidUnit` and `MonsterUnit` have `toJSON()`/`fromJSON()`
+- `AreaMap`: Already has `toJSON()` and `fromJSON()` in `models/area/AreaMap.ts`
+- `CombatLogManager`: Already has `toJSON()` and `fromJSON()` in `models/combat/CombatLogManager.ts`
 
 ---
 
@@ -708,7 +743,7 @@ export const GameView: React.FC<GameViewProps> = ({
   const [gameState, setGameState] = useState<CompleteGameState>(() => {
     // Try to load saved game if enabled
     if (autoLoadSave) {
-      const savedState = GameSaveManager.loadFromLocalStorage(0);
+      const savedState = GameSaveManager.loadFromSlot(0);
       if (savedState) {
         console.log('[GameView] Loaded saved game');
         return savedState;
@@ -793,7 +828,7 @@ export const GameView: React.FC<GameViewProps> = ({
       if (event.key === 'F5') {
         event.preventDefault();
         console.log('[GameView] Quick save');
-        GameSaveManager.saveToLocalStorage(gameState, 0);
+        GameSaveManager.saveToSlot(gameState, 0);
       }
     };
 
@@ -862,7 +897,7 @@ function createNewGameState(initialMapId: string): CompleteGameState {
   // Create default party (load all party members from registry)
   const partyMembers = PartyMemberRegistry.getAll()
     .map(member => PartyMemberRegistry.createPartyMember(member.id))
-    .filter((unit): unit is PartyMember => unit !== undefined);
+    .filter((unit): unit is CombatUnit => unit !== undefined);
 
   return {
     currentView: 'exploration',
@@ -881,9 +916,14 @@ function createNewGameState(initialMapId: string): CompleteGameState {
       },
       equipment: new Map(),
     },
-    globalVariables: new Map(),
-    triggeredEventIds: new Set(),
-    messageLog: [],
+    gameState: {
+      globalVariables: new Map(),
+      messageLog: [],
+      triggeredEventIds: new Set(),
+      currentMapId: initialMapId,
+      playerPosition: { x: map.playerSpawn.x, y: map.playerSpawn.y },
+      playerDirection: map.playerSpawn.direction,
+    },
     sessionStartTime: Date.now(),
     totalPlaytime: 0,
   };
@@ -984,15 +1024,15 @@ export class EventProcessor {
 
 **Objectives:**
 - Create `GameView` component
-- Define `CompleteGameState` interface
+- Define `CompleteGameState` interface (reusing existing types)
 - Implement basic view switching (exploration ↔ combat)
 - Create `ResourceManager` for shared resources
 
 **Steps:**
 
 1. **Create GameState interfaces**
-   - `models/game/GameState.ts` - Define all state interfaces
-   - Include TypeScript interfaces from Core Requirements section
+   - `models/game/GameState.ts` - Define CompleteGameState, ExplorationState, PartyState
+   - Reuse existing: `GameState` (EventPrecondition.ts), `CombatState`, `FirstPersonState`
    - Add JSDoc comments
 
 2. **Create ResourceManager**
@@ -1077,23 +1117,23 @@ npm run dev
 
 **Objectives:**
 - Implement `GameSaveManager`
-- Add serialization for all state types
+- Leverage existing serialization (CombatState, HumanoidUnit, AreaMap)
 - Support localStorage and file export/import
 
 **Steps:**
 
 1. **Create GameSaveManager**
    - `services/GameSaveManager.ts`
-   - Implement `saveToLocalStorage`
-   - Implement `loadFromLocalStorage`
-   - Implement `exportToFile`
-   - Implement `importFromFile`
+   - Implement `saveToSlot()` (reuse combatStorage.ts pattern)
+   - Implement `loadFromSlot()`
+   - Implement `exportToFile()`
+   - Implement `importFromFile()`
 
 2. **Add serialization methods**
    - Serialize `CompleteGameState` to JSON
    - Deserialize JSON to `CompleteGameState`
+   - Leverage existing: `serializeCombatState()`, `HumanoidUnit.toJSON()`, `AreaMap.toJSON()`
    - Handle Maps, Sets, and Date objects
-   - Handle party member state (HP, status effects, etc.)
 
 3. **Add auto-load on GameView mount**
    - Check localStorage for saved game
@@ -1104,11 +1144,6 @@ npm run dev
    - Add keyboard handler in GameView
    - Save to slot 0 on F5 press
    - Show save confirmation (future: toast notification)
-
-5. **Update PartyMember for serialization**
-   - Add `toJSON()` method
-   - Add `fromJSON()` static method
-   - Ensure all fields are serializable
 
 **Testing:**
 - [ ] Can save game state to localStorage
@@ -1190,21 +1225,14 @@ npm run dev
 **Steps:**
 
 1. **Update EventProcessor to use GameView state**
-   - Accept `globalVariables` from GameView
-   - Accept `triggeredEventIds` from GameView
-   - Return updated state after processing events
+   - Accept `gameState` from GameView (already has globalVariables, triggeredEventIds)
+   - Return updated GameState after processing events
 
-2. **Add global variable actions**
-   - Support `SetVariable` action
-   - Support `IncrementVariable` action
-   - Support conditional events based on variables
-
-3. **Update GameView to pass event state**
-   - Pass `globalVariables` to FirstPersonView
-   - Pass `triggeredEventIds` to FirstPersonView
+2. **Update GameView to pass event state**
+   - Pass `gameState` to FirstPersonView
    - Update state when events are processed
 
-4. **Add event state serialization**
+3. **Add event state serialization**
    - Serialize `Map<string, any>` to array
    - Serialize `Set<string>` to array
    - Deserialize on load
@@ -1368,23 +1396,27 @@ npm run dev
 
 ## Dependencies
 
-### Existing Systems
-- **FirstPersonView**: Exploration view (already implemented)
-- **CombatView**: Combat view (already implemented)
-- **Event System**: Triggers combat, modifies state (already implemented)
-- **PartyMemberRegistry**: Creates party members (already implemented)
-- **AreaMapRegistry**: Loads maps (already implemented)
-- **CombatEncounter**: Defines combat encounters (already implemented)
-- **SpriteAssetLoader**: Loads sprites (already implemented)
-- **FontAtlasLoader**: Loads fonts (already implemented)
-- **UISettings**: Integer scaling, display settings (already implemented)
+### Existing Systems (Already Implemented)
+- **FirstPersonView**: Exploration view
+- **CombatView**: Combat view
+- **Event System**: Triggers combat, modifies state
+- **PartyMemberRegistry**: Creates party members
+- **AreaMapRegistry**: Loads maps
+- **CombatEncounter**: Defines combat encounters
+- **SpriteAssetLoader**: Loads sprites
+- **FontAtlasLoader**: Loads fonts
+- **UISettings**: Integer scaling, display settings
+- **CombatState serialization**: `serializeCombatState()`, `deserializeCombatState()` in `models/combat/CombatState.ts`
+- **CombatUnit serialization**: `HumanoidUnit.toJSON()`, `HumanoidUnit.fromJSON()`
+- **AreaMap serialization**: `AreaMap.toJSON()`, `AreaMap.fromJSON()`
+- **CombatLogManager serialization**: `toJSON()`, `fromJSON()`
+- **combatStorage.ts**: Save/load utilities pattern to reuse
 
 ### New Systems Required
-- **GameState interfaces**: Define complete game state structure
+- **CompleteGameState interface**: Define complete game state structure
 - **ResourceManager**: Centralized resource caching
 - **ViewTransitionManager**: Handles view transitions
-- **GameSaveManager**: Save/load functionality
-- **PartyMember serialization**: Add toJSON/fromJSON methods
+- **GameSaveManager**: Save/load functionality (extends combatStorage.ts patterns)
 
 ---
 
@@ -1393,14 +1425,13 @@ npm run dev
 ### New Files
 
 #### Core Game State
-- `models/game/GameState.ts` - Complete game state interfaces
-- `models/game/PartyState.ts` - Party state interface and utilities
-- `models/game/ExplorationState.ts` - Exploration state interface
+- `models/game/GameState.ts` - CompleteGameState, ExplorationState, PartyState interfaces
+- `models/game/index.ts` - Barrel export
 
 #### Services
 - `services/ResourceManager.ts` - Centralized resource management
 - `services/ViewTransitionManager.ts` - View transition system
-- `services/GameSaveManager.ts` - Save/load functionality
+- `services/GameSaveManager.ts` - Save/load functionality (extends combatStorage.ts)
 
 #### Components
 - `components/game/GameView.tsx` - Top-level orchestrator
@@ -1431,13 +1462,8 @@ npm run dev
 ### Event System Integration
 - `utils/EventProcessor.ts`
   - Add `onStartCombat` callback
-  - Accept `globalVariables` and `triggeredEventIds` from GameView
-  - Return updated state after processing
-
-### Party Member Serialization
-- `models/combat/CombatUnit.ts` (or `PartyMember.ts`)
-  - Add `toJSON()` method
-  - Add `fromJSON()` static method
+  - Accept `gameState` from GameView
+  - Return updated GameState after processing
 
 ### App Entry Point
 - `App.tsx`
@@ -1532,8 +1558,8 @@ npm run dev
 
 ## Estimated Complexity
 
-- **Overall Complexity**: **Medium-High**
-- **Risk Level**: **Medium**
+- **Overall Complexity**: **Medium**
+- **Risk Level**: **Low-Medium** (leverages existing serialization)
 - **Estimated Time**: **21 hours** (including testing and polish)
 
 ### Breakdown by Phase
@@ -1541,20 +1567,20 @@ npm run dev
 |-------|-----------|------|
 | Phase 1: Core GameView | Medium | 4 hours |
 | Phase 2: View Transitions | Medium | 3 hours |
-| Phase 3: Save/Load System | High | 5 hours |
+| Phase 3: Save/Load System | Medium | 5 hours (reduced due to existing serialization) |
 | Phase 4: Party Persistence | Medium | 4 hours |
 | Phase 5: Event Integration | Medium | 3 hours |
 | Phase 6: Polish & Errors | Low | 2 hours |
 
 ### Risk Factors
-- **Save/Load Serialization**: Complex state with Maps, Sets, and class instances
+- **Save/Load Serialization**: REDUCED RISK - Most serialization already exists
 - **View Transition Timing**: Ensuring smooth transitions without glitches
 - **Party State Sync**: Keeping party state consistent across views
 - **Memory Management**: Preventing memory leaks during view switches
 
 ### Mitigation Strategies
-- Start with simple save/load for core state, add complexity incrementally
-- Test transitions thoroughly with various scenarios
+- Leverage existing serialization methods (CombatState, HumanoidUnit, AreaMap)
+- Start with simple transitions, add complexity incrementally
 - Use state snapshots to verify party state sync
 - Profile memory usage during development
 
@@ -1570,5 +1596,12 @@ npm run dev
 
 ---
 
-**Document Status**: Initial Draft
+**Document Status**: Updated (v1.1)
+**Changes**:
+- Identified and leveraged existing serialization (CombatState, HumanoidUnit, AreaMap, CombatLogManager)
+- Reused existing GameState interface from EventPrecondition.ts
+- Extended existing combatStorage.ts patterns for game-wide saves
+- Reduced complexity estimate due to existing infrastructure
+- Updated implementation plan to reflect existing code
+
 **Next Steps**: Review with team, create implementation plan
