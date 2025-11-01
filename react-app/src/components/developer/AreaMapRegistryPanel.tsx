@@ -1922,207 +1922,75 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
                             <div>
                               <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>X:</div>
-                              {editingField === `${area.id}-x` ? (
-                                <input
-                                  type="number"
-                                  value={editingValue}
-                                  onChange={(e) => {
-                                    setEditingValue(e.target.value);
-                                    handleUpdateEventAreaBounds(area.id, 'x', parseInt(e.target.value) || 0);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === 'Escape') {
-                                      setEditingField(null);
-                                    }
-                                  }}
-                                  onBlur={() => setEditingField(null)}
-                                  autoFocus
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.2)',
-                                    border: '1px solid #0f0',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  onClick={() => {
-                                    setEditingField(`${area.id}-x`);
-                                    setEditingValue(String(area.x));
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid #666',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                    cursor: 'pointer',
-                                    minHeight: '20px',
-                                  }}
-                                >
-                                  {area.x}
-                                </div>
-                              )}
+                              <input
+                                type="number"
+                                value={area.x}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'x', parseInt(e.target.value) || 0)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
                             <div>
                               <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Y:</div>
-                              {editingField === `${area.id}-y` ? (
-                                <input
-                                  type="number"
-                                  value={editingValue}
-                                  onChange={(e) => {
-                                    setEditingValue(e.target.value);
-                                    handleUpdateEventAreaBounds(area.id, 'y', parseInt(e.target.value) || 0);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === 'Escape') {
-                                      setEditingField(null);
-                                    }
-                                  }}
-                                  onBlur={() => setEditingField(null)}
-                                  autoFocus
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.2)',
-                                    border: '1px solid #0f0',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  onClick={() => {
-                                    setEditingField(`${area.id}-y`);
-                                    setEditingValue(String(area.y));
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid #666',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                    cursor: 'pointer',
-                                    minHeight: '20px',
-                                  }}
-                                >
-                                  {area.y}
-                                </div>
-                              )}
+                              <input
+                                type="number"
+                                value={area.y}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'y', parseInt(e.target.value) || 0)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
                             <div>
                               <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Width:</div>
-                              {editingField === `${area.id}-width` ? (
-                                <input
-                                  type="number"
-                                  value={editingValue}
-                                  onChange={(e) => {
-                                    setEditingValue(e.target.value);
-                                    handleUpdateEventAreaBounds(area.id, 'width', parseInt(e.target.value) || 1);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === 'Escape') {
-                                      setEditingField(null);
-                                    }
-                                  }}
-                                  onBlur={() => setEditingField(null)}
-                                  autoFocus
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.2)',
-                                    border: '1px solid #0f0',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  onClick={() => {
-                                    setEditingField(`${area.id}-width`);
-                                    setEditingValue(String(area.width));
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid #666',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                    cursor: 'pointer',
-                                    minHeight: '20px',
-                                  }}
-                                >
-                                  {area.width}
-                                </div>
-                              )}
+                              <input
+                                type="number"
+                                value={area.width}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'width', parseInt(e.target.value) || 1)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
                             <div>
                               <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Height:</div>
-                              {editingField === `${area.id}-height` ? (
-                                <input
-                                  type="number"
-                                  value={editingValue}
-                                  onChange={(e) => {
-                                    setEditingValue(e.target.value);
-                                    handleUpdateEventAreaBounds(area.id, 'height', parseInt(e.target.value) || 1);
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === 'Escape') {
-                                      setEditingField(null);
-                                    }
-                                  }}
-                                  onBlur={() => setEditingField(null)}
-                                  autoFocus
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.2)',
-                                    border: '1px solid #0f0',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                  }}
-                                />
-                              ) : (
-                                <div
-                                  onClick={() => {
-                                    setEditingField(`${area.id}-height`);
-                                    setEditingValue(String(area.height));
-                                  }}
-                                  style={{
-                                    width: '100%',
-                                    padding: '4px',
-                                    background: 'rgba(255,255,255,0.1)',
-                                    border: '1px solid #666',
-                                    borderRadius: '3px',
-                                    color: '#fff',
-                                    fontSize: '10px',
-                                    fontFamily: 'monospace',
-                                    cursor: 'pointer',
-                                    minHeight: '20px',
-                                  }}
-                                >
-                                  {area.height}
-                                </div>
-                              )}
+                              <input
+                                type="number"
+                                value={area.height}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'height', parseInt(e.target.value) || 1)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
                           </div>
 
