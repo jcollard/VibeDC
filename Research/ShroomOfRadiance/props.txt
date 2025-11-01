@@ -1,0 +1,27 @@
+vegetables-0- short grass prop
+vegetables-1- long grass prop
+vegetables-2 - Wheat prop
+vegetables-3 - small mushrooms prop
+vegetables-4 - medium mushrooms prop
+vegetables-5 - big mushrooms prop
+vegetables-6 - carrot sprouts prop
+vegetables-7 - medium carrots prop
+vegetables-8 - big carrots prop
+fire-0, 1, 2, 3, 4, 5, 6 - Animated camp fire prop
+keys-0 - silver key
+keys-1 - Gold Key
+keys-2 - Copper Key
+biomes-43 - Mushroom
+tiles2-5 - Toilet
+tiles2-1 - Apple Tree
+tiles2-4 - Forest Trees
+wood-8 - Bed
+wood-9 - Chair
+wood-12 - Stool / podium
+gemwright-8 - Blue potion
+gemwright-9 - Red potion
+gemwright-10 - Green potion
+gemwright-14 - Blue gem
+gemwright-15 - Red gem
+gemwright-16 - Green gem
+
