@@ -769,7 +769,6 @@ export const InventoryView: React.FC = () => {
       const success = PartyInventory.addItem(itemId, quantity);
       if (success) {
         console.log(`[DEV] Added ${quantity}x ${equipment.name} (${itemId}) to inventory`);
-        addLogMessage(`Added ${quantity}x ${equipment.name}`);
         setInventoryVersion(v => v + 1);
       } else {
         console.error(`[DEV] Failed to add ${equipment.name} to inventory`);
@@ -779,14 +778,12 @@ export const InventoryView: React.FC = () => {
     (window as any).giveGold = (amount: number = 100) => {
       PartyInventory.addGold(amount);
       console.log(`[DEV] Added ${amount} gold to party inventory`);
-      addLogMessage(`Added ${amount} gold`);
       setInventoryVersion(v => v + 1);
     };
 
     (window as any).clearInventory = () => {
       PartyInventory.clear();
       console.log('[DEV] Cleared party inventory');
-      addLogMessage('Inventory cleared');
       setInventoryVersion(v => v + 1);
     };
 
