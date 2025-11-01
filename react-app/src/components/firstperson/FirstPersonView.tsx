@@ -10,10 +10,12 @@ import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/FirstPersonLayoutManager';
 import { UISettings } from '../../config/UISettings';
-import { ThreeJSViewport } from './ThreeJSViewport';
-import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
-import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
-import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+// TEMPORARILY DISABLED FOR TESTING
+// import { ThreeJSViewport } from './ThreeJSViewport';
+// import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
+// import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
+// import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface FirstPersonViewProps {
   mapId: string; // AreaMap ID to load
@@ -89,6 +91,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
   // Track loaded sprites/fonts
   const [spritesLoaded, setSpritesLoaded] = useState(false);
   const fontAtlasRef = useRef<HTMLImageElement | null>(null);
+  const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
   // Animation timing
   const lastFrameTimeRef = useRef<number>(performance.now());
@@ -148,8 +151,48 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     if (!areaMap) return;
 
     const loadAssets = async () => {
-      // Load sprites (tileset sprites)
-      // TODO: Load sprites for the current tileset
+      // Load layout sprites (dividers used by HorizontalVerticalLayout)
+      const layoutSpriteIds = [
+        'frames2-1', // Horizontal divider
+        'frames2-2', // Vertical divider
+      ];
+
+      const spriteImages = new Map<string, HTMLImageElement>();
+      const loadedSheets = new Set<string>(); // Track which sheets we've already loaded
+
+      // Load sprites from SpriteRegistry
+      const loadPromises = layoutSpriteIds.map(async (spriteId) => {
+        const spriteDef = SpriteRegistry.getById(spriteId);
+        if (!spriteDef) {
+          console.warn(`[FirstPersonView] Sprite not found: ${spriteId}`);
+          return;
+        }
+
+        // Only load each sprite sheet once (multiple sprites may use the same sheet)
+        if (loadedSheets.has(spriteDef.spriteSheet)) {
+          return;
+        }
+        loadedSheets.add(spriteDef.spriteSheet);
+
+        // Load the sprite sheet - key by sheet path, not sprite ID
+        return new Promise<void>((resolve) => {
+          const img = new Image();
+          img.src = spriteDef.spriteSheet;
+          img.onload = () => {
+            spriteImages.set(spriteDef.spriteSheet, img); // Key by sprite sheet path!
+            console.log(`[FirstPersonView] Loaded sprite sheet: ${spriteDef.spriteSheet}`);
+            resolve();
+          };
+          img.onerror = () => {
+            console.warn(`[FirstPersonView] Failed to load sprite sheet: ${spriteDef.spriteSheet}`);
+            resolve();
+          };
+        });
+      });
+
+      await Promise.all(loadPromises);
+      spriteImagesRef.current = spriteImages;
+      console.log(`[FirstPersonView] Loaded ${spriteImages.size} sprite sheets`);
 
       // Load fonts
       await fontLoader.loadAll(['7px-04b03', '15px-dungeonslant']);
@@ -161,8 +204,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     loadAssets().catch(console.error);
   }, [areaMap, spriteLoader, fontLoader]);
 
+  // TEMPORARILY DISABLED FOR TESTING
   // 3D viewport container ref
-  const viewportContainerRef = useRef<HTMLDivElement>(null);
+  // const viewportContainerRef = useRef<HTMLDivElement>(null);
 
   // Render frame function
   const renderFrame = useCallback(() => {
@@ -188,68 +232,82 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     ctx.imageSmoothingEnabled = false;
 
     // Clear canvas
-    ctx.fillStyle = '#0a0a0a';
+    ctx.fillStyle = '#ff00ff'; // Bright magenta to see if canvas is rendering
     ctx.fillRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
 
+    // TEST: Render ONLY layout overlay (dividers, borders)
+    layoutManager.renderLayout({
+      ctx,
+      canvasWidth: CANVAS_WIDTH,
+      canvasHeight: CANVAS_HEIGHT,
+      spriteSize: 12,
+      fontId: '7px-04b03',
+      fontAtlasImage: fontAtlasRef.current,
+      spriteImages: spriteImagesRef.current,
+      currentUnit: null,
+      targetUnit: null,
+    });
+
+    // TEMPORARILY DISABLED FOR TESTING
     // Get layout regions
-    const topPanelRegion = layoutManager.getTurnOrderPanelRegion();
-    const combatLogRegion = layoutManager.getCombatLogPanelRegion();
-    const topInfoRegion = layoutManager.getTopInfoPanelRegion();
-    const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+    // const topPanelRegion = layoutManager.getTurnOrderPanelRegion();
+    // const combatLogRegion = layoutManager.getCombatLogPanelRegion();
+    // const topInfoRegion = layoutManager.getTopInfoPanelRegion();
+    // const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
 
-    // Render top panel (location name)
-    if (fontAtlasRef.current) {
-      FontAtlasRenderer.renderText(
-        ctx,
-        firstPersonState.map.name || 'Unknown Location',
-        topPanelRegion.x + 8,
-        topPanelRegion.y + 8,
-        '7px-04b03',
-        fontAtlasRef.current,
-        1,
-        'left',
-        '#ffffff'
-      );
-    }
+    // // Render top panel (location name)
+    // if (fontAtlasRef.current) {
+    //   FontAtlasRenderer.renderText(
+    //     ctx,
+    //     firstPersonState.map.name || 'Unknown Location',
+    //     topPanelRegion.x + 8,
+    //     topPanelRegion.y + 8,
+    //     '7px-04b03',
+    //     fontAtlasRef.current,
+    //     1,
+    //     'left',
+    //     '#ffffff'
+    //   );
+    // }
 
-    // Render minimap in top info panel
-    MinimapRenderer.render(
-      ctx,
-      firstPersonState.map,
-      firstPersonState.playerX,
-      firstPersonState.playerY,
-      firstPersonState.direction,
-      firstPersonState.exploredTiles,
-      topInfoRegion.x,
-      topInfoRegion.y,
-      topInfoRegion.width,
-      topInfoRegion.height
-    );
+    // // Render minimap in top info panel
+    // MinimapRenderer.render(
+    //   ctx,
+    //   firstPersonState.map,
+    //   firstPersonState.playerX,
+    //   firstPersonState.playerY,
+    //   firstPersonState.direction,
+    //   firstPersonState.exploredTiles,
+    //   topInfoRegion.x,
+    //   topInfoRegion.y,
+    //   topInfoRegion.width,
+    //   topInfoRegion.height
+    // );
 
-    // Render party member stats in bottom info panel
-    PartyMemberStatsPanel.render(
-      ctx,
-      firstPersonState.partyMember,
-      bottomInfoRegion.x,
-      bottomInfoRegion.y,
-      bottomInfoRegion.width,
-      bottomInfoRegion.height,
-      '7px-04b03',
-      fontAtlasRef.current
-    );
+    // // Render party member stats in bottom info panel
+    // PartyMemberStatsPanel.render(
+    //   ctx,
+    //   firstPersonState.partyMember,
+    //   bottomInfoRegion.x,
+    //   bottomInfoRegion.y,
+    //   bottomInfoRegion.width,
+    //   bottomInfoRegion.height,
+    //   '7px-04b03',
+    //   fontAtlasRef.current
+    // );
 
-    // Render combat log
-    if (fontAtlasRef.current) {
-      combatLogManager.render(
-        ctx,
-        combatLogRegion.x,
-        combatLogRegion.y,
-        combatLogRegion.width,
-        combatLogRegion.height,
-        '7px-04b03',
-        fontAtlasRef.current
-      );
-    }
+    // // Render combat log
+    // if (fontAtlasRef.current) {
+    //   combatLogManager.render(
+    //     ctx,
+    //     combatLogRegion.x,
+    //     combatLogRegion.y,
+    //     combatLogRegion.width,
+    //     combatLogRegion.height,
+    //     '7px-04b03',
+    //     fontAtlasRef.current
+    //   );
+    // }
 
     // Copy buffer to display
     const displayCtx = displayCanvas.getContext('2d');
@@ -365,8 +423,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     );
   }
 
+  // TEMPORARILY DISABLED FOR TESTING
   // Calculate 3D viewport position within the scaled canvas
-  const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
+  // const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
 
   return (
     <div
@@ -397,20 +456,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
           justifyContent: 'center',
         }}
       >
-        {/* Canvas with 2D UI elements */}
-        <canvas
-          ref={displayCanvasRef}
-          style={{
-            ...canvasDisplayStyle,
-            imageRendering: 'pixelated',
-            objectFit: 'contain',
-            cursor: 'default',
-            position: 'absolute',
-          } as React.CSSProperties}
-        />
-
-        {/* 3D viewport overlay (positioned over map panel region) */}
-        {spritesLoaded && firstPersonState && (
+        {/* TEMPORARILY DISABLED FOR TESTING - 3D viewport (behind canvas) */}
+        {/* {spritesLoaded && firstPersonState && (
           <div
             ref={viewportContainerRef}
             style={{
@@ -420,6 +467,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               width: `${(mapRegion.width / CANVAS_WIDTH) * 100}%`,
               height: `${(mapRegion.height / CANVAS_HEIGHT) * 100}%`,
               pointerEvents: 'none',
+              zIndex: 1,
             }}
           >
             <ThreeJSViewport
@@ -432,7 +480,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               onAnimationComplete={() => inputHandler.unblockInput()}
             />
           </div>
-        )}
+        )} */}
+
+        {/* Canvas with 2D UI elements (on top) */}
+        <canvas
+          ref={displayCanvasRef}
+          style={{
+            ...canvasDisplayStyle,
+            imageRendering: 'pixelated',
+            objectFit: 'contain',
+            cursor: 'default',
+            position: 'absolute',
+            zIndex: 2,
+            pointerEvents: 'none',
+          } as React.CSSProperties}
+        />
       </div>
     </div>
   );
