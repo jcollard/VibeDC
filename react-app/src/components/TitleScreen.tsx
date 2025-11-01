@@ -341,15 +341,15 @@ Now, most of **Phlegm** lies in ruin, overrun by zombifying spores, corrupted my
           // Move X position for next segment
           const bodyFontData = FontRegistry.getById('7px-04b03');
           if (bodyFontData) {
-            currentX += FontAtlasRenderer.measureText(segment.text, bodyFontData);
+            currentX = Math.floor(currentX + FontAtlasRenderer.measureText(segment.text, bodyFontData));
           }
         }
 
-        currentY += lineSpacing;
+        currentY = Math.floor(currentY + lineSpacing);
       }
 
       // Add extra spacing between paragraphs
-      currentY += lineSpacing;
+      currentY = Math.floor(currentY + lineSpacing);
     }
 
     // Render Continue button
