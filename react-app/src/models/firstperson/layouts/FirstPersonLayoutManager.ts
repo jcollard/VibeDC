@@ -36,6 +36,25 @@ export class FirstPersonLayoutManager extends CombatLayoutManager {
   }
 
   /**
+   * Override getTurnOrderPanelRegion to increase width by 4px and height by 8px
+   */
+  override getTurnOrderPanelRegion(): {
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } {
+    const baseRegion = super.getTurnOrderPanelRegion();
+
+    return {
+      x: baseRegion.x,
+      y: baseRegion.y,
+      width: baseRegion.width + 4,  // Increase width by 4px
+      height: baseRegion.height + 8  // Increase height by 8px
+    };
+  }
+
+  /**
    * Override getCombatLogPanelRegion to shift down by 8px and reduce height by 8px
    */
   override getCombatLogPanelRegion(): {

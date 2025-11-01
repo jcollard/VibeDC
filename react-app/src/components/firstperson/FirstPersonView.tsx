@@ -11,9 +11,9 @@ import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/FirstPersonLayoutManager';
 import { UISettings } from '../../config/UISettings';
 import { ThreeJSViewport, type ThreeJSViewportHandle } from './ThreeJSViewport';
-import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
-import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
-import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
+// import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
+// import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
+// import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 
 interface FirstPersonViewProps {
@@ -206,6 +206,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
   // 3D viewport ref to access its canvas
   const viewportRef = useRef<ThreeJSViewportHandle>(null);
 
+  // Debug mode for showing panel rectangles
+  const [showDebugRectangles, setShowDebugRectangles] = useState(false);
+
   // Render frame function
   const renderFrame = useCallback(() => {
     const displayCanvas = displayCanvasRef.current;
@@ -240,68 +243,27 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
     const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
 
-    // Composite 3D viewport canvas onto main canvas (in map region)
-    const viewportCanvas = viewportRef.current?.getCanvas();
-    if (viewportCanvas) {
-      ctx.drawImage(
-        viewportCanvas,
-        0, 0, viewportCanvas.width, viewportCanvas.height, // source
-        mapRegion.x, mapRegion.y, mapRegion.width, mapRegion.height // destination
-      );
-    }
+    // DEBUG: Draw colored boxes for each panel region (toggle with F3)
+    if (showDebugRectangles) {
+      // Top panel - Red
+      ctx.fillStyle = 'rgba(255, 0, 0, 0.3)';
+      ctx.fillRect(topPanelRegion.x, topPanelRegion.y, topPanelRegion.width, topPanelRegion.height);
 
-    // Render top panel (location name)
-    if (fontAtlasRef.current) {
-      FontAtlasRenderer.renderText(
-        ctx,
-        firstPersonState.map.name || 'Unknown Location',
-        topPanelRegion.x + 8,
-        topPanelRegion.y + 8,
-        '7px-04b03',
-        fontAtlasRef.current,
-        1,
-        'left',
-        '#ffffff'
-      );
-    }
+      // Map panel - Green
+      ctx.fillStyle = 'rgba(0, 255, 0, 0.3)';
+      ctx.fillRect(mapRegion.x, mapRegion.y, mapRegion.width, mapRegion.height);
 
-    // Render minimap in top info panel
-    MinimapRenderer.render(
-      ctx,
-      firstPersonState.map,
-      firstPersonState.playerX,
-      firstPersonState.playerY,
-      firstPersonState.direction,
-      firstPersonState.exploredTiles,
-      topInfoRegion.x,
-      topInfoRegion.y,
-      topInfoRegion.width,
-      topInfoRegion.height
-    );
+      // Combat log panel - Blue
+      ctx.fillStyle = 'rgba(0, 0, 255, 0.3)';
+      ctx.fillRect(combatLogRegion.x, combatLogRegion.y, combatLogRegion.width, combatLogRegion.height);
 
-    // Render party member stats in bottom info panel
-    PartyMemberStatsPanel.render(
-      ctx,
-      firstPersonState.partyMember,
-      bottomInfoRegion.x,
-      bottomInfoRegion.y,
-      bottomInfoRegion.width,
-      bottomInfoRegion.height,
-      '7px-04b03',
-      fontAtlasRef.current
-    );
+      // Top info panel - Yellow
+      ctx.fillStyle = 'rgba(255, 255, 0, 0.3)';
+      ctx.fillRect(topInfoRegion.x, topInfoRegion.y, topInfoRegion.width, topInfoRegion.height);
 
-    // Render combat log
-    if (fontAtlasRef.current) {
-      combatLogManager.render(
-        ctx,
-        combatLogRegion.x,
-        combatLogRegion.y,
-        combatLogRegion.width,
-        combatLogRegion.height,
-        '7px-04b03',
-        fontAtlasRef.current
-      );
+      // Bottom info panel - Magenta
+      ctx.fillStyle = 'rgba(255, 0, 255, 0.3)';
+      ctx.fillRect(bottomInfoRegion.x, bottomInfoRegion.y, bottomInfoRegion.width, bottomInfoRegion.height);
     }
 
     // Render layout overlay (dividers, borders) on top
@@ -323,7 +285,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       displayCtx.imageSmoothingEnabled = false;
       displayCtx.drawImage(bufferCanvas, 0, 0);
     }
-  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef]);
+  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef, showDebugRectangles]);
 
   // Animation loop
   useEffect(() => {
@@ -351,6 +313,19 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       }
     };
   }, [spritesLoaded, firstPersonState, renderFrame, combatLogManager]);
+
+  // Handle F3 key for debug rectangles toggle
+  useEffect(() => {
+    const handleDebugToggle = (event: KeyboardEvent) => {
+      if (event.key === 'F3') {
+        event.preventDefault();
+        setShowDebugRectangles(prev => !prev);
+      }
+    };
+
+    window.addEventListener('keydown', handleDebugToggle);
+    return () => window.removeEventListener('keydown', handleDebugToggle);
+  }, []);
 
   // Handle keyboard input
   useEffect(() => {
