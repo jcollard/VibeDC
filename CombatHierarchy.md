@@ -1879,6 +1879,8 @@ DEFAULT_ENEMY_BEHAVIORS = [
   4. Plays ScreenFadeInSequence (2.0s duration) for smooth transition
   5. Cinematic completes, deployment phase starts fresh
 - Exposes window.forceDefeat() for testing (DEV mode only)
+- Exposes window.forceVictory(itemCount?) for testing victory screen (DEV mode only)
+  - Optional itemCount parameter forces specific number of item drops (0-6)
 
 **Dependencies:** Nearly all combat model files, LoadingView, CombatEncounter registry, combatStorage utilities
 **Used By:** CombatViewRoute
