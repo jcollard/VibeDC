@@ -559,6 +559,56 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     });
   };
 
+  const handleUpdateEventAreaBounds = (areaId: string, field: 'x' | 'y' | 'width' | 'height', value: number) => {
+    if (!editedMap) return;
+
+    setEditedMap({
+      ...editedMap,
+      eventAreas: editedMap.eventAreas?.map(area => {
+        if (area.id !== areaId) return area;
+        return {
+          ...area,
+          [field]: Math.max(0, value), // Ensure non-negative values
+        };
+      }),
+    });
+  };
+
+  const handleUpdateEventAreaId = (oldId: string, newId: string) => {
+    if (!editedMap) return;
+
+    setEditedMap({
+      ...editedMap,
+      eventAreas: editedMap.eventAreas?.map(area => {
+        if (area.id !== oldId) return area;
+        return {
+          ...area,
+          id: newId,
+        };
+      }),
+    });
+
+    // Update selected area ID if it's the one being renamed
+    if (selectedEventArea === oldId) {
+      setSelectedEventArea(newId);
+    }
+  };
+
+  const handleUpdateEventAreaDescription = (areaId: string, description: string) => {
+    if (!editedMap) return;
+
+    setEditedMap({
+      ...editedMap,
+      eventAreas: editedMap.eventAreas?.map(area => {
+        if (area.id !== areaId) return area;
+        return {
+          ...area,
+          description,
+        };
+      }),
+    });
+  };
+
   const handleRemoveObject = (objectId: string) => {
     if (!editedMap) return;
     setEditedMap({
@@ -1677,17 +1727,121 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                           borderRadius: '4px',
                           marginBottom: '12px'
                         }}>
-                          <div style={{ fontSize: '11px', marginBottom: '8px' }}>
-                            <div style={{ fontWeight: 'bold' }}>{area.id}</div>
-                            <div style={{ color: '#aaa', fontSize: '10px', marginTop: '4px' }}>
-                              Position: ({area.x}, {area.y})
+                          <div style={{ fontSize: '10px', marginBottom: '4px', color: '#aaa' }}>Area ID:</div>
+                          <input
+                            type="text"
+                            value={area.id}
+                            onChange={(e) => handleUpdateEventAreaId(area.id, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              background: 'rgba(255,255,255,0.1)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontSize: '10px',
+                              fontFamily: 'monospace',
+                              marginBottom: '8px',
+                            }}
+                          />
+
+                          <div style={{ fontSize: '10px', marginBottom: '4px', color: '#aaa' }}>Description:</div>
+                          <input
+                            type="text"
+                            value={area.description || ''}
+                            onChange={(e) => handleUpdateEventAreaDescription(area.id, e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '4px',
+                              background: 'rgba(255,255,255,0.1)',
+                              border: '1px solid #666',
+                              borderRadius: '3px',
+                              color: '#fff',
+                              fontSize: '10px',
+                              fontFamily: 'monospace',
+                              marginBottom: '8px',
+                            }}
+                          />
+
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', marginBottom: '8px' }}>
+                            <div>
+                              <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>X:</div>
+                              <input
+                                type="number"
+                                value={area.x}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'x', parseInt(e.target.value) || 0)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
-                            <div style={{ color: '#aaa', fontSize: '10px' }}>
-                              Size: {area.width}x{area.height}
+                            <div>
+                              <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Y:</div>
+                              <input
+                                type="number"
+                                value={area.y}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'y', parseInt(e.target.value) || 0)}
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
-                            <div style={{ color: '#aaa', fontSize: '10px' }}>
-                              Events: {area.events.length}
+                            <div>
+                              <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Width:</div>
+                              <input
+                                type="number"
+                                value={area.width}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'width', parseInt(e.target.value) || 1)}
+                                min="1"
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
                             </div>
+                            <div>
+                              <div style={{ fontSize: '10px', marginBottom: '2px', color: '#aaa' }}>Height:</div>
+                              <input
+                                type="number"
+                                value={area.height}
+                                onChange={(e) => handleUpdateEventAreaBounds(area.id, 'height', parseInt(e.target.value) || 1)}
+                                min="1"
+                                style={{
+                                  width: '100%',
+                                  padding: '4px',
+                                  background: 'rgba(255,255,255,0.1)',
+                                  border: '1px solid #666',
+                                  borderRadius: '3px',
+                                  color: '#fff',
+                                  fontSize: '10px',
+                                  fontFamily: 'monospace',
+                                }}
+                              />
+                            </div>
+                          </div>
+
+                          <div style={{ fontSize: '10px', color: '#aaa', marginBottom: '8px' }}>
+                            Events: {area.events.length}
                           </div>
 
                           <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
