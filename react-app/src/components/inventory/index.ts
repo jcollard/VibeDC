@@ -2,4 +2,4 @@
  * Inventory view exports
  */
 
-export { InventoryView } from './InventoryView';
+export { PartyManagementView } from './PartyManagementView';

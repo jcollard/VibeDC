@@ -181,10 +181,10 @@ class EmptyPanelContent implements PanelContent {
 }
 
 /**
- * InventoryView component
+ * PartyManagementView component
  * Displays the party's inventory with filtering, sorting, pagination, and item details
  */
-export const InventoryView: React.FC = () => {
+export const PartyManagementView: React.FC = () => {
   // Load initial state from localStorage
   const [viewState, setViewState] = useState<InventoryViewState>(() =>
     loadInventoryViewStateFromLocalStorage()

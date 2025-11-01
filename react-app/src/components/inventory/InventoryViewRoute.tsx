@@ -3,8 +3,8 @@
  * Development only - accessible at /inventory
  */
 
-import { InventoryView } from './InventoryView';
+import { PartyManagementView } from './PartyManagementView';
 
 export const InventoryViewRoute: React.FC = () => {
-  return <InventoryView />;
+  return <PartyManagementView />;
 };
