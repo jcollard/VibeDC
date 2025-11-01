@@ -29,7 +29,31 @@ Before starting:
   - "State Management" - Immutable updates, const object pattern
   - "TypeScript Patterns" - Const objects instead of enums
   - "Performance Patterns" - Caching, object pooling
+  - "Common Pitfalls" - Avoid documented anti-patterns
 - ✅ Understand that this part does NOT integrate with the game yet
+
+## Key Guidelines for This Implementation
+
+**From GeneralGuidelines.md, this implementation follows:**
+
+1. **TypeScript Patterns** (Lines 1714-1766)
+   - Use const objects with `as const` instead of enums (EventTrigger)
+   - Extract type with `typeof Object[keyof typeof Object]`
+   - Provide type guards for runtime validation
+
+2. **State Management** (Lines 228-352)
+   - Always return NEW state objects (immutable pattern)
+   - Use spread operator: `{ ...state, field: newValue }`
+   - Never mutate existing state in actions or processors
+
+3. **WeakMap for Object Mapping** (Lines 552-620, 621-695)
+   - Not needed in Part 1 (no animations yet)
+   - Will be relevant in Part 2 for event tracking
+
+4. **Immutable State Updates** (Lines 332-352)
+   - Critical for all action implementations
+   - Ensures React/game engine change detection works
+   - Prevents subtle bugs from mutation
 
 ---
 
@@ -692,6 +716,11 @@ import type { CardinalDirection } from './InteractiveObject';
 
 /**
  * Game state interface (extend as needed)
+ *
+ * Guidelines Compliance:
+ * - Uses Map and Set for collections (not plain objects)
+ * - Maps and Sets support immutable updates via new Map()/new Set()
+ * - All fields are optional except globalVariables (may expand over time)
  */
 export interface GameState {
   globalVariables: Map<string, string | number | boolean>;
@@ -1566,6 +1595,37 @@ describe('EventProcessor', () => {
   });
 });
 ```
+
+**⚠️ CRITICAL Testing Note (GeneralGuidelines.md Lines 2136-2186):**
+
+Tests that modify testState MUST create a new state object first! Example:
+
+```typescript
+// ❌ BAD: Mutates testState
+it('should update existing variable', () => {
+  const state = createTestState();
+  state.globalVariables.set('count', 5);  // ❌ Mutates test fixture!
+
+  const action = new SetGlobalVariable('count', 10);
+  const newState = action.execute(state);
+  expect(newState.globalVariables.get('count')).toBe(10);
+});
+
+// ✅ GOOD: Creates new state
+it('should update existing variable', () => {
+  const state = createTestState();
+  const stateWithCount = {
+    ...state,
+    globalVariables: new Map(state.globalVariables).set('count', 5)
+  };
+
+  const action = new SetGlobalVariable('count', 10);
+  const newState = action.execute(stateWithCount);
+  expect(newState.globalVariables.get('count')).toBe(10);
+});
+```
+
+**Why**: Mutating test fixtures in tests can cause flaky tests and doesn't properly test immutability.
 
 **Run Tests:**
 ```bash

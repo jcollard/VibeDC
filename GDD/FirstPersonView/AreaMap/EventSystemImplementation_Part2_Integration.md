@@ -25,6 +25,30 @@ Before starting:
 - ✅ Understand existing AreaMap system
 - ✅ Understand existing AreaMapParser (YAML parsing)
 - ✅ Understand existing FirstPersonView movement system
+- ✅ Review [GeneralGuidelines.md](../../../GeneralGuidelines.md) sections:
+  - "Phase Handler Return Value Pattern" (Lines 287-330)
+  - "Immutable State Updates" (Lines 332-352)
+  - "React Hook Dependencies and Animation Loops" (Lines 1439-1507)
+
+## Key Guidelines for This Implementation
+
+**From GeneralGuidelines.md, this implementation must follow:**
+
+1. **Phase Handler Return Value Pattern** (Lines 287-330)
+   - **CRITICAL**: Always capture and apply return value from EventProcessor
+   - `const newState = eventProcessor.processMovement(...)`
+   - `if (newState !== gameState) { setGameState(newState); }`
+   - Never ignore return values from state update methods
+
+2. **Immutable State Updates** (Lines 332-352)
+   - AreaMap integration must preserve immutability
+   - Use spread operator when updating map with events
+   - Never mutate existing AreaMap objects
+
+3. **React Hook Dependencies** (Lines 1439-1507)
+   - Keep eventProcessor in useMemo (stable reference)
+   - Don't include gameState in renderFrame dependencies if not used
+   - Prevent unnecessary animation loop restarts
 
 ---
 
@@ -544,6 +568,8 @@ import { EventProcessor } from '../utils/EventProcessor';
 import type { GameState } from '../models/area/EventPrecondition';
 
 // In FirstPersonView component or movement hook
+
+// Guidelines Compliance: useMemo creates stable reference (Lines 1439-1507)
 const eventProcessor = useMemo(() => new EventProcessor(), []);
 
 // Track previous position for event processing
@@ -574,7 +600,8 @@ const handleMovement = useCallback((direction: CardinalDirection) => {
     setPlayerY(newY);
     setPreviousPlayerPos({ x: newX, y: newY });
 
-    // Process events AFTER position update
+    // Guidelines Compliance: ALWAYS capture return value (Lines 287-330)
+    // ⚠️ CRITICAL: Don't ignore the return value!
     const newGameState = eventProcessor.processMovement(
       gameState,
       currentMap,
@@ -584,8 +611,11 @@ const handleMovement = useCallback((direction: CardinalDirection) => {
       newY
     );
 
-    // Update game state with event results
-    setGameState(newGameState);
+    // Guidelines Compliance: Apply state changes (Lines 287-330)
+    // Only update if state actually changed (reference equality check)
+    if (newGameState !== gameState) {
+      setGameState(newGameState);
+    }
 
     // Handle any state changes from events (teleport, combat, etc.)
     handleEventStateChanges(newGameState);

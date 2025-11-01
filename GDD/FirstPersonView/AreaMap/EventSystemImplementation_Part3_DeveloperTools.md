@@ -24,6 +24,35 @@ Before starting:
 - ✅ Events fire correctly in-game
 - ✅ Understand existing AreaMapRegistryPanel structure
 - ✅ Familiar with React component patterns used in the project
+- ✅ Review [GeneralGuidelines.md](../../../GeneralGuidelines.md) sections:
+  - "UI Component State" (Lines 231-265)
+  - "State Preservation vs. Reset Pattern" (Lines 354-395)
+  - "Performance Considerations" (Lines 1278-1324)
+
+## Key Guidelines for This Implementation
+
+**From GeneralGuidelines.md, this implementation must follow:**
+
+1. **UI Component State** (Lines 231-265)
+   - Cache interactive components that maintain state (buttons, lists)
+   - Don't recreate components every frame
+   - Store as instance variables: `private button: Button | null = null`
+   - Only recreate on phase/context changes
+
+2. **Performance Patterns** (Lines 1286-1324)
+   - Cache off-screen canvases if rendering every frame
+   - Don't create new canvas objects in render loops
+   - Reuse buffers across frames
+
+3. **State Preservation vs. Reset** (Lines 354-395)
+   - Provide separate methods: `setItems()` vs `updateItems()`
+   - Reset scroll on context change (switching areas)
+   - Preserve scroll on data update (list changes)
+
+4. **Implementation Planning** (Lines 1842-2017)
+   - This phase already HAS a plan (Phase 11 from original doc)
+   - Follow the detailed step-by-step implementation
+   - Don't skip steps or deviate without documenting
 
 ---
 
@@ -788,6 +817,35 @@ components/developer/
    - Delete action button
    - **Up/Down arrows for reordering** (important!)
    - Type-specific field editors
+
+**Guidelines Compliance Notes:**
+
+**UI Component State** (Lines 231-265):
+```typescript
+// ✅ GOOD: Cache components that maintain state
+class EventAreaPropertiesPanel {
+  private eventList: EventListComponent | null = null;
+
+  render() {
+    if (!this.eventList) {
+      this.eventList = new EventListComponent({ onClick: ... });
+    }
+    this.eventList.setEvents(this.eventArea.events);
+    this.eventList.render(ctx, region);
+  }
+}
+
+// ❌ BAD: Recreate every render
+render() {
+  const eventList = new EventListComponent({ onClick: ... }); // Lost state!
+  eventList.render(ctx, region);
+}
+```
+
+**Performance** (Lines 1286-1324):
+- Don't create canvases in render loops
+- Cache off-screen buffers if used for preview rendering
+- Reuse buffer across multiple event area overlays if possible
 
 **Implementation Note:** The full component code is provided in the original EventSystemImplementationPlan.md (lines 2680-3451). Copy those implementations, adapting them to your project's styling and patterns.
 
