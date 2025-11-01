@@ -98,6 +98,7 @@ export class InventoryRenderer {
       items,
       state.selectedItemId,
       state.hoveredItemId,
+      state.category,
       itemListBounds,
       fontAtlas
     );
@@ -118,6 +119,32 @@ export class InventoryRenderer {
   }
 
   /**
+   * Get the appropriate empty message based on the active category
+   */
+  private getEmptyMessage(category: string): string {
+    const { EMPTY_INVENTORY } = this.constants.TEXT;
+
+    switch (category) {
+      case 'all':
+        return EMPTY_INVENTORY;
+      case 'weapons':
+        return 'You do not have any weapons';
+      case 'shields':
+        return 'You do not have any shields';
+      case 'armor':
+        return 'You do not have any armor';
+      case 'accessories':
+        return 'You do not have any accessories';
+      case 'held':
+        return 'You do not have any held items';
+      case 'quest-items':
+        return 'You do not have any quest items';
+      default:
+        return EMPTY_INVENTORY;
+    }
+  }
+
+  /**
    * Render item list
    */
   private renderItemList(
@@ -125,18 +152,19 @@ export class InventoryRenderer {
     items: InventoryItemWithQuantity[],
     selectedItemId: string | null,
     hoveredItemId: string | null,
+    activeCategory: string,
     bounds: Bounds,
     fontAtlas: HTMLImageElement
   ): void {
     const { ITEM_LIST } = this.constants.MAIN_PANEL;
-    const { EMPTY_INVENTORY } = this.constants.TEXT;
 
     if (items.length === 0) {
-      // Render "empty inventory" message
+      // Render context-aware empty message
+      const emptyMessage = this.getEmptyMessage(activeCategory);
       const emptyTextY = bounds.y + 10;
       FontAtlasRenderer.renderText(
         ctx,
-        EMPTY_INVENTORY,
+        emptyMessage,
         Math.round(bounds.x + bounds.width / 2),
         Math.round(emptyTextY),
         ITEM_LIST.FONT_ID,
