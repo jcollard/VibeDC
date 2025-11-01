@@ -544,6 +544,21 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     setEditingEventId(null);
   };
 
+  const handleDeleteEvent = (areaId: string, eventId: string) => {
+    if (!editedMap) return;
+
+    setEditedMap({
+      ...editedMap,
+      eventAreas: editedMap.eventAreas?.map(area => {
+        if (area.id !== areaId) return area;
+        return {
+          ...area,
+          events: area.events.filter(e => e.id !== eventId),
+        };
+      }),
+    });
+  };
+
   const handleRemoveObject = (objectId: string) => {
     if (!editedMap) return;
     setEditedMap({
@@ -1731,25 +1746,43 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                                   <div style={{ fontWeight: 'bold' }}>{event.id}</div>
                                   <div style={{ color: '#aaa' }}>Trigger: {event.trigger}</div>
                                   <div style={{ color: '#aaa' }}>Actions: {event.actions.length}</div>
-                                  <button
-                                    onClick={() => {
-                                      setEditingEventId(event.id);
-                                      setEventEditorVisible(true);
-                                    }}
-                                    style={{
-                                      marginTop: '4px',
-                                      padding: '4px 8px',
-                                      background: 'rgba(33, 150, 243, 0.3)',
-                                      border: '1px solid rgba(33, 150, 243, 0.6)',
-                                      borderRadius: '3px',
-                                      color: '#fff',
-                                      fontSize: '8px',
-                                      cursor: 'pointer',
-                                      fontFamily: 'monospace',
-                                    }}
-                                  >
-                                    Edit
-                                  </button>
+                                  <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+                                    <button
+                                      onClick={() => {
+                                        setEditingEventId(event.id);
+                                        setEventEditorVisible(true);
+                                      }}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 8px',
+                                        background: 'rgba(33, 150, 243, 0.3)',
+                                        border: '1px solid rgba(33, 150, 243, 0.6)',
+                                        borderRadius: '3px',
+                                        color: '#fff',
+                                        fontSize: '8px',
+                                        cursor: 'pointer',
+                                        fontFamily: 'monospace',
+                                      }}
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteEvent(area.id, event.id)}
+                                      style={{
+                                        flex: 1,
+                                        padding: '4px 8px',
+                                        background: 'rgba(244, 67, 54, 0.3)',
+                                        border: '1px solid rgba(244, 67, 54, 0.6)',
+                                        borderRadius: '3px',
+                                        color: '#fff',
+                                        fontSize: '8px',
+                                        cursor: 'pointer',
+                                        fontFamily: 'monospace',
+                                      }}
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
