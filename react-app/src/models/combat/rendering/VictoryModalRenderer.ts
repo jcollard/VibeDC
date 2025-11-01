@@ -27,6 +27,7 @@ export class VictoryModalRenderer {
     hoveredItemIndex: number | null,
     selectedItemIndices: Set<number>,
     continueHovered: boolean,
+    takeAllHovered: boolean,
     fonts: Map<string, HTMLImageElement>,
     sprites: Map<string, HTMLImageElement>,
     panelBounds: { width: number; height: number }
@@ -64,16 +65,27 @@ export class VictoryModalRenderer {
         fonts,
         sprites
       );
+
+      // 8. Render "Take All Loot" button
+      currentY = this.renderTakeAllButton(
+        ctx,
+        modalX,
+        currentY,
+        modalWidth,
+        takeAllHovered,
+        fonts
+      );
     }
 
-    // 6. Render continue button
+    // 9. Render continue button (always enabled)
     this.renderContinueButton(
       ctx,
       modalX,
       currentY,
       modalWidth,
       continueHovered,
-      selectedItemIndices.size === rewards.items.length,
+      selectedItemIndices,
+      rewards.items.length,
       fonts
     );
   }
@@ -312,13 +324,57 @@ export class VictoryModalRenderer {
   }
 
 
+  private renderTakeAllButton(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    startY: number,
+    modalWidth: number,
+    isHovered: boolean,
+    fonts: Map<string, HTMLImageElement>
+  ): number {
+    const buttonFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.CONTINUE_FONT_ID);
+    const buttonFontImage = fonts.get(CombatConstants.VICTORY_SCREEN.CONTINUE_FONT_ID);
+
+    if (!buttonFont || !buttonFontImage) {
+      console.warn("[VictoryModalRenderer] Victory button font not loaded");
+      return startY + 10;
+    }
+
+    const buttonText = "Take All Loot";
+    const buttonWidth = FontAtlasRenderer.measureText(buttonText, buttonFont);
+
+    // Center button horizontally
+    const buttonX = Math.floor(modalX + (modalWidth - buttonWidth) / 2);
+    const buttonY = startY;
+
+    // Determine button color (always enabled)
+    const buttonColor = isHovered
+      ? CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_HOVER
+      : CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_NORMAL;
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      buttonText,
+      buttonX,
+      buttonY,
+      CombatConstants.VICTORY_SCREEN.CONTINUE_FONT_ID,
+      buttonFontImage,
+      1,
+      'left',
+      buttonColor
+    );
+
+    return buttonY + buttonFont.charHeight + 4; // Add spacing after button
+  }
+
   private renderContinueButton(
     ctx: CanvasRenderingContext2D,
     modalX: number,
     startY: number,
     modalWidth: number,
     isHovered: boolean,
-    isEnabled: boolean,
+    selectedItemIndices: Set<number>,
+    totalItems: number,
     fonts: Map<string, HTMLImageElement>
   ): void {
     const buttonFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.CONTINUE_FONT_ID);
@@ -329,22 +385,23 @@ export class VictoryModalRenderer {
       return;
     }
 
-    const buttonText = CombatConstants.VICTORY_SCREEN.CONTINUE_TEXT;
+    // Change text based on whether loot was selected
+    const hasLoot = totalItems > 0;
+    const allLootSelected = selectedItemIndices.size === totalItems;
+    const buttonText = (hasLoot && !allLootSelected && selectedItemIndices.size === 0)
+      ? "Continue Without Looting"
+      : "Continue";
+
     const buttonWidth = FontAtlasRenderer.measureText(buttonText, buttonFont);
 
     // Center button horizontally
     const buttonX = Math.floor(modalX + (modalWidth - buttonWidth) / 2);
     const buttonY = startY;
 
-    // Determine button color
-    let buttonColor: string;
-    if (isEnabled) {
-      buttonColor = isHovered
-        ? CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_HOVER
-        : CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_NORMAL;
-    } else {
-      buttonColor = CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_DISABLED;
-    }
+    // Always enabled, just change color on hover
+    const buttonColor = isHovered
+      ? CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_HOVER
+      : CombatConstants.VICTORY_SCREEN.CONTINUE_COLOR_NORMAL;
 
     FontAtlasRenderer.renderText(
       ctx,
@@ -410,6 +467,58 @@ export class VictoryModalRenderer {
   }
 
   /**
+   * Calculates Take All button bounds for hit detection.
+   */
+  getTakeAllButtonBounds(
+    _panelBounds: { width: number; height: number },
+    rewards: VictoryRewards
+  ): { x: number; y: number; width: number; height: number } {
+    const modalX = CombatConstants.VICTORY_SCREEN.MODAL_X;
+    const modalY = CombatConstants.VICTORY_SCREEN.MODAL_Y;
+    const modalWidth = CombatConstants.VICTORY_SCREEN.MODAL_WIDTH;
+
+    const buttonFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.CONTINUE_FONT_ID);
+    if (!buttonFont) {
+      return { x: 0, y: 0, width: 0, height: 0 };
+    }
+
+    const titleFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.TITLE_FONT_ID);
+    const headerFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.HEADER_FONT_ID);
+    const sectionFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID);
+
+    const titleHeight = titleFont ? titleFont.charHeight : 15;
+    const headerHeight = headerFont ? headerFont.charHeight : 7;
+    const sectionHeight = sectionFont ? sectionFont.charHeight : 7;
+
+    // Calculate button Y (same as render logic)
+    let currentY = modalY + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
+    currentY += titleHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Title
+    currentY += headerHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // Header
+    currentY += sectionHeight + CombatConstants.VICTORY_SCREEN.SECTION_SPACING; // XP/Gold row
+
+    if (rewards.items.length > 0) {
+      currentY += sectionHeight + 4; // Items label + gap
+      // Two-column layout: calculate height based on max rows (3 items per column)
+      const maxItemsPerColumn = 3;
+      const itemsToRender = Math.min(rewards.items.length, 6); // Max 6 items
+      const numRows = Math.min(itemsToRender, maxItemsPerColumn);
+      currentY += numRows * (sectionHeight + 2); // Item rows
+      currentY += 4; // Extra spacing after items
+    }
+
+    const buttonText = "Take All Loot";
+    const buttonWidth = FontAtlasRenderer.measureText(buttonText, buttonFont);
+    const buttonX = Math.floor(modalX + (modalWidth - buttonWidth) / 2);
+
+    return {
+      x: buttonX,
+      y: currentY,
+      width: buttonWidth,
+      height: buttonFont.charHeight,
+    };
+  }
+
+  /**
    * Calculates continue button bounds for hit detection.
    */
   getContinueButtonBounds(
@@ -447,9 +556,12 @@ export class VictoryModalRenderer {
       const numRows = Math.min(itemsToRender, maxItemsPerColumn);
       currentY += numRows * (sectionHeight + 2); // Item rows
       currentY += 4; // Extra spacing after items
+
+      // Account for Take All button
+      currentY += buttonFont.charHeight + 4; // Take All button height + spacing
     }
 
-    const buttonText = CombatConstants.VICTORY_SCREEN.CONTINUE_TEXT;
+    const buttonText = "Continue Without Looting"; // Use longest text for bounds calculation
     const buttonWidth = FontAtlasRenderer.measureText(buttonText, buttonFont);
     const buttonX = Math.floor(modalX + (modalWidth - buttonWidth) / 2);
 

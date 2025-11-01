@@ -14,12 +14,13 @@ import type { VictoryRewards } from './VictoryRewards';
 /**
  * Phase handler for the victory screen.
  * Displays modal overlay with XP, gold, items, and continue button.
- * Requires player to select all items before continuing.
+ * Player can select items individually or take all loot.
  */
 export class VictoryPhaseHandler extends PhaseBase {
   private hoveredItemIndex: number | null = null;
   private selectedItemIndices: Set<number> = new Set();
   private continueHovered: boolean = false;
+  private takeAllHovered: boolean = false;
   private renderer: VictoryModalRenderer;
   private rewards: VictoryRewards;
 
@@ -47,7 +48,7 @@ export class VictoryPhaseHandler extends PhaseBase {
   }
 
   renderUI(state: CombatState, _encounter: CombatEncounter, context: PhaseRenderContext): void {
-    // Render victory modal (overlay, panel, rewards, items, button)
+    // Render victory modal (overlay, panel, rewards, items, buttons)
     const fonts = context.fontAtlasImages ?? new Map<string, HTMLImageElement>();
     const sprites = context.spriteImages ?? new Map<string, HTMLImageElement>();
 
@@ -58,6 +59,7 @@ export class VictoryPhaseHandler extends PhaseBase {
       this.hoveredItemIndex,
       this.selectedItemIndices,
       this.continueHovered,
+      this.takeAllHovered,
       fonts,
       sprites,
       { width: CombatConstants.CANVAS_WIDTH, height: CombatConstants.CANVAS_HEIGHT }
@@ -77,6 +79,7 @@ export class VictoryPhaseHandler extends PhaseBase {
     let needsRerender = false;
     let newHoveredItemIndex: number | null = null;
     let newContinueHovered = false;
+    let newTakeAllHovered = false;
 
     // Check item hover
     const itemBounds = this.renderer.getItemBounds(panelBounds, this.rewards);
@@ -84,6 +87,14 @@ export class VictoryPhaseHandler extends PhaseBase {
       if (this.isPointInBounds(context.canvasX, context.canvasY, itemBounds[i])) {
         newHoveredItemIndex = i;
         break;
+      }
+    }
+
+    // Check Take All button hover (only if there are items)
+    if (this.rewards.items.length > 0) {
+      const takeAllBounds = this.renderer.getTakeAllButtonBounds(panelBounds, this.rewards);
+      if (this.isPointInBounds(context.canvasX, context.canvasY, takeAllBounds)) {
+        newTakeAllHovered = true;
       }
     }
 
@@ -101,6 +112,11 @@ export class VictoryPhaseHandler extends PhaseBase {
 
     if (newContinueHovered !== this.continueHovered) {
       this.continueHovered = newContinueHovered;
+      needsRerender = true;
+    }
+
+    if (newTakeAllHovered !== this.takeAllHovered) {
+      this.takeAllHovered = newTakeAllHovered;
       needsRerender = true;
     }
 
@@ -142,18 +158,32 @@ export class VictoryPhaseHandler extends PhaseBase {
       }
     }
 
-    // Check if continue button clicked
+    // Check if Take All button clicked
+    if (this.rewards.items.length > 0) {
+      const takeAllBounds = this.renderer.getTakeAllButtonBounds(panelBounds, this.rewards);
+      if (this.isPointInBounds(context.canvasX, context.canvasY, takeAllBounds)) {
+        // Select all items
+        this.selectedItemIndices.clear();
+        for (let i = 0; i < this.rewards.items.length; i++) {
+          this.selectedItemIndices.add(i);
+        }
+
+        return {
+          handled: true,
+          newState: state,  // Trigger re-render
+        };
+      }
+    }
+
+    // Check if continue button clicked (always enabled)
     const buttonBounds = this.renderer.getContinueButtonBounds(panelBounds, this.rewards);
     if (this.isPointInBounds(context.canvasX, context.canvasY, buttonBounds)) {
-      // Only allow continue if all items are selected
-      if (this.selectedItemIndices.size === this.rewards.items.length) {
-        const newState = this.handleContinue(state);
-        if (newState) {
-          return {
-            handled: true,
-            newState,
-          };
-        }
+      const newState = this.handleContinue(state);
+      if (newState) {
+        return {
+          handled: true,
+          newState,
+        };
       }
       return { handled: true };
     }
