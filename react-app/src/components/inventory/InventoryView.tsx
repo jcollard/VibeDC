@@ -142,6 +142,9 @@ export const InventoryView: React.FC = () => {
   const detailPanelActiveRef = useRef(false);
   const originalBottomPanelContentRef = useRef<PanelContent | null>(null);
 
+  // Track selected equipment/ability from top panel (for sticky selection on click)
+  const selectedEquipmentRef = useRef<{ type: 'ability' | 'equipment'; item: any; slotLabel: string | null } | null>(null);
+
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -751,48 +754,51 @@ export const InventoryView: React.FC = () => {
       }
 
       // Handle ability/equipment detail panel swapping (similar to CombatView)
-      if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
-          canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
+      // Skip hover changes if equipment/ability is selected (clicked)
+      if (!selectedEquipmentRef.current) {
+        if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
+            canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
 
-        // Check if hover result is detail info
-        if (topInfoHoverResult && typeof topInfoHoverResult === 'object' && 'type' in topInfoHoverResult && 'item' in topInfoHoverResult) {
-          if (topInfoHoverResult.type === 'ability-detail') {
-            // Cache original bottom panel content if not already cached
-            if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
-              originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+          // Check if hover result is detail info
+          if (topInfoHoverResult && typeof topInfoHoverResult === 'object' && 'type' in topInfoHoverResult && 'item' in topInfoHoverResult) {
+            if (topInfoHoverResult.type === 'ability-detail') {
+              // Cache original bottom panel content if not already cached
+              if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+              }
+
+              // Show ability details in bottom panel
+              bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any));
+              detailPanelActiveRef.current = true;
+              needsRerender = true;
+            } else if (topInfoHoverResult.type === 'equipment-detail') {
+              // Cache original bottom panel content if not already cached
+              if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+              }
+
+              // Show equipment details in bottom panel
+              bottomPanelManager.setContent(new EquipmentInfoContent(topInfoHoverResult.item as any));
+              detailPanelActiveRef.current = true;
+              needsRerender = true;
             }
-
-            // Show ability details in bottom panel
-            bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any));
-            detailPanelActiveRef.current = true;
-            needsRerender = true;
-          } else if (topInfoHoverResult.type === 'equipment-detail') {
-            // Cache original bottom panel content if not already cached
-            if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
-              originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+          } else {
+            // Not hovering detail item - restore original panel if needed
+            if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
+              bottomPanelManager.setContent(originalBottomPanelContentRef.current);
+              detailPanelActiveRef.current = false;
+              originalBottomPanelContentRef.current = null;
+              needsRerender = true;
             }
-
-            // Show equipment details in bottom panel
-            bottomPanelManager.setContent(new EquipmentInfoContent(topInfoHoverResult.item as any));
-            detailPanelActiveRef.current = true;
-            needsRerender = true;
           }
         } else {
-          // Not hovering detail item - restore original panel if needed
+          // Mouse outside top panel - restore original panel if needed
           if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
             bottomPanelManager.setContent(originalBottomPanelContentRef.current);
             detailPanelActiveRef.current = false;
             originalBottomPanelContentRef.current = null;
             needsRerender = true;
           }
-        }
-      } else {
-        // Mouse outside top panel - restore original panel if needed
-        if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
-          bottomPanelManager.setContent(originalBottomPanelContentRef.current);
-          detailPanelActiveRef.current = false;
-          originalBottomPanelContentRef.current = null;
-          needsRerender = true;
         }
       }
 
@@ -871,6 +877,51 @@ export const InventoryView: React.FC = () => {
 
       // Check top info panel click (party member stats - for toggling views or showing details)
       const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+
+      // First check if clicking on ability/equipment to select it
+      if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
+          canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
+
+        // Get hover result to see if clicking on equipment/ability
+        const relativeX = canvasX - topInfoPanelRegion.x;
+        const relativeY = canvasY - topInfoPanelRegion.y;
+        const topContent = topInfoPanelManager.getContent();
+        if (topContent && 'handleHover' in topContent && typeof topContent.handleHover === 'function') {
+          const hoverResult = topContent.handleHover(relativeX, relativeY);
+
+          // If clicking on equipment or ability, select it
+          if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult && 'item' in hoverResult) {
+            if (hoverResult.type === 'equipment-detail' || hoverResult.type === 'ability-detail') {
+              // Get the slot label from hoveredStatId
+              const slotLabel = (topContent as any).hoveredStatId as string | null;
+
+              // Set as selected
+              selectedEquipmentRef.current = {
+                type: hoverResult.type === 'equipment-detail' ? 'equipment' : 'ability',
+                item: hoverResult.item,
+                slotLabel: slotLabel
+              };
+
+              // Update the top info panel to highlight the selected equipment
+              if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                (topContent as any).setSelectedEquipmentSlot(slotLabel);
+              }
+
+              // Show in bottom panel
+              if (hoverResult.type === 'equipment-detail') {
+                bottomPanelManager.setContent(new EquipmentInfoContent(hoverResult.item as any));
+              } else {
+                bottomPanelManager.setContent(new AbilityInfoContent(hoverResult.item as any));
+              }
+
+              detailPanelActiveRef.current = true;
+              renderFrame();
+              return;
+            }
+          }
+        }
+      }
+
       const topInfoClickResult = topInfoPanelManager.handleClick(
         canvasX,
         canvasY,
@@ -880,6 +931,17 @@ export const InventoryView: React.FC = () => {
         // Handle party member selection
         if (topInfoClickResult.type === 'party-member' && 'index' in topInfoClickResult) {
           // Selection is already updated by the callback in InventoryUnitInfoContent
+          // Clear equipment selection when changing party members
+          selectedEquipmentRef.current = null;
+          detailPanelActiveRef.current = false;
+          originalBottomPanelContentRef.current = null;
+
+          // Clear equipment highlight in top panel
+          const topContent = topInfoPanelManager.getContent();
+          if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+            (topContent as any).setSelectedEquipmentSlot(null);
+          }
+
           // Just render the frame to show the updated selection
           renderFrame();
           return;
@@ -901,6 +963,17 @@ export const InventoryView: React.FC = () => {
           canvasY >= row.bounds.y &&
           canvasY <= row.bounds.y + row.bounds.height
         ) {
+          // Clear equipment selection when clicking on inventory items
+          selectedEquipmentRef.current = null;
+          detailPanelActiveRef.current = false;
+          originalBottomPanelContentRef.current = null;
+
+          // Clear equipment highlight in top panel
+          const topContent = topInfoPanelManager.getContent();
+          if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+            (topContent as any).setSelectedEquipmentSlot(null);
+          }
+
           setViewState((prev) => ({ ...prev, selectedItemId: row.equipmentId }));
           const equipment = Equipment.getById(row.equipmentId);
           if (equipment) {

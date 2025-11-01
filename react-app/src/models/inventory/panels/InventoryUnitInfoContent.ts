@@ -16,6 +16,7 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
   private hoveredMemberIndex: number | null = null;
   private onMemberSelected?: (member: CombatUnit, index: number) => void;
   private selectorBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
+  private selectedEquipmentSlot: string | null = null; // Track selected equipment/ability slot (e.g., 'L.Hand', 'Reaction')
 
   constructor(
     config: UnitInfoConfig,
@@ -39,6 +40,29 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
   }
 
   /**
+   * Update selected equipment/ability slot for highlighting
+   * @param slotLabel - Slot label (e.g., 'L.Hand', 'Reaction') or null to clear
+   */
+  setSelectedEquipmentSlot(slotLabel: string | null): void {
+    this.selectedEquipmentSlot = slotLabel;
+  }
+
+  /**
+   * Get the color for an equipment/ability slot (with green highlight for selected)
+   */
+  private getSlotColor(slotLabel: string, isHovered: boolean): string {
+    const SELECTED_COLOR = '#00ff00'; // Green for selected items
+
+    // If this slot is selected, use green
+    if (this.selectedEquipmentSlot === slotLabel) {
+      return SELECTED_COLOR;
+    }
+
+    // Otherwise use hover color if hovered, or white
+    return isHovered ? HOVERED_TEXT : '#ffffff';
+  }
+
+  /**
    * Override render to add party member selector
    */
   render(
@@ -49,8 +73,73 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
     spriteImages?: Map<string, HTMLImageElement>,
     spriteSize?: number
   ): void {
+    // Temporarily override the parent's rendering to inject our custom color logic
+    // We do this by accessing the parent's private methods through 'as any'
+    const originalRenderAbilitySlot = (this as any).renderAbilitySlot;
+    const originalRenderEquipmentSlot = (this as any).renderEquipmentSlot;
+
+    // Override renderAbilitySlot with custom color logic
+    (this as any).renderAbilitySlot = (
+      ctx: CanvasRenderingContext2D,
+      region: PanelRegion,
+      label: string,
+      ability: any,
+      fontId: string,
+      fontAtlasImage: HTMLImageElement,
+      font: any,
+      y: number
+    ): number => {
+      const padding = (this as any).config.padding;
+      const lineSpacing = (this as any).config.lineSpacing;
+
+      const isHovered = (this as any).hoveredStatId === label;
+      const color = this.getSlotColor(label, isHovered);
+
+      const labelX = region.x + padding;
+      FontAtlasRenderer.renderText(ctx, label, labelX, y, fontId, fontAtlasImage, 1, 'left', color);
+
+      const abilityName = ability ? ability.name : '-';
+      const valueWidth = FontAtlasRenderer.measureText(abilityName, font);
+      const valueX = region.x + region.width - padding - valueWidth;
+      FontAtlasRenderer.renderText(ctx, abilityName, valueX, y, fontId, fontAtlasImage, 1, 'left', color);
+
+      return y + lineSpacing;
+    };
+
+    // Override renderEquipmentSlot with custom color logic
+    (this as any).renderEquipmentSlot = (
+      ctx: CanvasRenderingContext2D,
+      region: PanelRegion,
+      label: string,
+      equipment: any,
+      fontId: string,
+      fontAtlasImage: HTMLImageElement,
+      font: any,
+      y: number
+    ): number => {
+      const padding = (this as any).config.padding;
+      const lineSpacing = (this as any).config.lineSpacing;
+
+      const isHovered = (this as any).hoveredStatId === label;
+      const color = this.getSlotColor(label, isHovered);
+
+      const labelX = region.x + padding;
+      FontAtlasRenderer.renderText(ctx, label, labelX, y, fontId, fontAtlasImage, 1, 'left', color);
+
+      const equipmentName = equipment ? equipment.name : '-';
+      const valueWidth = FontAtlasRenderer.measureText(equipmentName, font);
+      const valueX = region.x + region.width - padding - valueWidth;
+      FontAtlasRenderer.renderText(ctx, equipmentName, valueX, y, fontId, fontAtlasImage, 1, 'left', color);
+
+      return y + lineSpacing;
+    };
+
     // Call parent render first
     super.render(ctx, region, fontId, fontAtlasImage, spriteImages, spriteSize);
+
+    // Restore original methods
+    (this as any).renderAbilitySlot = originalRenderAbilitySlot;
+    (this as any).renderEquipmentSlot = originalRenderEquipmentSlot;
 
     // Only render party selector in stats view when no helper text is showing
     // We check this by seeing if there's no hovered stat
