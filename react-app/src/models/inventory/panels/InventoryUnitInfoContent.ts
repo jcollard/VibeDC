@@ -259,13 +259,83 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
   }
 
   /**
-   * Override handleHover to include party selector
+   * Get slot label at position, including empty slots (inventory-specific behavior)
+   */
+  private getSlotLabelAtPosition(_relativeX: number, relativeY: number): string | null {
+    const padding = (this as any).config.padding;
+    const lineSpacing = (this as any).config.lineSpacing;
+
+    // Calculate header height - must match renderHeader's return value
+    const headerHeight = padding + (lineSpacing * 2);
+
+    // Calculate abilities start Y
+    const abilitiesStartY = headerHeight + 4; // 4px spacing
+
+    // Check if Y is below header
+    if (relativeY < abilitiesStartY) {
+      return null;
+    }
+
+    // Calculate row index
+    const rowY = relativeY - abilitiesStartY;
+    const rowIndex = Math.floor(rowY / lineSpacing);
+
+    // Ability slots (rows 0-2)
+    const abilitySlots = ['Reaction', 'Passive', 'Movement'];
+    if (rowIndex >= 0 && rowIndex < abilitySlots.length) {
+      return abilitySlots[rowIndex];
+    }
+
+    // Equipment slots (rows 3-7, only for humanoid units)
+    if ('leftHand' in (this as any).unit) {
+      const equipmentSlots = ['L.Hand', 'R.Hand', 'Head', 'Body', 'Accessory'];
+      const equipmentRowIndex = rowIndex - abilitySlots.length;
+
+      if (equipmentRowIndex >= 0 && equipmentRowIndex < equipmentSlots.length) {
+        return equipmentSlots[equipmentRowIndex];
+      }
+    }
+
+    return null;
+  }
+
+  /**
+   * Check if a slot is empty
+   */
+  private isSlotEmpty(slotLabel: string): boolean {
+    const unit = (this as any).unit;
+
+    // Check ability slots
+    if (slotLabel === 'Reaction') return !unit.reactionAbility;
+    if (slotLabel === 'Passive') return !unit.passiveAbility;
+    if (slotLabel === 'Movement') return !unit.movementAbility;
+
+    // Check equipment slots
+    if ('leftHand' in unit) {
+      const humanoid = unit as any;
+      if (slotLabel === 'L.Hand') return !humanoid.leftHand;
+      if (slotLabel === 'R.Hand') return !humanoid.rightHand;
+      if (slotLabel === 'Head') return !humanoid.head;
+      if (slotLabel === 'Body') return !humanoid.body;
+      if (slotLabel === 'Accessory') return !humanoid.accessory;
+    }
+
+    return false;
+  }
+
+  /**
+   * Determine slot type (equipment or ability)
+   */
+  private getSlotType(slotLabel: string): 'equipment' | 'ability' {
+    const abilitySlots = ['Reaction', 'Passive', 'Movement'];
+    return abilitySlots.includes(slotLabel) ? 'ability' : 'equipment';
+  }
+
+  /**
+   * Override handleHover to include party selector and empty slots
    */
   handleHover(relativeX: number, relativeY: number): unknown {
-    // Call parent hover handler first
-    const parentResult = super.handleHover(relativeX, relativeY);
-
-    // Check if hovering over party selector
+    // Check if hovering over party selector first (in stats view)
     const isStatsView = (this as any).currentView === 'stats';
     const hasHelperText = (this as any).hoveredStatId !== null;
 
@@ -297,11 +367,34 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
       }
     }
 
-    return parentResult;
+    // For abilities view, check for empty slots
+    if ((this as any).currentView === 'abilities') {
+      const slotLabel = this.getSlotLabelAtPosition(relativeX, relativeY);
+
+      if (slotLabel !== null) {
+        const isEmpty = this.isSlotEmpty(slotLabel);
+
+        if (isEmpty) {
+          // Hovering over empty slot
+          if ((this as any).hoveredStatId !== slotLabel) {
+            (this as any).hoveredStatId = slotLabel;
+          }
+
+          return {
+            type: 'empty-slot-detail',
+            slotLabel: slotLabel,
+            slotType: this.getSlotType(slotLabel)
+          };
+        }
+      }
+    }
+
+    // Call parent hover handler for non-empty slots
+    return super.handleHover(relativeX, relativeY);
   }
 
   /**
-   * Override handleClick to include party selector
+   * Override handleClick to include party selector and empty slots
    */
   handleClick(relativeX: number, relativeY: number): PanelClickResult {
     // Check if clicking on party selector first
@@ -327,7 +420,25 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
       }
     }
 
-    // Call parent click handler if not handled by selector
+    // For abilities view, check for empty slot clicks
+    if ((this as any).currentView === 'abilities') {
+      const slotLabel = this.getSlotLabelAtPosition(relativeX, relativeY);
+
+      if (slotLabel !== null) {
+        const isEmpty = this.isSlotEmpty(slotLabel);
+
+        if (isEmpty) {
+          // Empty slot clicked
+          return {
+            type: 'empty-slot',
+            slotLabel: slotLabel,
+            slotType: this.getSlotType(slotLabel)
+          } as any; // Using 'as any' since we're adding a new click result type
+        }
+      }
+    }
+
+    // Call parent click handler if not handled by selector or empty slot
     return super.handleClick(relativeX, relativeY);
   }
 }

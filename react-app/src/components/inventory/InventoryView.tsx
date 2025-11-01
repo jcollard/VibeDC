@@ -22,6 +22,7 @@ import { InventoryTopPanelContent, type InventoryStats } from '../../models/inve
 import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
 import { AbilityInfoContent } from '../../models/combat/managers/panels/AbilityInfoContent';
 import { InventoryUnitInfoContent } from '../../models/inventory/panels/InventoryUnitInfoContent';
+import { EmptySlotInfoContent } from '../../models/inventory/panels/EmptySlotInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { UISettings } from '../../config/UISettings';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
@@ -143,7 +144,8 @@ export const InventoryView: React.FC = () => {
   const originalBottomPanelContentRef = useRef<PanelContent | null>(null);
 
   // Track selected equipment/ability from top panel (for sticky selection on click)
-  const selectedEquipmentRef = useRef<{ type: 'ability' | 'equipment'; item: any; slotLabel: string | null } | null>(null);
+  // item can be null for empty slots
+  const selectedEquipmentRef = useRef<{ type: 'ability' | 'equipment'; item: any | null; slotLabel: string | null } | null>(null);
 
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -759,26 +761,44 @@ export const InventoryView: React.FC = () => {
         if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
             canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
 
-          // Check if hover result is detail info
-          if (topInfoHoverResult && typeof topInfoHoverResult === 'object' && 'type' in topInfoHoverResult && 'item' in topInfoHoverResult) {
-            if (topInfoHoverResult.type === 'ability-detail') {
-              // Cache original bottom panel content if not already cached
+          // Check if hover result is detail info or empty slot
+          if (topInfoHoverResult && typeof topInfoHoverResult === 'object' && 'type' in topInfoHoverResult) {
+            if ('item' in topInfoHoverResult) {
+              // Hovering over ability or equipment with item
+              if (topInfoHoverResult.type === 'ability-detail') {
+                // Cache original bottom panel content if not already cached
+                if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                  originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+                }
+
+                // Show ability details in bottom panel
+                bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any));
+                detailPanelActiveRef.current = true;
+                needsRerender = true;
+              } else if (topInfoHoverResult.type === 'equipment-detail') {
+                // Cache original bottom panel content if not already cached
+                if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                  originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+                }
+
+                // Show equipment details in bottom panel
+                bottomPanelManager.setContent(new EquipmentInfoContent(topInfoHoverResult.item as any));
+                detailPanelActiveRef.current = true;
+                needsRerender = true;
+              }
+            } else if (topInfoHoverResult.type === 'empty-slot-detail' && 'slotLabel' in topInfoHoverResult && 'slotType' in topInfoHoverResult) {
+              // Hovering over empty slot
               if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
                 originalBottomPanelContentRef.current = bottomPanelManager.getContent();
               }
 
-              // Show ability details in bottom panel
-              bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any));
-              detailPanelActiveRef.current = true;
-              needsRerender = true;
-            } else if (topInfoHoverResult.type === 'equipment-detail') {
-              // Cache original bottom panel content if not already cached
-              if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
-                originalBottomPanelContentRef.current = bottomPanelManager.getContent();
-              }
-
-              // Show equipment details in bottom panel
-              bottomPanelManager.setContent(new EquipmentInfoContent(topInfoHoverResult.item as any));
+              // Show empty slot info in bottom panel
+              bottomPanelManager.setContent(
+                new EmptySlotInfoContent(
+                  topInfoHoverResult.slotLabel as string,
+                  topInfoHoverResult.slotType as 'equipment' | 'ability'
+                )
+              );
               detailPanelActiveRef.current = true;
               needsRerender = true;
             }
@@ -889,10 +909,10 @@ export const InventoryView: React.FC = () => {
         if (topContent && 'handleHover' in topContent && typeof topContent.handleHover === 'function') {
           const hoverResult = topContent.handleHover(relativeX, relativeY);
 
-          // If clicking on equipment or ability, select it
-          if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult && 'item' in hoverResult) {
-            if (hoverResult.type === 'equipment-detail' || hoverResult.type === 'ability-detail') {
-              // Get the slot label from hoveredStatId
+          // If clicking on equipment, ability, or empty slot, select it
+          if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult) {
+            if ('item' in hoverResult && (hoverResult.type === 'equipment-detail' || hoverResult.type === 'ability-detail')) {
+              // Clicking on filled equipment or ability slot
               const slotLabel = (topContent as any).hoveredStatId as string | null;
 
               // Set as selected
@@ -914,6 +934,28 @@ export const InventoryView: React.FC = () => {
                 bottomPanelManager.setContent(new AbilityInfoContent(hoverResult.item as any));
               }
 
+              detailPanelActiveRef.current = true;
+              renderFrame();
+              return;
+            } else if (hoverResult.type === 'empty-slot-detail' && 'slotLabel' in hoverResult && 'slotType' in hoverResult) {
+              // Clicking on empty slot - show empty slot info and select the slot
+              const slotLabel = hoverResult.slotLabel as string;
+              const slotType = hoverResult.slotType as 'equipment' | 'ability';
+
+              // Set as selected (no item, just slot info)
+              selectedEquipmentRef.current = {
+                type: slotType,
+                item: null,
+                slotLabel: slotLabel
+              };
+
+              // Update the top info panel to highlight the selected slot
+              if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                (topContent as any).setSelectedEquipmentSlot(slotLabel);
+              }
+
+              // Show empty slot info in bottom panel
+              bottomPanelManager.setContent(new EmptySlotInfoContent(slotLabel, slotType));
               detailPanelActiveRef.current = true;
               renderFrame();
               return;
