@@ -30,6 +30,16 @@ enemies:
     description: "An elder dragon of immense power and wisdom"
     xpValue: 500
     goldValue: 1000
+    lootTable:
+      entries:
+        - equipmentId: "dragon-scale-armor-001"
+          dropRate: 10
+        - equipmentId: "flame-blade-001"
+          dropRate: 10
+        - equipmentId: "crown-of-courage-001"
+          dropRate: 8
+        - equipmentId: "strength-ring-001"
+          dropRate: 7
 
   - id: "blob"
     name: "Blob"
@@ -50,6 +60,10 @@ enemies:
     description: "A goblin equipped with a crude bow"
     xpValue: 15
     goldValue: 8
+    lootTable:
+      entries:
+        - equipmentId: "light-crossbow-001"
+          dropRate: 5
 
   - id: "dire-wolf"
     name: "Dire Wolf"
@@ -70,6 +84,12 @@ enemies:
     description: "A larger, more dangerous wolf with enhanced abilities"
     xpValue: 40
     goldValue: 25
+    lootTable:
+      entries:
+        - equipmentId: "swift-boots-001"
+          dropRate: 7
+        - equipmentId: "leather-armor-001"
+          dropRate: 5
 
   - id: "fire-elemental"
     name: "Fire Elemental"
@@ -90,6 +110,12 @@ enemies:
     description: "A being of pure flame"
     xpValue: 35
     goldValue: 20
+    lootTable:
+      entries:
+        - equipmentId: "flame-blade-001"
+          dropRate: 8
+        - equipmentId: "mana-amulet-001"
+          dropRate: 6
 
   - id: "goblin"
     name: "Goblin"
@@ -110,6 +136,12 @@ enemies:
     description: "A small, aggressive creature with crude weapons"
     xpValue: 10
     goldValue: 5
+    lootTable:
+      entries:
+        - equipmentId: "iron-sword-001"
+          dropRate: 5
+        - equipmentId: "torch-001"
+          dropRate: 7
 
   - id: "ice-elemental"
     name: "Ice Elemental"
@@ -130,6 +162,12 @@ enemies:
     description: "A being of frozen water and frost"
     xpValue: 35
     goldValue: 20
+    lootTable:
+      entries:
+        - equipmentId: "crystal-orb-001"
+          dropRate: 8
+        - equipmentId: "mystic-pendant-001"
+          dropRate: 6
 
   - id: "orc-berserker"
     name: "Orc Berserker"
@@ -150,6 +188,12 @@ enemies:
     description: "A rage-fueled orc that fights with reckless abandon"
     xpValue: 60
     goldValue: 40
+    lootTable:
+      entries:
+        - equipmentId: "brave-heart-charm-001"
+          dropRate: 8
+        - equipmentId: "plate-armor-001"
+          dropRate: 6
 
   - id: "orc-warrior"
     name: "Orc Warrior"
@@ -170,6 +214,12 @@ enemies:
     description: "A brutish warrior with immense strength"
     xpValue: 45
     goldValue: 30
+    lootTable:
+      entries:
+        - equipmentId: "iron-helmet-001"
+          dropRate: 7
+        - equipmentId: "iron-sword-001"
+          dropRate: 6
 
   - id: "skeleton"
     name: "Skeleton"
@@ -190,6 +240,10 @@ enemies:
     description: "Animated bones driven by dark magic"
     xpValue: 18
     goldValue: 10
+    lootTable:
+      entries:
+        - equipmentId: "iron-sword-001"
+          dropRate: 5
 
   - id: "skeleton-archer"
     name: "Skeleton Archer"
@@ -210,6 +264,10 @@ enemies:
     description: "An undead archer with unerring aim"
     xpValue: 20
     goldValue: 12
+    lootTable:
+      entries:
+        - equipmentId: "light-crossbow-001"
+          dropRate: 6
 
   - id: "wolf"
     name: "Wolf"
@@ -230,6 +288,10 @@ enemies:
     description: "A fierce predator with sharp teeth and claws"
     xpValue: 25
     goldValue: 15
+    lootTable:
+      entries:
+        - equipmentId: "leather-armor-001"
+          dropRate: 5
 
   - id: "young-dragon"
     name: "Young Dragon"
@@ -250,4 +312,12 @@ enemies:
     description: "A juvenile dragon, still formidable in power"
     xpValue: 200
     goldValue: 300
+    lootTable:
+      entries:
+        - equipmentId: "flame-blade-001"
+          dropRate: 10
+        - equipmentId: "wizards-robe-001"
+          dropRate: 8
+        - equipmentId: "wizards-hat-001"
+          dropRate: 7
 

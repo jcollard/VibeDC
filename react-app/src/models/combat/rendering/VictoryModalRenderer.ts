@@ -3,7 +3,6 @@ import { FontAtlasRenderer } from "../../../utils/FontAtlasRenderer";
 import { FontRegistry } from "../../../utils/FontRegistry";
 import type { CombatState } from "../CombatState";
 import type { VictoryRewards } from "../VictoryRewards";
-import { SpriteRegistry } from "../../../utils/SpriteRegistry";
 
 /**
  * Renders the victory screen modal: overlay, panel, rewards info, item grid, and continue button.
@@ -238,7 +237,7 @@ export class VictoryModalRenderer {
     hoveredItemIndex: number | null,
     selectedItemIndices: Set<number>,
     fonts: Map<string, HTMLImageElement>,
-    sprites: Map<string, HTMLImageElement>
+    _sprites: Map<string, HTMLImageElement>
   ): number {
     const sectionFont = FontRegistry.getById(CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID);
     const sectionFontImage = fonts.get(CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID);
@@ -251,8 +250,8 @@ export class VictoryModalRenderer {
     const leftMargin = modalX + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
     let currentY = startY;
 
-    // Render "Items:" label
-    const itemsText = "Items:";
+    // Render "Loot:" label
+    const itemsText = "Loot:";
     FontAtlasRenderer.renderText(
       ctx,
       itemsText,
@@ -265,99 +264,53 @@ export class VictoryModalRenderer {
       CombatConstants.VICTORY_SCREEN.SECTION_LABEL_COLOR
     );
 
-    currentY += sectionFont.charHeight + 4; // Small gap before grid
+    currentY += sectionFont.charHeight + 4; // Small gap before list
 
-    // Render item grid (3 columns)
-    const cellSize = CombatConstants.VICTORY_SCREEN.ITEM_CELL_SIZE;
-    const spacing = CombatConstants.VICTORY_SCREEN.ITEM_SPACING;
-    const columns = CombatConstants.VICTORY_SCREEN.ITEM_GRID_COLUMNS;
+    // Render items in two columns (max 3 items per column, 6 total)
+    const maxItemsPerColumn = 3;
+    const columnSpacing = 100; // Space between columns
+    const itemsToRender = rewards.items.slice(0, 6); // Limit to 6 items max
 
-    rewards.items.forEach((item, index) => {
-      const row = Math.floor(index / columns);
-      const col = index % columns;
+    let maxItemsRendered = 0;
+    itemsToRender.forEach((item, index) => {
+      const column = Math.floor(index / maxItemsPerColumn);
+      const row = index % maxItemsPerColumn;
 
-      const cellX = leftMargin + col * (cellSize + spacing);
-      const cellY = currentY + row * (cellSize + spacing);
+      const itemX = leftMargin + (column * columnSpacing);
+      const itemY = currentY + (row * (sectionFont.charHeight + 2));
 
-      // Render item cell
-      this.renderItemCell(
+      const isHovered = index === hoveredItemIndex;
+      const isSelected = selectedItemIndices.has(index);
+
+      // Determine text color based on state
+      let textColor: string = CombatConstants.VICTORY_SCREEN.SECTION_VALUE_COLOR;
+      if (isSelected) {
+        textColor = CombatConstants.VICTORY_SCREEN.ITEM_SELECTED_COLOR;
+      } else if (isHovered) {
+        textColor = CombatConstants.VICTORY_SCREEN.ITEM_HOVER_COLOR;
+      }
+
+      FontAtlasRenderer.renderText(
         ctx,
-        cellX,
-        cellY,
-        item.spriteId,
-        index === hoveredItemIndex,
-        selectedItemIndices.has(index),
-        sprites
+        item.name,
+        itemX,
+        itemY,
+        CombatConstants.VICTORY_SCREEN.SECTION_FONT_ID,
+        sectionFontImage,
+        1,
+        'left',
+        textColor
       );
+
+      maxItemsRendered = Math.max(maxItemsRendered, row + 1);
     });
 
-    // Calculate height of grid
-    const rows = Math.ceil(rewards.items.length / columns);
-    currentY += rows * (cellSize + spacing);
+    // Calculate height based on number of rows rendered
+    currentY += maxItemsRendered * (sectionFont.charHeight + 2);
 
-    return currentY;
+    return currentY + 4; // Extra spacing after items list
   }
 
-  private renderItemCell(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    spriteId: string,
-    isHovered: boolean,
-    isSelected: boolean,
-    sprites: Map<string, HTMLImageElement>
-  ): void {
-    const cellSize = CombatConstants.VICTORY_SCREEN.ITEM_CELL_SIZE;
-
-    // Render background
-    ctx.fillStyle = CombatConstants.VICTORY_SCREEN.ITEM_BACKGROUND;
-    ctx.fillRect(x, y, cellSize, cellSize);
-
-    // Render border (changes color based on state)
-    if (isSelected) {
-      ctx.strokeStyle = CombatConstants.VICTORY_SCREEN.ITEM_SELECTED_COLOR;
-      ctx.lineWidth = 2;
-    } else if (isHovered) {
-      ctx.strokeStyle = CombatConstants.VICTORY_SCREEN.ITEM_HOVER_COLOR;
-      ctx.lineWidth = 2;
-    } else {
-      ctx.strokeStyle = '#666666'; // Default grey
-      ctx.lineWidth = 1;
-    }
-    ctx.strokeRect(x, y, cellSize, cellSize);
-
-    // Render sprite (centered in cell)
-    const spriteData = SpriteRegistry.getById(spriteId);
-    if (!spriteData) {
-      console.warn(`[VictoryModalRenderer] Sprite data not found: ${spriteId}`);
-      return;
-    }
-
-    const spriteImage = sprites.get(spriteData.spriteSheet);
-    if (!spriteImage) {
-      console.warn(`[VictoryModalRenderer] Sprite sheet not loaded: ${spriteData.spriteSheet}`);
-      return;
-    }
-
-    // Center sprite in cell (assuming 12x12 sprites)
-    const spriteSize = 12;
-    const srcX = spriteData.x * spriteSize;
-    const srcY = spriteData.y * spriteSize;
-    const srcWidth = (spriteData.width || 1) * spriteSize;
-    const srcHeight = (spriteData.height || 1) * spriteSize;
-
-    ctx.drawImage(
-      spriteImage,
-      srcX,
-      srcY,
-      srcWidth,
-      srcHeight,
-      x,
-      y,
-      srcWidth,
-      srcHeight
-    );
-  }
 
   private renderContinueButton(
     ctx: CanvasRenderingContext2D,
@@ -407,8 +360,8 @@ export class VictoryModalRenderer {
   }
 
   /**
-   * Calculates item grid cell bounds for hit detection.
-   * Returns bounds for each item in the grid.
+   * Calculates item text bounds for hit detection.
+   * Returns bounds for each item in the list.
    */
   getItemBounds(
     _panelBounds: { width: number; height: number },
@@ -433,19 +386,25 @@ export class VictoryModalRenderer {
     currentY += sectionHeight + 4; // Items label + gap
 
     const leftMargin = modalX + CombatConstants.VICTORY_SCREEN.MODAL_PADDING;
-    const cellSize = CombatConstants.VICTORY_SCREEN.ITEM_CELL_SIZE;
-    const spacing = CombatConstants.VICTORY_SCREEN.ITEM_SPACING;
-    const columns = CombatConstants.VICTORY_SCREEN.ITEM_GRID_COLUMNS;
 
-    return rewards.items.map((_, index) => {
-      const row = Math.floor(index / columns);
-      const col = index % columns;
+    // Two-column layout (max 3 items per column, 6 total)
+    const maxItemsPerColumn = 3;
+    const columnSpacing = 100;
+    const itemsToRender = rewards.items.slice(0, 6); // Limit to 6 items max
+
+    return itemsToRender.map((item, index) => {
+      const column = Math.floor(index / maxItemsPerColumn);
+      const row = index % maxItemsPerColumn;
+
+      const itemX = leftMargin + (column * columnSpacing);
+      const itemY = currentY + (row * (sectionHeight + 2));
+      const textWidth = sectionFont ? FontAtlasRenderer.measureText(item.name, sectionFont) : 100;
 
       return {
-        x: leftMargin + col * (cellSize + spacing),
-        y: currentY + row * (cellSize + spacing),
-        width: cellSize,
-        height: cellSize,
+        x: itemX,
+        y: itemY,
+        width: textWidth,
+        height: sectionHeight,
       };
     });
   }
@@ -482,10 +441,12 @@ export class VictoryModalRenderer {
 
     if (rewards.items.length > 0) {
       currentY += sectionHeight + 4; // Items label + gap
-      const rows = Math.ceil(rewards.items.length / CombatConstants.VICTORY_SCREEN.ITEM_GRID_COLUMNS);
-      const cellSize = CombatConstants.VICTORY_SCREEN.ITEM_CELL_SIZE;
-      const spacing = CombatConstants.VICTORY_SCREEN.ITEM_SPACING;
-      currentY += rows * (cellSize + spacing);
+      // Two-column layout: calculate height based on max rows (3 items per column)
+      const maxItemsPerColumn = 3;
+      const itemsToRender = Math.min(rewards.items.length, 6); // Max 6 items
+      const numRows = Math.min(itemsToRender, maxItemsPerColumn);
+      currentY += numRows * (sectionHeight + 2); // Item rows
+      currentY += 4; // Extra spacing after items
     }
 
     const buttonText = CombatConstants.VICTORY_SCREEN.CONTINUE_TEXT;

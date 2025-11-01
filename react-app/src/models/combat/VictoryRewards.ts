@@ -4,15 +4,11 @@
  */
 
 /**
- * A single item reward with sprite ID and optional quantity
+ * A single item reward
  */
 export interface ItemReward {
-  /** Sprite ID for the item icon (e.g., 'items-0') */
-  spriteId: string;
   /** Display name of the item */
   name: string;
-  /** Number of this item awarded (defaults to 1) */
-  quantity?: number;
 }
 
 /**

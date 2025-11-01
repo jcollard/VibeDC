@@ -10,7 +10,10 @@ import type {
   CombatPredicateJSON,
 } from "./CombatPredicate";
 import { CombatPredicateFactory } from "./CombatPredicate";
-import type { VictoryRewards } from "./VictoryRewards";
+import type { VictoryRewards, ItemReward } from "./VictoryRewards";
+import type { GuaranteedLoot } from "./LootTable";
+import { rollLootTable } from "./LootTable";
+import { EquipmentRegistry } from "../../utils/EquipmentRegistry";
 
 /**
  * Represents an enemy placement on the combat map.
@@ -46,7 +49,8 @@ export class CombatEncounter {
   readonly playerDeploymentZones: Position[];
   readonly enemyPlacements: EnemyPlacement[];
   readonly tilesetId?: string; // Optional tileset ID for map reference
-  readonly rewards: VictoryRewards; // Victory rewards (XP, gold, items)
+  readonly guaranteedLoot: GuaranteedLoot[]; // Items that always drop from this encounter
+  private _rewards: VictoryRewards; // Victory rewards (XP, gold, items)
 
   constructor(
     id: string,
@@ -58,6 +62,7 @@ export class CombatEncounter {
     playerDeploymentZones: Position[],
     enemyPlacements: EnemyPlacement[],
     tilesetId?: string,
+    guaranteedLoot?: GuaranteedLoot[],
     rewards?: VictoryRewards
   ) {
     this.id = id;
@@ -69,35 +74,101 @@ export class CombatEncounter {
     this.playerDeploymentZones = playerDeploymentZones;
     this.enemyPlacements = enemyPlacements;
     this.tilesetId = tilesetId;
+    this.guaranteedLoot = guaranteedLoot ?? [];
 
     // Calculate rewards from enemies if not explicitly provided
-    this.rewards = rewards ?? this.calculateRewardsFromEnemies();
+    this._rewards = rewards ?? this.calculateRewardsFromEnemies();
 
     CombatEncounter.registry.set(id, this);
   }
 
   /**
-   * Calculates total XP and Gold rewards from all enemies in this encounter.
-   * Returns a VictoryRewards object with the summed values.
+   * Gets the victory rewards for this encounter.
+   * Returns cached rewards unless they need to be recalculated.
+   */
+  get rewards(): VictoryRewards {
+    return this._rewards;
+  }
+
+  /**
+   * Recalculates rewards from enemies (used for debugging with forced item drops).
+   */
+  recalculateRewards(): void {
+    this._rewards = this.calculateRewardsFromEnemies();
+  }
+
+  /**
+   * Calculates total XP, Gold, and item rewards from all enemies in this encounter.
+   * Returns a VictoryRewards object with:
+   * - Summed XP and Gold from all enemies
+   * - Guaranteed loot items (always drop)
+   * - Rolled loot table items (random drops based on drop rates)
    */
   private calculateRewardsFromEnemies(): VictoryRewards {
     let totalXp = 0;
     let totalGold = 0;
+    const droppedEquipmentIds: string[] = [];
 
+    // Check if developer forced a specific number of item drops
+    const forcedItemCount = (window as any).__DEV_FORCED_ITEM_COUNT;
+    let forcedDropsRemaining = forcedItemCount ?? 0;
+
+    // Sum XP/Gold and roll loot tables from all enemies
     for (const placement of this.enemyPlacements) {
       const enemyDef = EnemyRegistry.getById(placement.enemyId);
       if (enemyDef) {
         totalXp += enemyDef.xpValue;
         totalGold += enemyDef.goldValue;
+
+        // Roll the enemy's loot table if it has one
+        if (enemyDef.lootTable) {
+          const lootDrops = rollLootTable(enemyDef.lootTable, forcedDropsRemaining);
+          droppedEquipmentIds.push(...lootDrops);
+          // Reduce forced drops by how many actually dropped
+          if (forcedDropsRemaining > 0) {
+            forcedDropsRemaining = Math.max(0, forcedDropsRemaining - lootDrops.length);
+          }
+        }
       } else {
         console.warn(`Enemy definition not found for '${placement.enemyId}' in encounter '${this.id}'`);
+      }
+    }
+
+    // Clear the forced item count after use
+    if (forcedItemCount !== undefined) {
+      delete (window as any).__DEV_FORCED_ITEM_COUNT;
+    }
+
+    // Convert guaranteed loot to equipment IDs
+    const guaranteedEquipmentIds: string[] = [];
+    for (const loot of this.guaranteedLoot) {
+      const quantity = loot.quantity ?? 1;
+      for (let i = 0; i < quantity; i++) {
+        guaranteedEquipmentIds.push(loot.equipmentId);
+      }
+    }
+
+    // Combine guaranteed loot (first) with rolled loot, limit to 6 items max
+    const allEquipmentIds = [...guaranteedEquipmentIds, ...droppedEquipmentIds].slice(0, 6);
+
+    // Convert equipment IDs to ItemReward objects (each item shown separately)
+    const items: ItemReward[] = [];
+
+    for (const equipId of allEquipmentIds) {
+      const equipment = EquipmentRegistry.getById(equipId);
+      if (equipment) {
+        items.push({
+          name: equipment.name,
+        });
+      } else {
+        console.warn(`Equipment '${equipId}' not found in registry for encounter '${this.id}'`);
       }
     }
 
     return {
       xp: totalXp,
       gold: totalGold,
-      items: [], // Items can be added manually via rewards parameter
+      items,
     };
   }
 
@@ -237,6 +308,7 @@ export class CombatEncounter {
       json.playerDeploymentZones,
       enemyPlacements,
       tilesetId,
+      json.guaranteedLoot,
       json.rewards
     );
   }
@@ -267,5 +339,6 @@ export interface CombatEncounterJSON {
   defeatConditions: CombatPredicateJSON[];
   playerDeploymentZones: Position[];
   enemyPlacements: EnemyPlacement[];
+  guaranteedLoot?: GuaranteedLoot[]; // Optional guaranteed loot items
   rewards?: VictoryRewards; // Optional victory rewards
 }

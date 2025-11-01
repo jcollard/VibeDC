@@ -133,8 +133,14 @@ export const CombatView: React.FC<CombatViewProps> = ({ encounter }) => {
     };
 
     // Expose forceVictory function (for testing victory screen)
-    (window as any).forceVictory = () => {
+    (window as any).forceVictory = (itemCount?: number) => {
       console.log('[DEV] Forcing victory screen transition...');
+      if (itemCount !== undefined) {
+        console.log(`[DEV] Forcing ${itemCount} item drops...`);
+        (window as any).__DEV_FORCED_ITEM_COUNT = itemCount;
+        // Recalculate rewards to apply forced item count
+        activeEncounter.recalculateRewards();
+      }
       setCombatState(prevState => ({
         ...prevState,
         phase: 'victory' as const,

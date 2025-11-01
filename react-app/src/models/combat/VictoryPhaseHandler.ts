@@ -33,12 +33,8 @@ export class VictoryPhaseHandler extends PhaseBase {
   }
 
   getRequiredSprites(_state: CombatState, _encounter: CombatEncounter): PhaseSprites {
-    // Collect all item sprite IDs
-    const spriteIds = new Set<string>();
-    this.rewards.items.forEach(item => {
-      spriteIds.add(item.spriteId);
-    });
-    return { spriteIds };
+    // Items are rendered as text, no sprites needed
+    return { spriteIds: new Set<string>() };
   }
 
   protected updatePhase(_state: CombatState, _encounter: CombatEncounter, _deltaTime: number): CombatState | null {

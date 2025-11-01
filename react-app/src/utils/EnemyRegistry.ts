@@ -2,6 +2,7 @@ import { MonsterUnit } from '../models/combat/MonsterUnit';
 import { HumanoidUnit } from '../models/combat/HumanoidUnit';
 import type { CombatUnit } from '../models/combat/CombatUnit';
 import { UnitClass } from '../models/combat/UnitClass';
+import type { LootTable, LootTableJSON } from '../models/combat/LootTable';
 
 /**
  * Unit type enum for distinguishing between different unit implementations
@@ -92,6 +93,12 @@ export interface EnemyDefinition {
    * Gold value awarded when this enemy is defeated
    */
   goldValue: number;
+
+  /**
+   * Loot table for item drops (optional)
+   * Items have a chance to drop based on their drop rates (typically 5-10%)
+   */
+  lootTable?: LootTable;
 }
 
 /**
@@ -127,6 +134,7 @@ export interface EnemyDefinitionJSON {
   description?: string;
   xpValue: number;
   goldValue: number;
+  lootTable?: LootTableJSON;
 }
 
 /**
