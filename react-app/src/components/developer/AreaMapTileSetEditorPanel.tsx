@@ -96,7 +96,7 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
     }
   };
 
-  const handleExport = () => {
+  const handleExport = async () => {
     if (!editedTileset) return;
 
     // Export all tilesets from the registry
@@ -112,15 +112,35 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
       noRefs: true,
     });
 
-    const blob = new Blob([yamlString], { type: 'text/yaml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'area-tileset-database.yaml';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      // Use File System Access API if available
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: 'area-tileset-database.yaml',
+          types: [{
+            description: 'YAML Files',
+            accept: { 'text/yaml': ['.yaml', '.yml'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(yamlString);
+        await writable.close();
+      } else {
+        // Fallback to download link for browsers without File System Access API
+        const blob = new Blob([yamlString], { type: 'text/yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'area-tileset-database.yaml';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      // User cancelled the save dialog or error occurred
+      console.log('Export cancelled or failed:', error);
+    }
   };
 
   const handleTilesetFieldChange = (field: keyof AreaMapTileSet, value: any) => {

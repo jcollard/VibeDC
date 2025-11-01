@@ -166,7 +166,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     return rows.join('\n');
   };
 
-  const handleExport = () => {
+  const handleExportMaps = async () => {
     const mapsData = {
       areas: areaMaps.map(map => {
         const json = map.toJSON();
@@ -190,15 +190,79 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
       noRefs: true,
     });
 
-    const blob = new Blob([yamlString], { type: 'text/yaml' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'area-map-database.yaml';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    try {
+      // Use File System Access API if available
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: 'area-map-database.yaml',
+          types: [{
+            description: 'YAML Files',
+            accept: { 'text/yaml': ['.yaml', '.yml'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(yamlString);
+        await writable.close();
+      } else {
+        // Fallback to download link for browsers without File System Access API
+        const blob = new Blob([yamlString], { type: 'text/yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'area-map-database.yaml';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      // User cancelled the save dialog or error occurred
+      console.log('Export cancelled or failed:', error);
+    }
+  };
+
+  const handleExportTilesets = async () => {
+    const allTilesets = AreaMapTileSetRegistry.getAll();
+
+    const tilesetData = {
+      tilesets: allTilesets
+    };
+
+    const yamlString = yaml.dump(tilesetData, {
+      indent: 2,
+      lineWidth: -1,
+      noRefs: true,
+    });
+
+    try {
+      // Use File System Access API if available
+      if ('showSaveFilePicker' in window) {
+        const handle = await (window as any).showSaveFilePicker({
+          suggestedName: 'area-tileset-database.yaml',
+          types: [{
+            description: 'YAML Files',
+            accept: { 'text/yaml': ['.yaml', '.yml'] },
+          }],
+        });
+        const writable = await handle.createWritable();
+        await writable.write(yamlString);
+        await writable.close();
+      } else {
+        // Fallback to download link for browsers without File System Access API
+        const blob = new Blob([yamlString], { type: 'text/yaml' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'area-tileset-database.yaml';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+      }
+    } catch (error) {
+      // User cancelled the save dialog or error occurred
+      console.log('Export cancelled or failed:', error);
+    }
   };
 
   // Reserved for future use - allows editing map properties
@@ -720,7 +784,24 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         <div style={{ fontWeight: 'bold', fontSize: '18px' }}>Area Map Registry Editor</div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
           <button
-            onClick={handleExport}
+            onClick={handleExportTilesets}
+            style={{
+              padding: '8px 16px',
+              background: 'rgba(156, 39, 176, 0.3)',
+              border: '1px solid rgba(156, 39, 176, 0.6)',
+              borderRadius: '4px',
+              color: '#fff',
+              fontSize: '12px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+            }}
+            title="Export all tilesets to YAML file"
+          >
+            Export TileSet Database
+          </button>
+          <button
+            onClick={handleExportMaps}
             style={{
               padding: '8px 16px',
               background: 'rgba(33, 150, 243, 0.3)',
@@ -734,7 +815,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             }}
             title="Export all area maps to YAML file"
           >
-            Export YAML
+            Export AreaMap Database
           </button>
           {onClose && (
             <button
