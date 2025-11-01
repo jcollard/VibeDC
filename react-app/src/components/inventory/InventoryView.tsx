@@ -19,13 +19,48 @@ import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { InventoryStatsContent, type InventoryStats } from '../../models/inventory/panels/InventoryStatsContent';
-import { ItemDetailsContent } from '../../models/inventory/panels/ItemDetailsContent';
+import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { UISettings } from '../../config/UISettings';
+import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
 const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216 pixels (18 tiles)
+
+/**
+ * Empty panel content for when no item is selected
+ */
+class EmptyPanelContent implements PanelContent {
+  render(
+    ctx: CanvasRenderingContext2D,
+    region: PanelRegion,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement | null
+  ): void {
+    if (!fontAtlasImage) return;
+
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
+    const padding = 4;
+    const text = 'No item selected';
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      text,
+      Math.round(region.x + padding),
+      Math.round(region.y + padding),
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      '#888888'
+    );
+
+    ctx.restore();
+  }
+}
 
 /**
  * InventoryView component
@@ -86,7 +121,7 @@ export const InventoryView: React.FC = () => {
     topPanelManager.setContent(new InventoryStatsContent(stats));
 
     // Bottom panel: Item details (initially empty)
-    bottomPanelManager.setContent(new ItemDetailsContent(null, 0));
+    bottomPanelManager.setContent(new EmptyPanelContent());
   }, [topPanelManager, bottomPanelManager]);
 
   // Track canvas display style for integer scaling
@@ -238,12 +273,11 @@ export const InventoryView: React.FC = () => {
   useEffect(() => {
     if (viewState.selectedItemId) {
       const equipment = Equipment.getById(viewState.selectedItemId);
-      const quantity = PartyInventory.getItemCount(viewState.selectedItemId);
       if (equipment) {
-        bottomPanelManager.setContent(new ItemDetailsContent(equipment, quantity));
+        bottomPanelManager.setContent(new EquipmentInfoContent(equipment));
       }
     } else {
-      bottomPanelManager.setContent(new ItemDetailsContent(null, 0));
+      bottomPanelManager.setContent(new EmptyPanelContent());
     }
   }, [viewState.selectedItemId, bottomPanelManager]);
 
