@@ -84,10 +84,11 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
     const buttonBounds = (this as any).buttonBounds;
     if (!buttonBounds) return;
 
-    const selectorStartY = region.y + buttonBounds.y + buttonBounds.height + 4; // 4px padding below button
+    // Use panel-relative coordinates for both rendering and bounds
+    const selectorStartY = buttonBounds.y + buttonBounds.height + 4; // 4px padding below button
 
     // Calculate available height for selector
-    const availableHeight = region.height - (selectorStartY - region.y) - padding;
+    const availableHeight = region.height - selectorStartY - padding;
     if (availableHeight < 24) return; // Need at least 24px (12px sprite + 12px for name with padding)
 
     // Sprite and text dimensions
@@ -96,9 +97,9 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
     const memberSpacing = 2; // Spacing between members
     const memberTotalWidth = spriteDisplaySize + memberSpacing;
 
-    // Calculate total width and center it
+    // Calculate total width and center it (panel-relative)
     const totalWidth = (this.partyMembers.length * memberTotalWidth) - memberSpacing;
-    const startX = region.x + Math.floor((region.width - totalWidth) / 2);
+    const startX = Math.floor((region.width - totalWidth) / 2);
 
     // Clear bounds array for hit detection
     this.selectorBounds = [];
@@ -110,7 +111,7 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
       const isSelected = i === this.selectedMemberIndex;
       const isHovered = i === this.hoveredMemberIndex;
 
-      // Store bounds for hit detection
+      // Store bounds for hit detection (panel-relative coordinates)
       this.selectorBounds.push({
         x: currentX,
         y: selectorStartY,
@@ -118,10 +119,14 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
         height: spriteDisplaySize + 1 + nameHeight, // sprite + 1px gap + name
       });
 
+      // Convert to absolute canvas coordinates for rendering
+      const absX = region.x + currentX;
+      const absY = region.y + selectorStartY;
+
       // Draw selection box if selected
       if (isSelected) {
         ctx.fillStyle = '#ffff00'; // Yellow
-        ctx.fillRect(currentX - 1, selectorStartY - 1, spriteDisplaySize + 2, spriteDisplaySize + 2);
+        ctx.fillRect(absX - 1, absY - 1, spriteDisplaySize + 2, spriteDisplaySize + 2);
       }
 
       // Render sprite
@@ -130,25 +135,27 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
         member.spriteId,
         spriteImages,
         spriteSize,
-        currentX,
-        selectorStartY,
+        absX,
+        absY,
         spriteDisplaySize,
         spriteDisplaySize
       );
 
       // Render name below sprite
       const nameY = selectorStartY + spriteDisplaySize + 1;
+      const absNameY = region.y + nameY;
       const nameColor = isHovered ? HOVERED_TEXT : '#ffffff';
 
       // Measure name width and center it under the sprite
       const nameWidth = FontAtlasRenderer.measureText(member.name, font);
       const nameX = currentX + Math.floor((spriteDisplaySize - nameWidth) / 2);
+      const absNameX = region.x + nameX;
 
       FontAtlasRenderer.renderText(
         ctx,
         member.name,
-        nameX,
-        nameY,
+        absNameX,
+        absNameY,
         fontId,
         fontAtlasImage,
         1,

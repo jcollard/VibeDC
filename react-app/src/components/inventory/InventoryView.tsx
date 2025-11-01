@@ -168,17 +168,12 @@ export const InventoryView: React.FC = () => {
 
   // Initialize panel content
   useEffect(() => {
-    // Top panel: Inventory stats, category tabs, and sort options
-    const stats: InventoryStats = {
-      totalItems: PartyInventory.getTotalItemCount(),
-      uniqueItems: PartyInventory.getTotalUniqueItems(),
-      gold: PartyInventory.getGold(),
-    };
-    titlePanelManager.setContent(
-      new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
-    );
+    // Bottom panel: Item details (initially empty)
+    bottomPanelManager.setContent(new EmptyPanelContent());
+  }, [bottomPanelManager]);
 
-    // Top info panel: Party member stats with selector
+  // Update top info panel when selected party member changes
+  useEffect(() => {
     const partyMemberConfigs = PartyMemberRegistry.getAll();
     if (partyMemberConfigs.length > 0) {
       // Create all party member instances
@@ -212,10 +207,7 @@ export const InventoryView: React.FC = () => {
         );
       }
     }
-
-    // Bottom panel: Item details (initially empty)
-    bottomPanelManager.setContent(new EmptyPanelContent());
-  }, [titlePanelManager, bottomPanelManager, topInfoPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort, selectedPartyMemberIndex]);
+  }, [topInfoPanelManager, selectedPartyMemberIndex]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -579,9 +571,11 @@ export const InventoryView: React.FC = () => {
     renderer,
     layoutManager,
     titlePanelManager,
+    topInfoPanelManager,
     bottomPanelManager,
     combatLogManager,
     showDebugPanels,
+    selectedPartyMemberIndex,
   ]);
 
   // Expose developer mode functions to window (for testing)
@@ -832,6 +826,13 @@ export const InventoryView: React.FC = () => {
         topInfoPanelRegion
       );
       if (topInfoClickResult) {
+        // Handle party member selection
+        if (topInfoClickResult.type === 'party-member' && 'index' in topInfoClickResult) {
+          // Selection is already updated by the callback in InventoryUnitInfoContent
+          // Just render the frame to show the updated selection
+          renderFrame();
+          return;
+        }
         // If click result contains a message, add it to combat log
         if (topInfoClickResult.type === 'combat-log-message' && 'message' in topInfoClickResult) {
           combatLogManager.addMessage(topInfoClickResult.message);
