@@ -463,6 +463,19 @@ export const InventoryView: React.FC = () => {
     const fontAtlas = fontAtlasImagesRef.current.get(CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID);
     if (!fontAtlas) return;
 
+    // Calculate disabled items (when equipment slot is selected, incompatible items are disabled)
+    let disabledItemIds: Set<string> | undefined;
+    const selectedSlot = selectedEquipmentRef.current;
+    if (selectedSlot && selectedSlot.type === 'equipment' && selectedSlot.slotLabel && isEquipmentSlot(selectedSlot.slotLabel)) {
+      disabledItemIds = new Set<string>();
+      // Mark all incompatible items as disabled
+      for (const item of currentPageItems) {
+        if (!isEquipmentCompatibleWithSlot(item.equipment, selectedSlot.slotLabel)) {
+          disabledItemIds.add(item.equipmentId);
+        }
+      }
+    }
+
     // Render main panel (inventory grid)
     renderer.render(
       bufferCtx,
@@ -470,7 +483,8 @@ export const InventoryView: React.FC = () => {
       currentPageItems,
       totalPages,
       mainPanelBounds,
-      fontAtlas
+      fontAtlas,
+      disabledItemIds
     );
 
     // Render title panel (inventory stats, category tabs, and sort options)

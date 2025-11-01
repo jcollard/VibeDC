@@ -71,6 +71,7 @@ export class InventoryRenderer {
    * @param totalPages - Total number of pages
    * @param panelBounds - Panel region bounds
    * @param fontAtlas - Font atlas image
+   * @param disabledItemIds - Optional set of equipment IDs to render as disabled (dark grey)
    */
   render(
     ctx: CanvasRenderingContext2D,
@@ -78,7 +79,8 @@ export class InventoryRenderer {
     items: InventoryItemWithQuantity[],
     totalPages: number,
     panelBounds: Bounds,
-    fontAtlas: HTMLImageElement
+    fontAtlas: HTMLImageElement,
+    disabledItemIds?: Set<string>
   ): void {
     ctx.save();
     ctx.imageSmoothingEnabled = false;
@@ -99,7 +101,8 @@ export class InventoryRenderer {
       state.hoveredItemId,
       state.category,
       itemListBounds,
-      fontAtlas
+      fontAtlas,
+      disabledItemIds
     );
 
     // Render pagination at bottom (only if totalPages > 1)
@@ -152,7 +155,8 @@ export class InventoryRenderer {
     hoveredItemId: string | null,
     activeCategory: string,
     bounds: Bounds,
-    fontAtlas: HTMLImageElement
+    fontAtlas: HTMLImageElement,
+    disabledItemIds?: Set<string>
   ): void {
     const { ITEM_LIST } = this.constants.MAIN_PANEL;
 
@@ -179,10 +183,13 @@ export class InventoryRenderer {
     for (const item of items) {
       const isHovered = item.equipmentId === hoveredItemId;
       const isQuestItem = item.equipment.typeTags?.includes('quest-item') ?? false;
+      const isDisabled = disabledItemIds?.has(item.equipmentId) ?? false;
 
       // Determine text color
       let nameColor: string = ITEM_LIST.ITEM_NAME_COLOR;
-      if (isHovered) {
+      if (isDisabled) {
+        nameColor = '#666666'; // Dark grey for disabled items
+      } else if (isHovered) {
         nameColor = ITEM_LIST.HOVER_COLOR;
       } else if (isQuestItem) {
         nameColor = ITEM_LIST.QUEST_ITEM_COLOR;
