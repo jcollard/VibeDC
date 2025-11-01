@@ -62,7 +62,7 @@ When "Create Character" is clicked, display a centered modal overlay:
   - Visual representation as text box (144px wide)
   - Accept keyboard input (ASCII characters only)
   - Max length: 12 characters
-  - Active cursor blink at 0.5s rate
+  - Active cursor (solid, no blink animation)
   - Background: Dark grey `#333333`, Border: White `#ffffff` 1px
   - Text color: White `#ffffff`
   - Focus state: Yellow border `#ffff00`
@@ -302,19 +302,19 @@ When "Remove" is clicked on party member:
 - **Tab**: Cycle focus between input fields
 - **Arrow Keys**: Navigate sprite grid and class list
 
-### 9. Visual Feedback and Animations
+### 9. Visual Feedback
 
 #### Transitions
-- **Modal Open**: Fade in overlay (0.2s), scale in modal (0.2s)
-- **Modal Close**: Scale out modal (0.2s), fade out overlay (0.2s)
+- **Modal Open**: Instant display (no fade/scale animations)
+- **Modal Close**: Instant hide (no animations)
 - **Card Hover**: Border color change (instant)
 - **Button Hover**: Text color change (instant)
-- **List Scroll**: Smooth scroll animation (0.3s)
+- **List Scroll**: Instant scroll (no smooth scrolling)
 
 #### Error Messages
 - **Display**: Small red text box below invalid field
-- **Duration**: 3 seconds, then fade out
-- **Animation**: Fade in (0.2s), hold (2.6s), fade out (0.2s)
+- **Duration**: Persistent until condition resolved (no auto-fade)
+- **Animation**: None - instant show/hide
 
 ## Implementation Strategy
 
@@ -367,11 +367,10 @@ When "Remove" is clicked on party member:
 4. Test all interaction paths
 
 ### Phase 7: Visual Polish
-1. Implement modal animations (fade in/out, scale)
-2. Implement error message display
-3. Implement success message display
-4. Add hover effects and visual feedback
-5. Test visual consistency across all states
+1. Implement error message display (instant show/hide)
+2. Implement success message display (instant show/hide)
+3. Add hover effects and visual feedback (instant state changes)
+4. Test visual consistency across all states
 
 ### Phase 8: Integration
 1. Add navigation from Title Screen to Guild Hall
@@ -809,7 +808,7 @@ export const GuildHallConstants = {
     INPUT_BORDER_NORMAL: '#ffffff',
     INPUT_BORDER_FOCUS: '#ffff00',
     INPUT_TEXT_COLOR: '#ffffff',
-    CURSOR_BLINK_RATE: 0.5, // seconds
+    // No cursor blink - solid cursor
 
     // Sprite Selection
     SPRITE_LABEL: 'Appearance:',
@@ -1048,17 +1047,17 @@ export const GuildHallConstants = {
 
 ## Estimated Complexity
 
-- **Implementation Time**: 16-20 hours
+- **Implementation Time**: 14-18 hours
   - Guild Hall base screen: 2-3 hours
   - Character display cards: 2-3 hours
-  - Character creation modal: 4-5 hours
+  - Character creation modal: 3-4 hours (simplified without animations)
   - Party management logic: 2-3 hours
   - Data persistence: 2 hours
   - Input handling: 2-3 hours
-  - Visual polish: 2-3 hours
+  - Visual polish: 1-2 hours (simplified without animations)
   - Integration: 1-2 hours
 - **Testing Time**: 4-6 hours
-- **Total**: ~20-26 hours
+- **Total**: ~18-24 hours (saved ~2-3 hours by removing animations)
 
 **Complexity Rating**: High (involves UI, state management, persistence, validation)
 
@@ -1113,3 +1112,4 @@ This feature is complete when:
 - Future extensions will add character deletion and detailed character view
 - The 12-character name limit matches the pixel-art aesthetic and display space constraints
 - Party management uses simple click handlers, no drag-and-drop needed
+- **No animations**: All state changes are instant (modal open/close, errors, scrolling, cursor) for faster implementation
