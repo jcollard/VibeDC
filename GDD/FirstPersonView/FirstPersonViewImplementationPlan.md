@@ -29,9 +29,9 @@ This document provides a detailed, step-by-step implementation plan for the Firs
 
 **📋 Required for This Implementation:**
 - First person input handler (WASD movement, rotation)
-- First person state management (player position, direction, explored tiles)
+- First person state management (player position, direction, explored tiles, party member)
 - Minimap renderer (top-down view with fog of war)
-- Player stats panel renderer
+- Party member stats renderer (HP/MP from CombatUnit)
 - Interaction system (doors, chests, NPCs)
 
 ---
@@ -43,7 +43,7 @@ This document provides a detailed, step-by-step implementation plan for the Firs
 ```
 FirstPersonView.tsx (main container, equivalent to CombatView.tsx)
 ├── State Management
-│   ├── FirstPersonState (player position, direction, map, inventory, etc.)
+│   ├── FirstPersonState (player position, direction, map, party member)
 │   └── FirstPersonInputHandler (keyboard input processing)
 │
 ├── Rendering Pipeline
@@ -51,7 +51,7 @@ FirstPersonView.tsx (main container, equivalent to CombatView.tsx)
 │   ├── FirstPersonLayoutManager (5 panel regions, reuses CombatLayoutManager pattern)
 │   ├── ThreeJSViewportRenderer (3D map viewport in Map Panel region)
 │   ├── MinimapRenderer (top-down view in Top Info Panel)
-│   ├── PlayerStatsPanel (HP/MP/level in Bottom Info Panel)
+│   ├── PartyMemberStatsPanel (HP/MP from CombatUnit in Bottom Info Panel)
 │   └── CombatLogManager (reused from combat system)
 │
 └── Systems
@@ -88,6 +88,7 @@ User Input (WASD/E)
 import type { AreaMap } from '../area/AreaMap';
 import type { CardinalDirection } from '../../types';
 import type { CombatUnit } from '../combat/CombatUnit';
+import type { InteractiveObject } from '../area/InteractiveObject';
 
 /**
  * First person navigation state
@@ -120,62 +121,19 @@ export interface FirstPersonState {
   exploredTiles: Set<string>;
 
   /**
-   * Player stats (HP, MP, level, XP)
+   * Party member representing the player
+   * Contains HP, MP, equipment, etc.
    */
-  stats: PlayerStats;
-
-  /**
-   * Player inventory items
-   */
-  inventory: InventoryItem[];
-
-  /**
-   * Active bottom panel mode
-   */
-  activePanel: 'stats' | 'inventory' | 'interaction';
+  partyMember: CombatUnit;
 
   /**
    * Currently targeted interactive object (if any)
    */
   targetedObject: InteractiveObject | null;
 }
-
-/**
- * Player stats for display
- */
-export interface PlayerStats {
-  hp: number;
-  maxHp: number;
-  mp: number;
-  maxMp: number;
-  level: number;
-  experience: number;
-  experienceToNext: number;
-  statusEffects: StatusEffect[];
-}
-
-/**
- * Inventory item
- */
-export interface InventoryItem {
-  id: string;
-  name: string;
-  quantity: number;
-  spriteId: string;
-}
-
-/**
- * Status effect
- */
-export interface StatusEffect {
-  id: string;
-  name: string;
-  duration: number; // turns remaining
-  spriteId: string;
-}
 ```
 
-**Rationale:** Defines the core state structure for first-person navigation. Follows combat system's state pattern.
+**Rationale:** Defines the core state structure for first-person navigation. Uses existing CombatUnit from PartyMemberRegistry for player stats instead of custom interfaces.
 
 ---
 
@@ -195,7 +153,6 @@ export const InputCommand = {
   TurnLeft: 'turn-left',
   TurnRight: 'turn-right',
   Interact: 'interact',
-  ToggleInventory: 'toggle-inventory',
 } as const;
 
 export type InputCommand = typeof InputCommand[keyof typeof InputCommand];
@@ -222,9 +179,6 @@ export class FirstPersonInputHandler {
 
     // Interaction
     if (key === ' ' || key === 'e') return InputCommand.Interact;
-
-    // Inventory
-    if (key === 'i') return InputCommand.ToggleInventory;
 
     return null;
   }
@@ -471,6 +425,7 @@ import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import type { FirstPersonState } from '../../models/firstperson/FirstPersonState';
 import type { AreaMap } from '../../models/area/AreaMap';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
+import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { FirstPersonInputHandler } from '../../services/FirstPersonInputHandler';
 import { MovementValidator } from '../../services/MovementValidator';
 import { CombatConstants } from '../../models/combat/CombatConstants';
@@ -503,9 +458,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     return map;
   }, [mapId]);
 
+  // Load default party member for testing
+  const defaultPartyMember = useMemo(() => {
+    // TODO: Later, allow selecting which party member to use
+    // For now, use first available party member or create a test one
+    const partyMember = PartyMemberRegistry.createPartyMember('knight-001');
+    if (!partyMember) {
+      console.error('[FirstPersonView] Failed to create default party member');
+      return null;
+    }
+    return partyMember;
+  }, []);
+
   // Initialize state
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState | null>(() => {
-    if (!areaMap) return null;
+    if (!areaMap || !defaultPartyMember) return null;
 
     return {
       playerX: areaMap.playerSpawn.x,
@@ -513,18 +480,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       direction: areaMap.playerSpawn.direction,
       map: areaMap,
       exploredTiles: new Set([`${areaMap.playerSpawn.x},${areaMap.playerSpawn.y}`]),
-      stats: {
-        hp: 50,
-        maxHp: 50,
-        mp: 20,
-        maxMp: 20,
-        level: 1,
-        experience: 0,
-        experienceToNext: 100,
-        statusEffects: [],
-      },
-      inventory: [],
-      activePanel: 'stats',
+      partyMember: defaultPartyMember,
       targetedObject: null,
     };
   });
@@ -1120,24 +1076,24 @@ export class MinimapRenderer {
 
 ---
 
-#### Task 4.2: Create PlayerStatsPanel
-**File:** `react-app/src/models/firstperson/rendering/PlayerStatsPanel.ts`
+#### Task 4.2: Create PartyMemberStatsPanel
+**File:** `react-app/src/models/firstperson/rendering/PartyMemberStatsPanel.ts`
 
 **Changes:**
 ```typescript
-import type { PlayerStats } from '../FirstPersonState';
+import type { CombatUnit } from '../../combat/CombatUnit';
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
 
 /**
- * Renders player stats panel (HP/MP/level/XP)
+ * Renders party member stats panel (HP/MP from CombatUnit)
  */
-export class PlayerStatsPanel {
+export class PartyMemberStatsPanel {
   /**
-   * Render player stats in the given region
+   * Render party member stats in the given region
    */
   static render(
     ctx: CanvasRenderingContext2D,
-    stats: PlayerStats,
+    partyMember: CombatUnit,
     regionX: number,
     regionY: number,
     regionWidth: number,
@@ -1152,10 +1108,27 @@ export class PlayerStatsPanel {
     const lineHeight = 8;
     let currentY = regionY + 4;
 
-    // HP Bar
+    // Character name
     FontAtlasRenderer.renderText(
       ctx,
-      `HP: ${stats.hp}/${stats.maxHp}`,
+      partyMember.name,
+      regionX + 4,
+      currentY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      '#ffffff'
+    );
+    currentY += lineHeight + 2;
+
+    // HP Bar
+    const currentHp = partyMember.currentHealth;
+    const maxHp = partyMember.getMaxHealth();
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      `HP: ${currentHp}/${maxHp}`,
       regionX + 4,
       currentY,
       fontId,
@@ -1169,7 +1142,7 @@ export class PlayerStatsPanel {
     // HP bar visualization
     const barWidth = regionWidth - 8;
     const barHeight = 4;
-    const hpPercent = stats.hp / stats.maxHp;
+    const hpPercent = currentHp / maxHp;
 
     ctx.fillStyle = '#333333';
     ctx.fillRect(regionX + 4, currentY, barWidth, barHeight);
@@ -1180,9 +1153,12 @@ export class PlayerStatsPanel {
     currentY += barHeight + 4;
 
     // MP Bar
+    const currentMp = partyMember.currentMana;
+    const maxMp = partyMember.getMaxMana();
+
     FontAtlasRenderer.renderText(
       ctx,
-      `MP: ${stats.mp}/${stats.maxMp}`,
+      `MP: ${currentMp}/${maxMp}`,
       regionX + 4,
       currentY,
       fontId,
@@ -1194,7 +1170,7 @@ export class PlayerStatsPanel {
     currentY += lineHeight;
 
     // MP bar visualization
-    const mpPercent = stats.mp / stats.maxMp;
+    const mpPercent = currentMp / maxMp;
 
     ctx.fillStyle = '#333333';
     ctx.fillRect(regionX + 4, currentY, barWidth, barHeight);
@@ -1202,51 +1178,12 @@ export class PlayerStatsPanel {
     ctx.fillStyle = '#0088ff';
     ctx.fillRect(regionX + 4, currentY, Math.floor(barWidth * mpPercent), barHeight);
 
-    currentY += barHeight + 4;
-
-    // Level
-    FontAtlasRenderer.renderText(
-      ctx,
-      `Level: ${stats.level}`,
-      regionX + 4,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += lineHeight;
-
-    // XP Bar
-    FontAtlasRenderer.renderText(
-      ctx,
-      `XP: ${stats.experience}/${stats.experienceToNext}`,
-      regionX + 4,
-      currentY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#ffffff'
-    );
-    currentY += lineHeight;
-
-    // XP bar visualization
-    const xpPercent = stats.experience / stats.experienceToNext;
-
-    ctx.fillStyle = '#333333';
-    ctx.fillRect(regionX + 4, currentY, barWidth, barHeight);
-
-    ctx.fillStyle = '#ffaa00';
-    ctx.fillRect(regionX + 4, currentY, Math.floor(barWidth * xpPercent), barHeight);
-
     ctx.restore();
   }
 }
 ```
 
-**Rationale:** Renders player stats with HP/MP/XP bars. Uses FontAtlasRenderer for text.
+**Rationale:** Renders party member stats using CombatUnit's HP/MP properties. Reuses existing combat system data instead of creating custom stat interfaces.
 
 ---
 
@@ -1324,11 +1261,8 @@ const handleKeyDown = (event: KeyboardEvent) => {
 
     // Unblock input after rotation completes
   } else if (command === InputCommand.Interact) {
-    // TODO: Implement interaction system
+    // TODO: Implement interaction system (doors, chests, NPCs)
     console.log('[FirstPersonView] Interact');
-  } else if (command === InputCommand.ToggleInventory) {
-    // TODO: Toggle inventory panel
-    console.log('[FirstPersonView] Toggle inventory');
   }
 };
 ```
@@ -1403,7 +1337,7 @@ function FirstPersonTestRoute() {
 4. **Test collision**: Walk into walls, verify blocked
 5. **Test doors**: Walk through open doorways, verify auto-continuation
 6. **Test minimap**: Verify explored tiles show up, fog of war works
-7. **Test player stats**: Verify HP/MP bars render correctly
+7. **Test party member stats**: Verify name, HP/MP bars render correctly from CombatUnit
 8. **Test combat log**: Verify movement messages appear
 
 ### Automated Testing
@@ -1427,7 +1361,7 @@ react-app/src/
 │   │   └── FirstPersonLayoutManager.ts
 │   └── rendering/
 │       ├── MinimapRenderer.ts
-│       └── PlayerStatsPanel.ts
+│       └── PartyMemberStatsPanel.ts
 │
 ├── services/
 │   ├── FirstPersonInputHandler.ts
@@ -1457,7 +1391,7 @@ This implementation is complete when:
 3. ✅ WASD movement works with collision detection
 4. ✅ A/D rotation works with smooth camera animation
 5. ✅ Minimap shows explored tiles with fog of war
-6. ✅ Player stats panel displays HP/MP/level/XP
+6. ✅ Party member stats panel displays name, HP/MP from CombatUnit
 7. ✅ Combat log shows movement messages
 8. ✅ Input is blocked during animations
 9. ✅ Door auto-continuation works (two-tile movement)
@@ -1495,10 +1429,10 @@ This implementation is complete when:
 ## Next Steps After Completion
 
 1. **Interaction System**: Add door opening, chest looting, NPC dialogue
-2. **Inventory System**: Implement inventory panel with item management
-3. **Encounter System**: Add encounter triggers and combat transitions
-4. **Save/Load**: Integrate with combat save/load system
-5. **Additional Maps**: Create more test maps using AreaMap visual editor
+2. **Encounter System**: Add encounter triggers and combat transitions
+3. **Save/Load**: Integrate with save/load system for exploration progress
+4. **Additional Maps**: Create more test maps using AreaMap visual editor
+5. **Party Selection**: Allow choosing which party member to explore with
 
 ---
 
