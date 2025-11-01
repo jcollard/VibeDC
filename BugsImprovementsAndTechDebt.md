@@ -29,3 +29,5 @@ General improvments
  - Flicker blood decals in combat rather than red square: decals-0,1,2,3,4,5 are all blood decals
  
  
+ NEED TO DO
+  - FirstPersonView needs to use the correct tiles for drawing the 3d view

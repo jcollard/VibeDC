@@ -151,11 +151,9 @@ areas:
         'y': 1
         width: 3
         height: 2
-        description: Shows welcome message on first visit
         events:
           - id: first-visit
             trigger: on-enter
-            oneTime: true
             preconditions: []
             actions:
               - type: ShowMessage
@@ -163,12 +161,13 @@ areas:
               - type: SetGlobalVariable
                 variableName: visited-demo
                 value: true
+            oneTime: true
+        description: Shows welcome message on first visit
       - id: door-area
         x: 4
         'y': 3
         width: 1
         height: 1
-        description: Door that unlocks with key
         events:
           - id: door-locked
             trigger: on-step
@@ -181,7 +180,6 @@ areas:
                 message: The door is locked. You need a key.
           - id: door-unlock
             trigger: on-step
-            oneTime: true
             preconditions:
               - type: GlobalVariableIs
                 variableName: has-demo-key
@@ -192,16 +190,16 @@ areas:
               - type: SetGlobalVariable
                 variableName: door-unlocked
                 value: true
+            oneTime: true
+        description: Door that unlocks with key
       - id: key-area
         x: 7
         'y': 1
         width: 1
         height: 1
-        description: Key pickup location
         events:
           - id: pickup-key
             trigger: on-step
-            oneTime: true
             preconditions: []
             actions:
               - type: ShowMessage
@@ -209,21 +207,22 @@ areas:
               - type: SetGlobalVariable
                 variableName: has-demo-key
                 value: true
+            oneTime: true
+        description: Key pickup location
       - id: step-counter-area
         x: 5
         'y': 4
         width: 3
         height: 1
-        description: Counts steps and messages on exit
         events:
           - id: init-counter
             trigger: on-enter
-            oneTime: true
             preconditions: []
             actions:
               - type: SetGlobalVariable
                 variableName: entered-counter-area
                 value: true
+            oneTime: true
           - id: count-steps
             trigger: on-step
             preconditions: []
@@ -239,3 +238,20 @@ areas:
             actions:
               - type: ShowMessage
                 message: Thanks for visiting the counting area!
+        description: Counts steps and messages on exit
+      - id: area-1762041089369
+        x: 4
+        'y': 4
+        width: 1
+        height: 1
+        events:
+          - id: event-1762041101417
+            trigger: on-enter
+            preconditions: []
+            actions:
+              - type: StartEncounter
+                encounterId: dungeon
+            oneTime: false
+            description: ''
+        description: New event area
+        color: '#20B2AA'

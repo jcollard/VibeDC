@@ -66,7 +66,11 @@ function getRevealedTiles(x: number, y: number): string[] {
  * First Person View component for dungeon exploration
  * Uses same UI layout as CombatView but with 3D viewport in map panel
  */
-export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
+export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
+  mapId,
+  onStartCombat,
+  gameState: initialGameState,
+}) => {
   // Load area map
   const areaMap = useMemo(() => {
     const map = AreaMapRegistry.getById(mapId);
@@ -127,6 +131,11 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
 
   // Game state for event system
   const [gameState, setGameState] = useState<GameState>(() => {
+    // Use initialGameState from props if provided, otherwise create new
+    if (initialGameState) {
+      return initialGameState;
+    }
+
     if (!areaMap) {
       return {
         globalVariables: new Map(),
@@ -504,9 +513,17 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     }
 
     // Handle combat start (StartEncounter action)
-    if (newState.combatState?.active) {
-      // TODO: Trigger combat system
-      combatLogManager.addMessage(`Combat started: ${newState.combatState.encounterId}`);
+    if (newState.combatState?.active && newState.combatState.encounterId) {
+      const encounterId = newState.combatState.encounterId;
+      combatLogManager.addMessage(`Starting combat: ${encounterId}`);
+
+      // Trigger combat transition via GameView callback
+      if (onStartCombat) {
+        console.log('[FirstPersonView] Triggering combat via StartEncounter action:', encounterId);
+        onStartCombat(encounterId);
+      } else {
+        console.warn('[FirstPersonView] StartEncounter action fired but no onStartCombat callback provided');
+      }
     }
 
     // Handle messages (ShowMessage action)
@@ -517,7 +534,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
         combatLogManager.addMessage(msg.text);
       });
     }
-  }, [firstPersonState, gameState, combatLogManager]);
+  }, [firstPersonState, gameState, combatLogManager, onStartCombat]);
 
   // Handle keyboard input
   useEffect(() => {
