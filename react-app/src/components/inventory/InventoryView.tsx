@@ -159,6 +159,10 @@ export const InventoryView: React.FC = () => {
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
+  // Animation timing
+  const lastFrameTimeRef = useRef<number>(performance.now());
+  const animationFrameRef = useRef<number | null>(null);
+
   // Font atlas loader
   const fontLoader = useMemo(() => new FontAtlasLoader(), []);
 
@@ -512,37 +516,46 @@ export const InventoryView: React.FC = () => {
       disabledItemIds
     );
 
-    // Render title panel (inventory stats, category tabs, and sort options)
+    // Check if we're in debug log-only mode
+    const isDebugLogOnly = (window as any).isDebugLogOnly?.() || false;
+
+    // Get panel regions (needed for both rendering and debug visualization)
     const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
-    titlePanelManager.render(
-      bufferCtx,
-      titlePanelRegion,
-      CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
-      fontAtlas
-    );
-
-    // Render top info panel (party member stats)
-    const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
-    topInfoPanelManager.render(
-      bufferCtx,
-      topInfoPanelRegion,
-      CombatConstants.FONTS.UI_FONT_ID,
-      fontAtlas,
-      spriteImagesRef.current,
-      CombatConstants.SPRITE_SIZE
-    );
-
-    // Render bottom info panel (item details)
     const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
-    bottomPanelManager.render(
-      bufferCtx,
-      bottomPanelRegion,
-      CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
-      fontAtlas
-    );
+    const logPanelRegion = isDebugLogOnly
+      ? { x: 0, y: 0, width: CANVAS_WIDTH, height: CANVAS_HEIGHT }
+      : getInventoryLogPanelRegion(layoutManager);
+
+    if (!isDebugLogOnly) {
+      // Render title panel (inventory stats, category tabs, and sort options)
+      titlePanelManager.render(
+        bufferCtx,
+        titlePanelRegion,
+        CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
+        fontAtlas
+      );
+
+      // Render top info panel (party member stats)
+      const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+      topInfoPanelManager.render(
+        bufferCtx,
+        topInfoPanelRegion,
+        CombatConstants.FONTS.UI_FONT_ID,
+        fontAtlas,
+        spriteImagesRef.current,
+        CombatConstants.SPRITE_SIZE
+      );
+
+      // Render bottom info panel (item details)
+      bottomPanelManager.render(
+        bufferCtx,
+        bottomPanelRegion,
+        CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
+        fontAtlas
+      );
+    }
 
     // Render combat log panel (inventory actions)
-    const logPanelRegion = getInventoryLogPanelRegion(layoutManager);
     const logFontAtlas = fontAtlasImagesRef.current.get(CombatConstants.COMBAT_LOG.FONT_ID);
     if (logFontAtlas) {
       combatLogManager.render(
@@ -554,6 +567,19 @@ export const InventoryView: React.FC = () => {
         CombatConstants.COMBAT_LOG.FONT_ID,
         logFontAtlas
       );
+    }
+
+    // Skip rendering other panels if in debug log-only mode
+    if (isDebugLogOnly) {
+      // Copy buffer to display
+      if (displayCanvas) {
+        const displayCtx = displayCanvas.getContext('2d');
+        if (displayCtx) {
+          displayCtx.clearRect(0, 0, displayCanvas.width, displayCanvas.height);
+          displayCtx.drawImage(bufferCanvas, 0, 0);
+        }
+      }
+      return;
     }
 
     // Render layout dividers (HorizontalVerticalLayout overlay)
@@ -717,19 +743,75 @@ export const InventoryView: React.FC = () => {
       console.log('  - Bottom Info Panel: Magenta');
     };
 
+    (window as any).addLogMessage = (message?: string) => {
+      const msg = message || `Test message ${Date.now()}`;
+      combatLogManager.addMessage(msg);
+      console.log(`[DEV] Added log message: ${msg}`);
+      renderFrame();
+    };
+
+    let debugLogOnly = false;
+    (window as any).showOnlyLog = () => {
+      debugLogOnly = true;
+      console.log('[DEV] Showing only log panel (full screen)');
+      renderFrame();
+    };
+
+    (window as any).restoreLayout = () => {
+      debugLogOnly = false;
+      console.log('[DEV] Restored normal layout');
+      renderFrame();
+    };
+
+    (window as any).isDebugLogOnly = () => debugLogOnly;
+
     return () => {
       delete (window as any).giveItem;
       delete (window as any).giveGold;
       delete (window as any).clearInventory;
       delete (window as any).listEquipment;
       delete (window as any).showInventoryPanels;
+      delete (window as any).addLogMessage;
+      delete (window as any).showOnlyLog;
+      delete (window as any).restoreLayout;
     };
-  }, [combatLogManager, setInventoryVersion]);
+  }, [combatLogManager, setInventoryVersion, renderFrame, layoutManager]);
 
   // Render on state changes
   useEffect(() => {
     renderFrame();
   }, [renderFrame]);
+
+  // Animation loop for combat log animations
+  useEffect(() => {
+    if (!spritesLoaded || !fontsLoaded) return;
+
+    const animate = (currentTime: number) => {
+      // Calculate delta time in seconds
+      const deltaTime = (currentTime - lastFrameTimeRef.current) / 1000;
+      lastFrameTimeRef.current = currentTime;
+
+      // Update combat log animations
+      combatLogManager.update(deltaTime);
+
+      // Render the frame
+      renderFrame();
+
+      // Schedule next frame
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    // Start animation loop
+    lastFrameTimeRef.current = performance.now();
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    // Cleanup on unmount
+    return () => {
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [spritesLoaded, fontsLoaded, renderFrame, combatLogManager]);
 
   // Handle mouse move
   const handleMouseMove = useCallback(
@@ -1158,7 +1240,7 @@ export const InventoryView: React.FC = () => {
                 setPartyMemberVersion(v => v + 1);
               }
 
-              combatLogManager.addMessage(`Removed ${equipment.name} (added to inventory)`);
+              combatLogManager.addMessage(`${selectedMember.name} removed ${equipment.name}`);
               setInventoryVersion(v => v + 1);
 
               // Clear selection
@@ -1270,9 +1352,9 @@ export const InventoryView: React.FC = () => {
                 // Add the removed item to inventory (if there was one)
                 if (removedEquipment) {
                   PartyInventory.addItem(removedEquipment.id, 1);
-                  combatLogManager.addMessage(`Equipped ${clickedEquipment.name}, removed ${removedEquipment.name}`);
+                  combatLogManager.addMessage(`${selectedMember.name} equipped ${clickedEquipment.name}, removed ${removedEquipment.name}`);
                 } else {
-                  combatLogManager.addMessage(`Equipped ${clickedEquipment.name}`);
+                  combatLogManager.addMessage(`${selectedMember.name} equipped ${clickedEquipment.name}`);
                 }
 
                 // Update party member definition in registry
