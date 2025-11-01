@@ -349,7 +349,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
           >
             {sprite && (
               <SpriteCanvas
-                spriteSheet={`/assets/${sprite.spriteSheet}.png`}
+                spriteSheet={sprite.spriteSheet}
                 spriteX={sprite.x}
                 spriteY={sprite.y}
                 size={CELL_SIZE}
@@ -534,7 +534,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             >
               {sprite && (
                 <SpriteCanvas
-                  spriteSheet={`/assets/${sprite.spriteSheet}.png`}
+                  spriteSheet={sprite.spriteSheet}
                   spriteX={sprite.x}
                   spriteY={sprite.y}
                   size={48}

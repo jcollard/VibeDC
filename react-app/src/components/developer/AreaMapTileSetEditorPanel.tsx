@@ -415,7 +415,7 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
                 >
                   {sprite && (
                     <SpriteCanvas
-                      spriteSheet={`/assets/${sprite.spriteSheet}.png`}
+                      spriteSheet={sprite.spriteSheet}
                       spriteX={sprite.x}
                       spriteY={sprite.y}
                       size={48}
