@@ -1193,27 +1193,138 @@ export const InventoryView: React.FC = () => {
           canvasY >= row.bounds.y &&
           canvasY <= row.bounds.y + row.bounds.height
         ) {
-          // Clear equipment selection when clicking on inventory items
-          selectedEquipmentRef.current = null;
-          detailPanelActiveRef.current = false;
-          originalBottomPanelContentRef.current = null;
-
-          // Increment version to trigger re-render
-          setEquipmentSlotSelectionVersion(v => v + 1);
-
-          // Clear equipment highlight in top panel
-          const topContent = topInfoPanelManager.getContent();
-          if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
-            (topContent as any).setSelectedEquipmentSlot(null);
+          const clickedEquipment = Equipment.getById(row.equipmentId);
+          if (!clickedEquipment) {
+            return;
           }
 
-          setViewState((prev) => ({ ...prev, selectedItemId: row.equipmentId }));
-          const equipment = Equipment.getById(row.equipmentId);
-          if (equipment) {
-            combatLogManager.addMessage(`Selected: ${equipment.name}`);
+          // Check if we're in comparison mode (equipment slot selected)
+          const selectedSlot = selectedEquipmentRef.current;
+          if (selectedSlot && selectedSlot.slotLabel) {
+            // We're comparing items - try to equip the clicked item
+            const partyMemberConfigs = PartyMemberRegistry.getAll();
+            const selectedMember = partyMemberConfigs[selectedPartyMemberIndex];
+            const currentUnit = PartyMemberRegistry.createPartyMember(selectedMember.id);
+
+            if (selectedMember && currentUnit && 'leftHand' in currentUnit) {
+              const humanoid = currentUnit as any;
+
+              // Map slot labels to registry slot names
+              const slotMap: Record<string, 'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory'> = {
+                'L.Hand': 'leftHand',
+                'R.Hand': 'rightHand',
+                'Head': 'head',
+                'Body': 'body',
+                'Accessory': 'accessory'
+              };
+
+              const registrySlot = slotMap[selectedSlot.slotLabel];
+              if (!registrySlot) {
+                return;
+              }
+
+              // Check if the item is compatible with the slot (using EquipmentSlotUtil)
+              const isCompatible = isEquipmentCompatibleWithSlot(clickedEquipment, selectedSlot.slotLabel);
+              if (!isCompatible) {
+                combatLogManager.addMessage(`Cannot equip ${clickedEquipment.name} in ${selectedSlot.slotLabel} slot`);
+                renderFrame();
+                return;
+              }
+
+              // Try to equip the item (this will validate dual-wield rules for hands)
+              let equipSuccess = false;
+              let removedEquipment: Equipment | null = null;
+
+              // Get currently equipped item before attempting to equip
+              switch (registrySlot) {
+                case 'leftHand':
+                  removedEquipment = humanoid.leftHand;
+                  equipSuccess = humanoid.equipLeftHand(clickedEquipment);
+                  break;
+                case 'rightHand':
+                  removedEquipment = humanoid.rightHand;
+                  equipSuccess = humanoid.equipRightHand(clickedEquipment);
+                  break;
+                case 'head':
+                  removedEquipment = humanoid.head;
+                  humanoid.equipHead(clickedEquipment);
+                  equipSuccess = true;
+                  break;
+                case 'body':
+                  removedEquipment = humanoid.body;
+                  humanoid.equipBody(clickedEquipment);
+                  equipSuccess = true;
+                  break;
+                case 'accessory':
+                  removedEquipment = humanoid.accessory;
+                  humanoid.equipAccessory(clickedEquipment);
+                  equipSuccess = true;
+                  break;
+              }
+
+              if (equipSuccess) {
+                // Remove the new item from inventory
+                PartyInventory.removeItem(clickedEquipment.id, 1);
+
+                // Add the removed item to inventory (if there was one)
+                if (removedEquipment) {
+                  PartyInventory.addItem(removedEquipment.id, 1);
+                  combatLogManager.addMessage(`Equipped ${clickedEquipment.name}, removed ${removedEquipment.name}`);
+                } else {
+                  combatLogManager.addMessage(`Equipped ${clickedEquipment.name}`);
+                }
+
+                // Update party member definition in registry
+                PartyMemberRegistry.updateEquipment(selectedMember.id, registrySlot, clickedEquipment.id);
+
+                // Trigger re-render of party member
+                setPartyMemberVersion(v => v + 1);
+                setInventoryVersion(v => v + 1);
+
+                // Clear selection
+                selectedEquipmentRef.current = null;
+                detailPanelActiveRef.current = false;
+                originalBottomPanelContentRef.current = null;
+
+                // Increment version to trigger re-render
+                setEquipmentSlotSelectionVersion(v => v + 1);
+
+                // Clear equipment highlight in top panel
+                const topContent = topInfoPanelManager.getContent();
+                if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                  (topContent as any).setSelectedEquipmentSlot(null);
+                }
+
+                renderFrame();
+                return;
+              } else {
+                // Equipment validation failed (e.g., dual-wield rules)
+                combatLogManager.addMessage(`Cannot equip ${clickedEquipment.name} (equipment restrictions)`);
+                renderFrame();
+                return;
+              }
+            }
+          } else {
+            // Not in comparison mode - just select the item for viewing details
+            // Clear equipment selection when clicking on inventory items
+            selectedEquipmentRef.current = null;
+            detailPanelActiveRef.current = false;
+            originalBottomPanelContentRef.current = null;
+
+            // Increment version to trigger re-render
+            setEquipmentSlotSelectionVersion(v => v + 1);
+
+            // Clear equipment highlight in top panel
+            const topContent = topInfoPanelManager.getContent();
+            if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+              (topContent as any).setSelectedEquipmentSlot(null);
+            }
+
+            setViewState((prev) => ({ ...prev, selectedItemId: row.equipmentId }));
+            combatLogManager.addMessage(`Selected: ${clickedEquipment.name}`);
+            renderFrame();
+            return;
           }
-          renderFrame();
-          return;
         }
       }
 

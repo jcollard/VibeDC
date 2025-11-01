@@ -97,81 +97,97 @@ export class EquipmentComparisonContent implements PanelContent {
       y += lineSpacing + 2; // Extra spacing after title
     }
 
-    // Render Remove Item and Cancel options (below title, above helper text)
-    const normalColor = '#ffffff';
-    const hoverColor = '#ffff00'; // Yellow for hover
+    // Only render Remove Item and Cancel options when NOT comparing items
+    if (!this.comparisonItem) {
+      const normalColor = '#ffffff';
+      const hoverColor = '#ffff00'; // Yellow for hover
 
-    // Render "Remove Item" option first if currentItem exists
-    if (this.currentItem) {
-      const removeText = 'Remove Item';
-      const removeColor = this.hoveredOption === 'remove' ? hoverColor : normalColor;
-      const removeX = region.x + padding;
+      // Render "Remove Item" option first if currentItem exists
+      if (this.currentItem) {
+        const removeText = 'Remove Item';
+        const removeColor = this.hoveredOption === 'remove' ? hoverColor : normalColor;
+        const removeX = region.x + padding;
+        FontAtlasRenderer.renderText(
+          ctx,
+          removeText,
+          removeX,
+          y,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          removeColor
+        );
+
+        // Store remove bounds for hit detection (panel-relative)
+        const removeWidth = FontAtlasRenderer.measureText(removeText, font);
+        this.removeBounds = {
+          x: padding,
+          y: y - region.y,
+          width: removeWidth,
+          height: lineSpacing
+        };
+
+        y += lineSpacing; // Move to next line for Cancel
+      } else {
+        this.removeBounds = null;
+      }
+
+      // Render "Cancel" option
+      const cancelText = 'Cancel';
+      const cancelColor = this.hoveredOption === 'cancel' ? hoverColor : normalColor;
+      const cancelX = region.x + padding;
       FontAtlasRenderer.renderText(
         ctx,
-        removeText,
-        removeX,
+        cancelText,
+        cancelX,
         y,
         fontId,
         fontAtlasImage,
         1,
         'left',
-        removeColor
+        cancelColor
       );
 
-      // Store remove bounds for hit detection (panel-relative)
-      const removeWidth = FontAtlasRenderer.measureText(removeText, font);
-      this.removeBounds = {
+      // Store cancel bounds for hit detection (panel-relative)
+      const cancelWidth = FontAtlasRenderer.measureText(cancelText, font);
+      this.cancelBounds = {
         x: padding,
         y: y - region.y,
-        width: removeWidth,
+        width: cancelWidth,
         height: lineSpacing
       };
 
-      y += lineSpacing; // Move to next line for Cancel
+      y += lineSpacing; // Move past Cancel
     } else {
+      // Clear bounds when comparing
+      this.cancelBounds = null;
       this.removeBounds = null;
     }
 
-    // Render "Cancel" option
-    const cancelText = 'Cancel';
-    const cancelColor = this.hoveredOption === 'cancel' ? hoverColor : normalColor;
-    const cancelX = region.x + padding;
-    FontAtlasRenderer.renderText(
-      ctx,
-      cancelText,
-      cancelX,
-      y,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      cancelColor
-    );
+    // Render helper text
+    y += 12; // 12px spacing before helper text
 
-    // Store cancel bounds for hit detection (panel-relative)
-    const cancelWidth = FontAtlasRenderer.measureText(cancelText, font);
-    this.cancelBounds = {
-      x: padding,
-      y: y - region.y,
-      width: cancelWidth,
-      height: lineSpacing
-    };
+    // Determine helper text based on comparison state
+    const helperColor = '#888888'; // Grey for helper text
+    let helperText: string;
 
-    y += lineSpacing; // Move past Cancel
-
-    // Only show helper text if no comparison item
     if (!this.comparisonItem) {
-      y += 12; // 12px spacing before helper text
-
-      // Render helper text based on hover state or default
-      const helperColor = '#888888'; // Grey for helper text
-      let helperText = 'Select an item to equip.';
+      // No comparison item - show option-specific helper text
+      helperText = 'Select an item to equip.';
 
       if (this.hoveredOption === 'cancel') {
         helperText = 'Clear equipment selection';
       } else if (this.hoveredOption === 'remove') {
         helperText = 'Remove item and add to inventory';
       }
+    } else {
+      // Comparing items - show equip instruction
+      helperText = 'Click to Equip';
+    }
+
+    // Helper text rendering (only if we have text to show)
+    if (helperText) {
 
       // Helper text might be too wide, wrap if necessary
       const helperWidth = FontAtlasRenderer.measureText(helperText, font);
@@ -234,8 +250,10 @@ export class EquipmentComparisonContent implements PanelContent {
           FontAtlasRenderer.renderText(ctx, line2, line2X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
         }
       }
+    }
 
-      // If no comparison item, don't render stats
+    // If no comparison item, don't render stats - return early
+    if (!this.comparisonItem) {
       ctx.restore();
       return;
     }
