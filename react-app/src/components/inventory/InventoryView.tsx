@@ -555,20 +555,6 @@ export const InventoryView: React.FC = () => {
       );
     }
 
-    // Render combat log panel (inventory actions)
-    const logFontAtlas = fontAtlasImagesRef.current.get(CombatConstants.COMBAT_LOG.FONT_ID);
-    if (logFontAtlas) {
-      combatLogManager.render(
-        bufferCtx,
-        logPanelRegion.x,
-        logPanelRegion.y,
-        logPanelRegion.width,
-        logPanelRegion.height,
-        CombatConstants.COMBAT_LOG.FONT_ID,
-        logFontAtlas
-      );
-    }
-
     // Skip rendering other panels if in debug log-only mode
     if (isDebugLogOnly) {
       // Copy buffer to display
@@ -747,7 +733,7 @@ export const InventoryView: React.FC = () => {
       const msg = message || `Test message ${Date.now()}`;
       combatLogManager.addMessage(msg);
       console.log(`[DEV] Added log message: ${msg}`);
-      renderFrame();
+      // No need to call renderFrame() - animation loop handles it
     };
 
     let debugLogOnly = false;
@@ -779,8 +765,11 @@ export const InventoryView: React.FC = () => {
 
   // Render on state changes
   useEffect(() => {
-    renderFrame();
-  }, [renderFrame]);
+    // Only render if animation loop isn't running yet
+    if (!spritesLoaded || !fontsLoaded) {
+      renderFrame();
+    }
+  }, [renderFrame, spritesLoaded, fontsLoaded]);
 
   // Animation loop for combat log animations
   useEffect(() => {
