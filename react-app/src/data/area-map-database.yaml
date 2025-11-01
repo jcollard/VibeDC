@@ -127,3 +127,115 @@ areas:
     interactiveObjects: []
     npcSpawns: []
     encounterZones: []
+  - id: event-demo-map
+    name: Event System Demo
+    description: Demonstrates all event system features
+    tilesetId: dungeon-grey-stone
+    grid: |-
+      ##########
+      #........#
+      #........#
+      #...D....#
+      #........#
+      ##########
+    playerSpawn:
+      x: 2
+      'y': 2
+      direction: North
+    interactiveObjects: []
+    npcSpawns: []
+    encounterZones: []
+    eventAreas:
+      - id: entrance-area
+        x: 1
+        'y': 1
+        width: 3
+        height: 2
+        description: Shows welcome message on first visit
+        events:
+          - id: first-visit
+            trigger: on-enter
+            oneTime: true
+            preconditions: []
+            actions:
+              - type: ShowMessage
+                message: Welcome to the Event System Demo!
+              - type: SetGlobalVariable
+                variableName: visited-demo
+                value: true
+      - id: door-area
+        x: 4
+        'y': 3
+        width: 1
+        height: 1
+        description: Door that unlocks with key
+        events:
+          - id: door-locked
+            trigger: on-step
+            preconditions:
+              - type: GlobalVariableIs
+                variableName: has-demo-key
+                expectedValue: false
+            actions:
+              - type: ShowMessage
+                message: The door is locked. You need a key.
+          - id: door-unlock
+            trigger: on-step
+            oneTime: true
+            preconditions:
+              - type: GlobalVariableIs
+                variableName: has-demo-key
+                expectedValue: true
+            actions:
+              - type: ShowMessage
+                message: You use the key to unlock the door!
+              - type: SetGlobalVariable
+                variableName: door-unlocked
+                value: true
+      - id: key-area
+        x: 7
+        'y': 1
+        width: 1
+        height: 1
+        description: Key pickup location
+        events:
+          - id: pickup-key
+            trigger: on-step
+            oneTime: true
+            preconditions: []
+            actions:
+              - type: ShowMessage
+                message: You found a key!
+              - type: SetGlobalVariable
+                variableName: has-demo-key
+                value: true
+      - id: step-counter-area
+        x: 5
+        'y': 4
+        width: 3
+        height: 1
+        description: Counts steps and messages on exit
+        events:
+          - id: init-counter
+            trigger: on-enter
+            oneTime: true
+            preconditions: []
+            actions:
+              - type: SetGlobalVariable
+                variableName: entered-counter-area
+                value: true
+          - id: count-steps
+            trigger: on-step
+            preconditions: []
+            actions:
+              - type: ShowMessage
+                message: You stepped in the counting area
+          - id: exit-message
+            trigger: on-exit
+            preconditions:
+              - type: GlobalVariableIs
+                variableName: entered-counter-area
+                expectedValue: true
+            actions:
+              - type: ShowMessage
+                message: Thanks for visiting the counting area!
