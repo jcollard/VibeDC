@@ -297,10 +297,51 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     const newTileset = AreaMapTileSetRegistry.getById(newTilesetId);
     if (!newTileset) return;
 
-    // Update the map's tileset
+    // Remap the grid to use tiles from the new tileset
+    // For each tile, find a matching tile in the new tileset based on behavior
+    const newGrid = editedMap.grid.map(row =>
+      row.map(tile => {
+        // Find a tile in the new tileset that matches this tile's behavior
+        const matchingTileDef = newTileset.tileTypes.find(
+          tt => tt.behavior === tile.behavior &&
+                tt.walkable === tile.walkable &&
+                tt.passable === tile.passable
+        );
+
+        // If we find a match, use its spriteId; otherwise keep the old spriteId
+        if (matchingTileDef) {
+          return {
+            ...tile,
+            spriteId: matchingTileDef.spriteId,
+            terrainType: matchingTileDef.terrainType,
+          };
+        }
+
+        // No match found - try to find any tile with the same behavior
+        const behaviorMatch = newTileset.tileTypes.find(
+          tt => tt.behavior === tile.behavior
+        );
+
+        if (behaviorMatch) {
+          return {
+            ...tile,
+            spriteId: behaviorMatch.spriteId,
+            terrainType: behaviorMatch.terrainType,
+            walkable: behaviorMatch.walkable,
+            passable: behaviorMatch.passable,
+          };
+        }
+
+        // No match at all - keep the old tile but it might not render correctly
+        return tile;
+      })
+    );
+
+    // Update the map's tileset and grid
     setEditedMap({
       ...editedMap,
       tilesetId: newTilesetId,
+      grid: newGrid,
     });
 
     // Reset selected tile to first tile in new tileset
