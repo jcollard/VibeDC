@@ -48,9 +48,6 @@ export class MinimapRenderer {
 
     for (let dy = -halfHigh; dy <= halfHigh; dy++) {
       for (let dx = -halfWide; dx <= halfWide; dx++) {
-        // Skip the center tile (player position)
-        if (dx === 0 && dy === 0) continue;
-
         const mapX = playerX + dx;
         const mapY = playerY + dy;
         const tileKey = `${mapX},${mapY}`;
