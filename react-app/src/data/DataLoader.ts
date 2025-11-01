@@ -18,6 +18,7 @@ import { FontRegistry } from '../utils/FontRegistry';
 import { loadFontFromYAML } from '../utils/FontLoader';
 import { EquipmentTagRegistry } from '../utils/EquipmentTagRegistry';
 import type { EquipmentTagDefinitionJSON } from '../utils/EquipmentTagRegistry';
+import { AreaMapDataLoader } from '../services/AreaMapDataLoader';
 
 // Import YAML files as text
 import abilityYaml from './ability-database.yaml?raw';
@@ -35,6 +36,8 @@ import font8pxYaml from './fonts/8px-habbo8.yaml?raw';
 import font9pxYaml from './fonts/9px-habbo.yaml?raw';
 import font10pxYaml from './fonts/10px-bitfantasy.yaml?raw';
 import font15pxYaml from './fonts/15px-dungeonslant.yaml?raw';
+import areaTilesetYaml from './area-tileset-database.yaml?raw';
+import areaMapYaml from './area-map-database.yaml?raw';
 
 /**
  * Interface for ability data from YAML
@@ -298,6 +301,7 @@ export async function loadAllGameData(): Promise<void> {
   // - Equipment must be loaded before party members (they reference equipment)
   // - Enemies and party members should be loaded after classes (they reference unit classes)
   // - Tilesets must be loaded before encounters (encounters reference tilesets)
+  // - Area map tilesets must be loaded before area maps
   loadSprites();
   await loadFonts();
   loadEquipmentTags();
@@ -308,6 +312,13 @@ export async function loadAllGameData(): Promise<void> {
   loadPartyMembers();
   loadTilesets();
   loadEncounters();
+
+  // Load area map data (tilesets and maps for first-person navigation)
+  try {
+    await AreaMapDataLoader.loadAll(areaTilesetYaml, areaMapYaml);
+  } catch (error) {
+    console.warn('[DataLoader] Failed to load area map data:', error);
+  }
 
   console.log('Game data loaded successfully');
   console.log(`Total: ${SpriteRegistry.count} sprites, ${FontRegistry.count} fonts, ${EnemyRegistry.count} enemies, ${CombatAbility.getAll().length} abilities, ${Equipment.getAll().length} equipment, ${UnitClass.getAll().length} classes, ${TilesetRegistry.count} tilesets, ${CombatEncounter.getAll().length} encounters`);
