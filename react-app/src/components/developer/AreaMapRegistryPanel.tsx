@@ -7,6 +7,7 @@ import type { EncounterZone } from '../../models/area/EncounterZone';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
 import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { AreaMapTileSetEditorPanel } from './AreaMapTileSetEditorPanel';
 import * as yaml from 'js-yaml';
 
 // Helper component to render a sprite on a canvas
@@ -69,6 +70,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [currentTool, setCurrentTool] = useState<EditorTool>('paint');
   const [selectedTileChar, setSelectedTileChar] = useState<string>('#');
   const [selectedObjectType, setSelectedObjectType] = useState<InteractiveObjectType>(InteractiveObjectType.ClosedDoor);
+  const [tilesetEditorVisible, setTilesetEditorVisible] = useState(false);
+  const [editingTilesetId, setEditingTilesetId] = useState<string | null>(null);
 
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
@@ -287,6 +290,31 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     });
   };
 
+  const handleChangeTileset = (newTilesetId: string) => {
+    if (!editedMap) return;
+
+    // Get the new tileset
+    const newTileset = AreaMapTileSetRegistry.getById(newTilesetId);
+    if (!newTileset) return;
+
+    // Update the map's tileset
+    setEditedMap({
+      ...editedMap,
+      tilesetId: newTilesetId,
+    });
+
+    // Reset selected tile to first tile in new tileset
+    if (newTileset.tileTypes.length > 0) {
+      setSelectedTileChar(newTileset.tileTypes[0].char);
+    }
+  };
+
+  const handleOpenTilesetEditor = () => {
+    if (!selectedMap) return;
+    setEditingTilesetId(selectedMap.tilesetId);
+    setTilesetEditorVisible(true);
+  };
+
   // Render the grid
   const renderGrid = () => {
     const map = isEditing && editedMap ? AreaMap.fromJSON(editedMap) : selectedMap;
@@ -429,12 +457,62 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const renderTilePalette = () => {
     if (!selectedMap) return null;
 
-    const tileset = AreaMapTileSetRegistry.getById(selectedMap.tilesetId);
+    const currentTilesetId = isEditing && editedMap ? editedMap.tilesetId : selectedMap.tilesetId;
+    const tileset = AreaMapTileSetRegistry.getById(currentTilesetId);
     if (!tileset) return null;
 
+    const allTilesets = AreaMapTileSetRegistry.getAll();
+
     return (
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
-        {tileset.tileTypes.map(tileType => {
+      <>
+        {/* Tileset selector */}
+        {isEditing && (
+          <div style={{ marginBottom: '12px' }}>
+            <div style={{ fontSize: '11px', marginBottom: '6px', color: '#aaa' }}>Tileset:</div>
+            <select
+              value={currentTilesetId}
+              onChange={(e) => handleChangeTileset(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '6px',
+                background: 'rgba(255,255,255,0.1)',
+                border: '1px solid #666',
+                borderRadius: '4px',
+                color: '#fff',
+                fontSize: '11px',
+                fontFamily: 'monospace',
+              }}
+            >
+              {allTilesets.map(ts => (
+                <option key={ts.id} value={ts.id}>{ts.name}</option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Edit tileset button */}
+        <button
+          onClick={handleOpenTilesetEditor}
+          style={{
+            width: '100%',
+            padding: '8px',
+            marginBottom: '12px',
+            background: 'rgba(156, 39, 176, 0.3)',
+            border: '1px solid rgba(156, 39, 176, 0.6)',
+            borderRadius: '4px',
+            color: '#fff',
+            fontSize: '11px',
+            cursor: 'pointer',
+            fontFamily: 'monospace',
+            fontWeight: 'bold',
+          }}
+        >
+          Edit Tileset
+        </button>
+
+        {/* Tile palette */}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+          {tileset.tileTypes.map(tileType => {
           const sprite = SpriteRegistry.getById(tileType.spriteId);
 
           return (
@@ -468,7 +546,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             </div>
           );
         })}
-      </div>
+        </div>
+      </>
     );
   };
 
@@ -868,6 +947,17 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
           </div>
         )}
       </div>
+
+      {/* Tileset editor modal */}
+      {tilesetEditorVisible && editingTilesetId && (
+        <AreaMapTileSetEditorPanel
+          tilesetId={editingTilesetId}
+          onClose={() => {
+            setTilesetEditorVisible(false);
+            setEditingTilesetId(null);
+          }}
+        />
+      )}
     </div>
   );
 };
