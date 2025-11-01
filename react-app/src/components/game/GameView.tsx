@@ -89,7 +89,7 @@ export const GameView: React.FC<GameViewProps> = ({
   }, [handleQuickSave]);
 
   // ✅ GUIDELINE: View transition handlers
-  const handleStartCombat = async (encounterId: string) => {
+  const handleStartCombat = useCallback(async (encounterId: string) => {
     console.log(`[GameView] Starting combat: ${encounterId}`);
 
     setIsTransitioning(true);
@@ -109,7 +109,7 @@ export const GameView: React.FC<GameViewProps> = ({
       }
     );
     setIsTransitioning(false);
-  };
+  }, [gameState.currentView, transitionManager]);
 
   const handleCombatEnd = async (victory: boolean) => {
     console.log(`[GameView] Combat ended - Victory: ${victory}`);
@@ -133,6 +133,22 @@ export const GameView: React.FC<GameViewProps> = ({
     );
     setIsTransitioning(false);
   };
+
+  // 🛠️ DEVELOPER: Expose combat transition function for testing
+  useEffect(() => {
+    if (import.meta.env.DEV) {
+      (window as any).startEncounter = (encounterId: string) => {
+        console.log(`[DEV] Starting encounter: ${encounterId}`);
+        handleStartCombat(encounterId);
+      };
+
+      console.log('[DEV] Developer function available: startEncounter(id)');
+
+      return () => {
+        delete (window as any).startEncounter;
+      };
+    }
+  }, [handleStartCombat]);
 
   // Render loading screen
   if (!resourcesLoaded) {
