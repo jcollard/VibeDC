@@ -39,3 +39,12 @@ biomes
 97 - palace door variant
 98 - palace stairs variant
 
+vegetation-0 - Tree wall
+vegetation-1 - Tree
+vegetation-2 - Tree wall 2
+vegetation-3 - Bush
+vegetation-4 - Red berry Bush
+vegetation-5 - Blue berry Bush
+vegetation-6 - Yellow berry Bush
+vegetation-7 - Orange bush
+

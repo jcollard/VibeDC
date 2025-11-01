@@ -1,0 +1,9 @@
+vegetables-0- short grass prop
+vegetables-1- long grass prop
+vegetables-2 - Wheat prop
+vegetables-3 - small mushrooms prop
+vegetables-4 - medium mushrooms prop
+vegetables-5 - big mushrooms prop
+vegetables-6 - carrot sprouts prop
+vegetables-7 - medium carrots prop
+vegetables-8 - big carrots prop
