@@ -21,6 +21,7 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { InventoryStatsContent, type InventoryStats } from '../../models/inventory/panels/InventoryStatsContent';
 import { ItemDetailsContent } from '../../models/inventory/panels/ItemDetailsContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
+import { UISettings } from '../../config/UISettings';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
@@ -38,6 +39,17 @@ export const InventoryView: React.FC = () => {
 
   // Track inventory changes (increment to force re-render when inventory data changes)
   const [inventoryVersion, setInventoryVersion] = useState(0);
+
+  // Track window size for responsive scaling
+  const [windowSize, setWindowSize] = useState({ width: window.innerWidth, height: window.innerHeight });
+
+  // Track integer scaling setting
+  const [integerScalingEnabled] = useState<boolean>(
+    UISettings.isIntegerScalingEnabled()
+  );
+
+  // Track manual scale setting
+  const [manualScale] = useState<number>(UISettings.getManualScale());
 
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -76,6 +88,57 @@ export const InventoryView: React.FC = () => {
     // Bottom panel: Item details (initially empty)
     bottomPanelManager.setContent(new ItemDetailsContent(null, 0));
   }, [topPanelManager, bottomPanelManager]);
+
+  // Track canvas display style for integer scaling
+  const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
+    width: '100%',
+    height: '100%',
+  });
+
+  // Calculate and update canvas display dimensions based on integer scaling setting
+  useEffect(() => {
+    const updateCanvasStyle = () => {
+      const containerRef = displayCanvasRef.current?.parentElement;
+      if (!containerRef) {
+        setCanvasDisplayStyle({ width: '100%', height: '100%' });
+        return;
+      }
+
+      const scaledDimensions = UISettings.getIntegerScaledDimensions(
+        CANVAS_WIDTH,
+        CANVAS_HEIGHT,
+        containerRef.clientWidth,
+        containerRef.clientHeight
+      );
+
+      if (scaledDimensions) {
+        // Integer scaling enabled - use exact pixel dimensions
+        setCanvasDisplayStyle({
+          width: `${scaledDimensions.width}px`,
+          height: `${scaledDimensions.height}px`,
+        });
+      } else {
+        // Integer scaling disabled - use percentage to fill container
+        setCanvasDisplayStyle({ width: '100%', height: '100%' });
+      }
+    };
+
+    // Update immediately
+    updateCanvasStyle();
+
+    // Also update on next frame to ensure container is measured
+    requestAnimationFrame(updateCanvasStyle);
+  }, [windowSize.width, windowSize.height, integerScalingEnabled, manualScale]);
+
+  // Track window resize
+  useEffect(() => {
+    const handleResize = () => {
+      setWindowSize({ width: window.innerWidth, height: window.innerHeight });
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
 
   // Load fonts
   useEffect(() => {
@@ -548,7 +611,12 @@ export const InventoryView: React.FC = () => {
         ref={displayCanvasRef}
         width={CANVAS_WIDTH}
         height={CANVAS_HEIGHT}
-        style={{ width: '100%', height: '100%', imageRendering: 'pixelated', objectFit: 'contain' }}
+        style={{
+          width: canvasDisplayStyle.width,
+          height: canvasDisplayStyle.height,
+          imageRendering: 'pixelated',
+          objectFit: 'contain'
+        }}
         onMouseMove={handleMouseMove}
         onMouseDown={handleMouseDown}
       />
