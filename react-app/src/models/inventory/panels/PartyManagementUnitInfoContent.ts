@@ -29,6 +29,9 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     this.partyMembers = partyMembers;
     this.selectedMemberIndex = selectedIndex;
     this.onMemberSelected = onMemberSelected;
+
+    // Add helper text for Class XP
+    (this as any).statHelperText['Class XP'] = 'XP available for your primary class can be used to learn abilities.';
   }
 
   /**
@@ -63,6 +66,87 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   }
 
   /**
+   * Custom renderHeader to show available XP instead of Action Timer
+   * @returns Y position after header
+   */
+  private renderHeaderWithXp(
+    ctx: CanvasRenderingContext2D,
+    region: PanelRegion,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement,
+    font: any,
+    spriteImages?: Map<string, HTMLImageElement>,
+    spriteSize?: number
+  ): number {
+    const spriteX = region.x + (this as any).config.padding;
+    const spriteY = region.y + (this as any).config.padding;
+
+    // Sprite rendering
+    if (spriteImages && spriteSize) {
+      SpriteRenderer.renderSpriteById(
+        ctx,
+        (this as any).unit.spriteId,
+        spriteImages,
+        spriteSize,
+        spriteX,
+        spriteY,
+        12,
+        12
+      );
+    }
+
+    // Name rendering
+    const nameX = spriteX + 12 + 2;
+    const nameY = spriteY;
+    const nameColor = (this as any).unit.isPlayerControlled ? '#00ff00' : '#ff0000';
+    FontAtlasRenderer.renderText(ctx, (this as any).unit.name, nameX, nameY, fontId, fontAtlasImage, 1, 'left', nameColor);
+
+    // Class rendering
+    const classY = nameY + (this as any).config.lineSpacing;
+    let classText = (this as any).unit.unitClass.name;
+    if ((this as any).unit.secondaryClass) {
+      classText += `/${(this as any).unit.secondaryClass.name}`;
+    }
+    FontAtlasRenderer.renderText(ctx, classText, nameX, classY, fontId, fontAtlasImage, 1, 'left', '#ffffff');
+
+    // Class XP rendering (replacing Action Timer)
+    const unit = (this as any).unit;
+    const primaryClassName = unit.unitClass.name.toUpperCase();
+
+    const xpLabelY = spriteY;
+    const isXpHovered = (this as any).hoveredStatId === 'Class XP';
+    const xpColor = isXpHovered ? HOVERED_TEXT : '#ffffff';
+
+    const fullLabel = `${primaryClassName} XP`;
+    const fullLabelWidth = FontAtlasRenderer.measureText(fullLabel, font);
+    const availableWidth = region.width - (nameX - region.x) - 50;
+
+    if (fullLabelWidth <= availableWidth) {
+      const xpLabelX = region.x + region.width - (this as any).config.padding - fullLabelWidth;
+      FontAtlasRenderer.renderText(ctx, fullLabel, xpLabelX, xpLabelY, fontId, fontAtlasImage, 1, 'left', xpColor);
+    } else {
+      const xpText = 'XP';
+      const xpWidth = FontAtlasRenderer.measureText(xpText, font);
+      const xpLabelX = region.x + region.width - (this as any).config.padding - xpWidth;
+      FontAtlasRenderer.renderText(ctx, xpText, xpLabelX, xpLabelY, fontId, fontAtlasImage, 1, 'left', xpColor);
+    }
+
+    // Calculate available XP (earned - spent) for primary class
+    let availableXp = 0;
+    if ('getUnspentClassExperience' in unit) {
+      availableXp = unit.getUnspentClassExperience(unit.unitClass);
+    }
+
+    const xpValue = `${availableXp}`;
+    const xpValueWidth = FontAtlasRenderer.measureText(xpValue, font);
+    const xpValueX = region.x + region.width - (this as any).config.padding - xpValueWidth;
+    const xpValueY = xpLabelY + (this as any).config.lineSpacing;
+    FontAtlasRenderer.renderText(ctx, xpValue, xpValueX, xpValueY, fontId, fontAtlasImage, 1, 'left', isXpHovered ? HOVERED_TEXT : '#ffa500');
+
+    return classY + (this as any).config.lineSpacing;
+  }
+
+  /**
    * Override render to add party member selector
    */
   render(
@@ -73,10 +157,14 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     spriteImages?: Map<string, HTMLImageElement>,
     spriteSize?: number
   ): void {
-    // Temporarily override the parent's rendering to inject our custom color logic
+    // Temporarily override the parent's rendering to inject our custom logic
     // We do this by accessing the parent's private methods through 'as any'
+    const originalRenderHeader = (this as any).renderHeader;
     const originalRenderAbilitySlot = (this as any).renderAbilitySlot;
     const originalRenderEquipmentSlot = (this as any).renderEquipmentSlot;
+
+    // Override renderHeader with our custom XP rendering
+    (this as any).renderHeader = this.renderHeaderWithXp.bind(this);
 
     // Override renderAbilitySlot with custom color logic
     (this as any).renderAbilitySlot = (
@@ -138,6 +226,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     super.render(ctx, region, fontId, fontAtlasImage, spriteImages, spriteSize);
 
     // Restore original methods
+    (this as any).renderHeader = originalRenderHeader;
     (this as any).renderAbilitySlot = originalRenderAbilitySlot;
     (this as any).renderEquipmentSlot = originalRenderEquipmentSlot;
 
@@ -332,7 +421,71 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   }
 
   /**
-   * Override handleHover to include party selector and empty slots
+   * Custom getStatIdAt to handle Class XP region instead of Action Timer
+   * (Cannot override private parent method, so we use a different name)
+   */
+  private getStatIdAtWithXp(relativeX: number, relativeY: number): string | null {
+    // Calculate layout positions (must match render method)
+    const padding = (this as any).config.padding;
+    const lineSpacing = (this as any).config.lineSpacing;
+
+    // Sprite and name section height
+    const spriteY = padding;
+    const nameY = spriteY;
+    const classY = nameY + lineSpacing;
+    const statsStartY = classY + lineSpacing + 4;
+
+    // Check Class XP region (top-right) - replaces Action Timer
+    // Class XP label is at spriteY, value is at spriteY + lineSpacing
+    const xpLabelY = spriteY;
+    const xpValueY = xpLabelY + lineSpacing;
+
+    // Approximate Class XP region (right side of panel)
+    // This covers both the label and value rows
+    if (relativeY >= xpLabelY && relativeY < xpValueY + lineSpacing) {
+      // Check if X is on the right side (rough approximation)
+      if (relativeX > padding + 50) { // Assume Class XP takes right portion
+        return 'Class XP';
+      }
+    }
+
+    // Check if Y is within stats grid
+    if (relativeY < statsStartY) {
+      return null; // Above stats grid
+    }
+
+    // Calculate which stats row (0-4)
+    const statsRowY = relativeY - statsStartY;
+    const rowIndex = Math.floor(statsRowY / lineSpacing);
+
+    if (rowIndex < 0 || rowIndex >= 5) {
+      return null; // Outside stats grid rows
+    }
+
+    // Define stat labels (must match render order)
+    const leftColumnStats = ['HP', 'P.Pow', 'M.Pow', 'Move', 'Courage'];
+    const rightColumnStats = ['MP', 'P.Evd', 'M.Evd', 'Speed', 'Attunement'];
+
+    // Calculate column layout (must match render method)
+    const lastRegionWidth = (this as any).lastRegionWidth;
+    const statsAreaWidth = lastRegionWidth - (padding * 2);
+    const columnGap = 8;
+    const columnWidth = (statsAreaWidth - columnGap) / 2;
+
+    // The dividing line between columns is at the end of left column + half the gap
+    const columnDivider = padding + columnWidth + (columnGap / 2);
+
+    if (relativeX < columnDivider) {
+      // Left column
+      return leftColumnStats[rowIndex];
+    } else {
+      // Right column
+      return rightColumnStats[rowIndex];
+    }
+  }
+
+  /**
+   * Override handleHover to include party selector, empty slots, and Class XP
    */
   handleHover(relativeX: number, relativeY: number): unknown {
     // Check if mouse is outside panel bounds (same check as parent class)
@@ -347,6 +500,28 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
         this.hoveredMemberIndex = null;
       }
       return super.handleHover(relativeX, relativeY);
+    }
+
+    // Check if hovering over button (parent handles this)
+    const buttonBounds = (this as any).buttonBounds;
+    const wasButtonHovered = (this as any).isButtonHovered;
+    if (buttonBounds) {
+      const { x, y, width, height } = buttonBounds;
+      (this as any).isButtonHovered = relativeX >= x && relativeX <= x + width &&
+                                      relativeY >= y && relativeY <= y + height;
+    } else {
+      (this as any).isButtonHovered = false;
+    }
+
+    // If hovering button, set button text as "hovered stat" for helper text
+    if ((this as any).isButtonHovered) {
+      const currentView = (this as any).currentView;
+      const buttonText = currentView === 'stats' ? 'View Abilities' : 'Back';
+      if ((this as any).hoveredStatId !== buttonText || wasButtonHovered !== (this as any).isButtonHovered) {
+        (this as any).hoveredStatId = buttonText;
+        return { statId: buttonText, buttonHovered: true };
+      }
+      return null;
     }
 
     // Check if hovering over party selector first (in stats view)
@@ -381,6 +556,20 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
       }
     }
 
+    // For stats view, handle stat hover (including Class XP)
+    if (isStatsView) {
+      const statId = this.getStatIdAtWithXp(relativeX, relativeY);
+
+      // Update hover state if changed
+      if (statId !== (this as any).hoveredStatId || wasButtonHovered) {
+        (this as any).hoveredStatId = statId;
+        return { statId };
+      }
+
+      // No change in hover state
+      return null;
+    }
+
     // For abilities view, check for empty slots
     if ((this as any).currentView === 'abilities') {
       const slotLabel = this.getSlotLabelAtPosition(relativeX, relativeY);
@@ -403,7 +592,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
       }
     }
 
-    // Call parent hover handler for non-empty slots
+    // Call parent hover handler for non-empty ability/equipment slots in abilities view
     return super.handleHover(relativeX, relativeY);
   }
 
