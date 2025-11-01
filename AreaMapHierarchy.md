@@ -55,7 +55,10 @@ If unclear how pieces connect, read `## Data Flow Summary`
 - **Interactive objects** → `#### InteractiveObject.ts`, `#### AreaMap.ts`
 - **Spawn points** → `#### SpawnPoint.ts`
 - **Encounter zones** → `#### EncounterZone.ts`
-- **Developer tools** → `#### AreaMapRegistryPanel.tsx`, `#### AreaMapTileSetEditorPanel.tsx`
+- **Event system** → `#### EventArea.ts`, `#### EventProcessor.ts`, `#### EventTrigger.ts`
+- **Event actions** → `### 1a. Event System - Actions`
+- **Event preconditions** → `### 1a. Event System - Preconditions`
+- **Developer tools** → `#### AreaMapRegistryPanel.tsx`, `#### AreaMapTileSetEditorPanel.tsx`, `#### EventEditorModal.tsx`
 
 ### By Component Type:
 - **Models** → `### 1. Core Models`
@@ -77,7 +80,12 @@ If unclear how pieces connect, read `## Data Flow Summary`
 - **Open closed door** → `map.openDoor(x, y)`, returns new AreaMap instance (immutable)
 - **Get tile at position** → `map.getTile(x, y)`, returns AreaMapTile or undefined
 - **Register tileset** → `AreaMapTileSetRegistry.register(tileset)`, adds to global registry
+- **Process events** → `eventProcessor.processMovement(state, map, oldX, oldY, newX, newY)`, returns new GameState
+- **Create event area** → Define in YAML with id, position, dimensions, events array
+- **Add event action** → Add to event's actions array (ShowMessage, Teleport, etc.)
+- **Add event precondition** → Add to event's preconditions array (GlobalVariableIs, etc.)
 - **Browse maps in dev panel** → `<AreaMapRegistryPanel />`, developer tool component
+- **Edit events visually** → `<EventEditorModal />`, create/edit event areas and events
 
 ---
 
@@ -85,10 +93,14 @@ If unclear how pieces connect, read `## Data Flow Summary`
 
 ```
 react-app/src/
-├── models/area/               # Core data models (9 files)
-├── utils/                     # Utilities (4 files)
+├── models/area/               # Core data models (22 files)
+│   ├── actions/              # Event action implementations (7 files)
+│   ├── preconditions/        # Event precondition implementations (5 files)
+│   └── __tests__/            # Model tests (3 files)
+├── utils/                     # Utilities (6 files)
+│   └── __tests__/            # Utility tests (3 files)
 ├── services/                  # Data loaders (2 files)
-├── components/developer/      # Dev tools (2 files)
+├── components/developer/      # Dev tools (3 files)
 └── data/                      # YAML databases (2 files)
 ```
 
@@ -176,6 +188,182 @@ Located in: `react-app/src/models/area/`
 
 ---
 
+### 1a. Event System - Core
+
+Located in: `react-app/src/models/area/`
+
+#### `EventArea.ts`
+**Purpose:** Defines event areas and events that trigger based on player movement
+**Exports:** `EventArea`, `AreaEvent`, `EventAreaJSON`, `AreaEventJSON`, helper functions
+**Key Types:**
+- EventArea: Rectangular area with events (id, x, y, width, height, events[], description, color)
+- AreaEvent: Single event (id, trigger, preconditions[], actions[], oneTime, triggered, description)
+**Helper Functions:**
+- isPositionInEventArea(area, x, y): boolean
+- getEventsByTrigger(area, trigger): AreaEvent[]
+- getPendingOneTimeEvents(area): AreaEvent[]
+**Dependencies:** EventTrigger, EventPrecondition, EventAction
+**Used By:** EventProcessor, AreaMapParser, FirstPersonView, EventEditorModal
+
+#### `EventTrigger.ts`
+**Purpose:** Event trigger types (when events fire)
+**Exports:** `EventTrigger` const object, `EventTrigger` type, `isEventTrigger()` type guard
+**Const Object:** `{ OnEnter: "on-enter", OnStep: "on-step", OnExit: "on-exit" } as const`
+**Trigger Types:**
+- OnEnter: Fires when player enters area (wasn't in area previous frame)
+- OnStep: Fires every frame player is in area (was in area previous frame)
+- OnExit: Fires when player exits area (was in area previous frame)
+**Guidelines Compliance:** Uses const object pattern (NOT enum)
+**Dependencies:** None
+**Used By:** EventArea, EventProcessor, AreaMapParser
+
+#### `EventPrecondition.ts`
+**Purpose:** Base interface for event preconditions (conditions that must be true)
+**Exports:** `EventPrecondition`, `EventPreconditionJSON`, `GameState`
+**Key Interface:**
+- type: string (discriminator for JSON)
+- evaluate(state: GameState): boolean
+- toJSON(): EventPreconditionJSON
+**GameState:** Interface for game state (globalVariables: Map, messageLog, currentMapId, playerPosition, etc.)
+**Guidelines Compliance:** Pure functions (no side effects), immutable state
+**Dependencies:** CardinalDirection (from InteractiveObject)
+**Used By:** All precondition implementations, EventProcessor, ActionFactory
+
+#### `EventAction.ts`
+**Purpose:** Base interface for event actions (operations to perform)
+**Exports:** `EventAction`, `EventActionJSON`
+**Key Interface:**
+- type: string (discriminator for JSON)
+- execute(state: GameState): GameState (MUST return new state - immutable)
+- toJSON(): EventActionJSON
+**Guidelines Compliance:** Immutable state updates (always return new state)
+**Dependencies:** GameState (from EventPrecondition)
+**Used By:** All action implementations, EventProcessor, PreconditionFactory
+
+#### `README.md`
+**Purpose:** Event system documentation with examples and common patterns
+**Content:** Quick start, event types, preconditions, actions, common patterns, best practices, troubleshooting
+**See:** models/area/README.md for full documentation
+
+---
+
+### 1b. Event System - Preconditions
+
+Located in: `react-app/src/models/area/preconditions/`
+
+#### `GlobalVariableIs.ts`
+**Purpose:** Checks if a global variable equals a specific value
+**Exports:** `GlobalVariableIs` class
+**Constructor:** `(variableName: string, expectedValue: string | number | boolean)`
+**evaluate():** Returns true if state.globalVariables.get(variableName) === expectedValue
+**fromJSON():** Static factory method for deserialization
+**Guidelines Compliance:** Pure function, no side effects
+**Dependencies:** EventPrecondition, GameState
+**Used By:** PreconditionFactory, EventProcessor
+
+#### `GlobalVariableIsGreaterThan.ts`
+**Purpose:** Checks if a numeric variable is greater than a threshold
+**Exports:** `GlobalVariableIsGreaterThan` class
+**Constructor:** `(variableName: string, threshold: number)`
+**evaluate():** Returns true if variable > threshold (type-checks for number)
+**fromJSON():** Static factory method
+**Dependencies:** EventPrecondition, GameState
+**Used By:** PreconditionFactory
+
+#### `GlobalVariableIsLessThan.ts`
+**Purpose:** Checks if a numeric variable is less than a threshold
+**Exports:** `GlobalVariableIsLessThan` class
+**Constructor:** `(variableName: string, threshold: number)`
+**evaluate():** Returns true if variable < threshold (type-checks for number)
+**fromJSON():** Static factory method
+**Dependencies:** EventPrecondition, GameState
+**Used By:** PreconditionFactory
+
+#### `PreconditionFactory.ts`
+**Purpose:** Factory for creating precondition instances from JSON
+**Exports:** `PreconditionFactory` (static class)
+**Key Method:** `fromJSON(json: EventPreconditionJSON): EventPrecondition`
+**Pattern:** Switch on type discriminator, delegates to class-specific fromJSON()
+**Error Handling:** Throws on unknown type
+**Guidelines Compliance:** Discriminated union pattern, type-safe deserialization
+**Dependencies:** All precondition implementations
+**Used By:** AreaMapParser
+
+#### `index.ts`
+**Purpose:** Barrel export for preconditions
+**Exports:** All precondition classes and factory
+**Usage:** `import { GlobalVariableIs, PreconditionFactory } from '@/models/area/preconditions'`
+
+---
+
+### 1c. Event System - Actions
+
+Located in: `react-app/src/models/area/actions/`
+
+#### `ShowMessage.ts`
+**Purpose:** Displays a message to the player
+**Exports:** `ShowMessage` class
+**Constructor:** `(message: string)`
+**execute():** Appends message to state.messageLog array (returns new state)
+**fromJSON():** Static factory method
+**Guidelines Compliance:** Immutable update (creates new array with spread)
+**Dependencies:** EventAction, GameState
+**Used By:** ActionFactory, EventProcessor
+
+#### `SetGlobalVariable.ts`
+**Purpose:** Sets or updates a global variable
+**Exports:** `SetGlobalVariable` class
+**Constructor:** `(variableName: string, value: string | number | boolean)`
+**execute():** Creates new Map with updated variable (returns new state)
+**fromJSON():** Static factory method
+**Guidelines Compliance:** Immutable update (new Map instance)
+**Dependencies:** EventAction, GameState
+**Used By:** ActionFactory
+
+#### `Teleport.ts`
+**Purpose:** Moves player to different map and position
+**Exports:** `Teleport` class
+**Constructor:** `(targetMapId: string, targetX: number, targetY: number, targetDirection?: CardinalDirection)`
+**execute():** Updates currentMapId, playerPosition, playerDirection (returns new state)
+**fromJSON():** Static factory method
+**Dependencies:** EventAction, GameState, CardinalDirection
+**Used By:** ActionFactory, FirstPersonView (for handling map changes)
+
+#### `Rotate.ts`
+**Purpose:** Changes player's facing direction
+**Exports:** `Rotate` class
+**Constructor:** `(newDirection: CardinalDirection)`
+**execute():** Updates playerDirection (returns new state)
+**fromJSON():** Static factory method
+**Dependencies:** EventAction, GameState, CardinalDirection
+**Used By:** ActionFactory
+
+#### `StartEncounter.ts`
+**Purpose:** Triggers a combat encounter
+**Exports:** `StartEncounter` class
+**Constructor:** `(encounterId: string)`
+**execute():** Sets combatState to active with encounterId (returns new state)
+**fromJSON():** Static factory method
+**Dependencies:** EventAction, GameState
+**Used By:** ActionFactory, FirstPersonView (for combat transitions)
+
+#### `ActionFactory.ts`
+**Purpose:** Factory for creating action instances from JSON
+**Exports:** `ActionFactory` (static class)
+**Key Method:** `fromJSON(json: EventActionJSON): EventAction`
+**Pattern:** Switch on type discriminator, delegates to class-specific fromJSON()
+**Error Handling:** Throws on unknown type
+**Guidelines Compliance:** Discriminated union pattern, extensible design
+**Dependencies:** All action implementations
+**Used By:** AreaMapParser
+
+#### `index.ts`
+**Purpose:** Barrel export for actions
+**Exports:** All action classes and factory
+**Usage:** `import { ShowMessage, ActionFactory } from '@/models/area/actions'`
+
+---
+
 ### 2. Utilities
 
 Located in: `react-app/src/utils/`
@@ -227,6 +415,23 @@ Located in: `react-app/src/utils/`
 **Door Auto-Continuation:** Player moves TWO tiles (through door + next tile), prevents standing in doorway
 **Dependencies:** AreaMap, CardinalDirection, InteractiveObject
 **Used By:** FirstPersonView, FirstPersonInputHandler
+
+#### `EventProcessor.ts`
+**Purpose:** Processes events based on player movement, executes preconditions and actions
+**Exports:** `EventProcessor` (class)
+**Key Method:** `processMovement(gameState, areaMap, previousX, previousY, currentX, currentY): GameState`
+**Algorithm:**
+1. Determine which event areas contain previous and current positions
+2. Calculate entered, stayed-in, and exited areas
+3. Process OnExit events (player leaving areas)
+4. Process OnEnter events (player entering new areas)
+5. Process OnStep events (player still in areas)
+6. For each event: check preconditions → execute actions in order → mark one-time events as triggered
+**Performance:** O(n + m) where n = event areas, m = events in active areas
+**Error Handling:** Try-catch around precondition.evaluate() and action.execute(), logs errors, continues processing
+**Guidelines Compliance:** Returns NEW game state (immutable), no mutations
+**Dependencies:** AreaMap, EventArea, EventTrigger, GameState
+**Used By:** FirstPersonView
 
 ---
 
@@ -293,6 +498,30 @@ Located in: `react-app/src/components/developer/`
 **Dependencies:** AreaMapTileSet, AreaMapTileSetRegistry
 **Used By:** DeveloperPanel
 
+#### `EventEditorModal.tsx`
+**Purpose:** Modal dialog for creating and editing event areas and events
+**Exports:** `EventEditorModal`
+**Props:** isOpen, onClose, areaMap, eventArea (optional for editing)
+**Key Features:**
+- Create new event areas or edit existing ones
+- Set area position, dimensions, description, color
+- Event list editor (add/remove/reorder events)
+- Event property editor (id, trigger, oneTime, description)
+- Precondition builder (type selector, property editors)
+- Action builder (type selector, property editors)
+- Real-time validation (unique IDs, valid coordinates, required fields)
+- YAML preview
+- Save/cancel operations
+**UI Sections:**
+- Area Properties (x, y, width, height, description, color picker)
+- Events List (expandable cards with event details)
+- Event Editor (trigger dropdown, oneTime checkbox, description)
+- Preconditions Editor (add/remove, type-specific forms)
+- Actions Editor (add/remove, type-specific forms)
+**Validation:** Prevents invalid event configurations, shows error messages
+**Dependencies:** EventArea, AreaEvent, EventTrigger, PreconditionFactory, ActionFactory
+**Used By:** AreaMapRegistryPanel
+
 ---
 
 ### 5. Data Files
@@ -351,7 +580,9 @@ AreaMapDataLoader.loadAll()
     ↓
 ┌─────────────────────────────────────────┐
 │ AreaMapParser.parseAreaMapFromYAML()   │
-│ (ASCII grid → AreaMap instance)         │
+│ (ASCII grid + events → AreaMap)         │
+│   - PreconditionFactory.fromJSON()      │
+│   - ActionFactory.fromJSON()            │
 └─────────────────────────────────────────┘
     ↓
 ┌─────────────────────────────────────────┐
@@ -361,9 +592,21 @@ AreaMapDataLoader.loadAll()
     ↓
 FirstPersonView / Developer Panels
     ↓
-MovementValidator.validateMovement()
+┌─────────────────────────────────────────┐
+│ Movement & Validation                   │
+│ - MovementValidator.validateMovement()  │
+│ - AreaMap methods (getTile, etc.)       │
+└─────────────────────────────────────────┘
     ↓
-AreaMap methods (getTile, isWalkable, isDoorTile, etc.)
+┌─────────────────────────────────────────┐
+│ Event Processing (after movement)       │
+│ - EventProcessor.processMovement()      │
+│   - Evaluate preconditions              │
+│   - Execute actions                     │
+│   - Return new GameState                │
+└─────────────────────────────────────────┘
+    ↓
+Handle State Changes (Teleport, Combat, Messages, etc.)
 ```
 
 ---
@@ -404,6 +647,53 @@ interface SpawnPoint {
   y: number;
   direction: CardinalDirection;
   id?: string;
+}
+
+// Event System Types
+const EventTrigger = { OnEnter: "on-enter", OnStep: "on-step", OnExit: "on-exit" } as const;
+type EventTrigger = typeof EventTrigger[keyof typeof EventTrigger];
+
+interface EventArea {
+  id: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  events: AreaEvent[];
+  description?: string;
+  color?: string;
+}
+
+interface AreaEvent {
+  id: string;
+  trigger: EventTrigger;
+  preconditions: EventPrecondition[];
+  actions: EventAction[];
+  oneTime?: boolean;
+  triggered?: boolean;
+  description?: string;
+}
+
+interface EventPrecondition {
+  type: string;
+  evaluate(state: GameState): boolean;
+  toJSON(): EventPreconditionJSON;
+}
+
+interface EventAction {
+  type: string;
+  execute(state: GameState): GameState; // MUST return new state
+  toJSON(): EventActionJSON;
+}
+
+interface GameState {
+  globalVariables: Map<string, string | number | boolean>;
+  messageLog?: Array<{ text: string; timestamp: number }>;
+  currentMapId?: string;
+  playerPosition?: { x: number; y: number };
+  playerDirection?: CardinalDirection;
+  combatState?: { active: boolean; encounterId: string };
+  triggeredEventIds?: Set<string>;
 }
 ```
 
@@ -458,6 +748,95 @@ if (updatedMap) {
 }
 ```
 
+### Processing Events
+```typescript
+import { EventProcessor } from '@/utils/EventProcessor';
+import type { GameState } from '@/models/area/EventPrecondition';
+
+// Create processor (cache with useMemo in React)
+const eventProcessor = new EventProcessor();
+
+// Initialize game state
+const [gameState, setGameState] = useState<GameState>({
+  globalVariables: new Map(),
+  messageLog: [],
+  triggeredEventIds: new Set(),
+  currentMapId: areaMap.id,
+  playerPosition: { x: playerX, y: playerY },
+  playerDirection: direction,
+});
+
+// After player moves from (oldX, oldY) to (newX, newY)
+const newGameState = eventProcessor.processMovement(
+  gameState,
+  areaMap,
+  oldX,
+  oldY,
+  newX,
+  newY
+);
+
+// Apply state changes if any events fired
+if (newGameState !== gameState) {
+  setGameState(newGameState);
+
+  // Handle side effects from actions
+  if (newGameState.currentMapId !== gameState.currentMapId) {
+    // Teleport action triggered - load new map
+    const newMap = AreaMapRegistry.getById(newGameState.currentMapId);
+    // ... handle map transition
+  }
+
+  if (newGameState.combatState?.active) {
+    // StartEncounter action triggered - transition to combat
+    // ... start combat encounter
+  }
+}
+```
+
+### Defining Events in YAML
+```yaml
+eventAreas:
+  - id: treasure-room-entrance
+    x: 10
+    y: 5
+    width: 3
+    height: 3
+    description: "Entrance to treasure room"
+    color: "#ffaa00"
+    events:
+      # Check for key
+      - id: locked-door-check
+        trigger: on-enter
+        preconditions:
+          - type: GlobalVariableIs
+            variableName: "has-treasure-key"
+            expectedValue: false
+        actions:
+          - type: ShowMessage
+            message: "The door is locked. You need a key."
+
+      # Unlock and teleport
+      - id: unlock-door
+        trigger: on-enter
+        oneTime: true
+        preconditions:
+          - type: GlobalVariableIs
+            variableName: "has-treasure-key"
+            expectedValue: true
+        actions:
+          - type: ShowMessage
+            message: "The key fits! The door opens."
+          - type: Teleport
+            targetMapId: "treasure-room"
+            targetX: 5
+            targetY: 10
+            targetDirection: North
+          - type: SetGlobalVariable
+            variableName: "treasure-door-unlocked"
+            value: true
+```
+
 ---
 
 ## Guidelines Compliance
@@ -499,10 +878,20 @@ export function getDirectionOffset(direction: CardinalDirection): [number, numbe
 
 Located in: `react-app/src/models/area/__tests__/` and `react-app/src/utils/__tests__/`
 
-**AreaMap.test.ts:** getTile, setTile, isInBounds, isWalkable, isPassable, isDoorTile, interactive objects, serialization
-**AreaMapParser.test.ts:** ASCII parsing, variable-width rows, unknown chars, spawn validation, object bounds
-**AreaMapTileSetRegistry.test.ts:** register, getById, getByTag, count, clearRegistry
-**MovementValidator.test.ts:** floor movement, wall blocking, door auto-continuation, door edge cases, rotation helpers
+**Core Area Map Tests:**
+- **AreaMap.test.ts:** getTile, setTile, isInBounds, isWalkable, isPassable, isDoorTile, interactive objects, serialization
+- **AreaMapParser.test.ts:** ASCII parsing, variable-width rows, unknown chars, spawn validation, object bounds
+- **AreaMapTileSetRegistry.test.ts:** register, getById, getByTag, count, clearRegistry
+- **MovementValidator.test.ts:** floor movement, wall blocking, door auto-continuation, door edge cases, rotation helpers
+
+**Event System Tests (33 tests, all passing):**
+- **EventPreconditions.test.ts (11 tests):** GlobalVariableIs equality checks, GlobalVariableIsGreaterThan numeric comparisons, GlobalVariableIsLessThan numeric comparisons, type validation, serialization round-trips, PreconditionFactory creation
+- **EventActions.test.ts (12 tests):** ShowMessage log appending, SetGlobalVariable Map updates, Teleport map/position changes, Rotate direction changes, StartEncounter combat state, immutability verification, serialization, ActionFactory creation
+- **EventProcessor.test.ts (10 tests):** OnEnter trigger on area entry, OnStep trigger on continued stay, OnExit trigger on area departure, precondition evaluation (pass/fail), one-time event tracking, action execution order
+- **AreaMapParserEvents.test.ts:** Event area parsing from YAML, precondition/action deserialization, validation errors
+- **EventSystemIntegration.test.ts:** End-to-end event processing scenarios
+
+**Test Coverage:** 100% of event system core functionality covered
 
 ---
 
@@ -511,3 +900,6 @@ Located in: `react-app/src/models/area/__tests__/` and `react-app/src/utils/__te
 For detailed implementation, see:
 - [AreaMapSystemOverview.md](GDD/FirstPersonView/AreaMap/AreaMapSystemOverview.md)
 - [AreaMapImplementationPlan.md](GDD/FirstPersonView/AreaMap/AreaMapImplementationPlan.md)
+- [EventSystemOverview.md](GDD/FirstPersonView/AreaMap/EventSystemOverview.md)
+- [EventSystemImplementationPlan.md](GDD/FirstPersonView/AreaMap/EventSystemImplementationPlan.md)
+- [models/area/README.md](react-app/src/models/area/README.md) - Event system quick reference

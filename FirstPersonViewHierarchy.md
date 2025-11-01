@@ -48,9 +48,10 @@ If unclear how pieces connect, read `## Data Flow Summary`
 
 ### By Task Type:
 - **3D rendering** → `#### ThreeJSViewport.tsx`, `#### Cell.tsx`
-- **Camera animation** → `#### AnimatedPerspectiveCamera.tsx`
+- **Camera animation** → `####AnimatedPerspectiveCamera.tsx`
 - **Movement** → `#### FirstPersonInputHandler.ts`, `#### MovementValidator.ts`
 - **Input handling** → `#### FirstPersonInputHandler.ts`
+- **Event processing** → `#### EventProcessor.ts` (see AreaMapHierarchy.md)
 - **Minimap** → `#### MinimapRenderer.ts`
 - **Player stats** → `#### PartyMemberStatsPanel.ts`
 - **Texture loading** → `#### SpriteSheetLoader.ts`, `#### tileTextureConfig.ts`
@@ -70,6 +71,7 @@ If unclear how pieces connect, read `## Data Flow Summary`
 - **Load first-person view** → `<FirstPersonView mapId="dungeon-room-1" />`, loads AreaMap from registry
 - **Process input** → `FirstPersonInputHandler.processKeyDown()`, returns InputCommand
 - **Validate movement** → `validateMovement(map, x, y, dir)`, returns discriminated union with door auto-continue
+- **Process events** → `eventProcessor.processMovement(state, map, oldX, oldY, newX, newY)`, returns new GameState
 - **Render minimap** → `MinimapRenderer.render(ctx, map, x, y, dir, exploredTiles, ...)`, fog of war
 - **Render stats** → `PartyMemberStatsPanel.render(ctx, unit, ...)`, HP/MP bars
 - **Load 3D textures** → `SpriteSheetLoader.load()`, caches THREE.Texture instances
@@ -102,22 +104,23 @@ Located in: `react-app/src/components/firstperson/`
 
 #### `FirstPersonView.tsx`
 **Purpose:** Main container for first-person exploration mode
-**Lines:** 610 lines
+**Lines:** 610+ lines (updated with event system integration)
 **Props:** `{ mapId: string }`
-**State:** FirstPersonState, spritesLoaded, windowSize, canvasDisplayStyle
+**State:** FirstPersonState, GameState (for events), spritesLoaded, windowSize, canvasDisplayStyle
 **Key Features:**
 - Manages overall state and input handling
+- **Event System Integration:** Processes movement-based events, handles Teleport/StartEncounter actions
 - Double-buffered canvas rendering (384×216 native)
 - Integer scaling for pixel-perfect display
 - 5-panel layout (Top, Map/3D, Combat Log, Minimap, Stats)
 - Loads sprites and fonts
-- Integrates ThreeJSViewport, MinimapRenderer, PartyMemberStatsPanel
+- Integrates ThreeJSViewport, MinimapRenderer, PartyMemberStatsPanel, EventProcessor
 - WASD movement, QE rotation, Space interact, Esc exit
 **Rendering Pipeline:**
 1. Clear canvas
 2. Render top panel (title)
 3. Render 3D viewport (composited from ThreeJSViewport offscreen canvas)
-4. Render combat log (CombatLogManager)
+4. Render combat log (CombatLogManager) - includes event messages
 5. Render minimap (fog of war)
 6. Render party stats (HP/MP bars)
 **Input Handling:**
@@ -129,7 +132,12 @@ Located in: `react-app/src/components/firstperson/`
 - E: Turn right
 - Space: Interact with targeted object
 - Esc: Exit first-person view
-**Dependencies:** FirstPersonState, FirstPersonInputHandler, FirstPersonLayoutManager, ThreeJSViewport, MinimapRenderer, PartyMemberStatsPanel, AreaMapRegistry, MovementValidator, CombatLogManager
+**Event Processing Flow:**
+1. Player moves from (oldX, oldY) to (newX, newY)
+2. EventProcessor.processMovement() called with previous and current positions
+3. Returns new GameState with updated variables, messages, combat state, etc.
+4. handleEventStateChanges() processes side effects (map transitions, combat triggers)
+**Dependencies:** FirstPersonState, GameState, EventProcessor, FirstPersonInputHandler, FirstPersonLayoutManager, ThreeJSViewport, MinimapRenderer, PartyMemberStatsPanel, AreaMapRegistry, MovementValidator, CombatLogManager
 **Used By:** App routing (/dev/test/:mapId)
 
 ---
