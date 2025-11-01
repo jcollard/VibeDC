@@ -12,6 +12,7 @@ import { EquipmentRegistryPanel } from './developer/EquipmentRegistryPanel';
 import { ClassRegistryPanel } from './developer/ClassRegistryPanel';
 import { TilesetRegistryPanel } from './developer/TilesetRegistryPanel';
 import { EncounterRegistryPanel } from './developer/EncounterRegistryPanel';
+import { AreaMapRegistryPanel } from './developer/AreaMapRegistryPanel';
 import { parseMap } from '../utils/mapParser';
 import { UserInputConfig, type PlayerAction } from '../models/UserInputConfig';
 import { Player } from '../models/Player';
@@ -70,6 +71,9 @@ export const Game: React.FC = () => {
 
   // Encounter registry panel visibility (development only)
   const [encounterRegistryVisible, setEncounterRegistryVisible] = useState<boolean>(false);
+
+  // Area map registry panel visibility (development only)
+  const [areaMapRegistryVisible, setAreaMapRegistryVisible] = useState<boolean>(false);
 
   // Initialize input configuration
   const inputConfig = useMemo(() => UserInputConfig.load(), []);
@@ -502,6 +506,10 @@ export const Game: React.FC = () => {
                   setEncounterRegistryVisible(true);
                   setDeveloperPanelVisible(false);
                 }}
+                onOpenAreaMapRegistry={() => {
+                  setAreaMapRegistryVisible(true);
+                  setDeveloperPanelVisible(false);
+                }}
                 onOpenDebugPanel={() => {
                   setDebugPanelVisible(true);
                   setDeveloperPanelVisible(false);
@@ -569,6 +577,13 @@ export const Game: React.FC = () => {
         {import.meta.env.DEV && encounterRegistryVisible && (
           <EncounterRegistryPanel
             onClose={() => setEncounterRegistryVisible(false)}
+          />
+        )}
+
+        {/* Area map registry panel - only available in development mode */}
+        {import.meta.env.DEV && areaMapRegistryVisible && (
+          <AreaMapRegistryPanel
+            onClose={() => setAreaMapRegistryVisible(false)}
           />
         )}
       </div>

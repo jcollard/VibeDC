@@ -9,6 +9,7 @@ import { EquipmentRegistryPanel } from './developer/EquipmentRegistryPanel';
 import { ClassRegistryPanel } from './developer/ClassRegistryPanel';
 import { TilesetRegistryPanel } from './developer/TilesetRegistryPanel';
 import { EncounterRegistryPanel } from './developer/EncounterRegistryPanel';
+import { AreaMapRegistryPanel } from './developer/AreaMapRegistryPanel';
 
 export const DevRoute: React.FC = () => {
   const [developerPanelVisible, setDeveloperPanelVisible] = useState<boolean>(true);
@@ -21,6 +22,7 @@ export const DevRoute: React.FC = () => {
   const [classRegistryVisible, setClassRegistryVisible] = useState<boolean>(false);
   const [tilesetRegistryVisible, setTilesetRegistryVisible] = useState<boolean>(false);
   const [encounterRegistryVisible, setEncounterRegistryVisible] = useState<boolean>(false);
+  const [areaMapRegistryVisible, setAreaMapRegistryVisible] = useState<boolean>(false);
 
   return (
     <div style={{
@@ -76,6 +78,10 @@ export const DevRoute: React.FC = () => {
           }}
           onOpenEncounterRegistry={() => {
             setEncounterRegistryVisible(true);
+            setDeveloperPanelVisible(false);
+          }}
+          onOpenAreaMapRegistry={() => {
+            setAreaMapRegistryVisible(true);
             setDeveloperPanelVisible(false);
           }}
           onOpenDebugPanel={() => {
@@ -170,6 +176,16 @@ export const DevRoute: React.FC = () => {
         <EncounterRegistryPanel
           onClose={() => {
             setEncounterRegistryVisible(false);
+            setDeveloperPanelVisible(true);
+          }}
+        />
+      )}
+
+      {/* Area map registry panel */}
+      {areaMapRegistryVisible && (
+        <AreaMapRegistryPanel
+          onClose={() => {
+            setAreaMapRegistryVisible(false);
             setDeveloperPanelVisible(true);
           }}
         />
