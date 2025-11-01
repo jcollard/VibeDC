@@ -159,37 +159,21 @@ export class EquipmentComparisonContent implements PanelContent {
       };
 
       y += lineSpacing; // Move past Cancel
-    } else {
-      // Clear bounds when comparing
-      this.cancelBounds = null;
-      this.removeBounds = null;
-    }
 
-    // Render helper text
-    y += 12; // 12px spacing before helper text
+      // Add spacing before helper text when showing options
+      y += 12;
 
-    // Determine helper text based on comparison state
-    const helperColor = '#888888'; // Grey for helper text
-    let helperText: string;
-
-    if (!this.comparisonItem) {
-      // No comparison item - show option-specific helper text
-      helperText = 'Select an item to equip.';
+      // Render helper text for non-comparison mode
+      const helperColor = '#888888'; // Grey for helper text
+      let helperText = 'Select an item to equip.';
 
       if (this.hoveredOption === 'cancel') {
         helperText = 'Clear equipment selection';
       } else if (this.hoveredOption === 'remove') {
         helperText = 'Remove item and add to inventory';
       }
-    } else {
-      // Comparing items - show equip instruction
-      helperText = 'Click to Equip';
-    }
 
-    // Helper text rendering (only if we have text to show)
-    if (helperText) {
-
-      // Helper text might be too wide, wrap if necessary
+      // Helper text rendering
       const helperWidth = FontAtlasRenderer.measureText(helperText, font);
       const helperAvailableWidth = region.width - (padding * 2);
 
@@ -250,15 +234,18 @@ export class EquipmentComparisonContent implements PanelContent {
           FontAtlasRenderer.renderText(ctx, line2, line2X, y, fontId, fontAtlasImage, 1, 'left', helperColor);
         }
       }
-    }
 
-    // If no comparison item, don't render stats - return early
-    if (!this.comparisonItem) {
+      // Not comparing - return early after rendering helper text
       ctx.restore();
       return;
     }
 
-    y += 2; // Small spacing before stats
+    // Clear bounds when comparing
+    this.cancelBounds = null;
+    this.removeBounds = null;
+
+    // When comparing, add minimal spacing before stats
+    y += 2;
 
     // Get non-default properties from comparison item
     const comparisonStats = this.getNonDefaultProperties(this.comparisonItem);
@@ -356,6 +343,25 @@ export class EquipmentComparisonContent implements PanelContent {
         }
       }
     }
+
+    // Render helper text below stats when comparing
+    y += 8; // Add spacing before helper text
+    const helperColor = '#888888'; // Grey for helper text
+    const helperText = 'Click to Equip';
+    const helperWidth = FontAtlasRenderer.measureText(helperText, font);
+    const helperX = region.x + Math.floor((region.width - helperWidth) / 2);
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      helperText,
+      helperX,
+      y,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      helperColor
+    );
 
     ctx.restore();
   }
