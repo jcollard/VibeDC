@@ -20,11 +20,12 @@ import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { InventoryTopPanelContent, type InventoryStats } from '../../models/inventory/panels/InventoryTopPanelContent';
 import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
-import { UnitInfoContent } from '../../models/combat/managers/panels/UnitInfoContent';
+import { InventoryUnitInfoContent } from '../../models/inventory/panels/InventoryUnitInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { UISettings } from '../../config/UISettings';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
+import type { CombatUnit } from '../../models/combat/CombatUnit';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
@@ -133,6 +134,9 @@ export const InventoryView: React.FC = () => {
   // Track manual scale setting
   const [manualScale] = useState<number>(UISettings.getManualScale());
 
+  // Track selected party member index for top info panel
+  const [selectedPartyMemberIndex, setSelectedPartyMemberIndex] = useState(0);
+
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -174,20 +178,36 @@ export const InventoryView: React.FC = () => {
       new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
     );
 
-    // Top info panel: First party member's stats
-    const partyMembers = PartyMemberRegistry.getAll();
-    if (partyMembers.length > 0) {
-      const firstMember = PartyMemberRegistry.createPartyMember(partyMembers[0].id);
-      if (firstMember) {
+    // Top info panel: Party member stats with selector
+    const partyMemberConfigs = PartyMemberRegistry.getAll();
+    if (partyMemberConfigs.length > 0) {
+      // Create all party member instances
+      const partyMembers: CombatUnit[] = [];
+      for (const config of partyMemberConfigs) {
+        const member = PartyMemberRegistry.createPartyMember(config.id);
+        if (member) {
+          partyMembers.push(member);
+        }
+      }
+
+      if (partyMembers.length > 0) {
+        const selectedMember = partyMembers[selectedPartyMemberIndex] || partyMembers[0];
+
         topInfoPanelManager.setContent(
-          new UnitInfoContent(
+          new InventoryUnitInfoContent(
             {
-              title: firstMember.name,
+              title: selectedMember.name,
               titleColor: '#00ff00',
               padding: 1,
               lineSpacing: 8,
             },
-            firstMember
+            selectedMember,
+            partyMembers,
+            selectedPartyMemberIndex,
+            (_member: CombatUnit, index: number) => {
+              // Update selected party member
+              setSelectedPartyMemberIndex(index);
+            }
           )
         );
       }
@@ -195,7 +215,7 @@ export const InventoryView: React.FC = () => {
 
     // Bottom panel: Item details (initially empty)
     bottomPanelManager.setContent(new EmptyPanelContent());
-  }, [titlePanelManager, bottomPanelManager, topInfoPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
+  }, [titlePanelManager, bottomPanelManager, topInfoPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort, selectedPartyMemberIndex]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
