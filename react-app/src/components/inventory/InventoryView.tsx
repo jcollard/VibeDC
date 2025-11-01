@@ -71,7 +71,7 @@ function getInventoryMainPanelBounds(layoutManager: CombatLayoutManager, canvasW
 }
 
 /**
- * Empty panel content for when no item is selected
+ * Empty panel content for when no item is hovered
  */
 class EmptyPanelContent implements PanelContent {
   render(
@@ -86,7 +86,7 @@ class EmptyPanelContent implements PanelContent {
     ctx.imageSmoothingEnabled = false;
 
     const padding = 4;
-    const text = 'No item selected';
+    const text = 'Hover over an item';
 
     FontAtlasRenderer.renderText(
       ctx,
@@ -345,17 +345,17 @@ export const InventoryView: React.FC = () => {
     saveInventoryViewStateToLocalStorage(viewState);
   }, [viewState]);
 
-  // Update bottom panel when selected item changes
+  // Update bottom panel when hovered item changes
   useEffect(() => {
-    if (viewState.selectedItemId) {
-      const equipment = Equipment.getById(viewState.selectedItemId);
+    if (viewState.hoveredItemId) {
+      const equipment = Equipment.getById(viewState.hoveredItemId);
       if (equipment) {
         bottomPanelManager.setContent(new EquipmentInfoContent(equipment));
       }
     } else {
       bottomPanelManager.setContent(new EmptyPanelContent());
     }
-  }, [viewState.selectedItemId, bottomPanelManager]);
+  }, [viewState.hoveredItemId, bottomPanelManager]);
 
   // Update top panel stats when inventory changes (simplified - just on render)
   useEffect(() => {

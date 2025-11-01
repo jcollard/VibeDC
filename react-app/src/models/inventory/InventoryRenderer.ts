@@ -96,7 +96,6 @@ export class InventoryRenderer {
     this.renderItemList(
       ctx,
       items,
-      state.selectedItemId,
       state.hoveredItemId,
       state.category,
       itemListBounds,
@@ -150,7 +149,6 @@ export class InventoryRenderer {
   private renderItemList(
     ctx: CanvasRenderingContext2D,
     items: InventoryItemWithQuantity[],
-    selectedItemId: string | null,
     hoveredItemId: string | null,
     activeCategory: string,
     bounds: Bounds,
@@ -179,15 +177,12 @@ export class InventoryRenderer {
     // Render each item
     let itemY = bounds.y;
     for (const item of items) {
-      const isSelected = item.equipmentId === selectedItemId;
       const isHovered = item.equipmentId === hoveredItemId;
       const isQuestItem = item.equipment.typeTags?.includes('quest-item') ?? false;
 
       // Determine text color
       let nameColor: string = ITEM_LIST.ITEM_NAME_COLOR;
-      if (isSelected) {
-        nameColor = ITEM_LIST.SELECTED_COLOR;
-      } else if (isHovered) {
+      if (isHovered) {
         nameColor = ITEM_LIST.HOVER_COLOR;
       } else if (isQuestItem) {
         nameColor = ITEM_LIST.QUEST_ITEM_COLOR;
