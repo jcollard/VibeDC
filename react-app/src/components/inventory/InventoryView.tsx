@@ -152,6 +152,9 @@ export const InventoryView: React.FC = () => {
   // Track equipment slot selection version to trigger re-renders
   const [equipmentSlotSelectionVersion, setEquipmentSlotSelectionVersion] = useState(0);
 
+  // Track bottom panel update version to force re-renders
+  const [bottomPanelVersion, setBottomPanelVersion] = useState(0);
+
   // Canvas refs for double buffering
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -440,6 +443,9 @@ export const InventoryView: React.FC = () => {
       // No slot selected and no item hovered
       bottomPanelManager.setContent(new EmptyPanelContent());
     }
+
+    // Trigger a re-render by updating version
+    setBottomPanelVersion(v => v + 1);
   }, [viewState.hoveredItemId, bottomPanelManager, equipmentSlotSelectionVersion]);
 
   // Update top panel stats when inventory changes (simplified - just on render)
@@ -641,6 +647,7 @@ export const InventoryView: React.FC = () => {
     combatLogManager,
     showDebugPanels,
     selectedPartyMemberIndex,
+    bottomPanelVersion,
   ]);
 
   // Expose developer mode functions to window (for testing)
@@ -1005,23 +1012,17 @@ export const InventoryView: React.FC = () => {
                 slotLabel: slotLabel
               };
 
-              // Increment version to trigger re-render
-              setEquipmentSlotSelectionVersion(v => v + 1);
-
               // Update the top info panel to highlight the selected equipment
               if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
                 (topContent as any).setSelectedEquipmentSlot(slotLabel);
               }
 
-              // Show in bottom panel
-              if (hoverResult.type === 'equipment-detail') {
-                bottomPanelManager.setContent(new EquipmentInfoContent(hoverResult.item as any));
-              } else {
-                bottomPanelManager.setContent(new AbilityInfoContent(hoverResult.item as any));
-              }
-
               detailPanelActiveRef.current = true;
-              renderFrame();
+
+              // Increment version to trigger re-render (this will trigger useEffect which sets bottom panel content)
+              setEquipmentSlotSelectionVersion(v => v + 1);
+
+              // Don't call renderFrame() here - let the useEffect handle it
               return;
             } else if (hoverResult.type === 'empty-slot-detail' && 'slotLabel' in hoverResult && 'slotType' in hoverResult) {
               // Clicking on empty slot - show empty slot info and select the slot
