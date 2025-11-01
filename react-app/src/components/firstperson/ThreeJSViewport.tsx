@@ -1,4 +1,4 @@
-import React, { useRef, useMemo, useEffect } from 'react';
+import React, { useRef, useMemo, useEffect, useImperativeHandle, forwardRef } from 'react';
 import { Canvas } from '@react-three/fiber';
 import type { CardinalDirection } from '../../types';
 import { Cell } from '../Cell';
@@ -18,11 +18,15 @@ interface ThreeJSViewportProps {
   onAnimationComplete?: () => void;
 }
 
+export interface ThreeJSViewportHandle {
+  getCanvas: () => HTMLCanvasElement | null;
+}
+
 /**
  * 3D first-person viewport using React Three Fiber
- * Renders within a constrained region (Map Panel)
+ * Renders to an offscreen canvas that can be composited onto the main canvas
  */
-export const ThreeJSViewport: React.FC<ThreeJSViewportProps> = ({
+export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewportProps>(({
   areaMap,
   playerX,
   playerY,
@@ -30,13 +34,25 @@ export const ThreeJSViewport: React.FC<ThreeJSViewportProps> = ({
   width,
   height,
   onAnimationComplete
-}) => {
+}, ref) => {
   // Sprite sheet loader
   const [spriteSheetLoader, setSpriteSheetLoader] = React.useState<SpriteSheetLoader | null>(null);
   const [texturesLoaded, setTexturesLoaded] = React.useState<boolean>(false);
 
   // Camera ref
   const cameraRef = useRef<CameraAnimationHandle>(null);
+
+  // Container ref to access the canvas
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  // Expose getCanvas method to parent
+  useImperativeHandle(ref, () => ({
+    getCanvas: () => {
+      // Find the canvas element created by React Three Fiber
+      const canvas = containerRef.current?.querySelector('canvas');
+      return canvas || null;
+    }
+  }));
 
   // Load sprite sheet (tileset sprites)
   useEffect(() => {
@@ -144,15 +160,15 @@ export const ThreeJSViewport: React.FC<ThreeJSViewportProps> = ({
 
   if (!texturesLoaded) {
     return (
-      <div style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px' }}>
+      <div ref={containerRef} style={{ width, height, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontSize: '10px', position: 'absolute', left: '-9999px' }}>
         Loading textures...
       </div>
     );
   }
 
   return (
-    <div style={{ width, height, position: 'relative' }}>
-      <Canvas gl={{ antialias: false }} style={{ width: '100%', height: '100%' }}>
+    <div ref={containerRef} style={{ width, height, position: 'absolute', left: '-9999px', top: 0 }}>
+      <Canvas gl={{ antialias: false }} style={{ width: '100%', height: '100%', display: 'block' }}>
         <AnimatedPerspectiveCamera
           ref={cameraRef}
           targetPosition={cameraTransform.position}
@@ -214,4 +230,6 @@ export const ThreeJSViewport: React.FC<ThreeJSViewportProps> = ({
       </div>
     </div>
   );
-};
+});
+
+ThreeJSViewport.displayName = 'ThreeJSViewport';

@@ -10,7 +10,7 @@ import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { CombatLogManager } from '../../models/combat/CombatLogManager';
 import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/FirstPersonLayoutManager';
 import { UISettings } from '../../config/UISettings';
-import { ThreeJSViewport } from './ThreeJSViewport';
+import { ThreeJSViewport, type ThreeJSViewportHandle } from './ThreeJSViewport';
 import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
 import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
@@ -203,8 +203,8 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     loadAssets().catch(console.error);
   }, [areaMap, spriteLoader, fontLoader]);
 
-  // 3D viewport container ref
-  const viewportContainerRef = useRef<HTMLDivElement>(null);
+  // 3D viewport ref to access its canvas
+  const viewportRef = useRef<ThreeJSViewportHandle>(null);
 
   // Render frame function
   const renderFrame = useCallback(() => {
@@ -238,6 +238,17 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     const combatLogRegion = layoutManager.getCombatLogPanelRegion();
     const topInfoRegion = layoutManager.getTopInfoPanelRegion();
     const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+    const mapRegion = layoutManager.getMapViewport(CANVAS_WIDTH, CANVAS_HEIGHT);
+
+    // Composite 3D viewport canvas onto main canvas (in map region)
+    const viewportCanvas = viewportRef.current?.getCanvas();
+    if (viewportCanvas) {
+      ctx.drawImage(
+        viewportCanvas,
+        0, 0, viewportCanvas.width, viewportCanvas.height, // source
+        mapRegion.x, mapRegion.y, mapRegion.width, mapRegion.height // destination
+      );
+    }
 
     // Render top panel (location name)
     if (fontAtlasRef.current) {
@@ -312,7 +323,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
       displayCtx.imageSmoothingEnabled = false;
       displayCtx.drawImage(bufferCanvas, 0, 0);
     }
-  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager]);
+  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef]);
 
   // Animation loop
   useEffect(() => {
@@ -452,33 +463,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
           justifyContent: 'center',
         }}
       >
-        {/* 3D viewport (behind canvas) */}
-        {spritesLoaded && firstPersonState && (
-          <div
-            ref={viewportContainerRef}
-            style={{
-              position: 'absolute',
-              left: `${(mapRegion.x / CANVAS_WIDTH) * 100}%`,
-              top: `${(mapRegion.y / CANVAS_HEIGHT) * 100}%`,
-              width: `${(mapRegion.width / CANVAS_WIDTH) * 100}%`,
-              height: `${(mapRegion.height / CANVAS_HEIGHT) * 100}%`,
-              pointerEvents: 'none',
-              zIndex: 1,
-            }}
-          >
-            <ThreeJSViewport
-              areaMap={firstPersonState.map}
-              playerX={firstPersonState.playerX}
-              playerY={firstPersonState.playerY}
-              direction={firstPersonState.direction}
-              width={mapRegion.width}
-              height={mapRegion.height}
-              onAnimationComplete={() => inputHandler.unblockInput()}
-            />
-          </div>
-        )}
-
-        {/* Canvas with 2D UI elements (on top) */}
+        {/* Canvas with 2D UI elements */}
         <canvas
           ref={displayCanvasRef}
           style={{
@@ -486,11 +471,24 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
             imageRendering: 'pixelated',
             objectFit: 'contain',
             cursor: 'default',
-            position: 'absolute',
-            zIndex: 2,
+            position: 'relative',
             pointerEvents: 'none',
           } as React.CSSProperties}
         />
+
+        {/* Offscreen 3D viewport - rendered to its own canvas, then composited onto main canvas */}
+        {spritesLoaded && firstPersonState && (
+          <ThreeJSViewport
+            ref={viewportRef}
+            areaMap={firstPersonState.map}
+            playerX={firstPersonState.playerX}
+            playerY={firstPersonState.playerY}
+            direction={firstPersonState.direction}
+            width={mapRegion.width}
+            height={mapRegion.height}
+            onAnimationComplete={() => inputHandler.unblockInput()}
+          />
+        )}
       </div>
     </div>
   );
