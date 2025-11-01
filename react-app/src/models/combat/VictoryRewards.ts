@@ -7,6 +7,8 @@
  * A single item reward
  */
 export interface ItemReward {
+  /** Equipment ID for adding to inventory */
+  equipmentId: string;
   /** Display name of the item */
   name: string;
 }

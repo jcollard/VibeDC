@@ -10,6 +10,7 @@ import type { CombatEncounter } from './CombatEncounter';
 import { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 import { CombatConstants } from './CombatConstants';
 import type { VictoryRewards } from './VictoryRewards';
+import { PartyInventory } from '../../utils/inventory/PartyInventory';
 
 /**
  * Phase handler for the victory screen.
@@ -200,18 +201,31 @@ export class VictoryPhaseHandler extends PhaseBase {
   }
 
   private handleContinue(_state: CombatState): CombatState | null {
-    // TODO: Phase 7 - Return to world view or next encounter
-    // For now, log and return null
-    console.log("[VictoryPhaseHandler] Continue clicked - returning to world (not yet implemented)");
-    console.log("[VictoryPhaseHandler] Selected items:",
-      Array.from(this.selectedItemIndices).map(i => this.rewards.items[i].name)
-    );
+    // Award gold to party inventory
+    if (this.rewards.gold > 0) {
+      PartyInventory.addGold(this.rewards.gold);
+      console.log(`[VictoryPhaseHandler] Added ${this.rewards.gold} gold to party inventory`);
+    }
 
-    // In the future, this will:
-    // 1. Award XP to party members
-    // 2. Add gold to party inventory
-    // 3. Add selected items to party inventory
-    // 4. Navigate back to world view
+    // Add selected items to party inventory
+    const selectedItems = Array.from(this.selectedItemIndices)
+      .map(i => this.rewards.items[i])
+      .filter(item => item !== undefined);
+
+    for (const item of selectedItems) {
+      const success = PartyInventory.addItem(item.equipmentId, 1);
+      if (success) {
+        console.log(`[VictoryPhaseHandler] Added ${item.name} to party inventory`);
+      } else {
+        console.warn(`[VictoryPhaseHandler] Failed to add ${item.name} (${item.equipmentId}) to inventory`);
+      }
+    }
+
+    console.log(`[VictoryPhaseHandler] Party inventory now has ${PartyInventory.getGold()} gold and ${PartyInventory.getTotalItemCount()} items`);
+
+    // TODO: Phase 7 - Award XP to party members and return to world view
+    // For now, return null (no state change)
+    console.log("[VictoryPhaseHandler] Continue clicked - XP and world navigation not yet implemented");
 
     return null;
   }
