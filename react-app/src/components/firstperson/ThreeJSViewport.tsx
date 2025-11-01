@@ -39,6 +39,9 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
   const [spriteSheetLoader, setSpriteSheetLoader] = React.useState<SpriteSheetLoader | null>(null);
   const [texturesLoaded, setTexturesLoaded] = React.useState<boolean>(false);
 
+  // Camera offset state (for developer adjustment)
+  const [cameraOffset, setCameraOffset] = React.useState<number>(-0.3);
+
   // Camera ref
   const cameraRef = useRef<CameraAnimationHandle>(null);
 
@@ -77,7 +80,6 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
 
   // Calculate camera transform
   const cameraTransform = useMemo(() => {
-    const cameraOffset = 0.3; // Slightly forward in tile
     let worldX = playerX;
     let worldZ = playerY;
 
@@ -87,20 +89,20 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
 
     switch (direction) {
       case 'North':
-        rotationY = 0;
-        offsetZ = -cameraOffset;
+        rotationY = 0; // Looking in -Z direction (North is negative grid Y)
+        offsetZ = -cameraOffset; // Offset forward
         break;
       case 'South':
-        rotationY = Math.PI;
-        offsetZ = cameraOffset;
+        rotationY = Math.PI; // Looking in +Z direction (South is positive grid Y)
+        offsetZ = cameraOffset; // Offset forward
         break;
       case 'East':
-        rotationY = -Math.PI / 2;
-        offsetX = cameraOffset;
+        rotationY = -Math.PI / 2; // Looking in +X direction (East is positive grid X)
+        offsetX = cameraOffset; // Offset forward
         break;
       case 'West':
-        rotationY = Math.PI / 2;
-        offsetX = -cameraOffset;
+        rotationY = Math.PI / 2; // Looking in -X direction (West is negative grid X)
+        offsetX = -cameraOffset; // Offset forward
         break;
     }
 
@@ -108,7 +110,21 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
       position: [worldX + offsetX, 0, worldZ + offsetZ] as [number, number, number],
       rotation: [0, rotationY, 0] as [number, number, number]
     };
-  }, [playerX, playerY, direction]);
+  }, [playerX, playerY, direction, cameraOffset]);
+
+  // Expose developer function to window
+  useEffect(() => {
+    // @ts-ignore - Developer function
+    window.setOffset = (n: number) => {
+      console.log(`[ThreeJSViewport] Setting camera offset to ${n}`);
+      setCameraOffset(n);
+    };
+
+    return () => {
+      // @ts-ignore
+      delete window.setOffset;
+    };
+  }, []);
 
   // Update camera target when player moves
   useEffect(() => {
