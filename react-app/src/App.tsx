@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom'
 import { Game } from './components/Game'
 import { CombatViewRoute } from './components/combat/CombatViewRoute'
 import { DevRoute } from './components/DevRoute'
+import { FirstPersonView } from './components/firstperson/FirstPersonView'
 import { loadAllGameData } from './data/DataLoader'
 import './App.css'
 
@@ -38,9 +39,27 @@ function App() {
         {import.meta.env.DEV && (
           <Route path="/dev" element={<DevRoute />} />
         )}
+
+        {/* Development-only route for testing first-person exploration */}
+        {import.meta.env.DEV && (
+          <Route path="/dev/test/:mapId" element={<FirstPersonTestRoute />} />
+        )}
       </Routes>
     </BrowserRouter>
   );
+}
+
+/**
+ * Route component for first-person test mode
+ */
+function FirstPersonTestRoute() {
+  const { mapId } = useParams<{ mapId: string }>();
+
+  if (!mapId) {
+    return <div style={{ color: 'white', padding: '20px' }}>Error: No map ID provided</div>;
+  }
+
+  return <FirstPersonView mapId={mapId} />;
 }
 
 export default App
