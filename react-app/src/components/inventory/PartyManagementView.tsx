@@ -21,7 +21,7 @@ import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { InventoryTopPanelContent, type InventoryStats } from '../../models/inventory/panels/InventoryTopPanelContent';
 import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
 import { AbilityInfoContent } from '../../models/combat/managers/panels/AbilityInfoContent';
-import { InventoryUnitInfoContent } from '../../models/inventory/panels/InventoryUnitInfoContent';
+import { PartyManagementUnitInfoContent } from '../../models/inventory/panels/PartyManagementUnitInfoContent';
 import { EmptySlotInfoContent } from '../../models/inventory/panels/EmptySlotInfoContent';
 import { EquipmentComparisonContent } from '../../models/inventory/panels/EquipmentComparisonContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
@@ -297,7 +297,7 @@ export const PartyManagementView: React.FC = () => {
       if (partyMembers.length > 0) {
         const selectedMember = partyMembers[selectedPartyMemberIndex] || partyMembers[0];
 
-        const content = new InventoryUnitInfoContent(
+        const content = new PartyManagementUnitInfoContent(
           {
             title: selectedMember.name,
             titleColor: '#00ff00',

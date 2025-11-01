@@ -7,10 +7,10 @@ import { FontRegistry } from '../../../utils/FontRegistry';
 import { HOVERED_TEXT } from '../../combat/managers/panels/colors';
 
 /**
- * Extended UnitInfoContent for inventory view that adds party member selection UI.
+ * Extended UnitInfoContent for party management view that adds party member selection UI.
  * Shows party member sprites below "View Abilities" button when no helper text is displayed.
  */
-export class InventoryUnitInfoContent extends UnitInfoContent {
+export class PartyManagementUnitInfoContent extends UnitInfoContent {
   private partyMembers: CombatUnit[] = [];
   private selectedMemberIndex: number = 0;
   private hoveredMemberIndex: number | null = null;
