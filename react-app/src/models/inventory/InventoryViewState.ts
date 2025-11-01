@@ -102,13 +102,14 @@ export function serializeInventoryViewState(state: InventoryViewState): Inventor
 /**
  * Deserialize inventory view state from JSON (from localStorage)
  * Restores persistent state and initializes transient states to defaults
+ * Note: Filter, sort, and selection are intentionally reset to defaults on load
  */
-export function deserializeInventoryViewState(json: InventoryViewStateJSON): InventoryViewState {
+export function deserializeInventoryViewState(_json: InventoryViewStateJSON): InventoryViewState {
   return {
-    category: json.category,
-    sortMode: json.sortMode,
-    currentPage: json.currentPage,
-    selectedItemId: json.selectedItemId,
+    category: 'all', // Reset to 'all' category on load
+    sortMode: 'name-asc', // Reset to default sort on load
+    currentPage: 0, // Reset to first page on load
+    selectedItemId: null, // Always clear selection on load
     hoveredItemId: null,
     hoveredCategory: null,
     hoveredSort: false,
