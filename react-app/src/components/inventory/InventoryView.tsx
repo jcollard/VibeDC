@@ -20,8 +20,10 @@ import { FontAtlasLoader } from '../../services/FontAtlasLoader';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { InventoryTopPanelContent, type InventoryStats } from '../../models/inventory/panels/InventoryTopPanelContent';
 import { EquipmentInfoContent } from '../../models/combat/managers/panels/EquipmentInfoContent';
+import { UnitInfoContent } from '../../models/combat/managers/panels/UnitInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { UISettings } from '../../config/UISettings';
+import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
 
 // Canvas dimensions (same as CombatView)
@@ -155,9 +157,10 @@ export const InventoryView: React.FC = () => {
   // Combat log manager (reuse for inventory action messages)
   const combatLogManager = useMemo(() => new CombatLogManager(), []);
 
-  // Panel managers for title/bottom info panels
+  // Panel managers for title/bottom info panels and top info panel
   const titlePanelManager = useMemo(() => new InfoPanelManager(), []);
   const bottomPanelManager = useMemo(() => new InfoPanelManager(), []);
+  const topInfoPanelManager = useMemo(() => new InfoPanelManager(), []);
 
   // Initialize panel content
   useEffect(() => {
@@ -171,9 +174,28 @@ export const InventoryView: React.FC = () => {
       new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
     );
 
+    // Top info panel: First party member's stats
+    const partyMembers = PartyMemberRegistry.getAll();
+    if (partyMembers.length > 0) {
+      const firstMember = PartyMemberRegistry.createPartyMember(partyMembers[0].id);
+      if (firstMember) {
+        topInfoPanelManager.setContent(
+          new UnitInfoContent(
+            {
+              title: firstMember.name,
+              titleColor: '#00ff00',
+              padding: 1,
+              lineSpacing: 8,
+            },
+            firstMember
+          )
+        );
+      }
+    }
+
     // Bottom panel: Item details (initially empty)
     bottomPanelManager.setContent(new EmptyPanelContent());
-  }, [titlePanelManager, bottomPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
+  }, [titlePanelManager, bottomPanelManager, topInfoPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -416,6 +438,17 @@ export const InventoryView: React.FC = () => {
       fontAtlas
     );
 
+    // Render top info panel (party member stats)
+    const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+    topInfoPanelManager.render(
+      bufferCtx,
+      topInfoPanelRegion,
+      CombatConstants.FONTS.UI_FONT_ID,
+      fontAtlas,
+      spriteImagesRef.current,
+      CombatConstants.SPRITE_SIZE
+    );
+
     // Render bottom info panel (item details)
     const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
     bottomPanelManager.render(
@@ -439,8 +472,6 @@ export const InventoryView: React.FC = () => {
         logFontAtlas
       );
     }
-
-    // Top info panel is now unused (content moved to title panel)
 
     // Render layout dividers (HorizontalVerticalLayout overlay)
     // Note: Don't pass panel managers here - we render them manually above
