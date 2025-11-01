@@ -4,6 +4,7 @@ import type { AreaMapTileDefinition } from '../../models/area/AreaMapTileDefinit
 import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { TileBehavior } from '../../models/area/TileBehavior';
+import { SpriteBrowser } from './SpriteBrowser';
 import * as yaml from 'js-yaml';
 
 // Helper component to render a sprite on a canvas
@@ -51,15 +52,17 @@ const SpriteCanvas: React.FC<{ spriteSheet: string; spriteX: number; spriteY: nu
 interface AreaMapTileSetEditorPanelProps {
   tilesetId: string;
   onClose: () => void;
+  onSave?: () => void;
 }
 
 /**
  * Editor panel for modifying area map tilesets.
  * Allows editing tileset properties and tile definitions.
  */
-export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps> = ({ tilesetId, onClose }) => {
+export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps> = ({ tilesetId, onClose, onSave }) => {
   const [editedTileset, setEditedTileset] = useState<AreaMapTileSet | null>(null);
   const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
+  const [spriteBrowserVisible, setSpriteBrowserVisible] = useState(false);
 
   useEffect(() => {
     const tileset = AreaMapTileSetRegistry.getById(tilesetId);
@@ -80,6 +83,12 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
       AreaMapTileSetRegistry.register(editedTileset);
 
       alert('Tileset saved successfully!');
+
+      // Notify parent that tileset was saved
+      if (onSave) {
+        onSave();
+      }
+
       onClose();
     } catch (error) {
       console.error('Failed to save tileset:', error);
@@ -90,8 +99,11 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
   const handleExport = () => {
     if (!editedTileset) return;
 
+    // Export all tilesets from the registry
+    const allTilesets = AreaMapTileSetRegistry.getAll();
+
     const tilesetData = {
-      tilesets: [editedTileset]
+      tilesets: allTilesets
     };
 
     const yamlString = yaml.dump(tilesetData, {
@@ -104,7 +116,7 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `${editedTileset.id}-tileset.yaml`;
+    a.download = 'area-tileset-database.yaml';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
@@ -132,6 +144,12 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
       ...editedTileset,
       tileTypes: newTileTypes,
     });
+  };
+
+  const handleSpriteSelect = (spriteId: string) => {
+    if (selectedTileIndex === null) return;
+    handleTileDefChange(selectedTileIndex, 'spriteId', spriteId);
+    setSpriteBrowserVisible(false);
   };
 
   const handleAddTile = () => {
@@ -507,23 +525,51 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
-              <label style={{ fontSize: '11px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Sprite ID:</label>
-              <input
-                type="text"
-                value={selectedTile.spriteId}
-                onChange={(e) => handleTileDefChange(selectedTileIndex!, 'spriteId', e.target.value)}
+              <label style={{ fontSize: '11px', color: '#aaa', display: 'block', marginBottom: '4px' }}>Sprite:</label>
+              <div
+                onClick={() => setSpriteBrowserVisible(true)}
                 style={{
-                  width: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '8px',
                   padding: '6px',
-                  background: 'rgba(255,255,255,0.1)',
-                  border: '1px solid #666',
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.1)',
                   borderRadius: '4px',
-                  color: '#fff',
-                  fontSize: '11px',
-                  fontFamily: 'monospace',
+                  cursor: 'pointer',
+                  transition: 'background 0.2s',
                 }}
-                placeholder="biomes-0"
-              />
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(33, 150, 243, 0.1)';
+                  e.currentTarget.style.borderColor = 'rgba(33, 150, 243, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)';
+                  e.currentTarget.style.borderColor = 'rgba(255, 255, 255, 0.1)';
+                }}
+                title="Click to change sprite"
+              >
+                {(() => {
+                  const sprite = SpriteRegistry.getById(selectedTile.spriteId);
+                  return sprite ? (
+                    <>
+                      <SpriteCanvas
+                        spriteSheet={sprite.spriteSheet}
+                        spriteX={sprite.x}
+                        spriteY={sprite.y}
+                        size={32}
+                      />
+                      <span style={{ color: '#fff', fontSize: '11px', fontFamily: 'monospace' }}>
+                        {selectedTile.spriteId}
+                      </span>
+                    </>
+                  ) : (
+                    <span style={{ color: '#666', fontSize: '11px', fontStyle: 'italic', fontFamily: 'monospace' }}>
+                      {selectedTile.spriteId} (not found)
+                    </span>
+                  );
+                })()}
+              </div>
             </div>
 
             <div style={{ marginBottom: '12px' }}>
@@ -608,6 +654,15 @@ export const AreaMapTileSetEditorPanel: React.FC<AreaMapTileSetEditorPanelProps>
           </div>
         )}
       </div>
+
+      {/* Sprite Browser Modal */}
+      {spriteBrowserVisible && selectedTileIndex !== null && editedTileset && (
+        <SpriteBrowser
+          selectedSpriteId={editedTileset.tileTypes[selectedTileIndex].spriteId}
+          onSelectSprite={handleSpriteSelect}
+          onClose={() => setSpriteBrowserVisible(false)}
+        />
+      )}
     </div>
   );
 };

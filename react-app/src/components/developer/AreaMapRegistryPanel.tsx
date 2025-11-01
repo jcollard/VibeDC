@@ -72,6 +72,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [selectedObjectType, setSelectedObjectType] = useState<InteractiveObjectType>(InteractiveObjectType.ClosedDoor);
   const [tilesetEditorVisible, setTilesetEditorVisible] = useState(false);
   const [editingTilesetId, setEditingTilesetId] = useState<string | null>(null);
+  const [tilesetRefreshKey, setTilesetRefreshKey] = useState(0);
 
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
@@ -356,6 +357,86 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     setTilesetEditorVisible(true);
   };
 
+  const handleTilesetSaved = () => {
+    // When tileset is saved, we need to update the map's grid to use the new sprite IDs
+    // from the updated tileset definitions
+    if (editedMap && isEditing) {
+      const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
+      if (!tileset) {
+        console.warn('[AreaMapRegistryPanel] Tileset not found:', editedMap.tilesetId);
+        setTilesetRefreshKey(prev => prev + 1);
+        return;
+      }
+
+      console.log('[AreaMapRegistryPanel] Remapping grid after tileset save');
+      console.log('[AreaMapRegistryPanel] Tileset:', tileset);
+
+      // Remap the grid to use updated sprites from the tileset
+      const newGrid = editedMap.grid.map((row, y) =>
+        row.map((tile, x) => {
+          // Find ALL tileset definitions that match this tile's properties
+          const matchingTileDefs = tileset.tileTypes.filter(
+            tt => tt.behavior === tile.behavior &&
+                  tt.walkable === tile.walkable &&
+                  tt.passable === tile.passable
+          );
+
+          if (matchingTileDefs.length === 1) {
+            // Exactly one match - use it
+            console.log(`[${x},${y}] Unique match: ${tile.spriteId} -> ${matchingTileDefs[0].spriteId}`);
+            return {
+              ...tile,
+              spriteId: matchingTileDefs[0].spriteId,
+              terrainType: matchingTileDefs[0].terrainType,
+            };
+          } else if (matchingTileDefs.length > 1) {
+            // Multiple matches - try to find the one with the same OLD spriteId
+            // This handles the case where the user is editing an existing tile definition
+            const sameSprite = matchingTileDefs.find(tt => tt.spriteId === tile.spriteId);
+            if (sameSprite) {
+              console.log(`[${x},${y}] Same sprite match: ${tile.spriteId} (no change)`);
+              return tile; // Sprite didn't change
+            }
+
+            // Otherwise, use the first match (best guess)
+            console.log(`[${x},${y}] Multiple matches, using first: ${tile.spriteId} -> ${matchingTileDefs[0].spriteId}`);
+            return {
+              ...tile,
+              spriteId: matchingTileDefs[0].spriteId,
+              terrainType: matchingTileDefs[0].terrainType,
+            };
+          }
+
+          // No exact match - try matching by behavior only
+          const behaviorMatches = tileset.tileTypes.filter(
+            tt => tt.behavior === tile.behavior
+          );
+
+          if (behaviorMatches.length > 0) {
+            console.log(`[${x},${y}] Behavior-only match: ${tile.spriteId} -> ${behaviorMatches[0].spriteId}`);
+            return {
+              ...tile,
+              spriteId: behaviorMatches[0].spriteId,
+              terrainType: behaviorMatches[0].terrainType,
+            };
+          }
+
+          // No match found, keep original tile
+          console.warn(`[${x},${y}] No match found for tile:`, tile);
+          return tile;
+        })
+      );
+
+      setEditedMap({
+        ...editedMap,
+        grid: newGrid,
+      });
+    }
+
+    // Increment refresh key to force re-render of map preview
+    setTilesetRefreshKey(prev => prev + 1);
+  };
+
   // Render the grid
   const renderGrid = () => {
     const map = isEditing && editedMap ? AreaMap.fromJSON(editedMap) : selectedMap;
@@ -483,6 +564,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
 
     return (
       <div
+        key={`grid-${tilesetRefreshKey}`}
         style={{
           position: 'relative',
           width: map.width * CELL_SIZE,
@@ -997,6 +1079,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             setTilesetEditorVisible(false);
             setEditingTilesetId(null);
           }}
+          onSave={handleTilesetSaved}
         />
       )}
     </div>

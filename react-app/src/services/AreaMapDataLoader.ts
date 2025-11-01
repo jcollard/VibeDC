@@ -18,15 +18,9 @@ export class AreaMapDataLoader {
   /**
    * Load tileset database from YAML
    */
-  static async loadTilesets(yamlPath: string = '/data/area-tileset-database.yaml'): Promise<void> {
-    console.log('[AreaMapDataLoader] Loading tilesets from', yamlPath);
+  static async loadTilesets(yamlText: string): Promise<void> {
+    console.log('[AreaMapDataLoader] Loading tilesets');
 
-    const response = await fetch(yamlPath);
-    if (!response.ok) {
-      throw new Error(`Failed to load tileset database: ${response.statusText}`);
-    }
-
-    const yamlText = await response.text();
     const data = YAML.load(yamlText) as any;
 
     if (!data.tilesets || !Array.isArray(data.tilesets)) {
@@ -71,15 +65,9 @@ export class AreaMapDataLoader {
   /**
    * Load area map database from YAML
    */
-  static async loadAreaMaps(yamlPath: string = '/data/area-map-database.yaml'): Promise<void> {
-    console.log('[AreaMapDataLoader] Loading area maps from', yamlPath);
+  static async loadAreaMaps(yamlText: string): Promise<void> {
+    console.log('[AreaMapDataLoader] Loading area maps');
 
-    const response = await fetch(yamlPath);
-    if (!response.ok) {
-      throw new Error(`Failed to load area map database: ${response.statusText}`);
-    }
-
-    const yamlText = await response.text();
     const data = YAML.load(yamlText) as any;
 
     if (!data.areas || !Array.isArray(data.areas)) {
@@ -118,8 +106,8 @@ export class AreaMapDataLoader {
   /**
    * Load all area map data (tilesets + maps)
    */
-  static async loadAll(): Promise<void> {
-    await this.loadTilesets();
-    await this.loadAreaMaps();
+  static async loadAll(tilesetYaml: string, areaMapYaml: string): Promise<void> {
+    await this.loadTilesets(tilesetYaml);
+    await this.loadAreaMaps(areaMapYaml);
   }
 }

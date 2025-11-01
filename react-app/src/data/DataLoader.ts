@@ -36,6 +36,8 @@ import font8pxYaml from './fonts/8px-habbo8.yaml?raw';
 import font9pxYaml from './fonts/9px-habbo.yaml?raw';
 import font10pxYaml from './fonts/10px-bitfantasy.yaml?raw';
 import font15pxYaml from './fonts/15px-dungeonslant.yaml?raw';
+import areaTilesetYaml from './area-tileset-database.yaml?raw';
+import areaMapYaml from './area-map-database.yaml?raw';
 
 /**
  * Interface for ability data from YAML
@@ -312,11 +314,10 @@ export async function loadAllGameData(): Promise<void> {
   loadEncounters();
 
   // Load area map data (tilesets and maps for first-person navigation)
-  // Note: This may fail in test environments where fetch is not available
   try {
-    await AreaMapDataLoader.loadAll();
+    await AreaMapDataLoader.loadAll(areaTilesetYaml, areaMapYaml);
   } catch (error) {
-    console.warn('[DataLoader] Failed to load area map data (may be in test environment):', error);
+    console.warn('[DataLoader] Failed to load area map data:', error);
   }
 
   console.log('Game data loaded successfully');
