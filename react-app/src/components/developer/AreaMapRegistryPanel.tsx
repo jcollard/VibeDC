@@ -2268,25 +2268,38 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
 
                 <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>All Event Areas</div>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
-                  {editedMap?.eventAreas?.map(area => (
-                    <div
-                      key={area.id}
-                      onClick={() => setSelectedEventArea(area.id)}
-                      style={{
-                        padding: '8px',
-                        background: selectedEventArea === area.id ? 'rgba(0, 255, 0, 0.2)' : 'rgba(255,255,255,0.1)',
-                        border: selectedEventArea === area.id ? '2px solid green' : '1px solid #666',
-                        borderRadius: '4px',
-                        fontSize: '10px',
-                        cursor: 'pointer',
-                      }}
-                    >
-                      <div style={{ fontWeight: 'bold' }}>{area.id}</div>
-                      <div style={{ color: '#aaa' }}>Position: ({area.x}, {area.y})</div>
-                      <div style={{ color: '#aaa' }}>Size: {area.width}x{area.height}</div>
-                      <div style={{ color: '#aaa' }}>Events: {area.events.length}</div>
-                    </div>
-                  ))}
+                  {editedMap?.eventAreas?.map(area => {
+                    const areaColor = area.color || '#a020f0';
+                    const isSelected = selectedEventArea === area.id;
+
+                    // Helper function to convert hex to rgba
+                    const hexToRgba = (hex: string, alpha: number) => {
+                      const r = parseInt(hex.slice(1, 3), 16);
+                      const g = parseInt(hex.slice(3, 5), 16);
+                      const b = parseInt(hex.slice(5, 7), 16);
+                      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+                    };
+
+                    return (
+                      <div
+                        key={area.id}
+                        onClick={() => setSelectedEventArea(area.id)}
+                        style={{
+                          padding: '8px',
+                          background: isSelected ? hexToRgba(areaColor, 0.3) : hexToRgba(areaColor, 0.15),
+                          border: `2px solid ${areaColor}`,
+                          borderRadius: '4px',
+                          fontSize: '10px',
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <div style={{ fontWeight: 'bold' }}>{area.id}</div>
+                        <div style={{ color: '#aaa' }}>Position: ({area.x}, {area.y})</div>
+                        <div style={{ color: '#aaa' }}>Size: {area.width}x{area.height}</div>
+                        <div style={{ color: '#aaa' }}>Events: {area.events.length}</div>
+                      </div>
+                    );
+                  })}
                 </div>
               </>
             )}
