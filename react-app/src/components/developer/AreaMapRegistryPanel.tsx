@@ -1887,12 +1887,12 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                                 <input
                                   type="number"
                                   value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onChange={(e) => {
+                                    setEditingValue(e.target.value);
+                                    handleUpdateEventAreaBounds(area.id, 'x', parseInt(e.target.value) || 0);
+                                  }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      handleUpdateEventAreaBounds(area.id, 'x', parseInt(editingValue) || 0);
-                                      setEditingField(null);
-                                    } else if (e.key === 'Escape') {
+                                    if (e.key === 'Enter' || e.key === 'Escape') {
                                       setEditingField(null);
                                     }
                                   }}
@@ -1938,12 +1938,12 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                                 <input
                                   type="number"
                                   value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onChange={(e) => {
+                                    setEditingValue(e.target.value);
+                                    handleUpdateEventAreaBounds(area.id, 'y', parseInt(e.target.value) || 0);
+                                  }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      handleUpdateEventAreaBounds(area.id, 'y', parseInt(editingValue) || 0);
-                                      setEditingField(null);
-                                    } else if (e.key === 'Escape') {
+                                    if (e.key === 'Enter' || e.key === 'Escape') {
                                       setEditingField(null);
                                     }
                                   }}
@@ -1989,12 +1989,12 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                                 <input
                                   type="number"
                                   value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onChange={(e) => {
+                                    setEditingValue(e.target.value);
+                                    handleUpdateEventAreaBounds(area.id, 'width', parseInt(e.target.value) || 1);
+                                  }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      handleUpdateEventAreaBounds(area.id, 'width', parseInt(editingValue) || 1);
-                                      setEditingField(null);
-                                    } else if (e.key === 'Escape') {
+                                    if (e.key === 'Enter' || e.key === 'Escape') {
                                       setEditingField(null);
                                     }
                                   }}
@@ -2040,12 +2040,12 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                                 <input
                                   type="number"
                                   value={editingValue}
-                                  onChange={(e) => setEditingValue(e.target.value)}
+                                  onChange={(e) => {
+                                    setEditingValue(e.target.value);
+                                    handleUpdateEventAreaBounds(area.id, 'height', parseInt(e.target.value) || 1);
+                                  }}
                                   onKeyDown={(e) => {
-                                    if (e.key === 'Enter') {
-                                      handleUpdateEventAreaBounds(area.id, 'height', parseInt(editingValue) || 1);
-                                      setEditingField(null);
-                                    } else if (e.key === 'Escape') {
+                                    if (e.key === 'Enter' || e.key === 'Escape') {
                                       setEditingField(null);
                                     }
                                   }}
