@@ -720,6 +720,17 @@ export const InventoryView: React.FC = () => {
         needsRerender = true;
       }
 
+      // Check if hovering over top info panel (party member stats)
+      const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+      const topInfoHoverResult = topInfoPanelManager.handleHover(
+        canvasX,
+        canvasY,
+        topInfoPanelRegion
+      );
+      if (topInfoHoverResult) {
+        needsRerender = true;
+      }
+
       // Check pagination hover
       const paginationBounds = renderer.getPaginationButtonBounds(mainPanelBounds, totalPages);
       let newHoveredPagination: 'prev' | 'next' | null = null;
@@ -738,7 +749,7 @@ export const InventoryView: React.FC = () => {
         renderFrame();
       }
     },
-    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame]
+    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, layoutManager, topInfoPanelManager]
   );
 
   // Handle mouse click
@@ -793,6 +804,22 @@ export const InventoryView: React.FC = () => {
         }
       }
 
+      // Check top info panel click (party member stats - for toggling views or showing details)
+      const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+      const topInfoClickResult = topInfoPanelManager.handleClick(
+        canvasX,
+        canvasY,
+        topInfoPanelRegion
+      );
+      if (topInfoClickResult) {
+        // If click result contains a message, add it to combat log
+        if (topInfoClickResult.type === 'combat-log-message' && 'message' in topInfoClickResult) {
+          combatLogManager.addMessage(topInfoClickResult.message);
+        }
+        renderFrame();
+        return;
+      }
+
       // Check item click
       const itemRows = renderer.getItemRowBounds(currentPageItems, mainPanelBounds);
       for (const row of itemRows) {
@@ -828,7 +855,7 @@ export const InventoryView: React.FC = () => {
         return;
       }
     },
-    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, combatLogManager]
+    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, combatLogManager, layoutManager, topInfoPanelManager]
   );
 
   return (
