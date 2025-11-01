@@ -100,6 +100,10 @@ export const InventoryView: React.FC = () => {
   const [fontsLoaded, setFontsLoaded] = useState(false);
   const fontAtlasImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
 
+  // Track if sprites are loaded
+  const [spritesLoaded, setSpritesLoaded] = useState(false);
+  const spriteImagesRef = useRef<Map<string, HTMLImageElement>>(new Map());
+
   // Inventory renderer
   const renderer = useMemo(() => new InventoryRenderer(), []);
 
@@ -109,8 +113,8 @@ export const InventoryView: React.FC = () => {
   // Combat log manager (reuse for inventory action messages)
   const combatLogManager = useMemo(() => new CombatLogManager(), []);
 
-  // Panel managers for top/bottom info panels
-  const topPanelManager = useMemo(() => new InfoPanelManager(), []);
+  // Panel managers for title/bottom info panels
+  const titlePanelManager = useMemo(() => new InfoPanelManager(), []);
   const bottomPanelManager = useMemo(() => new InfoPanelManager(), []);
 
   // Initialize panel content
@@ -121,13 +125,13 @@ export const InventoryView: React.FC = () => {
       uniqueItems: PartyInventory.getTotalUniqueItems(),
       gold: PartyInventory.getGold(),
     };
-    topPanelManager.setContent(
+    titlePanelManager.setContent(
       new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
     );
 
     // Bottom panel: Item details (initially empty)
     bottomPanelManager.setContent(new EmptyPanelContent());
-  }, [topPanelManager, bottomPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
+  }, [titlePanelManager, bottomPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -197,6 +201,31 @@ export const InventoryView: React.FC = () => {
 
     loadFonts();
   }, [fontLoader]);
+
+  // Load sprites (manually load the frames2 sprite sheet for layout dividers)
+  useEffect(() => {
+    const loadSprites = async () => {
+      try {
+        const img = new Image();
+        img.src = '/spritesheets/atlas.png';
+        await new Promise<void>((resolve, reject) => {
+          img.onload = () => {
+            spriteImagesRef.current.set('/spritesheets/atlas.png', img);
+            setSpritesLoaded(true);
+            resolve();
+          };
+          img.onerror = (err) => {
+            console.error('Failed to load sprite sheet:', err);
+            reject(err);
+          };
+        });
+      } catch (error) {
+        console.error('Failed to load sprites:', error);
+      }
+    };
+
+    loadSprites();
+  }, []);
 
   // Filter and sort items based on current state
   const filteredAndSortedItems = useMemo<InventoryItemWithQuantity[]>(() => {
@@ -293,15 +322,15 @@ export const InventoryView: React.FC = () => {
       uniqueItems: PartyInventory.getTotalUniqueItems(),
       gold: PartyInventory.getGold(),
     };
-    topPanelManager.setContent(
+    titlePanelManager.setContent(
       new InventoryTopPanelContent(stats, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort)
     );
-  }, [filteredAndSortedItems, topPanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
+  }, [filteredAndSortedItems, titlePanelManager, viewState.category, viewState.hoveredCategory, viewState.sortMode, viewState.hoveredSort]);
 
   // Render frame
   const renderFrame = useCallback(() => {
     const displayCanvas = displayCanvasRef.current;
-    if (!displayCanvas || !fontsLoaded) return;
+    if (!displayCanvas || !fontsLoaded || !spritesLoaded) return;
 
     // Initialize buffer canvas if needed
     if (!bufferCanvasRef.current) {
@@ -338,7 +367,7 @@ export const InventoryView: React.FC = () => {
 
     // Render title panel (inventory stats, category tabs, and sort options)
     const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
-    topPanelManager.render(
+    titlePanelManager.render(
       bufferCtx,
       titlePanelRegion,
       CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
@@ -370,6 +399,37 @@ export const InventoryView: React.FC = () => {
     }
 
     // Top info panel is now unused (content moved to title panel)
+
+    // Render layout dividers (HorizontalVerticalLayout overlay)
+    // Note: Don't pass panel managers here - we render them manually above
+    // to avoid duplicate rendering with default "Active Unit" / "Unit Info" titles
+    layoutManager.renderLayout({
+      ctx: bufferCtx,
+      canvasWidth: CANVAS_WIDTH,
+      canvasHeight: CANVAS_HEIGHT,
+      spriteSize: CombatConstants.SPRITE_SIZE,
+      fontId: CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID,
+      fontAtlasImage: fontAtlas,
+      topPanelFontAtlasImage: fontAtlas,
+      topPanelSmallFontAtlasImage: fontAtlas,
+      spriteImages: spriteImagesRef.current,
+      currentUnit: null,
+      currentUnitPosition: undefined,
+      targetUnit: null,
+      targetUnitPosition: undefined,
+      partyUnits: [],
+      isDeploymentPhase: false,
+      isEnemyDeploymentPhase: false,
+      hoveredPartyMemberIndex: null,
+      deployedUnitCount: 0,
+      totalDeploymentZones: 0,
+      onEnterCombat: () => {},
+      combatLogManager,
+      // Don't pass panel managers - we render them manually to avoid default titles
+      currentUnitPanelManager: undefined,
+      targetUnitPanelManager: undefined,
+      activeAction: null,
+    });
 
     // Debug: Render panel boundaries if enabled
     if (showDebugPanels) {
@@ -418,13 +478,14 @@ export const InventoryView: React.FC = () => {
     }
   }, [
     fontsLoaded,
+    spritesLoaded,
     viewState,
     currentPageItems,
     totalPages,
     mainPanelBounds,
     renderer,
     layoutManager,
-    topPanelManager,
+    titlePanelManager,
     bottomPanelManager,
     combatLogManager,
     showDebugPanels,
@@ -527,11 +588,11 @@ export const InventoryView: React.FC = () => {
 
       // Check category tab hover (now in title panel)
       const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
-      const topPanelContent = topPanelManager.getContent();
+      const titlePanelContent = titlePanelManager.getContent();
       let newHoveredCategory: InventoryCategory | null = null;
 
-      if (topPanelContent instanceof InventoryTopPanelContent) {
-        const categoryTabs = topPanelContent.getCategoryTabBounds(titlePanelRegion);
+      if (titlePanelContent instanceof InventoryTopPanelContent) {
+        const categoryTabs = titlePanelContent.getCategoryTabBounds(titlePanelRegion);
         for (const tab of categoryTabs) {
           if (
             canvasX >= tab.bounds.x &&
@@ -552,8 +613,8 @@ export const InventoryView: React.FC = () => {
 
       // Check sort dropdown hover (now in title panel)
       let sortHovered = false;
-      if (topPanelContent instanceof InventoryTopPanelContent) {
-        const sortBounds = topPanelContent.getSortBounds(titlePanelRegion);
+      if (titlePanelContent instanceof InventoryTopPanelContent) {
+        const sortBounds = titlePanelContent.getSortBounds(titlePanelRegion);
         sortHovered =
           canvasX >= sortBounds.x &&
           canvasX <= sortBounds.x + sortBounds.width &&
@@ -621,10 +682,10 @@ export const InventoryView: React.FC = () => {
 
       // Check category tab click (now in title panel)
       const titlePanelRegion = layoutManager.getTurnOrderPanelRegion();
-      const topPanelContent = topPanelManager.getContent();
+      const titlePanelContent = titlePanelManager.getContent();
 
-      if (topPanelContent instanceof InventoryTopPanelContent) {
-        const categoryTabs = topPanelContent.getCategoryTabBounds(titlePanelRegion);
+      if (titlePanelContent instanceof InventoryTopPanelContent) {
+        const categoryTabs = titlePanelContent.getCategoryTabBounds(titlePanelRegion);
         for (const tab of categoryTabs) {
           if (
             canvasX >= tab.bounds.x &&
@@ -641,8 +702,8 @@ export const InventoryView: React.FC = () => {
       }
 
       // Check sort dropdown click (now in title panel)
-      if (topPanelContent instanceof InventoryTopPanelContent) {
-        const sortBounds = topPanelContent.getSortBounds(titlePanelRegion);
+      if (titlePanelContent instanceof InventoryTopPanelContent) {
+        const sortBounds = titlePanelContent.getSortBounds(titlePanelRegion);
         if (
           canvasX >= sortBounds.x &&
           canvasX <= sortBounds.x + sortBounds.width &&
