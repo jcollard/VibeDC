@@ -342,4 +342,43 @@ export class PartyMemberRegistry {
   static count(): number {
     return this.registry.size;
   }
+
+  /**
+   * Update equipment for a party member definition
+   * @param id The party member ID
+   * @param slot The equipment slot to update
+   * @param equipmentId The equipment ID to set (null to remove)
+   * @returns true if updated successfully, false if party member not found
+   */
+  static updateEquipment(
+    id: string,
+    slot: 'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory',
+    equipmentId: string | null
+  ): boolean {
+    const definition = this.registry.get(id);
+    if (!definition) {
+      return false;
+    }
+
+    // Update the appropriate equipment slot
+    switch (slot) {
+      case 'leftHand':
+        definition.leftHandId = equipmentId ?? undefined;
+        break;
+      case 'rightHand':
+        definition.rightHandId = equipmentId ?? undefined;
+        break;
+      case 'head':
+        definition.headId = equipmentId ?? undefined;
+        break;
+      case 'body':
+        definition.bodyId = equipmentId ?? undefined;
+        break;
+      case 'accessory':
+        definition.accessoryId = equipmentId ?? undefined;
+        break;
+    }
+
+    return true;
+  }
 }

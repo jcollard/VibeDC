@@ -187,6 +187,12 @@ export const InventoryView: React.FC = () => {
     bottomPanelManager.setContent(new EmptyPanelContent());
   }, [bottomPanelManager]);
 
+  // Track party member changes (equipment updates) to trigger re-renders
+  const [partyMemberVersion, setPartyMemberVersion] = useState(0);
+
+  // Track current view state for top info panel
+  const topInfoPanelViewRef = useRef<'stats' | 'abilities'>('stats');
+
   // Update top info panel when selected party member changes
   useEffect(() => {
     const partyMemberConfigs = PartyMemberRegistry.getAll();
@@ -203,26 +209,32 @@ export const InventoryView: React.FC = () => {
       if (partyMembers.length > 0) {
         const selectedMember = partyMembers[selectedPartyMemberIndex] || partyMembers[0];
 
-        topInfoPanelManager.setContent(
-          new InventoryUnitInfoContent(
-            {
-              title: selectedMember.name,
-              titleColor: '#00ff00',
-              padding: 1,
-              lineSpacing: 8,
-            },
-            selectedMember,
-            partyMembers,
-            selectedPartyMemberIndex,
-            (_member: CombatUnit, index: number) => {
-              // Update selected party member
-              setSelectedPartyMemberIndex(index);
-            }
-          )
+        const content = new InventoryUnitInfoContent(
+          {
+            title: selectedMember.name,
+            titleColor: '#00ff00',
+            padding: 1,
+            lineSpacing: 8,
+          },
+          selectedMember,
+          partyMembers,
+          selectedPartyMemberIndex,
+          (_member: CombatUnit, index: number) => {
+            // Update selected party member
+            setSelectedPartyMemberIndex(index);
+          }
         );
+
+        // Restore previous view if it was abilities
+        if (topInfoPanelViewRef.current === 'abilities') {
+          // Toggle to abilities view by simulating the button click
+          (content as any).currentView = 'abilities';
+        }
+
+        topInfoPanelManager.setContent(content);
       }
     }
-  }, [topInfoPanelManager, selectedPartyMemberIndex]);
+  }, [topInfoPanelManager, selectedPartyMemberIndex, partyMemberVersion]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -1047,6 +1059,14 @@ export const InventoryView: React.FC = () => {
         topInfoPanelRegion
       );
       if (topInfoClickResult) {
+        // Handle view toggle
+        if (topInfoClickResult.type === 'view-toggled' && 'view' in topInfoClickResult) {
+          // Update the view ref to preserve it across re-renders
+          topInfoPanelViewRef.current = topInfoClickResult.view as 'stats' | 'abilities';
+          renderFrame();
+          return;
+        }
+
         // Handle party member selection
         if (topInfoClickResult.type === 'party-member' && 'index' in topInfoClickResult) {
           // Selection is already updated by the callback in InventoryUnitInfoContent
@@ -1119,9 +1139,23 @@ export const InventoryView: React.FC = () => {
               // Add item to inventory
               PartyInventory.addItem(equipment.id, 1);
 
-              // TODO: Remove item from party member's equipment slot
-              // This would require PartyMemberRegistry to have methods to modify equipment
-              // For now, just add to inventory and show message
+              // Map slot labels to registry slot names
+              const slotMap: Record<string, 'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory'> = {
+                'L.Hand': 'leftHand',
+                'R.Hand': 'rightHand',
+                'Head': 'head',
+                'Body': 'body',
+                'Accessory': 'accessory'
+              };
+
+              const registrySlot = slotMap[selectedSlot.slotLabel];
+              if (registrySlot) {
+                // Update party member definition in registry
+                PartyMemberRegistry.updateEquipment(selectedMember.id, registrySlot, null);
+
+                // Trigger re-render of party member
+                setPartyMemberVersion(v => v + 1);
+              }
 
               combatLogManager.addMessage(`Removed ${equipment.name} (added to inventory)`);
               setInventoryVersion(v => v + 1);
