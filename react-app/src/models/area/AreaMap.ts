@@ -3,7 +3,10 @@ import type { InteractiveObject, ObjectState } from './InteractiveObject';
 import { InteractiveObjectType as InteractiveObjectTypeConst, ObjectState as ObjectStateConst } from './InteractiveObject';
 import type { SpawnPoint } from './SpawnPoint';
 import type { EncounterZone } from './EncounterZone';
-import type { EventArea } from './EventArea';
+import type { EventArea, EventAreaJSON, AreaEvent } from './EventArea';
+import { isPositionInEventArea } from './EventArea';
+import { PreconditionFactory } from './preconditions/PreconditionFactory';
+import { ActionFactory } from './actions/ActionFactory';
 import { TileBehavior } from './TileBehavior';
 import type { AreaMapTileDefinition } from './AreaMapTileDefinition';
 
@@ -135,6 +138,31 @@ export class AreaMap {
       }
     }
     return undefined;
+  }
+
+  /**
+   * Gets all event areas that contain the specified position.
+   *
+   * @param x Grid X coordinate
+   * @param y Grid Y coordinate
+   * @returns Array of event areas containing this position
+   */
+  getEventAreasAt(x: number, y: number): EventArea[] {
+    if (!this.eventAreas) {
+      return [];
+    }
+
+    return this.eventAreas.filter(area => isPositionInEventArea(area, x, y));
+  }
+
+  /**
+   * Gets a specific event area by ID.
+   *
+   * @param id Event area ID
+   * @returns Event area or undefined if not found
+   */
+  getEventAreaById(id: string): EventArea | undefined {
+    return this.eventAreas?.find(area => area.id === id);
   }
 
   /**
@@ -270,8 +298,31 @@ export class AreaMap {
       interactiveObjects: Array.from(this.interactiveObjects.values()),
       npcSpawns: this.npcSpawns,
       encounterZones: this.encounterZones,
-      eventAreas: this.eventAreas,
+      eventAreas: this.eventAreas ? this.serializeEventAreas(this.eventAreas) : undefined,
     };
+  }
+
+  /**
+   * Serializes event areas to JSON format
+   */
+  private serializeEventAreas(eventAreas: EventArea[]): EventAreaJSON[] {
+    return eventAreas.map(area => ({
+      id: area.id,
+      x: area.x,
+      y: area.y,
+      width: area.width,
+      height: area.height,
+      events: area.events.map(event => ({
+        id: event.id,
+        trigger: event.trigger,
+        preconditions: event.preconditions.map(p => p.toJSON()),
+        actions: event.actions.map(a => a.toJSON()),
+        oneTime: event.oneTime,
+        triggered: event.triggered,
+        description: event.description,
+      })),
+      description: area.description,
+    }));
   }
 
   /**
@@ -290,8 +341,31 @@ export class AreaMap {
       json.interactiveObjects,
       json.npcSpawns,
       json.encounterZones,
-      json.eventAreas
+      json.eventAreas ? AreaMap.deserializeEventAreas(json.eventAreas) : undefined
     );
+  }
+
+  /**
+   * Deserializes event areas from JSON format
+   */
+  private static deserializeEventAreas(eventAreasJSON: EventAreaJSON[]): EventArea[] {
+    return eventAreasJSON.map(areaJson => ({
+      id: areaJson.id,
+      x: areaJson.x,
+      y: areaJson.y,
+      width: areaJson.width,
+      height: areaJson.height,
+      events: areaJson.events.map(eventJson => ({
+        id: eventJson.id,
+        trigger: eventJson.trigger,
+        preconditions: eventJson.preconditions.map(p => PreconditionFactory.fromJSON(p)),
+        actions: eventJson.actions.map(a => ActionFactory.fromJSON(a)),
+        oneTime: eventJson.oneTime,
+        triggered: eventJson.triggered,
+        description: eventJson.description,
+      } as AreaEvent)),
+      description: areaJson.description,
+    }));
   }
 }
 
@@ -310,5 +384,5 @@ export interface AreaMapJSON {
   interactiveObjects: InteractiveObject[];
   npcSpawns: SpawnPoint[];
   encounterZones?: EncounterZone[];
-  eventAreas?: EventArea[];
+  eventAreas?: EventAreaJSON[];
 }

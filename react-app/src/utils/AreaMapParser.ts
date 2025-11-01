@@ -4,6 +4,10 @@ import type { AreaMapTileSet } from '../models/area/AreaMapTileSet';
 import type { InteractiveObject } from '../models/area/InteractiveObject';
 import type { SpawnPoint } from '../models/area/SpawnPoint';
 import type { EncounterZone } from '../models/area/EncounterZone';
+import type { EventArea, EventAreaJSON, AreaEvent, AreaEventJSON } from '../models/area/EventArea';
+import { isEventTrigger } from '../models/area/EventTrigger';
+import { PreconditionFactory } from '../models/area/preconditions/PreconditionFactory';
+import { ActionFactory } from '../models/area/actions/ActionFactory';
 
 /**
  * YAML structure for area map definitions
@@ -18,6 +22,7 @@ export interface AreaMapYAML {
   interactiveObjects?: InteractiveObject[];
   npcSpawns?: SpawnPoint[];
   encounterZones?: EncounterZone[];
+  eventAreas?: EventAreaJSON[];
 }
 
 /**
@@ -106,6 +111,12 @@ export function parseAreaMapFromYAML(
     }
   }
 
+  // Parse event areas if present
+  let eventAreas: EventArea[] | undefined;
+  if (areaData.eventAreas) {
+    eventAreas = areaData.eventAreas.map(areaJson => parseEventArea(areaJson, areaData.id));
+  }
+
   // Create AreaMap instance
   return new AreaMap(
     areaData.id,
@@ -118,7 +129,8 @@ export function parseAreaMapFromYAML(
     areaData.playerSpawn,
     areaData.interactiveObjects,
     areaData.npcSpawns,
-    areaData.encounterZones
+    areaData.encounterZones,
+    eventAreas
   );
 }
 
@@ -127,4 +139,96 @@ export function parseAreaMapFromYAML(
  */
 function isValidPosition(x: number, y: number, width: number, height: number): boolean {
   return x >= 0 && x < width && y >= 0 && y < height;
+}
+
+/**
+ * Parses an event area from JSON.
+ *
+ * @param areaJson Event area JSON data
+ * @param mapId Parent map ID (for error messages)
+ * @returns Parsed EventArea
+ */
+function parseEventArea(areaJson: EventAreaJSON, mapId: string): EventArea {
+  // Validate required fields
+  if (!areaJson.id || typeof areaJson.x !== 'number' || typeof areaJson.y !== 'number') {
+    throw new Error(`Invalid event area in map '${mapId}': missing required fields`);
+  }
+
+  // Validate bounds
+  if (areaJson.width <= 0 || areaJson.height <= 0) {
+    throw new Error(
+      `Invalid event area '${areaJson.id}' in map '${mapId}': width and height must be positive`
+    );
+  }
+
+  // Parse events
+  const events: AreaEvent[] = areaJson.events.map(eventJson =>
+    parseAreaEvent(eventJson, areaJson.id, mapId)
+  );
+
+  return {
+    id: areaJson.id,
+    x: areaJson.x,
+    y: areaJson.y,
+    width: areaJson.width,
+    height: areaJson.height,
+    events,
+    description: areaJson.description,
+  };
+}
+
+/**
+ * Parses an area event from JSON.
+ *
+ * @param eventJson Event JSON data
+ * @param areaId Parent area ID
+ * @param mapId Parent map ID (for error messages)
+ * @returns Parsed AreaEvent
+ */
+function parseAreaEvent(
+  eventJson: AreaEventJSON,
+  areaId: string,
+  mapId: string
+): AreaEvent {
+  // Validate trigger type
+  if (!isEventTrigger(eventJson.trigger)) {
+    throw new Error(
+      `Invalid trigger type '${eventJson.trigger}' in event '${eventJson.id}' ` +
+      `(area '${areaId}', map '${mapId}')`
+    );
+  }
+
+  // Parse preconditions
+  const preconditions = eventJson.preconditions.map(precondJson => {
+    try {
+      return PreconditionFactory.fromJSON(precondJson);
+    } catch (error) {
+      throw new Error(
+        `Error parsing precondition in event '${eventJson.id}' ` +
+        `(area '${areaId}', map '${mapId}'): ${error}`
+      );
+    }
+  });
+
+  // Parse actions
+  const actions = eventJson.actions.map(actionJson => {
+    try {
+      return ActionFactory.fromJSON(actionJson);
+    } catch (error) {
+      throw new Error(
+        `Error parsing action in event '${eventJson.id}' ` +
+        `(area '${areaId}', map '${mapId}'): ${error}`
+      );
+    }
+  });
+
+  return {
+    id: eventJson.id,
+    trigger: eventJson.trigger,
+    preconditions,
+    actions,
+    oneTime: eventJson.oneTime,
+    triggered: eventJson.triggered,
+    description: eventJson.description,
+  };
 }

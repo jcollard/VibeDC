@@ -15,6 +15,8 @@ import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRende
 import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { EventProcessor } from '../../utils/EventProcessor';
+import type { GameState } from '../../models/area/EventPrecondition';
 
 interface FirstPersonViewProps {
   mapId: string; // AreaMap ID to load
@@ -102,6 +104,31 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
 
   // Layout manager
   const layoutManager = useMemo(() => new FirstPersonLayoutManager(), []);
+
+  // Event processor (Guidelines Compliance: useMemo creates stable reference)
+  const eventProcessor = useMemo(() => new EventProcessor(), []);
+
+  // Game state for event system
+  const [gameState, setGameState] = useState<GameState>(() => {
+    if (!areaMap) {
+      return {
+        globalVariables: new Map(),
+        messageLog: [],
+        triggeredEventIds: new Set<string>(),
+        currentMapId: mapId,
+        playerPosition: { x: 0, y: 0 },
+        playerDirection: 'North',
+      };
+    }
+    return {
+      globalVariables: new Map(),
+      messageLog: [],
+      triggeredEventIds: new Set<string>(),
+      currentMapId: areaMap.id,
+      playerPosition: { x: areaMap.playerSpawn.x, y: areaMap.playerSpawn.y },
+      playerDirection: areaMap.playerSpawn.direction,
+    };
+  });
 
   // Canvas refs
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
@@ -415,6 +442,66 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
     return () => window.removeEventListener('keydown', handleDebugToggle);
   }, []);
 
+  // Helper function to process events after movement
+  const processMovementEvents = useCallback((previousX: number, previousY: number, newX: number, newY: number) => {
+    if (!firstPersonState) return;
+
+    // Guidelines Compliance: ALWAYS capture return value (GeneralGuidelines.md Lines 287-330)
+    const newGameState = eventProcessor.processMovement(
+      gameState,
+      firstPersonState.map,
+      previousX,
+      previousY,
+      newX,
+      newY
+    );
+
+    // Guidelines Compliance: Apply state changes (GeneralGuidelines.md Lines 287-330)
+    // Only update if state actually changed (reference equality check)
+    if (newGameState !== gameState) {
+      setGameState(newGameState);
+
+      // Handle any state changes from events (teleport, combat, etc.)
+      handleEventStateChanges(newGameState);
+    }
+  }, [firstPersonState, gameState, eventProcessor]);
+
+  // Helper function to handle state changes triggered by events
+  const handleEventStateChanges = useCallback((newState: GameState) => {
+    // Handle map change (Teleport action)
+    if (newState.currentMapId && newState.currentMapId !== firstPersonState?.map.id) {
+      const newMap = AreaMapRegistry.getById(newState.currentMapId);
+      if (newMap && firstPersonState) {
+        setFirstPersonState(prev => ({
+          ...prev!,
+          map: newMap,
+          playerX: newState.playerPosition?.x ?? prev!.playerX,
+          playerY: newState.playerPosition?.y ?? prev!.playerY,
+          direction: newState.playerDirection ?? prev!.direction,
+          exploredTiles: new Set(getRevealedTiles(
+            newState.playerPosition?.x ?? prev!.playerX,
+            newState.playerPosition?.y ?? prev!.playerY
+          )),
+        }));
+      }
+    }
+
+    // Handle combat start (StartEncounter action)
+    if (newState.combatState?.active) {
+      // TODO: Trigger combat system
+      combatLogManager.addMessage(`Combat started: ${newState.combatState.encounterId}`);
+    }
+
+    // Handle messages (ShowMessage action)
+    if (newState.messageLog && newState.messageLog.length > (gameState.messageLog?.length || 0)) {
+      const newMessages = newState.messageLog.slice(gameState.messageLog?.length || 0);
+      // Display messages to user
+      newMessages.forEach(msg => {
+        combatLogManager.addMessage(msg.text);
+      });
+    }
+  }, [firstPersonState, gameState, combatLogManager]);
+
   // Handle keyboard input
   useEffect(() => {
     if (!firstPersonState) return;
@@ -439,6 +526,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
             // Block input during animation
             inputHandler.blockInput();
 
+            const previousX = firstPersonState.playerX;
+            const previousY = firstPersonState.playerY;
+
             // Update state
             setFirstPersonState(prev => ({
               ...prev!,
@@ -446,6 +536,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               playerY: targetPos.y,
               exploredTiles: new Set([...prev!.exploredTiles, ...getRevealedTiles(targetPos.x, targetPos.y)])
             }));
+
+            // Process events after movement
+            processMovementEvents(previousX, previousY, targetPos.x, targetPos.y);
 
             // Unblock input after animation completes
             setTimeout(() => inputHandler.unblockInput(), 200);
@@ -465,6 +558,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
             // Block input during animation
             inputHandler.blockInput();
 
+            const previousX = firstPersonState.playerX;
+            const previousY = firstPersonState.playerY;
+
             // Update state
             setFirstPersonState(prev => ({
               ...prev!,
@@ -472,6 +568,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
               playerY: result.finalY!,
               exploredTiles: new Set([...prev!.exploredTiles, ...getRevealedTiles(result.finalX!, result.finalY!)])
             }));
+
+            // Process events after movement
+            processMovementEvents(previousX, previousY, result.finalX, result.finalY);
 
             // Unblock input after animation completes (handled in ThreeJSViewport callback)
             setTimeout(() => inputHandler.unblockInput(), 200);
@@ -495,6 +594,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
           // Block input during animation
           inputHandler.blockInput();
 
+          const previousX = firstPersonState.playerX;
+          const previousY = firstPersonState.playerY;
+
           // Update state
           setFirstPersonState(prev => ({
             ...prev!,
@@ -502,6 +604,9 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
             playerY: targetPos.y,
             exploredTiles: new Set([...prev!.exploredTiles, ...getRevealedTiles(targetPos.x, targetPos.y)])
           }));
+
+          // Process events after movement
+          processMovementEvents(previousX, previousY, targetPos.x, targetPos.y);
 
           // Unblock input after animation completes
           setTimeout(() => inputHandler.unblockInput(), 200);
@@ -534,7 +639,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({ mapId }) => {
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [firstPersonState, inputHandler, combatLogManager]);
+  }, [firstPersonState, inputHandler, combatLogManager, processMovementEvents]);
 
   // Show error if map not found
   if (!areaMap || !firstPersonState) {
