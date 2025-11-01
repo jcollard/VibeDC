@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Game } from './components/Game'
 import { CombatViewRoute } from './components/combat/CombatViewRoute'
+import { InventoryViewRoute } from './components/inventory/InventoryViewRoute'
 import { TitleScreen } from './components/TitleScreen'
 import { loadAllGameData } from './data/DataLoader'
 import './App.css'
@@ -33,6 +34,7 @@ function App() {
         {import.meta.env.DEV && (
           <>
             <Route path="/combat/:encounterId" element={<CombatViewRoute />} />
+            <Route path="/inventory" element={<InventoryViewRoute />} />
             <Route path="/title" element={<TitleScreen />} />
           </>
         )}
