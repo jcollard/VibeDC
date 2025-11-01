@@ -4,6 +4,31 @@
 
 ---
 
+## Guidelines Compliance (Part 2)
+
+This section continues following patterns from [GeneralGuidelines.md](../../../GeneralGuidelines.md):
+
+### ✅ Discriminated Union Results
+Movement validation uses type-safe discriminated unions:
+```typescript
+export type MovementResult =
+  | { success: true; finalX: number; finalY: number; ... }
+  | { success: false; reason: string; ... };
+```
+
+### ✅ No Object Creation in Hot Paths
+Movement validation avoids creating objects in loops:
+- Direction offset calculations use tuple returns `[number, number]`
+- Results are constructed once at return points, not in iterations
+
+### ✅ Registry Pattern
+AreaMapRegistry follows established combat system patterns:
+- Static methods for global access
+- Warning on duplicate registrations
+- Consistent API with TilesetRegistry and CombatEncounterRegistry
+
+---
+
 ## Phase 5: Movement Validation
 
 **Goal:** Implement movement validation with door auto-continuation logic.
@@ -22,18 +47,25 @@ import type { CardinalDirection, InteractiveObject } from '../models/area/Intera
 import { InteractiveObjectType } from '../models/area/InteractiveObject';
 
 /**
- * Result of movement validation
+ * Result of movement validation using discriminated union pattern
+ *
+ * ⚠️ GUIDELINE COMPLIANCE: Type-safe result pattern (GeneralGuidelines.md)
+ * Use discriminated unions for results with different data based on success/failure.
  */
-export interface MovementResult {
-  success: boolean;
-  reason?: string;
-  finalX?: number;
-  finalY?: number;
-  passThroughDoor?: boolean;
-  doorX?: number;
-  doorY?: number;
-  interactiveObject?: InteractiveObject;
-}
+export type MovementResult =
+  | {
+      success: true;
+      finalX: number;
+      finalY: number;
+      passThroughDoor: boolean;
+      doorX?: number;
+      doorY?: number;
+    }
+  | {
+      success: false;
+      reason: string;
+      interactiveObject?: InteractiveObject;
+    };
 
 /**
  * Validates if player can move from current position to target position.
@@ -673,6 +705,11 @@ import type { AreaMapTileSet } from '../models/area/AreaMapTileSet';
 /**
  * Loads tileset and area map data from YAML files.
  * Similar to existing data loaders (EncounterDataLoader, TilesetDataLoader).
+ *
+ * ⚠️ GUIDELINE COMPLIANCE: Async operations (GeneralGuidelines.md)
+ * - Uses async/await for file loading
+ * - Collects errors instead of failing fast (better UX for data validation)
+ * - Logs progress and errors for debugging
  */
 export class AreaMapDataLoader {
   /**
@@ -990,10 +1027,40 @@ if (result.success) {
 ## Opening a Door
 
 \`\`\`typescript
-const doorOpened = dungeon.openDoor(targetX, targetY);
-if (doorOpened) {
+// ⚠️ GUIDELINE COMPLIANCE: Immutable state updates (GeneralGuidelines.md)
+// openDoor() returns a NEW AreaMap instance, does not mutate existing map
+const updatedMap = dungeon.openDoor(targetX, targetY);
+if (updatedMap) {
   console.log('Door opened!');
-  // Door tile is now passable
+  // Update your state with the new map instance
+  setCurrentAreaMap(updatedMap);
+  // Door tile is now passable in updatedMap
+}
+\`\`\`
+
+## Type-Safe Movement Result Handling
+
+\`\`\`typescript
+// ⚠️ GUIDELINE COMPLIANCE: Discriminated unions (GeneralGuidelines.md)
+const result = validateMovement(dungeon, playerX, playerY, 'North');
+
+// TypeScript knows which fields are available based on success
+if (result.success) {
+  // Type-safe: finalX and finalY are guaranteed to exist
+  playerX = result.finalX;
+  playerY = result.finalY;
+
+  if (result.passThroughDoor) {
+    console.log(\`Passed through door at (\${result.doorX}, \${result.doorY})\`);
+  }
+} else {
+  // Type-safe: reason is guaranteed to exist
+  console.log(\`Cannot move: \${result.reason}\`);
+
+  // interactiveObject may or may not exist
+  if (result.interactiveObject) {
+    console.log('Press E to interact');
+  }
 }
 \`\`\`
 ```
@@ -1013,6 +1080,15 @@ Before marking the AreaMap system as complete:
 - [ ] No linter warnings
 - [ ] All public methods have JSDoc comments
 - [ ] No console.log statements (use console.warn/error appropriately)
+
+### Guidelines Compliance
+- [ ] All type enums use const object pattern (not TypeScript enums)
+- [ ] State-modifying methods return new objects (immutable pattern)
+- [ ] MovementResult uses discriminated union (success: boolean)
+- [ ] No object creation in movement validation loops
+- [ ] Type guards for runtime validation (isTileBehavior)
+- [ ] Async/await pattern for data loading
+- [ ] Registry pattern follows existing combat system conventions
 
 ### Testing
 - [ ] All unit tests pass

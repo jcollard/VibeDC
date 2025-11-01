@@ -7,3 +7,14 @@ vegetables-5 - big mushrooms prop
 vegetables-6 - carrot sprouts prop
 vegetables-7 - medium carrots prop
 vegetables-8 - big carrots prop
+fire-0, 1, 2, 3, 4, 5, 6 - Animated camp fire prop
+keys-0 - silver key
+keys-1 - Gold Key
+keys-2 - Copper Key
+biomes-43 - Mushroom
+tiles2-5 - Toilet
+tiles2-1 - Apple Tree
+tiles2-4 - Forest Trees
+wood-8 - Bed
+wood-9 - Chair
+wood-12 - Stool / podium

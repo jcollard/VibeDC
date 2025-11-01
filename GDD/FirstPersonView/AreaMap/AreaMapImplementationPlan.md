@@ -16,6 +16,43 @@ Before starting implementation:
 - ✅ Understand the door auto-continuation mechanic
 - ✅ Review existing CombatMap and TilesetRegistry patterns
 - ✅ Familiarize with biomes sprite sheet sprite IDs
+- ✅ **Read [GeneralGuidelines.md](../../../GeneralGuidelines.md) sections:**
+  - "State Management" - Immutable updates, const object pattern
+  - "Performance Patterns" - Caching, object pooling
+  - "Common Pitfalls" - Real-world bugs to avoid
+
+## Guidelines Compliance Notes
+
+This implementation follows key patterns from [GeneralGuidelines.md](../../../GeneralGuidelines.md):
+
+### ✅ Const Object Pattern (Not Enums)
+All type definitions use `const` objects with `as const` instead of TypeScript enums for `erasableSyntaxOnly` compliance:
+```typescript
+export const TileBehavior = { Wall: "wall", Floor: "floor", Door: "door" } as const;
+export type TileBehavior = typeof TileBehavior[keyof typeof TileBehavior];
+```
+
+### ✅ Immutable State Updates
+All state-modifying methods return NEW objects instead of mutating existing state:
+- `updateObjectState()` returns new AreaMap with updated objects
+- `openDoor()` returns new AreaMap with updated grid and objects
+- Never mutates `this.grid` or `this.interactiveObjects` directly
+
+### ✅ Type Guards
+Boolean type guards for runtime validation:
+```typescript
+export function isTileBehavior(value: string): value is TileBehavior
+```
+
+### ✅ WeakMap Pattern (Future)
+Interactive objects use `Map<string, InteractiveObject>` for now, but could use WeakMap for object-to-ID mapping if needed for memory management (see GeneralGuidelines.md "WeakMap for Animation Data").
+
+### ⚠️ Performance Considerations
+When integrating with FirstPersonView rendering:
+- Cache stateful UI components (see "UI Component State" in guidelines)
+- Use off-screen canvas for complex rendering (see "Color Tinting with Off-Screen Canvas")
+- Round all coordinates for pixel-perfect rendering
+- Disable image smoothing: `ctx.imageSmoothingEnabled = false`
 
 ## Implementation Order
 
@@ -468,6 +505,11 @@ import { TileBehavior } from './TileBehavior';
 
 /**
  * Represents a navigable area map for first-person exploration.
+ *
+ * ⚠️ GUIDELINE COMPLIANCE: Immutable state pattern (GeneralGuidelines.md)
+ * - State-modifying methods return NEW AreaMap instances
+ * - Grid is private to prevent external mutation
+ * - All readonly fields except grid (which is managed immutably via methods)
  */
 export class AreaMap {
   readonly id: string;
@@ -653,15 +695,43 @@ Add to `AreaMap` class:
 
   /**
    * Updates an interactive object's state.
-   * Used when player opens doors, chests, activates switches, etc.
+   * Returns a NEW AreaMap instance with the updated object state (immutable pattern).
+   *
+   * ⚠️ GUIDELINE COMPLIANCE: Immutable state updates (GeneralGuidelines.md)
+   * Always create new objects with spread operator instead of mutating existing state.
+   * This ensures React change detection works correctly.
    */
-  updateObjectState(objectId: string, newState: ObjectState): boolean {
+  updateObjectState(objectId: string, newState: ObjectState): AreaMap | null {
     const obj = this.interactiveObjects.get(objectId);
     if (!obj) {
-      return false;
+      return null;
     }
-    obj.state = newState;
-    return true;
+
+    // Create new interactive object with updated state
+    const updatedObject: InteractiveObject = {
+      ...obj,
+      state: newState,
+    };
+
+    // Create new interactive objects array with updated object
+    const updatedObjects = Array.from(this.interactiveObjects.values()).map(o =>
+      o.id === objectId ? updatedObject : o
+    );
+
+    // Return new AreaMap instance with updated objects
+    return new AreaMap(
+      this.id,
+      this.name,
+      this.description,
+      this.width,
+      this.height,
+      this.grid,
+      this.tilesetId,
+      this.playerSpawn,
+      updatedObjects,
+      this.npcSpawns,
+      this.encounterZones
+    );
   }
 ```
 
@@ -672,27 +742,27 @@ Add to `AreaMap` class (this requires the AreaMapTileSetRegistry from Phase 3, s
 ```typescript
   /**
    * Opens a closed door at the specified position.
-   * Replaces the tile with a door tile and updates object state.
+   * Returns a NEW AreaMap instance with door tile replaced and object updated (immutable pattern).
    *
+   * ⚠️ GUIDELINE COMPLIANCE: Immutable state updates (GeneralGuidelines.md)
    * NOTE: This method depends on AreaMapTileSetRegistry being available.
    * It will be fully functional after Phase 3.
    */
-  openDoor(x: number, y: number): boolean {
+  openDoor(x: number, y: number): AreaMap | null {
     const obj = this.getInteractiveObjectAt(x, y);
     if (!obj || obj.type !== InteractiveObjectType.ClosedDoor) {
-      return false;
+      return null;
     }
 
     // Check if door is locked
     if (obj.state === ObjectState.Locked) {
       // TODO: Check player inventory for key
-      return false; // For now, locked doors cannot be opened
+      return null; // For now, locked doors cannot be opened
     }
 
     // This will be implemented after Phase 3 when registry is available
     // For now, we'll just update the object state
-    this.updateObjectState(obj.id, ObjectState.Open);
-    return true;
+    return this.updateObjectState(obj.id, ObjectState.Open);
   }
 ```
 
@@ -939,7 +1009,7 @@ describe('AreaMap', () => {
       expect(found?.id).toBe('chest-1');
     });
 
-    it('should update object state', () => {
+    it('should update object state (immutably)', () => {
       const grid: AreaMapTile[][] = [[createFloorTile()]];
       const door: InteractiveObject = {
         id: 'door-1',
@@ -962,8 +1032,14 @@ describe('AreaMap', () => {
         [door]
       );
 
-      expect(map.updateObjectState('door-1', ObjectState.Open)).toBe(true);
-      expect(map.interactiveObjects.get('door-1')?.state).toBe(ObjectState.Open);
+      // Should return NEW AreaMap instance
+      const updatedMap = map.updateObjectState('door-1', ObjectState.Open);
+      expect(updatedMap).not.toBeNull();
+      expect(updatedMap).not.toBe(map); // Different instance
+      expect(updatedMap?.interactiveObjects.get('door-1')?.state).toBe(ObjectState.Open);
+
+      // Original map should be unchanged
+      expect(map.interactiveObjects.get('door-1')?.state).toBe(ObjectState.Closed);
     });
   });
 
@@ -1100,18 +1176,21 @@ import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
 
   /**
    * Opens a closed door at the specified position.
-   * Replaces the tile with a door tile and updates object state.
+   * Returns a NEW AreaMap instance with door tile replaced and object updated (immutable pattern).
+   *
+   * ⚠️ GUIDELINE COMPLIANCE: Immutable state updates (GeneralGuidelines.md)
+   * Always create new objects with spread operator instead of mutating existing state.
    */
-  openDoor(x: number, y: number): boolean {
+  openDoor(x: number, y: number): AreaMap | null {
     const obj = this.getInteractiveObjectAt(x, y);
     if (!obj || obj.type !== InteractiveObjectType.ClosedDoor) {
-      return false;
+      return null;
     }
 
     // Check if door is locked
     if (obj.state === ObjectState.Locked) {
       // TODO: Check player inventory for key
-      return false; // For now, locked doors cannot be opened
+      return null; // For now, locked doors cannot be opened
     }
 
     // Get the tile definition for open doors (default: 'D')
@@ -1119,16 +1198,16 @@ import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
     const tileset = AreaMapTileSetRegistry.getById(this.tilesetId);
     if (!tileset) {
       console.error(`Tileset '${this.tilesetId}' not found`);
-      return false;
+      return null;
     }
 
     const openTileDef = tileset.tileTypes.find(t => t.char === openChar);
     if (!openTileDef) {
       console.error(`Open door tile '${openChar}' not found in tileset '${this.tilesetId}'`);
-      return false;
+      return null;
     }
 
-    // Replace tile with door tile
+    // Create new tile with door properties
     const doorTile: AreaMapTile = {
       behavior: openTileDef.behavior,
       walkable: openTileDef.walkable,
@@ -1137,9 +1216,33 @@ import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
       terrainType: openTileDef.terrainType,
     };
 
-    this.setTile(x, y, doorTile);
-    this.updateObjectState(obj.id, ObjectState.Open);
-    return true;
+    // Create new grid with updated tile (immutable)
+    const newGrid = this.grid.map((row, rowIndex) =>
+      rowIndex === y
+        ? row.map((tile, colIndex) => (colIndex === x ? doorTile : tile))
+        : row
+    );
+
+    // Update object state and get new map with updated objects
+    const mapWithUpdatedObject = this.updateObjectState(obj.id, ObjectState.Open);
+    if (!mapWithUpdatedObject) {
+      return null;
+    }
+
+    // Return new AreaMap instance with updated grid
+    return new AreaMap(
+      this.id,
+      this.name,
+      this.description,
+      this.width,
+      this.height,
+      newGrid,
+      this.tilesetId,
+      this.playerSpawn,
+      Array.from(mapWithUpdatedObject.interactiveObjects.values()),
+      this.npcSpawns,
+      this.encounterZones
+    );
   }
 ```
 
