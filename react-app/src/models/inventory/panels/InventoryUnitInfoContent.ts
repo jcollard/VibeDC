@@ -335,6 +335,20 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
    * Override handleHover to include party selector and empty slots
    */
   handleHover(relativeX: number, relativeY: number): unknown {
+    // Check if mouse is outside panel bounds (same check as parent class)
+    const lastRegionWidth = (this as any).lastRegionWidth;
+    const lastRegionHeight = (this as any).lastRegionHeight;
+
+    if (relativeX < 0 || relativeY < 0 ||
+        relativeX >= lastRegionWidth ||
+        relativeY >= lastRegionHeight) {
+      // Clear hover state and delegate to parent
+      if (this.hoveredMemberIndex !== null) {
+        this.hoveredMemberIndex = null;
+      }
+      return super.handleHover(relativeX, relativeY);
+    }
+
     // Check if hovering over party selector first (in stats view)
     const isStatsView = (this as any).currentView === 'stats';
     const hasHelperText = (this as any).hoveredStatId !== null;
@@ -397,6 +411,17 @@ export class InventoryUnitInfoContent extends UnitInfoContent {
    * Override handleClick to include party selector and empty slots
    */
   handleClick(relativeX: number, relativeY: number): PanelClickResult {
+    // Check if mouse is outside panel bounds (same check as parent class)
+    const lastRegionWidth = (this as any).lastRegionWidth;
+    const lastRegionHeight = (this as any).lastRegionHeight;
+
+    if (relativeX < 0 || relativeY < 0 ||
+        relativeX >= lastRegionWidth ||
+        relativeY >= lastRegionHeight) {
+      // Delegate to parent (which returns null for out-of-bounds clicks)
+      return super.handleClick(relativeX, relativeY);
+    }
+
     // Check if clicking on party selector first
     const isStatsView = (this as any).currentView === 'stats';
     const hasHelperText = (this as any).hoveredStatId !== null;
