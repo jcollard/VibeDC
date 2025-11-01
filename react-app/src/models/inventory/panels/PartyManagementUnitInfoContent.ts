@@ -17,6 +17,8 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   private onMemberSelected?: (member: CombatUnit, index: number) => void;
   private selectorBounds: Array<{ x: number; y: number; width: number; height: number }> = [];
   private selectedEquipmentSlot: string | null = null; // Track selected equipment/ability slot (e.g., 'L.Hand', 'Reaction')
+  private learnAbilitiesButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private isLearnAbilitiesButtonHovered: boolean = false;
 
   constructor(
     config: UnitInfoConfig,
@@ -32,6 +34,12 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
 
     // Add helper text for Class XP
     (this as any).statHelperText['Class XP'] = 'XP available for your primary class can be used to learn abilities.';
+
+    // Add helper text for Spend XP button
+    (this as any).statHelperText['Spend XP'] = 'Spend XP to learn new abilities for this character.';
+
+    // Update helper text for View Abilities & Equipment button
+    (this as any).statHelperText['View Abilities & Equipment'] = "View this unit's abilities and equipment";
   }
 
   /**
@@ -40,6 +48,66 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   updatePartyMembers(partyMembers: CombatUnit[], selectedIndex: number): void {
     this.partyMembers = partyMembers;
     this.selectedMemberIndex = selectedIndex;
+  }
+
+  /**
+   * Custom renderToggleButton that adds "Spend XP" option
+   * @returns Y position after buttons
+   */
+  private renderToggleButtonWithLearnAbilities(
+    ctx: CanvasRenderingContext2D,
+    region: PanelRegion,
+    fontId: string,
+    fontAtlasImage: HTMLImageElement,
+    font: any,
+    y: number
+  ): number {
+    const lineSpacing = (this as any).config.lineSpacing;
+    const currentView = (this as any).currentView;
+    const buttonText = currentView === 'stats' ? 'View Abilities & Equipment' : 'Back';
+
+    // Move options down by 2px
+    let currentY = y + 2;
+
+    const textWidth = FontAtlasRenderer.measureText(buttonText, font);
+    const textX = region.x + Math.floor((region.width - textWidth) / 2);
+
+    // Use hover color when button is hovered
+    const isButtonHovered = (this as any).isButtonHovered;
+    const buttonColor = isButtonHovered ? HOVERED_TEXT : '#ffffff';
+    FontAtlasRenderer.renderText(ctx, buttonText, textX, currentY, fontId, fontAtlasImage, 1, 'left', buttonColor);
+
+    (this as any).buttonBounds = {
+      x: textX - region.x,
+      y: currentY - region.y,
+      width: textWidth,
+      height: lineSpacing
+    };
+
+    currentY += lineSpacing;
+
+    // Only render "Spend XP" in stats view
+    if (currentView === 'stats') {
+      const spendXpText = 'Spend XP';
+      const spendXpTextWidth = FontAtlasRenderer.measureText(spendXpText, font);
+      const spendXpTextX = region.x + Math.floor((region.width - spendXpTextWidth) / 2);
+
+      const spendXpButtonColor = this.isLearnAbilitiesButtonHovered ? HOVERED_TEXT : '#ffffff';
+      FontAtlasRenderer.renderText(ctx, spendXpText, spendXpTextX, currentY, fontId, fontAtlasImage, 1, 'left', spendXpButtonColor);
+
+      this.learnAbilitiesButtonBounds = {
+        x: spendXpTextX - region.x,
+        y: currentY - region.y,
+        width: spendXpTextWidth,
+        height: lineSpacing
+      };
+
+      currentY += lineSpacing;
+    } else {
+      this.learnAbilitiesButtonBounds = null;
+    }
+
+    return currentY;
   }
 
   /**
@@ -162,9 +230,13 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     const originalRenderHeader = (this as any).renderHeader;
     const originalRenderAbilitySlot = (this as any).renderAbilitySlot;
     const originalRenderEquipmentSlot = (this as any).renderEquipmentSlot;
+    const originalRenderToggleButton = (this as any).renderToggleButton;
 
     // Override renderHeader with our custom XP rendering
     (this as any).renderHeader = this.renderHeaderWithXp.bind(this);
+
+    // Override renderToggleButton with our custom button rendering
+    (this as any).renderToggleButton = this.renderToggleButtonWithLearnAbilities.bind(this);
 
     // Override renderAbilitySlot with custom color logic
     (this as any).renderAbilitySlot = (
@@ -229,6 +301,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     (this as any).renderHeader = originalRenderHeader;
     (this as any).renderAbilitySlot = originalRenderAbilitySlot;
     (this as any).renderEquipmentSlot = originalRenderEquipmentSlot;
+    (this as any).renderToggleButton = originalRenderToggleButton;
 
     // Only render party selector in stats view when no helper text is showing
     // We check this by seeing if there's no hovered stat
@@ -258,12 +331,18 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     const config = (this as any).config;
     const padding = config.padding;
 
-    // Calculate Y position: below the "View Abilities" button
-    const buttonBounds = (this as any).buttonBounds;
-    if (!buttonBounds) return;
+    // Calculate Y position: below the "Spend XP" button (or "View Abilities & Equipment" if no Spend XP)
+    let selectorStartY: number;
 
-    // Use panel-relative coordinates for both rendering and bounds
-    const selectorStartY = buttonBounds.y + buttonBounds.height + 4; // 4px padding below button
+    if (this.learnAbilitiesButtonBounds) {
+      // Position directly below "Spend XP" button (no extra spacing)
+      selectorStartY = this.learnAbilitiesButtonBounds.y + this.learnAbilitiesButtonBounds.height;
+    } else {
+      // Fallback to below main button (shouldn't happen in stats view, but just in case)
+      const buttonBounds = (this as any).buttonBounds;
+      if (!buttonBounds) return;
+      selectorStartY = buttonBounds.y + buttonBounds.height + 4;
+    }
 
     // Calculate available height for selector
     const availableHeight = region.height - selectorStartY - padding;
@@ -513,11 +592,31 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
       (this as any).isButtonHovered = false;
     }
 
+    // Check if hovering over "Learn Abilities" button
+    const wasLearnAbilitiesButtonHovered = this.isLearnAbilitiesButtonHovered;
+    if (this.learnAbilitiesButtonBounds) {
+      const { x, y, width, height } = this.learnAbilitiesButtonBounds;
+      this.isLearnAbilitiesButtonHovered = relativeX >= x && relativeX <= x + width &&
+                                           relativeY >= y && relativeY <= y + height;
+    } else {
+      this.isLearnAbilitiesButtonHovered = false;
+    }
+
     // If hovering button, set button text as "hovered stat" for helper text
     if ((this as any).isButtonHovered) {
       const currentView = (this as any).currentView;
-      const buttonText = currentView === 'stats' ? 'View Abilities' : 'Back';
+      const buttonText = currentView === 'stats' ? 'View Abilities & Equipment' : 'Back';
       if ((this as any).hoveredStatId !== buttonText || wasButtonHovered !== (this as any).isButtonHovered) {
+        (this as any).hoveredStatId = buttonText;
+        return { statId: buttonText, buttonHovered: true };
+      }
+      return null;
+    }
+
+    // If hovering "Spend XP" button
+    if (this.isLearnAbilitiesButtonHovered) {
+      const buttonText = 'Spend XP';
+      if ((this as any).hoveredStatId !== buttonText || wasLearnAbilitiesButtonHovered !== this.isLearnAbilitiesButtonHovered) {
         (this as any).hoveredStatId = buttonText;
         return { statId: buttonText, buttonHovered: true };
       }
@@ -597,7 +696,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   }
 
   /**
-   * Override handleClick to include party selector and empty slots
+   * Override handleClick to include party selector, empty slots, and Learn Abilities button
    */
   handleClick(relativeX: number, relativeY: number): PanelClickResult {
     // Check if mouse is outside panel bounds (same check as parent class)
@@ -611,7 +710,18 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
       return super.handleClick(relativeX, relativeY);
     }
 
-    // Check if clicking on party selector first
+    // Check if clicking on "Learn Abilities" button first
+    if (this.learnAbilitiesButtonBounds) {
+      const { x, y, width, height } = this.learnAbilitiesButtonBounds;
+      if (relativeX >= x && relativeX <= x + width &&
+          relativeY >= y && relativeY <= y + height) {
+        // TODO: Implement Learn Abilities functionality
+        // For now, do nothing
+        return { type: 'learn-abilities' } as any;
+      }
+    }
+
+    // Check if clicking on party selector
     const isStatsView = (this as any).currentView === 'stats';
     const hasHelperText = (this as any).hoveredStatId !== null;
 
