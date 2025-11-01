@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Game } from './components/Game'
 import { CombatViewRoute } from './components/combat/CombatViewRoute'
+import { DevRoute } from './components/DevRoute'
 import { loadAllGameData } from './data/DataLoader'
 import './App.css'
 
@@ -31,6 +32,11 @@ function App() {
         {/* Development-only route for testing combat encounters */}
         {import.meta.env.DEV && (
           <Route path="/combat/:encounterId" element={<CombatViewRoute />} />
+        )}
+
+        {/* Development-only route for developer panel */}
+        {import.meta.env.DEV && (
+          <Route path="/dev" element={<DevRoute />} />
         )}
       </Routes>
     </BrowserRouter>

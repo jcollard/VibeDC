@@ -18,3 +18,10 @@ tiles2-4 - Forest Trees
 wood-8 - Bed
 wood-9 - Chair
 wood-12 - Stool / podium
+gemwright-8 - Blue potion
+gemwright-9 - Red potion
+gemwright-10 - Green potion
+gemwright-14 - Blue gem
+gemwright-15 - Red gem
+gemwright-16 - Green gem
+

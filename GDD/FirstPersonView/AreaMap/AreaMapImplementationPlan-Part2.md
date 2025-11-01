@@ -959,17 +959,599 @@ describe('AreaMap Integration Tests', () => {
 
 ---
 
-## Phase 9: Documentation and Cleanup
+## Phase 9: AreaMap Developer Panel
+
+**Goal:** Create a developer panel for browsing, editing, and testing area maps (similar to EncounterRegistryPanel).
+
+**Duration:** 6-8 hours
+
+**Dependencies:** All previous phases
+
+**Reference Implementation:** [EncounterRegistryPanel.tsx](react-app/src/components/developer/EncounterRegistryPanel.tsx)
+
+### Overview
+
+The AreaMap developer panel provides a visual interface for:
+- **Browsing** all registered area maps
+- **Editing** map properties, tiles, and objects
+- **Visual tile painting** with drag-to-paint support
+- **Interactive object placement** and editing
+- **Spawn point management** (player and NPCs)
+- **Encounter zone** configuration
+- **YAML export** for both tilesets and maps
+- **Duplicate/delete** operations
+- **Testing** maps in FirstPersonView (future)
+
+### Step 9.1: Core Component Structure
+
+**File:** `react-app/src/components/developer/AreaMapRegistryPanel.tsx`
+
+```typescript
+import { useState, useEffect, useRef } from 'react';
+import { AreaMap } from '../../models/area/AreaMap';
+import type { AreaMapJSON } from '../../models/area/AreaMap';
+import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
+import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
+import { TileBehavior } from '../../models/area/TileBehavior';
+import { InteractiveObjectType, ObjectState } from '../../models/area/InteractiveObject';
+import type { InteractiveObject } from '../../models/area/InteractiveObject';
+import type { SpawnPoint } from '../../models/area/SpawnPoint';
+import type { EncounterZone } from '../../models/area/EncounterZone';
+import { TagFilter } from './TagFilter';
+import { AreaMapPreview } from './AreaMapPreview';
+import * as yaml from 'js-yaml';
+
+interface AreaMapRegistryPanelProps {
+  onClose?: () => void;
+  onTestMap?: (areaMap: AreaMap) => void;
+}
+
+/**
+ * Developer panel for browsing and editing area maps.
+ * Provides a visual interface for map creation and editing.
+ *
+ * ⚠️ GUIDELINE COMPLIANCE: UI Component State (GeneralGuidelines.md)
+ * - Caches stateful components (preview, buttons) to preserve interaction state
+ * - Uses React state for data that triggers re-renders
+ * - Uses useRef for original state storage (cancel/revert functionality)
+ * - Immutable state updates when saving changes
+ */
+export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({
+  onClose,
+  onTestMap
+}) => {
+  // State management
+  const [areaMaps, setAreaMaps] = useState<AreaMap[]>([]);
+  const [selectedMap, setSelectedMap] = useState<AreaMap | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedMap, setEditedMap] = useState<AreaMapJSON | null>(null);
+  const [selectedTag, setSelectedTag] = useState<string>('');
+  const [allTags, setAllTags] = useState<string[]>([]);
+  const [editedTilesetId, setEditedTilesetId] = useState<string>('');
+  const [mapRenderKey, setMapRenderKey] = useState(0);
+  const [selectedTileIndex, setSelectedTileIndex] = useState<number | null>(null);
+
+  // ⚠️ GUIDELINE COMPLIANCE: useRef for non-rendering state (GeneralGuidelines.md)
+  // Store original map state before editing for cancel/revert
+  const originalMapRef = useRef<AreaMapJSON | null>(null);
+
+  // Initialize - load maps from registry
+  useEffect(() => {
+    loadAreaMaps();
+  }, []);
+
+  // Extract unique tags from tilesets
+  useEffect(() => {
+    const tagSet = new Set<string>();
+    areaMaps.forEach(map => {
+      const tileset = AreaMapTileSetRegistry.getById(map.tilesetId);
+      tileset?.tags?.forEach(tag => tagSet.add(tag));
+    });
+    setAllTags(Array.from(tagSet).sort());
+  }, [areaMaps]);
+
+  const loadAreaMaps = () => {
+    setAreaMaps(AreaMapRegistry.getAll());
+  };
+
+  const handleSelectMap = (map: AreaMap) => {
+    setSelectedMap(map);
+    setIsEditing(false);
+    setEditedMap(null);
+  };
+
+  const handleEdit = () => {
+    if (!selectedMap) return;
+
+    // ⚠️ GUIDELINE COMPLIANCE: State preservation pattern (GeneralGuidelines.md)
+    // Store deep copy for cancel/revert
+    originalMapRef.current = selectedMap.toJSON();
+
+    setIsEditing(true);
+    setEditedMap(selectedMap.toJSON());
+    setSelectedTileIndex(null);
+    setEditedTilesetId(selectedMap.tilesetId);
+  };
+
+  const handleCancelEdit = () => {
+    // ⚠️ GUIDELINE COMPLIANCE: Immutable state updates (GeneralGuidelines.md)
+    if (originalMapRef.current && selectedMap) {
+      const restoredMap = AreaMap.fromJSON(originalMapRef.current);
+      AreaMapRegistry.unregister(selectedMap.id);
+      AreaMapRegistry.register(restoredMap);
+      setSelectedMap(restoredMap);
+      originalMapRef.current = null;
+    }
+
+    setIsEditing(false);
+    setEditedMap(null);
+    setSelectedTileIndex(null);
+    setMapRenderKey(prev => prev + 1);
+  };
+
+  const handleSaveEdit = () => {
+    if (!editedMap || !selectedMap) return;
+
+    // Validation
+    const existingMap = AreaMapRegistry.getById(editedMap.id);
+    if (existingMap && existingMap.id !== selectedMap.id) {
+      alert(`Error: Map ID "${editedMap.id}" already exists.`);
+      return;
+    }
+
+    // Validate player spawn on walkable tile
+    const spawnTile = selectedMap.getTile(editedMap.playerSpawn.x, editedMap.playerSpawn.y);
+    if (!spawnTile?.walkable) {
+      alert(`Error: Player spawn at (${editedMap.playerSpawn.x}, ${editedMap.playerSpawn.y}) is not walkable.`);
+      return;
+    }
+
+    // Validate no duplicate object positions
+    const objectPositions = new Set<string>();
+    for (const obj of editedMap.interactiveObjects || []) {
+      const key = `${obj.x},${obj.y}`;
+      if (objectPositions.has(key)) {
+        alert(`Error: Duplicate object at (${obj.x}, ${obj.y}).`);
+        return;
+      }
+      objectPositions.add(key);
+    }
+
+    try {
+      const oldId = selectedMap.id;
+      const idChanged = oldId !== editedMap.id;
+
+      // ⚠️ GUIDELINE COMPLIANCE: Immutable state updates (GeneralGuidelines.md)
+      // Create new AreaMap instance instead of mutating
+      const updatedMap = new AreaMap(
+        editedMap.id,
+        editedMap.name,
+        editedMap.description,
+        editedMap.width,
+        editedMap.height,
+        selectedMap.toJSON().grid, // Current grid state
+        editedTilesetId,
+        editedMap.playerSpawn,
+        editedMap.interactiveObjects,
+        editedMap.npcSpawns,
+        editedMap.encounterZones
+      );
+
+      // Update registry
+      if (idChanged) AreaMapRegistry.unregister(oldId);
+      else AreaMapRegistry.unregister(selectedMap.id);
+
+      AreaMapRegistry.register(updatedMap);
+
+      // Update UI
+      setSelectedMap(updatedMap);
+      setIsEditing(false);
+      setEditedMap(null);
+      setAreaMaps(AreaMapRegistry.getAll());
+    } catch (error) {
+      console.error('Failed to save map:', error);
+      alert(`Failed to save: ${error}`);
+    }
+  };
+
+  // Additional handlers: handleExport, handleDuplicate, handleDelete, etc.
+  // ... (implementation continues)
+
+  return (
+    <div style={{ /* Panel styles */ }}>
+      {/* UI implementation similar to EncounterRegistryPanel */}
+    </div>
+  );
+};
+```
+
+### Step 9.2: AreaMapPreview Component
+
+**File:** `react-app/src/components/developer/AreaMapPreview.tsx`
+
+Visual map editor component with canvas rendering:
+
+```typescript
+interface AreaMapPreviewProps {
+  areaMap: AreaMap;
+  isEditing?: boolean;
+  selectedTileIndex?: number | null;
+  onTilePlacement?: (x: number, y: number, tileTypeIndex: number) => void;
+  onBatchTilePlacement?: (tiles: Array<{ x: number; y: number; tileTypeIndex: number }>) => void;
+  onObjectMove?: (objectId: string, newX: number, newY: number) => void;
+  onSpawnPointMove?: (type: 'player' | 'npc', index: number, newX: number, newY: number) => void;
+  onObjectSelect?: (objectId: string | null) => void;
+  mapUpdateTrigger?: number;
+}
+
+/**
+ * ⚠️ GUIDELINE COMPLIANCE: Canvas rendering (GeneralGuidelines.md)
+ * - Disables image smoothing for pixel-perfect rendering
+ * - Rounds all coordinates to integers
+ * - Uses off-screen canvas for complex rendering if needed
+ * - Caches canvas reference (useRef)
+ */
+export const AreaMapPreview: React.FC<AreaMapPreviewProps> = ({
+  areaMap,
+  isEditing,
+  // ... props
+}) => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [draggedTiles, setDraggedTiles] = useState<Array<{ x: number; y: number; tileTypeIndex: number }>>([]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    // ⚠️ GUIDELINE COMPLIANCE: Disable image smoothing (GeneralGuidelines.md)
+    ctx.imageSmoothingEnabled = false;
+
+    renderMap(ctx, areaMap);
+  }, [areaMap, mapUpdateTrigger]);
+
+  const renderMap = (ctx: CanvasRenderingContext2D, map: AreaMap) => {
+    const TILE_SIZE = 12;
+    const SCALE = 2; // 12x12 tiles rendered at 24x24 pixels
+
+    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+
+    // Render tiles
+    for (let y = 0; y < map.height; y++) {
+      for (let x = 0; x < map.width; x++) {
+        const tile = map.getTile(x, y);
+        if (!tile) continue;
+
+        // ⚠️ GUIDELINE COMPLIANCE: Round coordinates (GeneralGuidelines.md)
+        const renderX = Math.floor(x * TILE_SIZE * SCALE);
+        const renderY = Math.floor(y * TILE_SIZE * SCALE);
+
+        // Render tile sprite (use SpriteRenderer)
+        // Color-code by behavior: walls=red tint, floors=green tint, doors=blue tint
+        renderTileSprite(ctx, tile, renderX, renderY, TILE_SIZE * SCALE);
+      }
+    }
+
+    // Render interactive objects
+    map.interactiveObjects.forEach(obj => {
+      const x = Math.floor(obj.x * TILE_SIZE * SCALE);
+      const y = Math.floor(obj.y * TILE_SIZE * SCALE);
+      renderInteractiveObject(ctx, obj, x, y, TILE_SIZE * SCALE);
+    });
+
+    // Render player spawn (green circle with 'P')
+    const spawn = map.playerSpawn;
+    const spawnX = Math.floor(spawn.x * TILE_SIZE * SCALE);
+    const spawnY = Math.floor(spawn.y * TILE_SIZE * SCALE);
+    ctx.fillStyle = 'rgba(76, 175, 80, 0.5)';
+    ctx.fillRect(spawnX, spawnY, TILE_SIZE * SCALE, TILE_SIZE * SCALE);
+    // Draw 'P' text
+
+    // Render grid lines in edit mode
+    if (isEditing) {
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.lineWidth = 1;
+      for (let x = 0; x <= map.width; x++) {
+        const lineX = Math.floor(x * TILE_SIZE * SCALE);
+        ctx.beginPath();
+        ctx.moveTo(lineX, 0);
+        ctx.lineTo(lineX, map.height * TILE_SIZE * SCALE);
+        ctx.stroke();
+      }
+      for (let y = 0; y <= map.height; y++) {
+        const lineY = Math.floor(y * TILE_SIZE * SCALE);
+        ctx.beginPath();
+        ctx.moveTo(0, lineY);
+        ctx.lineTo(map.width * TILE_SIZE * SCALE, lineY);
+        ctx.stroke();
+      }
+    }
+  };
+
+  const handleMouseDown = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isEditing || selectedTileIndex === null) return;
+
+    const { x, y } = getGridPosition(e);
+    if (x < 0 || x >= areaMap.width || y < 0 || y >= areaMap.height) return;
+
+    setIsDragging(true);
+    setDraggedTiles([{ x, y, tileTypeIndex: selectedTileIndex }]);
+
+    if (onTilePlacement) {
+      onTilePlacement(x, y, selectedTileIndex);
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDragging || selectedTileIndex === null) return;
+
+    const { x, y } = getGridPosition(e);
+    if (x < 0 || x >= areaMap.width || y < 0 || y >= areaMap.height) return;
+
+    // Check if already placed this tile
+    if (draggedTiles.some(t => t.x === x && t.y === y)) return;
+
+    const newTiles = [...draggedTiles, { x, y, tileTypeIndex: selectedTileIndex }];
+    setDraggedTiles(newTiles);
+
+    if (onTilePlacement) {
+      onTilePlacement(x, y, selectedTileIndex);
+    }
+  };
+
+  const handleMouseUp = () => {
+    if (isDragging && onBatchTilePlacement && draggedTiles.length > 1) {
+      onBatchTilePlacement(draggedTiles);
+    }
+    setIsDragging(false);
+    setDraggedTiles([]);
+  };
+
+  const getGridPosition = (e: React.MouseEvent<HTMLCanvasElement>): { x: number; y: number } => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const TILE_SIZE = 12;
+    const SCALE = 2;
+    const canvasX = e.clientX - rect.left;
+    const canvasY = e.clientY - rect.top;
+    return {
+      x: Math.floor(canvasX / (TILE_SIZE * SCALE)),
+      y: Math.floor(canvasY / (TILE_SIZE * SCALE))
+    };
+  };
+
+  return (
+    <div style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px' }}>
+      <canvas
+        ref={canvasRef}
+        width={areaMap.width * 24}
+        height={areaMap.height * 24}
+        onMouseDown={handleMouseDown}
+        onMouseMove={handleMouseMove}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseUp}
+        style={{
+          border: '1px solid rgba(255, 255, 255, 0.3)',
+          imageRendering: 'pixelated',
+          cursor: isEditing && selectedTileIndex !== null ? 'crosshair' : 'default'
+        }}
+      />
+    </div>
+  );
+};
+```
+
+### Step 9.3: Tile Palette Component
+
+**File:** `react-app/src/components/developer/TilePalette.tsx`
+
+```typescript
+interface TilePaletteProps {
+  tilesetId: string;
+  selectedTileIndex: number | null;
+  onTileSelect: (index: number) => void;
+}
+
+/**
+ * Visual tile picker showing available tiles from the selected tileset.
+ * Color-coded by behavior (wall=red, floor=green, door=blue).
+ */
+export const TilePalette: React.FC<TilePaletteProps> = ({
+  tilesetId,
+  selectedTileIndex,
+  onTileSelect
+}) => {
+  const tileset = AreaMapTileSetRegistry.getById(tilesetId);
+  if (!tileset) return null;
+
+  return (
+    <div style={{ padding: '12px', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '4px' }}>
+      <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>
+        Tile Palette
+      </div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px' }}>
+        {tileset.tileTypes.map((tileType, index) => {
+          const isSelected = selectedTileIndex === index;
+
+          // Color-code by behavior
+          let borderColor = 'rgba(255, 255, 255, 0.3)';
+          if (tileType.behavior === TileBehavior.Wall) borderColor = 'rgba(244, 67, 54, 0.6)';
+          else if (tileType.behavior === TileBehavior.Floor) borderColor = 'rgba(76, 175, 80, 0.6)';
+          else if (tileType.behavior === TileBehavior.Door) borderColor = 'rgba(33, 150, 243, 0.6)';
+
+          return (
+            <div
+              key={index}
+              onClick={() => onTileSelect(index)}
+              style={{
+                padding: '8px',
+                background: isSelected ? 'rgba(33, 150, 243, 0.3)' : 'rgba(0, 0, 0, 0.3)',
+                border: `2px solid ${isSelected ? 'rgba(33, 150, 243, 0.8)' : borderColor}`,
+                borderRadius: '4px',
+                cursor: 'pointer',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '4px',
+                minWidth: '60px',
+              }}
+            >
+              {/* Render tile sprite preview */}
+              <div style={{ fontSize: '9px', color: '#aaa', textAlign: 'center' }}>
+                {tileType.char}
+              </div>
+              <div style={{ fontSize: '8px', color: '#666' }}>
+                {tileType.behavior}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+```
+
+### Step 9.4: Integration with DevPanel
+
+Update `react-app/src/components/developer/DevPanel.tsx`:
+
+```typescript
+import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
+import { AreaMapRegistryPanel } from './AreaMapRegistryPanel';
+
+// Add state
+const [showAreaMapPanel, setShowAreaMapPanel] = useState(false);
+
+// Add button in panel
+<button
+  onClick={() => setShowAreaMapPanel(true)}
+  style={buttonStyle}
+  title="Browse and edit area maps"
+>
+  Area Maps ({AreaMapRegistry.count})
+</button>
+
+// Render panel
+{showAreaMapPanel && (
+  <AreaMapRegistryPanel
+    onClose={() => setShowAreaMapPanel(false)}
+    onTestMap={(map) => {
+      // Future: Launch FirstPersonView with this map
+      console.log('Testing map:', map.id);
+      setShowAreaMapPanel(false);
+    }}
+  />
+)}
+```
+
+### Step 9.5: Export/Import YAML Functionality
+
+Add helper functions for YAML export:
+
+```typescript
+const handleExport = () => {
+  // Export tilesets
+  const tilesetDatabase = {
+    tilesets: AreaMapTileSetRegistry.getAll().map(ts => ({
+      id: ts.id,
+      name: ts.name,
+      description: ts.description,
+      spriteSheet: ts.spriteSheet,
+      tileTypes: ts.tileTypes,
+      tags: ts.tags,
+    }))
+  };
+
+  // Export maps with ASCII grid representation
+  const mapDatabase = {
+    areas: areaMaps.map(map => ({
+      ...map.toJSON(),
+      grid: mapGridToASCII(map), // Convert grid to ASCII
+    }))
+  };
+
+  // Download both files
+  downloadYAML(tilesetDatabase, 'area-tileset-database.yaml');
+  downloadYAML(mapDatabase, 'area-map-database.yaml');
+};
+
+const mapGridToASCII = (map: AreaMap): string => {
+  const tileset = AreaMapTileSetRegistry.getById(map.tilesetId);
+  if (!tileset) return '';
+
+  const rows: string[] = [];
+  for (let y = 0; y < map.height; y++) {
+    let row = '';
+    for (let x = 0; x < map.width; x++) {
+      const tile = map.getTile(x, y);
+      const tileType = tileset.tileTypes.find(tt =>
+        tt.behavior === tile?.behavior && tt.spriteId === tile?.spriteId
+      );
+      row += tileType?.char || '.';
+    }
+    rows.push(row);
+  }
+  return rows.join('\n');
+};
+```
+
+### Phase 9 Validation
+
+**Manual Testing Checklist:**
+- [ ] Can open AreaMap panel from DevPanel
+- [ ] Can browse all registered area maps
+- [ ] Can filter maps by tileset tags
+- [ ] Can select and view map details
+- [ ] Can enter edit mode for selected map
+- [ ] Can edit map properties (name, description, ID)
+- [ ] Can change tileset and see preview update
+- [ ] Tile palette shows all tiles from selected tileset
+- [ ] Can select tile from palette
+- [ ] Can click to place single tile
+- [ ] Can drag to paint multiple tiles
+- [ ] Tile colors match behavior (wall=red, floor=green, door=blue)
+- [ ] Can add interactive objects (chest, door, NPC, etc.)
+- [ ] Can move interactive objects by dragging
+- [ ] Can edit interactive object properties
+- [ ] Can delete interactive objects
+- [ ] Can move player spawn point
+- [ ] Can add/remove NPC spawn points
+- [ ] Can add/remove encounter zones
+- [ ] Can save changes and see updates in registry
+- [ ] Can cancel edits and revert to original
+- [ ] Can duplicate maps with unique IDs
+- [ ] Can delete maps with confirmation
+- [ ] Can export tilesets and maps to YAML
+- [ ] Exported YAML matches expected format
+- [ ] Exported YAML can be re-imported successfully
+- [ ] Grid lines visible in edit mode
+- [ ] Canvas rendering is pixel-perfect (no blur)
+- [ ] No console errors during operation
+
+**Guidelines Compliance:**
+- [ ] All state-modifying operations use immutable updates
+- [ ] Canvas rendering disables image smoothing
+- [ ] Coordinates are rounded to integers
+- [ ] Stateful components are cached (useRef/useState)
+- [ ] Original state stored in useRef for cancel/revert
+- [ ] No object creation in render loops or hot paths
+
+---
+
+## Phase 10: Documentation and Cleanup
 
 **Goal:** Finalize documentation and clean up code.
 
 **Duration:** 1 hour
 
-### Step 9.1: Add JSDoc Comments
+### Step 10.1: Add JSDoc Comments
 
 Ensure all public methods have JSDoc comments.
 
-### Step 9.2: Create Usage Examples
+### Step 10.2: Create Usage Examples
 
 **File:** `GDD/FirstPersonView/AreaMap/UsageExamples.md`
 
@@ -1129,17 +1711,18 @@ After completing this implementation:
 
 ## Estimated Total Time
 
-- Phase 1: 1-2 hours
-- Phase 2: 3-4 hours
-- Phase 3: 1-2 hours
-- Phase 4: 2-3 hours
-- Phase 5: 2-3 hours
-- Phase 6: 1 hour
-- Phase 7: 3-4 hours
-- Phase 8: 2-3 hours
-- Phase 9: 1 hour
+- Phase 1: 1-2 hours (Core type definitions)
+- Phase 2: 3-4 hours (AreaMap class implementation)
+- Phase 3: 1-2 hours (Tileset registry)
+- Phase 4: 2-3 hours (ASCII parser)
+- Phase 5: 2-3 hours (Movement validation)
+- Phase 6: 1 hour (AreaMap registry)
+- Phase 7: 3-4 hours (Data loaders and YAML)
+- Phase 8: 2-3 hours (Integration testing)
+- Phase 9: 6-8 hours (Developer panel)
+- Phase 10: 1 hour (Documentation and cleanup)
 
-**Total: 16-24 hours** (2-3 days of focused work)
+**Total: 22-32 hours** (3-4 days of focused work)
 
 ---
 
