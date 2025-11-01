@@ -7,6 +7,9 @@ A multiplayer web-based game prototype with server-authoritative movement, built
 - **Server-Authoritative Movement**: All player movements are validated server-side via Cloud Functions
 - **Real-time Multiplayer**: Multiple players can join and see each other move in real-time
 - **Grid-based Movement**: Players move on a 2D grid with walls and obstacles
+- **Tactical Combat System**: Turn-based combat with unit positioning and abilities
+- **Area Map System**: Grid-based dungeon navigation with tilesets and interactive objects ([GDD Documentation](GDD/FirstPersonView/AreaMap/))
+- **Developer Tools**: Visual editors for creating tilesets and area maps
 - **Local Testing**: Full Firebase emulator support for local development
 
 ## Tech Stack

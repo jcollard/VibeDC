@@ -26,5 +26,6 @@ General improvments
  - Show animation of attack THEN show KO (or don't show numbers if unit is KO'd, or remove KO text from map)
  - Update weapons to have an "Attack Power" and "Attack Multiplier" rather than Physical Power / Physical Multiplier
  - Throughout we are missing a setter for wounds and the AI added a cast to any to set the private property. We should add a setter and refactor throughout
+ - Flicker blood decals in combat rather than red square: decals-0,1,2,3,4,5 are all blood decals
  
  

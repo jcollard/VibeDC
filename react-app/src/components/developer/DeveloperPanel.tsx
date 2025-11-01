@@ -12,6 +12,7 @@ interface DeveloperPanelProps {
   onOpenClassRegistry?: () => void;
   onOpenTilesetRegistry?: () => void;
   onOpenEncounterRegistry?: () => void;
+  onOpenAreaMapRegistry?: () => void;
   onOpenDebugPanel?: () => void;
 }
 
@@ -31,6 +32,7 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
   onOpenClassRegistry,
   onOpenTilesetRegistry,
   onOpenEncounterRegistry,
+  onOpenAreaMapRegistry,
   onOpenDebugPanel,
 }) => {
   const panels = [
@@ -103,6 +105,13 @@ export const DeveloperPanel: React.FC<DeveloperPanelProps> = ({
       shortcut: 'F2 → Encounter',
       available: !!onOpenEncounterRegistry,
       onClick: onOpenEncounterRegistry,
+    },
+    {
+      name: 'Area Map Registry',
+      description: 'Browse and edit first-person area maps',
+      shortcut: 'F2 → Area Map',
+      available: !!onOpenAreaMapRegistry,
+      onClick: onOpenAreaMapRegistry,
     },
     {
       name: 'Debug Panel',
