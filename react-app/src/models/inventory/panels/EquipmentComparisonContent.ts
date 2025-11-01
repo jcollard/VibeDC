@@ -44,22 +44,88 @@ export class EquipmentComparisonContent implements PanelContent {
     const titleText = `${currentName} vs ${comparisonName}`;
     const titleColor = '#ffff00'; // Yellow for title
 
-    FontAtlasRenderer.renderText(
-      ctx,
-      titleText,
-      region.x + padding,
-      y,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      titleColor
-    );
+    // Check if title fits on one line
+    const availableWidth = region.width - (padding * 2);
+    const titleWidth = FontAtlasRenderer.measureText(titleText, font);
 
-    y += lineSpacing + 2; // Extra spacing after title
+    if (titleWidth <= availableWidth) {
+      // Title fits on one line
+      FontAtlasRenderer.renderText(
+        ctx,
+        titleText,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        titleColor
+      );
+      y += lineSpacing + 2; // Extra spacing after title
+    } else {
+      // Title is too wide, wrap it
+      const line1 = currentName;
+      const line2 = `vs ${comparisonName}`;
 
-    // If no comparison item, just show the title with "??"
+      FontAtlasRenderer.renderText(
+        ctx,
+        line1,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        titleColor
+      );
+      y += lineSpacing;
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        line2,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        titleColor
+      );
+      y += lineSpacing + 2; // Extra spacing after title
+    }
+
+    // If no comparison item, show helper text (wrapped)
     if (!this.comparisonItem) {
+      const helperColor = '#888888'; // Grey for helper text
+      const helperLine1 = 'Hover over an';
+      const helperLine2 = 'item to compare';
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        helperLine1,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        helperColor
+      );
+
+      y += lineSpacing;
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        helperLine2,
+        region.x + padding,
+        y,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        helperColor
+      );
+
       ctx.restore();
       return;
     }
