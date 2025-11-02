@@ -14,7 +14,7 @@ import { CombatConstants } from '../CombatConstants';
 /**
  * Strategy mode - defines what the player is currently doing
  */
-type StrategyMode = 'normal' | 'moveSelection' | 'attackSelection';
+type StrategyMode = 'normal' | 'moveSelection' | 'attackSelection' | 'abilitySelection';
 
 /**
  * Player turn strategy - waits for player input to decide actions
@@ -70,6 +70,10 @@ export class PlayerTurnStrategy implements TurnStrategy {
   private selectedAttackTarget: Position | null = null;
   private attackRangeCachedPosition: Position | null = null; // Position used to calculate attack range
 
+  // Ability selection state (cached when entering ability mode)
+  private selectedAbilityId: string | null = null;
+  private abilityTargetPosition: Position | null = null;
+
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState, hasMoved: boolean = false, _hasActed: boolean = false): void {
     this.activeUnit = unit;
     this.activePosition = position;
@@ -84,6 +88,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.hoveredAttackTarget = null;
     this.selectedAttackTarget = null;
     this.attackRangeCachedPosition = null;
+    this.selectedAbilityId = null;
+    this.abilityTargetPosition = null;
 
     // Calculate movement range for this unit
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
@@ -117,6 +123,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.hoveredAttackTarget = null;
     this.selectedAttackTarget = null;
     this.attackRangeCachedPosition = null;
+    this.selectedAbilityId = null;
+    this.abilityTargetPosition = null;
   }
 
   update(
@@ -169,6 +177,11 @@ export class PlayerTurnStrategy implements TurnStrategy {
     // Handle attack mode clicks
     if (this.mode === 'attackSelection') {
       return this.handleAttackClick(clickedPosition, state);
+    }
+
+    // Handle ability mode clicks
+    if (this.mode === 'abilitySelection') {
+      return this.handleAbilityClick(clickedPosition);
     }
 
     // Normal mode: unit selection
@@ -280,6 +293,12 @@ export class PlayerTurnStrategy implements TurnStrategy {
       return;
     }
 
+    if (actionId === 'ability') {
+      // Show ability menu (handled by CombatLayoutManager)
+      this.pendingAction = { type: 'show-ability-menu' };
+      return;
+    }
+
     // Handle reset-move
     if (actionId === 'reset-move') {
       this.pendingAction = { type: 'reset-move' };
@@ -292,6 +311,9 @@ export class PlayerTurnStrategy implements TurnStrategy {
     }
     if (this.mode === 'attackSelection') {
       this.exitAttackMode();
+    }
+    if (this.mode === 'abilitySelection') {
+      this.exitAbilityMode();
     }
 
     // Convert actionId to TurnAction
@@ -720,5 +742,70 @@ export class PlayerTurnStrategy implements TurnStrategy {
    */
   getSelectedAttackTarget(): Position | null {
     return this.selectedAttackTarget;
+  }
+
+  /**
+   * Handle ability selection from ability menu
+   * Called when player selects an ability from AbilityMenuContent
+   */
+  handleAbilitySelected(abilityId: string): void {
+    // Store selected ability and enter ability targeting mode
+    this.selectedAbilityId = abilityId;
+    this.mode = 'abilitySelection';
+
+    // Exit other modes
+    if (this.mode === 'moveSelection') {
+      this.exitMoveMode();
+    }
+    if (this.mode === 'attackSelection') {
+      this.exitAttackMode();
+    }
+
+    // TODO Phase 2.5: Calculate ability range and show targeting overlay
+    // For now, abilities can target any unit (simplified targeting)
+  }
+
+  /**
+   * Handle ability menu cancellation
+   * Called when player clicks Cancel in AbilityMenuContent
+   */
+  handleAbilityCancelled(): void {
+    this.selectedAbilityId = null;
+    this.abilityTargetPosition = null;
+    this.mode = 'normal';
+  }
+
+  /**
+   * Exit ability selection mode
+   */
+  private exitAbilityMode(): void {
+    this.mode = 'normal';
+    this.selectedAbilityId = null;
+    this.abilityTargetPosition = null;
+  }
+
+  /**
+   * Handle click during ability mode
+   * Simplified targeting - allows clicking any unit for now
+   */
+  private handleAbilityClick(position: Position): PhaseEventResult {
+    if (!this.selectedAbilityId || !this.currentState) {
+      return { handled: true };
+    }
+
+    // Get target unit at position (optional - some abilities are self-targeting)
+    const targetUnit = this.currentState.unitManifest.getUnitAt(position);
+
+    // Execute ability
+    this.pendingAction = {
+      type: 'ability',
+      abilityId: this.selectedAbilityId,
+      target: position
+    };
+
+    // Exit ability mode
+    this.exitAbilityMode();
+
+    return { handled: true };
   }
 }
