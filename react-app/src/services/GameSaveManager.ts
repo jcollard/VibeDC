@@ -33,9 +33,14 @@ export class GameSaveManager {
         },
       };
 
-      // Serialize state
+      // Serialize state with version metadata
       const serialized = serializeCompleteGameState(stateWithSlotInfo);
-      const json = JSON.stringify(serialized);
+      const saveData = {
+        version: '1.0',
+        savedAt: new Date().toISOString(),
+        state: serialized,
+      };
+      const json = JSON.stringify(saveData);
 
       // Save to localStorage
       const key = this.getSaveKey(slotIndex);
@@ -69,9 +74,16 @@ export class GameSaveManager {
         return null;
       }
 
-      // Deserialize state
-      const serialized = JSON.parse(json);
-      const state = deserializeCompleteGameState(serialized);
+      // Deserialize and validate version
+      const saveData = JSON.parse(json);
+
+      // Validate version
+      if (!saveData.version || saveData.version !== '1.0') {
+        console.error(`[GameSaveManager] Incompatible save version: ${saveData.version || 'unknown'} (expected 1.0)`);
+        return null;
+      }
+
+      const state = deserializeCompleteGameState(saveData.state);
 
       if (!state) {
         console.error(`[GameSaveManager] Failed to deserialize slot ${slotIndex}`);
@@ -174,11 +186,14 @@ export class GameSaveManager {
       }
 
       // Parse just the metadata without full deserialization
-      const data = JSON.parse(json);
+      const saveData = JSON.parse(json);
+
+      // Handle both new versioned format and legacy format
+      const data = saveData.state || saveData;
 
       return {
         slotIndex,
-        savedAt: new Date(data.saveSlotInfo?.savedAt || Date.now()),
+        savedAt: new Date(data.saveSlotInfo?.savedAt || saveData.savedAt || Date.now()),
         playtime: data.saveSlotInfo?.playtime || 0,
         currentView: data.currentView,
         currentMapId: data.explorationState?.currentMapId || 'unknown',
