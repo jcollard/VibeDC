@@ -289,6 +289,14 @@ export const PartyManagementView: React.FC = () => {
     bottomPanelManager.setContent(new EmptyPanelContent());
   }, [bottomPanelManager]);
 
+  // Reset bottom panel when exiting spend-xp mode
+  useEffect(() => {
+    if (panelMode === 'inventory') {
+      // Clear the bottom panel when returning to inventory mode
+      bottomPanelManager.setContent(new EmptyPanelContent());
+    }
+  }, [panelMode, bottomPanelManager]);
+
   // Track party member changes (equipment updates) to trigger re-renders
   const [partyMemberVersion, setPartyMemberVersion] = useState(0);
 
