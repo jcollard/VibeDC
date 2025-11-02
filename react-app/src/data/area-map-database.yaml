@@ -254,4 +254,25 @@ areas:
             oneTime: false
             description: ''
         description: New event area
-        color: '#20B2AA'
+  - id: new-phlegm
+    name: New Phlegm
+    description: A new area map
+    tilesetId: dungeon-brown-brick
+    grid: |-
+      ##########
+      #........#
+      #........#
+      #........#
+      #........#
+      #........#
+      #........#
+      #........#
+      #........#
+      ##########
+    playerSpawn:
+      x: 5
+      'y': 5
+      direction: North
+    interactiveObjects: []
+    npcSpawns: []
+    encounterZones: []

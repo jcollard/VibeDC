@@ -107,6 +107,10 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [newMapHeight, setNewMapHeight] = useState(10);
   const [newMapTilesetId, setNewMapTilesetId] = useState('');
 
+  // Map name editing state
+  const [isEditingMapName, setIsEditingMapName] = useState(false);
+  const [editingMapName, setEditingMapName] = useState('');
+
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
 
@@ -241,6 +245,30 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
 
   const handleCancelCreateNewMap = () => {
     setIsCreatingNewMap(false);
+  };
+
+  const handleStartEditMapName = () => {
+    if (!editedMap) return;
+    setEditingMapName(editedMap.name);
+    setIsEditingMapName(true);
+  };
+
+  const handleSaveMapName = () => {
+    if (!editedMap || !editingMapName.trim()) {
+      setIsEditingMapName(false);
+      return;
+    }
+
+    setEditedMap({
+      ...editedMap,
+      name: editingMapName.trim(),
+    });
+    setIsEditingMapName(false);
+  };
+
+  const handleCancelEditMapName = () => {
+    setIsEditingMapName(false);
+    setEditingMapName('');
   };
 
   // Helper to deserialize event areas from JSON to class instances
@@ -1536,11 +1564,106 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             <>
               {/* Map info */}
               <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #666' }}>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{selectedMap.name}</div>
-                <div style={{ fontSize: '11px', color: '#aaa' }}>{selectedMap.description}</div>
-                <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                  Size: {selectedMap.width}x{selectedMap.height} • Tileset: {selectedMap.tilesetId}
-                </div>
+                {isEditing && editedMap ? (
+                  <>
+                    {isEditingMapName ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                        <input
+                          type="text"
+                          value={editingMapName}
+                          onChange={(e) => setEditingMapName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveMapName();
+                            } else if (e.key === 'Escape') {
+                              handleCancelEditMapName();
+                            }
+                          }}
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            background: 'rgba(255,255,255,0.1)',
+                            border: '2px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            fontSize: '16px',
+                            fontFamily: 'monospace',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                        <button
+                          onClick={handleSaveMapName}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(76, 175, 80, 0.3)',
+                            border: '1px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                          title="Save (Enter)"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={handleCancelEditMapName}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(244, 67, 54, 0.3)',
+                            border: '1px solid rgba(244, 67, 54, 0.6)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                          title="Cancel (Escape)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={handleStartEditMapName}
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          marginBottom: '8px',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '4px',
+                          border: '2px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                          e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.borderColor = 'transparent';
+                        }}
+                        title="Click to edit map name"
+                      >
+                        {editedMap.name}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '11px', color: '#aaa' }}>{editedMap.description}</div>
+                    <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                      Size: {editedMap.width}x{editedMap.height} • Tileset: {editedMap.tilesetId}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{selectedMap.name}</div>
+                    <div style={{ fontSize: '11px', color: '#aaa' }}>{selectedMap.description}</div>
+                    <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                      Size: {selectedMap.width}x{selectedMap.height} • Tileset: {selectedMap.tilesetId}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Edit controls */}
