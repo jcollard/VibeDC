@@ -34,7 +34,7 @@ export const Cell: React.FC<CellProps> = ({ worldX, worldZ, tileType, textures }
   // tileType can be either old format ('#', '+', '.') or new format ('wall', 'door', 'floor')
   const isWall = tileType === '#' || tileType === 'wall';
   const isDoor = tileType === '+' || tileType === 'door';
-  const hasWalls = isWall || isDoor; // Both walls and doors render vertical surfaces
+  const hasWalls = isWall || isDoor; // Walls and doors both render all 6 sides
 
   const wallColor = isWall ? '#444444' : (isDoor ? '#8B4513' : '#666666');
   const floorColor = isWall ? '#222222' : '#333333';
@@ -73,7 +73,7 @@ export const Cell: React.FC<CellProps> = ({ worldX, worldZ, tileType, textures }
     );
   }
 
-  // Wall cell - render all 6 sides
+  // Wall/Door cell - render all 6 sides
   return (
     <group position={[posX, 0, posZ]}>
       {/* Floor */}

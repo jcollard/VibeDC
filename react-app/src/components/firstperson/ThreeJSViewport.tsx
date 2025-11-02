@@ -238,8 +238,9 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
                 ceiling: spriteCoords,
               };
 
-              // Walls get wall textures on all 4 sides
-              if (cell.behavior === 'wall') {
+              // Walls and doors get wall textures on all 4 sides
+              // Doors will show texture on vertical planes but remain passable
+              if (cell.behavior === 'wall' || cell.behavior === 'door') {
                 textureMapping.wallFront = spriteCoords;
                 textureMapping.wallBack = spriteCoords;
                 textureMapping.wallLeft = spriteCoords;
