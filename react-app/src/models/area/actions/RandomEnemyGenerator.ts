@@ -168,8 +168,11 @@ export function generateRandomEnemy(partyStatRanges?: PartyStatRanges): EnemyDef
   // Pick a random sprite
   const sprite = SPRITE_DEFINITIONS[Math.floor(Math.random() * SPRITE_DEFINITIONS.length)];
 
-  // Pick a random name from the sprite's names
-  const name = sprite.names[Math.floor(Math.random() * sprite.names.length)];
+  // Pick a random name from the sprite's names (limit to 12 characters)
+  let name = sprite.names[Math.floor(Math.random() * sprite.names.length)];
+  if (name.length > 12) {
+    name = name.substring(0, 12);
+  }
 
   // Determine unit type based on tags
   const unitType: 'monster' | 'humanoid' = sprite.tags.includes('humanoid') ? 'humanoid' : 'monster';
@@ -218,8 +221,9 @@ export function generateRandomEnemy(partyStatRanges?: PartyStatRanges): EnemyDef
   const baseCourage = 5 + Math.floor(Math.random() * 10); // 5-14
   const baseAttunement = 5 + Math.floor(Math.random() * 10); // 5-14
 
-  // XP and gold based on stats
-  const xpValue = Math.floor((baseHealth + basePhysicalPower + baseMagicPower) / 3);
+  // XP and gold based on stats (with tripled random range)
+  const baseXP = Math.floor((baseHealth + basePhysicalPower + baseMagicPower) / 3);
+  const xpValue = baseXP + Math.floor(Math.random() * (baseXP * 2 + 1)); // Range: baseXP to baseXP * 3
   const goldValue = Math.floor(xpValue / 2) + Math.floor(Math.random() * 10);
 
   // Generate unique ID
