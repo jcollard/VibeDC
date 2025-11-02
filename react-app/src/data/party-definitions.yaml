@@ -16,6 +16,7 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 10
     spriteId: "crystalwarriors-14"
+    learnedAbilityIds: ["leg-strike-001"]
     reactionAbilityId: "parry-001"
     passiveAbilityId: "meat-shield-001"
     movementAbilityId: "journeyman-001"
@@ -69,6 +70,7 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 20
     spriteId: "crystalwarriors-10"
+    learnedAbilityIds: ["heal-001", "harm-001", "strength-001"]
     leftHandId: "heavy-crossbow-001"
     headId: "wizards-hat-001"
     bodyId: "wizards-robe-001"
@@ -91,6 +93,7 @@ partyMembers:
     baseCourage: 12
     baseAttunement: 10
     spriteId: "crystalwarriors-4"
+    learnedAbilityIds: ["throw-stone-001"]
     leftHandId: "steel-dagger-001"
     rightHandId: "steel-dagger-001"
     bodyId: "leather-armor-001"
