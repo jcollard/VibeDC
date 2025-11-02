@@ -7,6 +7,7 @@ import { EquipmentBrowser } from './EquipmentBrowser';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { UnitClass } from '../../models/combat/UnitClass';
 import { Equipment } from '../../models/combat/Equipment';
+import { EquipmentRegistry } from '../../utils/EquipmentRegistry';
 import { TagFilter } from './TagFilter';
 
 interface EnemyRegistryPanelProps {
@@ -261,6 +262,23 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
       }
       if (enemy.description) {
         yaml += `    description: "${enemy.description}"\n`;
+      }
+
+      // XP and Gold rewards
+      yaml += `    xpValue: ${enemy.xpValue}\n`;
+      yaml += `    goldValue: ${enemy.goldValue}\n`;
+
+      // Loot table
+      if (enemy.lootTable && enemy.lootTable.entries.length > 0) {
+        yaml += `    lootTable:\n`;
+        yaml += `      entries:\n`;
+        for (const entry of enemy.lootTable.entries) {
+          yaml += `        - equipmentId: "${entry.equipmentId}"\n`;
+          yaml += `          dropRate: ${entry.dropRate}\n`;
+          if (entry.quantity && entry.quantity > 1) {
+            yaml += `          quantity: ${entry.quantity}\n`;
+          }
+        }
       }
 
       yaml += '\n';
@@ -1139,6 +1157,231 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                   ) : (
                     <div style={{ color: '#fff' }}>{selectedEnemy.baseAttunement}</div>
                   )}
+                </div>
+              </div>
+
+              {/* Rewards Section */}
+              <div style={{
+                background: 'rgba(255, 193, 7, 0.1)',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                borderRadius: '4px',
+                padding: '12px',
+                marginTop: '12px',
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'rgba(255, 193, 7, 0.9)' }}>
+                  Rewards
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11px' }}>
+                  {/* XP Value */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>XP Value:</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedEnemy?.xpValue || 0}
+                        onChange={(e) => handleFieldChange('xpValue', Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ color: '#fff' }}>{selectedEnemy.xpValue}</div>
+                    )}
+                  </div>
+
+                  {/* Gold Value */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Gold Value:</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedEnemy?.goldValue || 0}
+                        onChange={(e) => handleFieldChange('goldValue', Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ color: '#fff' }}>{selectedEnemy.goldValue}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Loot Table */}
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                    Loot Table:
+                  </label>
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '3px',
+                    padding: '6px',
+                    minHeight: '30px',
+                  }}>
+                    {(isEditing ? editedEnemy?.lootTable?.entries : selectedEnemy.lootTable?.entries)?.map((entry, index) => {
+                      const equipment = EquipmentRegistry.getById(entry.equipmentId);
+                      return (
+                        <div
+                          key={index}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '4px 0',
+                            borderBottom: '1px solid rgba(255, 193, 7, 0.2)',
+                            fontSize: '10px',
+                          }}
+                        >
+                          <span>
+                            {equipment ? equipment.name : entry.equipmentId}
+                            {entry.quantity && entry.quantity > 1 ? ` x${entry.quantity}` : ''}
+                          </span>
+                          <span style={{ color: '#aaa' }}>
+                            {entry.dropRate}%
+                            {isEditing && (
+                              <button
+                                onClick={() => {
+                                  if (!editedEnemy?.lootTable) return;
+                                  const newEntries = editedEnemy.lootTable.entries.filter((_, i) => i !== index);
+                                  handleFieldChange('lootTable', {
+                                    entries: newEntries
+                                  });
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#f44336',
+                                  cursor: 'pointer',
+                                  padding: '0 0 0 8px',
+                                  fontSize: '14px',
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    }) || (
+                      <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>No loot table</div>
+                    )}
+                    {isEditing && (
+                      <div style={{ marginTop: '6px', display: 'flex', gap: '4px', fontSize: '10px' }}>
+                        <select
+                          id="loot-equipment-select"
+                          style={{
+                            flex: 1,
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          <option value="">Select equipment...</option>
+                          {EquipmentRegistry.getAll().map(eq => (
+                            <option key={eq.id} value={eq.id}>
+                              {eq.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          id="loot-drop-rate"
+                          type="number"
+                          placeholder="Drop %"
+                          min="0"
+                          max="100"
+                          defaultValue="10"
+                          style={{
+                            width: '60px',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                        <input
+                          id="loot-quantity"
+                          type="number"
+                          placeholder="Qty"
+                          min="1"
+                          defaultValue="1"
+                          style={{
+                            width: '50px',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const equipmentSelect = document.getElementById('loot-equipment-select') as HTMLSelectElement;
+                            const dropRateInput = document.getElementById('loot-drop-rate') as HTMLInputElement;
+                            const quantityInput = document.getElementById('loot-quantity') as HTMLInputElement;
+
+                            const equipmentId = equipmentSelect.value;
+                            const dropRate = Number(dropRateInput.value);
+                            const quantity = Number(quantityInput.value);
+
+                            if (!equipmentId || !dropRate) return;
+
+                            const currentLootTable = editedEnemy?.lootTable || { entries: [] };
+                            const newEntry = {
+                              equipmentId,
+                              dropRate,
+                              ...(quantity > 1 ? { quantity } : {}),
+                            };
+
+                            handleFieldChange('lootTable', {
+                              entries: [...currentLootTable.entries, newEntry]
+                            });
+
+                            // Reset form
+                            equipmentSelect.value = '';
+                            dropRateInput.value = '10';
+                            quantityInput.value = '1';
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(255, 193, 7, 0.3)',
+                            border: '1px solid rgba(255, 193, 7, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 
