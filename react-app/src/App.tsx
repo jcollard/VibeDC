@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, useParams } from 'react-router-dom'
 import { Game } from './components/Game'
 import { GameView } from './components/game/GameView'
 import { CombatViewRoute } from './components/combat/CombatViewRoute'
+import { InventoryViewRoute } from './components/inventory/InventoryViewRoute'
 import { TitleScreen } from './components/TitleScreen'
 import { DevRoute } from './components/DevRoute'
 import { FirstPersonView } from './components/firstperson/FirstPersonView'
@@ -47,6 +48,7 @@ function App() {
         {import.meta.env.DEV && (
           <>
             <Route path="/combat/:encounterId" element={<CombatViewRoute />} />
+            <Route path="/inventory" element={<InventoryViewRoute />} />
             <Route path="/title" element={<TitleScreen />} />
           </>
         )}

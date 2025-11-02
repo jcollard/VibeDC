@@ -198,32 +198,62 @@ export class PartyMemberRegistry {
     // Equip items
     if (definition.leftHandId) {
       const equipment = Equipment.getById(definition.leftHandId);
-      if (equipment) unit.equipLeftHand(equipment);
-      else console.warn(`Left hand equipment '${definition.leftHandId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipLeftHand(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip left hand for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Left hand equipment '${definition.leftHandId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.rightHandId) {
       const equipment = Equipment.getById(definition.rightHandId);
-      if (equipment) unit.equipRightHand(equipment);
-      else console.warn(`Right hand equipment '${definition.rightHandId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipRightHand(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip right hand for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Right hand equipment '${definition.rightHandId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.headId) {
       const equipment = Equipment.getById(definition.headId);
-      if (equipment) unit.equipHead(equipment);
-      else console.warn(`Head equipment '${definition.headId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipHead(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip head for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Head equipment '${definition.headId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.bodyId) {
       const equipment = Equipment.getById(definition.bodyId);
-      if (equipment) unit.equipBody(equipment);
-      else console.warn(`Body equipment '${definition.bodyId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipBody(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip body for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Body equipment '${definition.bodyId}' not found for party member '${id}'`);
+      }
     }
 
     if (definition.accessoryId) {
       const equipment = Equipment.getById(definition.accessoryId);
-      if (equipment) unit.equipAccessory(equipment);
-      else console.warn(`Accessory equipment '${definition.accessoryId}' not found for party member '${id}'`);
+      if (equipment) {
+        const result = unit.equipAccessory(equipment);
+        if (!result.success) {
+          console.warn(`Failed to equip accessory for party member '${id}': ${result.message}`);
+        }
+      } else {
+        console.warn(`Accessory equipment '${definition.accessoryId}' not found for party member '${id}'`);
+      }
     }
 
     // Add experience if specified
@@ -341,5 +371,87 @@ export class PartyMemberRegistry {
    */
   static count(): number {
     return this.registry.size;
+  }
+
+  /**
+   * Update equipment for a party member definition
+   * @param id The party member ID
+   * @param slot The equipment slot to update
+   * @param equipmentId The equipment ID to set (null to remove)
+   * @returns true if updated successfully, false if party member not found
+   */
+  static updateEquipment(
+    id: string,
+    slot: 'leftHand' | 'rightHand' | 'head' | 'body' | 'accessory',
+    equipmentId: string | null
+  ): boolean {
+    const definition = this.registry.get(id);
+    if (!definition) {
+      return false;
+    }
+
+    // Update the appropriate equipment slot
+    switch (slot) {
+      case 'leftHand':
+        definition.leftHandId = equipmentId ?? undefined;
+        break;
+      case 'rightHand':
+        definition.rightHandId = equipmentId ?? undefined;
+        break;
+      case 'head':
+        definition.headId = equipmentId ?? undefined;
+        break;
+      case 'body':
+        definition.bodyId = equipmentId ?? undefined;
+        break;
+      case 'accessory':
+        definition.accessoryId = equipmentId ?? undefined;
+        break;
+    }
+
+    return true;
+  }
+
+  /**
+   * Update learned abilities and XP for a party member definition from a HumanoidUnit
+   * @param id The party member ID
+   * @param unit The HumanoidUnit with updated abilities and XP
+   * @returns true if updated successfully, false if party member not found
+   */
+  static updateFromUnit(id: string, unit: HumanoidUnit): boolean {
+    const definition = this.registry.get(id);
+    if (!definition) {
+      return false;
+    }
+
+    // Update learned abilities
+    definition.learnedAbilityIds = Array.from(unit.learnedAbilities).map(ability => ability.id);
+
+    // Update assigned abilities
+    definition.reactionAbilityId = unit.reactionAbility?.id;
+    definition.passiveAbilityId = unit.passiveAbility?.id;
+    definition.movementAbilityId = unit.movementAbility?.id;
+
+    // Update classes
+    definition.unitClassId = unit.unitClass.id;
+    definition.secondaryClassId = unit.secondaryClass?.id ?? undefined;
+
+    // Update XP values
+    definition.totalExperience = unit.totalExperience;
+
+    // Convert Maps to Records for storage
+    const classExpRecord: Record<string, number> = {};
+    unit.classExperience.forEach((value, key) => {
+      classExpRecord[key] = value;
+    });
+    definition.classExperience = classExpRecord;
+
+    const classExpSpentRecord: Record<string, number> = {};
+    unit.classExperienceSpent.forEach((value, key) => {
+      classExpSpentRecord[key] = value;
+    });
+    definition.classExperienceSpent = classExpSpentRecord;
+
+    return true;
   }
 }

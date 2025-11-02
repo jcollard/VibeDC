@@ -274,9 +274,12 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
               this.originalBottomPanelContent = bottomPanelManager.content;
             }
 
+            // Get the unit from the top panel content
+            const unit = topContent.getUnit();
+
             // Create or reuse cached ability panel
             if (!this.cachedAbilityPanel) {
-              this.cachedAbilityPanel = new AbilityInfoContent(hoverResult.item);
+              this.cachedAbilityPanel = new AbilityInfoContent(hoverResult.item, unit);
             } else {
               // Update existing panel with new ability
               this.cachedAbilityPanel.setAbility(hoverResult.item);
