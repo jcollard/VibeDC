@@ -361,10 +361,15 @@ export const PartyManagementView: React.FC = () => {
           (content as any).currentView = 'abilities';
         }
 
+        // Restore selected ability slot if in set-abilities mode
+        if (panelMode === 'set-abilities' && setAbilitiesSlotTypeRef.current) {
+          (content as any).setSelectedEquipmentSlot(setAbilitiesSlotTypeRef.current);
+        }
+
         topInfoPanelManager.setContent(content);
       }
     }
-  }, [topInfoPanelManager, selectedPartyMemberIndex, partyMemberVersion]);
+  }, [topInfoPanelManager, selectedPartyMemberIndex, partyMemberVersion, panelMode]);
 
   // Track canvas display style for integer scaling
   const [canvasDisplayStyle, setCanvasDisplayStyle] = useState<{ width: string; height: string }>({
@@ -1628,10 +1633,8 @@ export const PartyManagementView: React.FC = () => {
                 // Show confirmation message
                 addLogMessage(`Set ${slotType} ability to ${ability.name}`);
 
-                // Return to inventory mode
-                setPanelMode('inventory');
-
                 // Clear cached references to force recreation from updated registry
+                // This will refresh both the top info panel and the set-abilities main panel
                 selectedMemberRef.current = null;
                 setAbilitiesMainContentRef.current = null;
 
