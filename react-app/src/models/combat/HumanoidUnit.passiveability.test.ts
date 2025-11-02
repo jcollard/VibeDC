@@ -2,7 +2,6 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { HumanoidUnit } from './HumanoidUnit';
 import { UnitClass } from './UnitClass';
 import { CombatAbility } from './CombatAbility';
-import type { AbilityEffect } from './CombatAbility';
 
 describe('HumanoidUnit - Passive Ability Integration', () => {
   let testUnit: HumanoidUnit;

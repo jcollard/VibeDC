@@ -3,7 +3,7 @@ import type { CombatAbility, AbilityEffect } from '../CombatAbility';
 import type { CombatState } from '../CombatState';
 import type { Position } from '../../../types';
 import type { CinematicSequence } from '../CinematicSequence';
-import type { StatModifier } from '../StatModifier';
+import type { StatModifier, StatType } from '../StatModifier';
 
 /**
  * Context information for ability execution
@@ -165,12 +165,13 @@ export class AbilityExecutor {
   /**
    * Get total mana cost of ability
    */
-  private static getManaCost(ability: CombatAbility): number {
-    // Check for mana-cost effect type
-    const manaCostEffect = ability.effects?.find(e => e.type === 'mana-cost');
-    if (manaCostEffect) {
-      return typeof manaCostEffect.value === 'number' ? manaCostEffect.value : 0;
-    }
+  private static getManaCost(_ability: CombatAbility): number {
+    // Note: mana-cost is not currently a valid EffectType
+    // This code is disabled until mana cost system is implemented
+    // const manaCostEffect = ability.effects?.find(e => e.type === 'mana-cost');
+    // if (manaCostEffect) {
+    //   return typeof manaCostEffect.value === 'number' ? manaCostEffect.value : 0;
+    // }
 
     // Default: no cost
     return 0;
@@ -331,7 +332,7 @@ export class AbilityExecutor {
 
     const modifier: StatModifier = {
       id: `ability-${context.caster.name}-${Date.now()}`,
-      stat: effect.params.stat,
+      stat: effect.params.stat as StatType,
       value: typeof effect.value === 'number' ? effect.value : 0,
       duration: effect.duration ?? -1,
       source: 'ability',
@@ -418,8 +419,8 @@ export class AbilityExecutor {
    */
   private static calculateDamageValue(
     effect: AbilityEffect,
-    caster: CombatUnit,
-    isMagical: boolean
+    _caster: CombatUnit,
+    _isMagical: boolean
   ): number {
     if (typeof effect.value === 'number') {
       return Math.floor(effect.value);
@@ -435,7 +436,7 @@ export class AbilityExecutor {
    */
   private static calculateHealValue(
     effect: AbilityEffect,
-    caster: CombatUnit
+    _caster: CombatUnit
   ): number {
     if (typeof effect.value === 'number') {
       return Math.floor(effect.value);
@@ -449,7 +450,7 @@ export class AbilityExecutor {
    * Calculate physical hit chance
    */
   private static calculatePhysicalHitChance(
-    attacker: CombatUnit,
+    _attacker: CombatUnit,
     defender: CombatUnit
   ): number {
     // Simplified hit calculation
@@ -462,7 +463,7 @@ export class AbilityExecutor {
    * Calculate magic hit chance
    */
   private static calculateMagicHitChance(
-    attacker: CombatUnit,
+    _attacker: CombatUnit,
     defender: CombatUnit
   ): number {
     // Simplified hit calculation

@@ -496,6 +496,7 @@ export const GameView: React.FC<GameViewProps> = ({
             mapId={gameState.explorationState.currentMapId}
             onStartCombat={handleStartCombat}
             onOpenPartyManagement={() => handleOpenPartyManagement('exploration')}
+            onOpenGuildHall={handleTransitionToGuildHall}
             onExplorationStateChange={handleExplorationStateChange}
             resourceManager={resourceManager}
             initialState={gameState.explorationState}

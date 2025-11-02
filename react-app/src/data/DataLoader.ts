@@ -81,6 +81,7 @@ interface ClassData {
   multipliers?: Record<string, number>;
   requirements?: Record<string, number>;
   allowedEquipmentTypes?: string[];
+  canDualWield?: boolean;
   starterConfig?: {
     baseHealth: number;
     baseMana: number;
@@ -187,7 +188,8 @@ export function loadClasses(): void {
       requirements,
       classData.id,
       classData.allowedEquipmentTypes,
-      classData.starterConfig
+      classData.starterConfig,
+      classData.canDualWield ?? false
     );
   }
 

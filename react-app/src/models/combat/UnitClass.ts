@@ -40,6 +40,12 @@ export class UnitClass {
   public readonly allowedEquipmentTypes: readonly string[];
 
   /**
+   * Whether this class can naturally dual-wield weapons
+   * If true, units of this class can equip two weapons without requiring a passive ability
+   */
+  public readonly canDualWield: boolean;
+
+  /**
    * Starter configuration for creating new characters with this class
    * Defines base stats and initial equipment for new characters
    */
@@ -117,7 +123,8 @@ export class UnitClass {
       reactionAbilityId?: string;
       passiveAbilityId?: string;
       movementAbilityId?: string;
-    }
+    },
+    canDualWield: boolean = false
   ) {
     this.id = id ?? crypto.randomUUID();
     this.name = name;
@@ -128,6 +135,7 @@ export class UnitClass {
     this.requirements = requirements;
     this.allowedEquipmentTypes = allowedEquipmentTypes ?? [];
     this.starterConfig = starterConfig;
+    this.canDualWield = canDualWield;
 
     // Register this class in the registry
     UnitClass.registry.set(this.id, this);

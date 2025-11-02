@@ -46,8 +46,6 @@ export class AbilityMenuContent implements PanelContent {
   private hoveredButtonIndex: number | null = null;
   private buttonsDisabled: boolean = false;
   private currentUnit: CombatUnit | null = null;
-  private lastRegionWidth: number = 0;
-  private lastRegionHeight: number = 0;
 
   constructor(config: AbilityMenuConfig, unit: CombatUnit) {
     this.config = config;
@@ -97,10 +95,12 @@ export class AbilityMenuContent implements PanelContent {
   private getManaCost(ability: CombatAbility): number {
     if (!ability.effects) return 0;
 
-    const manaCostEffect = ability.effects.find(e => e.type === 'mana-cost');
-    if (manaCostEffect) {
-      return typeof manaCostEffect.value === 'number' ? manaCostEffect.value : 0;
-    }
+    // Note: mana-cost is not currently a valid EffectType
+    // This code is disabled until mana cost system is implemented
+    // const manaCostEffect = ability.effects.find(e => e.type === 'mana-cost');
+    // if (manaCostEffect) {
+    //   return typeof manaCostEffect.value === 'number' ? manaCostEffect.value : 0;
+    // }
 
     return 0;
   }
@@ -153,7 +153,7 @@ export class AbilityMenuContent implements PanelContent {
 
     for (const word of words) {
       const testLine = currentLine ? `${currentLine} ${word}` : word;
-      const width = FontAtlasRenderer.measureText(testLine, fontId).width;
+      const width = FontAtlasRenderer.measureTextByFontId(testLine, fontId);
 
       if (width <= maxWidth) {
         currentLine = testLine;
@@ -179,10 +179,6 @@ export class AbilityMenuContent implements PanelContent {
     fontAtlasImage: HTMLImageElement | null
   ): void {
     if (!fontAtlasImage) return;
-
-    // Cache region dimensions for bounds checking
-    this.lastRegionWidth = region.width;
-    this.lastRegionHeight = region.height;
 
     let currentY = region.y + this.config.padding;
 
@@ -265,7 +261,7 @@ export class AbilityMenuContent implements PanelContent {
   }
 
   handleClick(
-    relativeX: number,
+    _relativeX: number,
     relativeY: number
   ): PanelClickResult {
     // Ignore clicks if buttons are disabled
@@ -306,7 +302,7 @@ export class AbilityMenuContent implements PanelContent {
     return { type: 'ability-selected', abilityId: button.id };
   }
 
-  handleHover(relativeX: number, relativeY: number): void {
+  handleHover(_relativeX: number, relativeY: number): void {
     // Calculate which button is being hovered
     const buttonIndex = Math.floor(
       (relativeY - this.config.padding - this.config.lineSpacing) / this.config.lineSpacing
