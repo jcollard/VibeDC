@@ -535,6 +535,56 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     return () => window.removeEventListener('keydown', handleDebugToggle);
   }, []);
 
+  // Expose developer teleport function
+  useEffect(() => {
+    // @ts-ignore - Developer function
+    window.teleport = (mapId: string, x: number, y: number) => {
+      console.log(`[FirstPersonView] Teleporting to map '${mapId}' at position (${x}, ${y})`);
+
+      const newMap = AreaMapRegistry.getById(mapId);
+      if (!newMap) {
+        console.error(`[FirstPersonView] Map '${mapId}' not found in registry`);
+        return;
+      }
+
+      const targetTile = newMap.getTile(x, y);
+      if (!targetTile) {
+        console.error(`[FirstPersonView] Position (${x}, ${y}) is out of bounds for map '${mapId}'`);
+        return;
+      }
+
+      if (!targetTile.walkable) {
+        console.warn(`[FirstPersonView] Position (${x}, ${y}) is not walkable (tile type: ${targetTile.behavior})`);
+      }
+
+      setFirstPersonState(prev => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          map: newMap,
+          playerX: x,
+          playerY: y,
+          exploredTiles: new Set(getRevealedTiles(x, y)),
+        };
+      });
+
+      // Update game state to match
+      setGameState(prev => ({
+        ...prev,
+        currentMapId: mapId,
+        playerPosition: { x, y },
+      }));
+
+      combatLogManager.addMessage(`Teleported to ${newMap.name}`);
+    };
+
+    return () => {
+      // @ts-ignore
+      delete window.teleport;
+    };
+  }, [combatLogManager]);
+
   // Helper function to process events after movement
   const processMovementEvents = useCallback((previousX: number, previousY: number, newX: number, newY: number) => {
     if (!firstPersonState) return;
