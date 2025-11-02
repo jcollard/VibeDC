@@ -77,7 +77,7 @@ const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216 pixels (18 tiles)
 export const CombatView: React.FC<CombatViewProps> = ({
   encounter,
   combatState: externalCombatState,
-  onCombatEnd: _onCombatEnd, // TODO: Phase 2 - Wire up combat end callback
+  onCombatEnd,
   resourceManager: _resourceManager, // TODO: Phase 1 - Use shared resource manager
   partyState: _partyState // TODO: Phase 4 - Initialize units from party state
 }) => {
@@ -138,6 +138,16 @@ export const CombatView: React.FC<CombatViewProps> = ({
       phaseHandlerRef.current = new VictoryPhaseHandler(activeEncounter.rewards);
     }
   }, [combatState.phase, uiStateManager, phaseHandlerVersion, activeEncounter]);
+
+  // Check for combat end signal and trigger callback
+  useEffect(() => {
+    if (combatState.shouldEndCombat && onCombatEnd) {
+      // Determine victory/defeat based on current phase
+      const victory = combatState.phase === 'victory';
+      console.log(`[CombatView] Combat ending - Victory: ${victory}`);
+      onCombatEnd(victory);
+    }
+  }, [combatState.shouldEndCombat, combatState.phase, onCombatEnd]);
 
   // Expose developer mode functions to window (for testing)
   useEffect(() => {

@@ -199,21 +199,23 @@ export class VictoryPhaseHandler extends PhaseBase {
     return { handled: false };
   }
 
-  private handleContinue(_state: CombatState): CombatState | null {
-    // TODO: Phase 7 - Return to world view or next encounter
-    // For now, log and return null
-    console.log("[VictoryPhaseHandler] Continue clicked - returning to world (not yet implemented)");
+  private handleContinue(state: CombatState): CombatState | null {
+    console.log("[VictoryPhaseHandler] Continue clicked - returning to exploration");
     console.log("[VictoryPhaseHandler] Selected items:",
       Array.from(this.selectedItemIndices).map(i => this.rewards.items[i].name)
     );
 
+    // TODO: Phase 7 - Apply rewards to party state
     // In the future, this will:
     // 1. Award XP to party members
     // 2. Add gold to party inventory
     // 3. Add selected items to party inventory
-    // 4. Navigate back to world view
 
-    return null;
+    // Signal to CombatView that combat should end
+    return {
+      ...state,
+      shouldEndCombat: true,
+    };
   }
 
   private isPointInBounds(
