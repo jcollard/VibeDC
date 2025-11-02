@@ -112,6 +112,13 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [isEditingMapName, setIsEditingMapName] = useState(false);
   const [editingMapName, setEditingMapName] = useState('');
 
+  // Dungeon generation parameters
+  const [showDungeonSettings, setShowDungeonSettings] = useState(false);
+  const [dungeonRoomAttempts, setDungeonRoomAttempts] = useState(50);
+  const [dungeonMinRoomSize, setDungeonMinRoomSize] = useState(3);
+  const [dungeonMaxRoomSize, setDungeonMaxRoomSize] = useState(8);
+  const [dungeonExtraConnections, setDungeonExtraConnections] = useState(true);
+
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
 
@@ -275,11 +282,14 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const handleGenerateDungeon = () => {
     if (!editedMap) return;
 
-    const confirmed = confirm(
-      'This will replace the current map layout with a randomly generated dungeon. This action cannot be undone. Continue?'
-    );
+    // Show settings modal instead of generating immediately
+    setShowDungeonSettings(true);
+  };
 
-    if (!confirmed) return;
+  const handleConfirmGenerateDungeon = () => {
+    if (!editedMap) return;
+
+    setShowDungeonSettings(false);
 
     const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
     if (!tileset) {
@@ -287,24 +297,28 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
       return;
     }
 
-    // Create dungeon generator
+    // Validate and clamp max room size
+    const clampedMaxRoomSize = Math.min(
+      dungeonMaxRoomSize,
+      Math.floor(Math.min(editedMap.width, editedMap.height) / 2)
+    );
+
+    // Create dungeon generator with user-specified parameters
     const generator = new DungeonGenerator({
       width: editedMap.width,
       height: editedMap.height,
-      roomAttempts: 50,
-      minRoomSize: 3,
-      maxRoomSize: Math.min(10, Math.floor(Math.min(editedMap.width, editedMap.height) / 2)),
+      roomAttempts: dungeonRoomAttempts,
+      minRoomSize: dungeonMinRoomSize,
+      maxRoomSize: clampedMaxRoomSize,
       corridorWidth: 1,
+      extraConnections: dungeonExtraConnections,
     });
 
     // Generate the dungeon
-    const { grid: charGrid, rooms, doors } = generator.generate();
+    const { grid: charGrid, rooms } = generator.generate();
 
     // Convert character grid to tile grid
     const tileGrid = DungeonGenerator.convertToTileGrid(charGrid, tileset);
-
-    // Create door objects
-    const doorObjects = DungeonGenerator.createDoorObjects(doors);
 
     // Find a spawn point in the first room, or center of map if no rooms
     let spawnX = Math.floor(editedMap.width / 2);
@@ -320,7 +334,7 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     setEditedMap({
       ...editedMap,
       grid: tileGrid,
-      interactiveObjects: doorObjects,
+      interactiveObjects: [], // Clear existing objects - user can place doors manually
       playerSpawn: {
         x: spawnX,
         y: spawnY,
@@ -2693,6 +2707,192 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
               </button>
               <button
                 onClick={handleCancelCreateNewMap}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(244, 67, 54, 0.3)',
+                  border: '1px solid rgba(244, 67, 54, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dungeon generation settings modal */}
+      {showDungeonSettings && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+          }}
+          onClick={() => setShowDungeonSettings(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(30, 30, 30, 0.98)',
+              border: '2px solid rgba(156, 39, 176, 0.8)',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '500px',
+              maxWidth: '90%',
+              color: '#fff',
+              fontFamily: 'monospace',
+            }}
+          >
+            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
+              Dungeon Generation Settings
+            </div>
+            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '20px' }}>
+              Configure parameters for random dungeon generation
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Room Attempts */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+                  Room Attempts: {dungeonRoomAttempts}
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="150"
+                  value={dungeonRoomAttempts}
+                  onChange={(e) => setDungeonRoomAttempts(parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: 'rgba(156, 39, 176, 0.8)',
+                  }}
+                />
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                  Higher values create more densely packed dungeons
+                </div>
+              </div>
+
+              {/* Min Room Size */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+                  Min Room Size: {dungeonMinRoomSize}
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="10"
+                  value={dungeonMinRoomSize}
+                  onChange={(e) => {
+                    const newMin = parseInt(e.target.value);
+                    setDungeonMinRoomSize(newMin);
+                    // Ensure max is always >= min
+                    if (dungeonMaxRoomSize < newMin) {
+                      setDungeonMaxRoomSize(newMin);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    accentColor: 'rgba(156, 39, 176, 0.8)',
+                  }}
+                />
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                  Minimum width/height of generated rooms
+                </div>
+              </div>
+
+              {/* Max Room Size */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+                  Max Room Size: {dungeonMaxRoomSize}
+                </div>
+                <input
+                  type="range"
+                  min={dungeonMinRoomSize}
+                  max="20"
+                  value={dungeonMaxRoomSize}
+                  onChange={(e) => setDungeonMaxRoomSize(parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: 'rgba(156, 39, 176, 0.8)',
+                  }}
+                />
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                  Maximum width/height of generated rooms
+                </div>
+              </div>
+
+              {/* Extra Connections */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={dungeonExtraConnections}
+                    onChange={(e) => setDungeonExtraConnections(e.target.checked)}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      cursor: 'pointer',
+                      accentColor: 'rgba(156, 39, 176, 0.8)',
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#fff' }}>Extra Connections</div>
+                    <div style={{ fontSize: '9px', color: '#666' }}>
+                      Add additional corridors between rooms for more complex layouts
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div style={{
+              marginTop: '20px',
+              padding: '12px',
+              background: 'rgba(255, 152, 0, 0.1)',
+              border: '1px solid rgba(255, 152, 0, 0.3)',
+              borderRadius: '4px',
+              fontSize: '10px',
+              color: '#ffab40',
+            }}>
+              ⚠️ This will replace the current map layout. This action cannot be undone.
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button
+                onClick={handleConfirmGenerateDungeon}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(156, 39, 176, 0.3)',
+                  border: '1px solid rgba(156, 39, 176, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Generate Dungeon
+              </button>
+              <button
+                onClick={() => setShowDungeonSettings(false)}
                 style={{
                   flex: 1,
                   padding: '10px 16px',
