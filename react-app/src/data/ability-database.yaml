@@ -105,12 +105,20 @@ abilities:
   # Fighter Reactions
   - id: "parry-001"
     name: "Parry"
-    description: "Increases your physical evasion based on your weapon"
+    description: "Before being attacked, briefly increases your physical evasion"
     abilityType: "Reaction"
     experiencePrice: 500
     tags:
       - "defensive"
       - "evasion"
+      - "before-attacked"  # Trigger tag
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 15
+        duration: 1  # Very brief boost just for this attack
+        params:
+          stat: "physicalEvade"
 
   # Fighter Passives
   - id: "meat-shield-001"
@@ -228,21 +236,34 @@ abilities:
   # Rogue Reactions
   - id: "slippery-001"
     name: "Slippery"
-    description: "After taking damage, gain Haste"
+    description: "After taking damage, gain increased speed"
     abilityType: "Reaction"
     experiencePrice: 500
     tags:
       - "defensive"
-      - "haste"
+      - "speed"
+      - "after-attacked"  # Trigger tag
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 5
+        duration: 2  # Lasts 2 turns
+        params:
+          stat: "speed"
 
   - id: "repost-001"
     name: "Repost"
-    description: "After being attacked, perform an attack on the enemy"
+    description: "After being attacked, perform a counter-attack on the enemy"
     abilityType: "Reaction"
     experiencePrice: 250
     tags:
       - "offensive"
       - "counter"
+      - "after-attacked"  # Trigger tag
+    effects:
+      - type: "damage-physical"
+        target: "enemy"  # Target is the attacker
+        value: 5  # Fixed damage for simplicity
 
   # Rogue Passives
   - id: "fast-001"
@@ -455,13 +476,24 @@ abilities:
   # Apprentice Reactions
   - id: "quick-shield-001"
     name: "Quick Shield"
-    description: "Before taking physical damage, casts Minor Shield to absorb the blow (uses MP)"
+    description: "Before being attacked, briefly increases your magical evasion (costs mana)"
     abilityType: "Reaction"
     experiencePrice: 200
     tags:
       - "magic"
       - "defensive"
-      - "shield"
+      - "evasion"
+      - "before-attacked"  # Trigger tag
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 5
+      - type: "stat-bonus"
+        target: "self"
+        value: 20
+        duration: 1  # Very brief boost just for this attack
+        params:
+          stat: "magicEvade"
 
   # Apprentice Passives
   - id: "focused-001"

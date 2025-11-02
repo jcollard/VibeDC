@@ -175,6 +175,30 @@ export class HumanoidUnit implements CombatUnit {
     return this._wounds;
   }
 
+  /**
+   * Add wounds (damage) to this unit. Wounds are capped at maxHealth.
+   * @param amount The amount of damage to add (must be non-negative)
+   */
+  addWounds(amount: number): void {
+    if (amount < 0) {
+      console.warn('addWounds called with negative value, use healWounds instead');
+      return;
+    }
+    this._wounds = Math.min(this._wounds + amount, this.maxHealth);
+  }
+
+  /**
+   * Remove wounds (heal) from this unit. Wounds cannot go below 0.
+   * @param amount The amount of healing to apply (must be non-negative)
+   */
+  healWounds(amount: number): void {
+    if (amount < 0) {
+      console.warn('healWounds called with negative value, use addWounds instead');
+      return;
+    }
+    this._wounds = Math.max(0, this._wounds - amount);
+  }
+
   get mana(): number {
     return Math.max(0, this.maxMana - this._manaUsed);
   }
@@ -185,6 +209,30 @@ export class HumanoidUnit implements CombatUnit {
 
   get manaUsed(): number {
     return this._manaUsed;
+  }
+
+  /**
+   * Use mana. Mana used is capped at maxMana.
+   * @param amount The amount of mana to use (must be non-negative)
+   */
+  useMana(amount: number): void {
+    if (amount < 0) {
+      console.warn('useMana called with negative value, use restoreMana instead');
+      return;
+    }
+    this._manaUsed = Math.min(this._manaUsed + amount, this.maxMana);
+  }
+
+  /**
+   * Restore mana. Mana used cannot go below 0.
+   * @param amount The amount of mana to restore (must be non-negative)
+   */
+  restoreMana(amount: number): void {
+    if (amount < 0) {
+      console.warn('restoreMana called with negative value, use useMana instead');
+      return;
+    }
+    this._manaUsed = Math.max(0, this._manaUsed - amount);
   }
 
   get physicalPower(): number {
@@ -201,6 +249,14 @@ export class HumanoidUnit implements CombatUnit {
 
   get actionTimer(): number {
     return this._actionTimer;
+  }
+
+  /**
+   * Set the action timer to a specific value.
+   * @param value The new action timer value (0-100+)
+   */
+  setActionTimer(value: number): void {
+    this._actionTimer = Math.max(0, value);
   }
 
   get movement(): number {

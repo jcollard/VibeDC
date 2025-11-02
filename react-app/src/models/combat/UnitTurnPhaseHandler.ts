@@ -28,6 +28,8 @@ import { AttackAnimationSequence } from './AttackAnimationSequence';
 import { CombatCalculations } from './utils/CombatCalculations';
 import type { Equipment } from './Equipment';
 import { AbilityExecutor, type AbilityExecutionContext } from './abilities/AbilityExecutor';
+import { ReactionHandler } from './abilities/ReactionHandler';
+import type { ReactionTriggerContext } from './abilities/ReactionTrigger';
 
 /**
  * Unit turn phase handler - manages individual unit turns using strategy pattern
@@ -709,7 +711,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Get target unit if position specified
     let targetUnit: CombatUnit | undefined;
     if (targetPosition) {
-      targetUnit = state.unitManifest.getUnitAt(targetPosition);
+      targetUnit = state.unitManifest.getUnitAtPosition(targetPosition);
     }
 
     // Create execution context
@@ -1258,14 +1260,41 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       const logMessage = `[color=${attackerNameColor}]${attacker.name}[/color] attacks [color=${targetNameColor}]${target.name}[/color]...`;
       this.pendingLogMessages.push(logMessage);
 
+      // ============================================================
+      // TRIGGER: before-attack (attacker's reaction)
+      // ============================================================
+      this.triggerReaction({
+        triggerType: 'before-attack',
+        reactor: attacker,
+        reactorPosition: attackerPosition,
+        target,
+        targetPosition,
+        state: this.currentState!
+      });
+
+      // ============================================================
+      // TRIGGER: before-attacked (defender's reaction)
+      // ============================================================
+      this.triggerReaction({
+        triggerType: 'before-attacked',
+        reactor: target,
+        reactorPosition: targetPosition,
+        attacker,
+        attackerPosition,
+        state: this.currentState!
+      });
+
       // Roll hit/miss
       const hitChance = CombatCalculations.getChanceToHit(attacker, target, distance, 'physical');
       const hitRoll = Math.random();
       const isHit = hitRoll < hitChance;
 
+      let damageDealt = 0;
+
       if (isHit) {
         // Calculate damage (weapon can be null for unarmed)
         const damage = CombatCalculations.calculateAttackDamage(attacker, weapon, target, distance, 'physical');
+        damageDealt = damage;
 
         // Apply damage to target
         this.applyDamage(target, damage);
@@ -1290,6 +1319,32 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         // Create miss animation
         this.attackAnimations = [new AttackAnimationSequence(targetPosition, false, 0)];
       }
+
+      // ============================================================
+      // TRIGGER: after-attacked (defender's reaction)
+      // ============================================================
+      this.triggerReaction({
+        triggerType: 'after-attacked',
+        reactor: target,
+        reactorPosition: targetPosition,
+        attacker,
+        attackerPosition,
+        damageDealt,
+        state: this.currentState!
+      });
+
+      // ============================================================
+      // TRIGGER: after-attack (attacker's reaction)
+      // ============================================================
+      this.triggerReaction({
+        triggerType: 'after-attack',
+        reactor: attacker,
+        reactorPosition: attackerPosition,
+        target,
+        targetPosition,
+        damageDealt,
+        state: this.currentState!
+      });
     } else {
       // Dual wielding - two sequential attacks
       const logMessage = `[color=${attackerNameColor}]${attacker.name}[/color] attacks [color=${targetNameColor}]${target.name}[/color] with both weapons...`;
@@ -1301,14 +1356,41 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         const weapon = weapons[i];
         const attackLabel = i === 0 ? 'First' : 'Second';
 
+        // ============================================================
+        // TRIGGER: before-attack (attacker's reaction, per weapon)
+        // ============================================================
+        this.triggerReaction({
+          triggerType: 'before-attack',
+          reactor: attacker,
+          reactorPosition: attackerPosition,
+          target,
+          targetPosition,
+          state: this.currentState!
+        });
+
+        // ============================================================
+        // TRIGGER: before-attacked (defender's reaction, per weapon)
+        // ============================================================
+        this.triggerReaction({
+          triggerType: 'before-attacked',
+          reactor: target,
+          reactorPosition: targetPosition,
+          attacker,
+          attackerPosition,
+          state: this.currentState!
+        });
+
         // Roll hit/miss for this weapon
         const hitChance = CombatCalculations.getChanceToHit(attacker, target, distance, 'physical');
         const hitRoll = Math.random();
         const isHit = hitRoll < hitChance;
 
+        let damageDealt = 0;
+
         if (isHit) {
           // Calculate damage
           const damage = CombatCalculations.calculateAttackDamage(attacker, weapon, target, distance, 'physical');
+          damageDealt = damage;
 
           // Apply damage to target
           this.applyDamage(target, damage);
@@ -1327,6 +1409,32 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
           // Create miss animation
           animations.push(new AttackAnimationSequence(targetPosition, false, 0));
         }
+
+        // ============================================================
+        // TRIGGER: after-attacked (defender's reaction, per weapon)
+        // ============================================================
+        this.triggerReaction({
+          triggerType: 'after-attacked',
+          reactor: target,
+          reactorPosition: targetPosition,
+          attacker,
+          attackerPosition,
+          damageDealt,
+          state: this.currentState!
+        });
+
+        // ============================================================
+        // TRIGGER: after-attack (attacker's reaction, per weapon)
+        // ============================================================
+        this.triggerReaction({
+          triggerType: 'after-attack',
+          reactor: attacker,
+          reactorPosition: attackerPosition,
+          target,
+          targetPosition,
+          damageDealt,
+          state: this.currentState!
+        });
       }
 
       // Check if unit was knocked out (after all weapons have struck)
@@ -1340,6 +1448,26 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
 
     // Start attack animation sequence
     this.attackAnimationIndex = 0;
+  }
+
+  /**
+   * Trigger a reaction and add messages to pending log
+   */
+  private triggerReaction(context: ReactionTriggerContext): void {
+    if (!this.currentState) return;
+
+    const result = ReactionHandler.checkReaction({
+      ...context,
+      state: this.currentState
+    });
+
+    if (result.shouldExecute) {
+      // Add reaction log messages
+      for (const msg of result.logMessages) {
+        this.pendingLogMessages.push(msg);
+      }
+      // Note: State mutations happen inside AbilityExecutor, no need to apply result.newState
+    }
   }
 
   /**

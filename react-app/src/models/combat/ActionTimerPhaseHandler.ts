@@ -390,6 +390,19 @@ export class ActionTimerPhaseHandler extends PhaseBase implements CombatPhaseHan
           if (readyUnit) {
             console.log(`[ActionTimerPhaseHandler] ${readyUnit.unit.name} is ready to act (timer: ${readyUnit.unit.actionTimer.toFixed(2)})`);
 
+            // Decrement stat modifier durations for the ready unit at the start of their turn
+            if ('decrementModifierDurations' in readyUnit.unit) {
+              const expired = (readyUnit.unit as any).decrementModifierDurations();
+              if (expired.length > 0) {
+                for (const modifier of expired) {
+                  const unitColor = readyUnit.unit.isPlayerControlled ? '#00ff00' : '#ff0000';
+                  this.pendingLogMessages.push(
+                    `[color=${unitColor}]${readyUnit.unit.name}[/color]'s ${modifier.stat} boost expired.`
+                  );
+                }
+              }
+            }
+
             // Reset state for next time we enter action-timer phase
             this.animationMode = 'idle';
             this.turnCalculated = false;

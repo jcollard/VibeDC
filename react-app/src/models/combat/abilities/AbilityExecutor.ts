@@ -97,8 +97,8 @@ export class AbilityExecutor {
     }
 
     // Consume mana
-    if (manaCost > 0 && 'consumeMana' in context.caster) {
-      (context.caster as any).consumeMana(manaCost);
+    if (manaCost > 0 && 'useMana' in context.caster) {
+      (context.caster as any).useMana(manaCost);
     }
 
     // Process each effect in sequence
@@ -262,7 +262,7 @@ export class AbilityExecutor {
       const roll = Math.random() * 100;
       if (roll > hitChance) {
         const targetColor = target.isPlayerControlled ? '#00ff00' : '#ff0000';
-        results.logMessages.push(`<color=${targetColor}>${target.name}</color> evaded!`);
+        results.logMessages.push(`[color=${targetColor}]${target.name}[/color] evaded!`);
         return;
       }
     }
@@ -278,8 +278,8 @@ export class AbilityExecutor {
     const targetColor = target.isPlayerControlled ? '#00ff00' : '#ff0000';
 
     results.logMessages.push(
-      `<color=${casterColor}>${context.caster.name}</color> used ${abilityName}! ` +
-      `<color=${targetColor}>${target.name}</color> took ${baseDamage} damage!`
+      `[color=${casterColor}]${context.caster.name}[/color] used ${abilityName}! ` +
+      `[color=${targetColor}]${target.name}[/color] took ${baseDamage} damage!`
     );
   }
 
@@ -296,16 +296,16 @@ export class AbilityExecutor {
     const healAmount = this.calculateHealValue(effect, context.caster);
     const actualHeal = Math.min(healAmount, target.wounds);
 
-    if ('removeWounds' in target) {
-      (target as any).removeWounds(actualHeal);
+    if ('healWounds' in target) {
+      (target as any).healWounds(actualHeal);
     }
     results.heals?.set(target, actualHeal);
 
     const casterColor = context.caster.isPlayerControlled ? '#00ff00' : '#ff0000';
     const targetColor = target.isPlayerControlled ? '#00ff00' : '#ff0000';
     results.logMessages.push(
-      `<color=${casterColor}>${context.caster.name}</color> used ${abilityName}! ` +
-      `<color=${targetColor}>${target.name}</color> restored ${actualHeal} HP!`
+      `[color=${casterColor}]${context.caster.name}[/color] used ${abilityName}! ` +
+      `[color=${targetColor}]${target.name}[/color] restored ${actualHeal} HP!`
     );
   }
 
@@ -351,8 +351,8 @@ export class AbilityExecutor {
     const buffType = isDebuff ? 'decreased' : 'increased';
 
     results.logMessages.push(
-      `<color=${casterColor}>${context.caster.name}</color> used ${abilityName}! ` +
-      `<color=${targetColor}>${target.name}</color>'s ${modifier.stat} ${buffType}!`
+      `[color=${casterColor}]${context.caster.name}[/color] used ${abilityName}! ` +
+      `[color=${targetColor}]${target.name}[/color]'s ${modifier.stat} ${buffType}!`
     );
   }
 
@@ -379,8 +379,8 @@ export class AbilityExecutor {
     const casterColor = context.caster.isPlayerControlled ? '#00ff00' : '#ff0000';
     const targetColor = target.isPlayerControlled ? '#00ff00' : '#ff0000';
     results.logMessages.push(
-      `<color=${casterColor}>${context.caster.name}</color> used ${abilityName}! ` +
-      `<color=${targetColor}>${target.name}</color> restored ${actualRestore} mana!`
+      `[color=${casterColor}]${context.caster.name}[/color] used ${abilityName}! ` +
+      `[color=${targetColor}]${target.name}[/color] restored ${actualRestore} mana!`
     );
   }
 
@@ -408,8 +408,8 @@ export class AbilityExecutor {
     const casterColor = context.caster.isPlayerControlled ? '#00ff00' : '#ff0000';
     const targetColor = target.isPlayerControlled ? '#00ff00' : '#ff0000';
     results.logMessages.push(
-      `<color=${casterColor}>${context.caster.name}</color> used ${abilityName}! ` +
-      `<color=${targetColor}>${target.name}</color>'s action timer changed by ${modifyAmount}!`
+      `[color=${casterColor}]${context.caster.name}[/color] used ${abilityName}! ` +
+      `[color=${targetColor}]${target.name}[/color]'s action timer changed by ${modifyAmount}!`
     );
   }
 
