@@ -14,6 +14,7 @@ import { UnitClass } from '../../combat/UnitClass';
 const HOVERED_CLASS_COLOR = '#ffff00'; // Yellow for hovered class
 const SELECTED_CLASS_COLOR = '#00ff00'; // Green for selected class
 const NORMAL_CLASS_COLOR = '#ffffff'; // White for normal class
+const DISABLED_CLASS_COLOR = '#888888'; // Gray for disabled (unmet requirements) class
 const HOVERED_ABILITY_COLOR = '#ffff00'; // Yellow for hovered ability
 const HEADER_COLOR = '#ff8c00'; // Dark orange for headers
 const DIVIDER_SPRITE = 'frames-3'; // 12x12 sprite for vertical divider
@@ -26,7 +27,7 @@ export class SpendXpMainPanelContent implements PanelContent {
   private selectedClassId: string;
   private hoveredClassIndex: number | null = null;
   private hoveredAbilityIndex: number | null = null;
-  private classBounds: Array<{ x: number; y: number; width: number; height: number; classId: string }> = [];
+  private classBounds: Array<{ x: number; y: number; width: number; height: number; classId: string; meetsRequirements: boolean }> = [];
   private abilityBounds: Array<{ x: number; y: number; width: number; height: number; abilityId: string; canAfford: boolean; isLearned: boolean }> = [];
   private playerClasses: UnitClass[] = [];
   private unit: CombatUnit;
@@ -50,6 +51,25 @@ export class SpendXpMainPanelContent implements PanelContent {
       return humanoid.getUnspentClassExperience(cls);
     }
     return 0;
+  }
+
+  /**
+   * Check if the unit meets the requirements for a class
+   */
+  private meetsClassRequirements(cls: UnitClass): boolean {
+    const humanoid = this.unit as HumanoidUnit;
+    if (!humanoid.classExperience) {
+      return cls.requirements.size === 0;
+    }
+
+    // Check each requirement
+    for (const [requiredClassId, requiredXp] of cls.requirements) {
+      const earnedXp = humanoid.classExperience.get(requiredClassId) ?? 0;
+      if (earnedXp < requiredXp) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /**
@@ -131,12 +151,15 @@ export class SpendXpMainPanelContent implements PanelContent {
     // Render class list
     for (let i = 0; i < this.playerClasses.length; i++) {
       const cls = this.playerClasses[i];
+      const meetsRequirements = this.meetsClassRequirements(cls);
       const isSelected = cls.id === this.selectedClassId;
       const isHovered = this.hoveredClassIndex === i;
 
       // Determine color
       let color = NORMAL_CLASS_COLOR;
-      if (isSelected) {
+      if (!meetsRequirements) {
+        color = DISABLED_CLASS_COLOR;
+      } else if (isSelected) {
         color = SELECTED_CLASS_COLOR;
       } else if (isHovered) {
         color = HOVERED_CLASS_COLOR;
@@ -179,7 +202,8 @@ export class SpendXpMainPanelContent implements PanelContent {
         y: currentY - region.y,
         width: leftColumnWidth,
         height: lineSpacing,
-        classId: cls.id
+        classId: cls.id,
+        meetsRequirements
       });
 
       currentY += lineSpacing;
@@ -367,7 +391,14 @@ export class SpendXpMainPanelContent implements PanelContent {
       if (newHoveredAbilityIndex !== null) {
         return { type: 'ability-hover', abilityIndex: newHoveredAbilityIndex };
       } else if (newHoveredClassIndex !== null) {
-        return { type: 'class-hover', classIndex: newHoveredClassIndex };
+        const classId = this.classBounds[newHoveredClassIndex].classId;
+        const meetsRequirements = this.classBounds[newHoveredClassIndex].meetsRequirements;
+        return {
+          type: 'class-hover',
+          classIndex: newHoveredClassIndex,
+          classId,
+          meetsRequirements
+        };
       } else {
         return { type: 'hover-cleared' };
       }
@@ -406,6 +437,10 @@ export class SpendXpMainPanelContent implements PanelContent {
         relativeY >= bounds.y &&
         relativeY <= bounds.y + bounds.height
       ) {
+        // Don't allow selection of classes that don't meet requirements
+        if (!bounds.meetsRequirements) {
+          return null;
+        }
         // Select this class
         this.selectedClassId = bounds.classId;
         return { type: 'class-selected', classId: bounds.classId };

@@ -27,6 +27,7 @@ import { EquipmentComparisonContent } from '../../models/inventory/panels/Equipm
 import { SpendXpTitlePanelContent } from '../../models/inventory/panels/SpendXpTitlePanelContent';
 import { SpendXpMainPanelContent } from '../../models/inventory/panels/SpendXpMainPanelContent';
 import { ClassInfoContent } from '../../models/inventory/panels/ClassInfoContent';
+import { ClassRequirementsInfoContent } from '../../models/inventory/panels/ClassRequirementsInfoContent';
 import { SetAbilitiesTitlePanelContent } from '../../models/inventory/panels/SetAbilitiesTitlePanelContent';
 import { SetAbilitiesMainPanelContent } from '../../models/inventory/panels/SetAbilitiesMainPanelContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
@@ -1287,7 +1288,32 @@ export const PartyManagementView: React.FC<PartyManagementViewProps> = ({ onClos
         if (relativeX >= 0 && relativeY >= 0 &&
             relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
           const hoverResult = spendXpMainContentRef.current.handleHover(relativeX, relativeY);
-          if (hoverResult) {
+          if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult) {
+            // Handle class hover - show class requirements if disabled
+            if (hoverResult.type === 'class-hover' && 'classId' in hoverResult && 'meetsRequirements' in hoverResult && selectedMemberRef.current) {
+              const unitClass = UnitClass.getById(hoverResult.classId as string);
+              if (unitClass) {
+                // Cache original bottom panel content if not already cached
+                if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                  originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+                }
+
+                // Show class requirements if disabled, otherwise show class info
+                if (!(hoverResult.meetsRequirements as boolean)) {
+                  bottomPanelManager.setContent(new ClassRequirementsInfoContent(unitClass, selectedMemberRef.current));
+                } else {
+                  bottomPanelManager.setContent(new ClassInfoContent(unitClass, selectedMemberRef.current));
+                }
+                detailPanelActiveRef.current = true;
+              }
+            } else if (hoverResult.type === 'hover-cleared') {
+              // Restore original bottom panel content when hover is cleared
+              if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
+                bottomPanelManager.setContent(originalBottomPanelContentRef.current);
+                detailPanelActiveRef.current = false;
+                originalBottomPanelContentRef.current = null;
+              }
+            }
             needsRerender = true;
           }
         }
