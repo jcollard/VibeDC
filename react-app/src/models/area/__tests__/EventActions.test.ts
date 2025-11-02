@@ -1,11 +1,16 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, beforeEach } from 'vitest';
 import { ShowMessage } from '../actions/ShowMessage';
 import { Teleport } from '../actions/Teleport';
 import { Rotate } from '../actions/Rotate';
 import { StartEncounter } from '../actions/StartEncounter';
 import { SetGlobalVariable } from '../actions/SetGlobalVariable';
+import { GenerateRandomEncounter } from '../actions/GenerateRandomEncounter';
 import { ActionFactory } from '../actions/ActionFactory';
 import type { GameState } from '../EventPrecondition';
+import { CombatEncounter } from '../../combat/CombatEncounter';
+import { TilesetRegistry } from '../../../utils/TilesetRegistry';
+import { EnemyRegistry } from '../../../utils/EnemyRegistry';
+import type { EnemyDefinition } from '../../../utils/EnemyRegistry';
 
 describe('EventActions', () => {
   const createTestState = (): GameState => ({
@@ -123,11 +128,132 @@ describe('EventActions', () => {
     });
   });
 
+  describe('GenerateRandomEncounter', () => {
+    beforeEach(() => {
+      // Clear registries before each test
+      CombatEncounter.clearRegistry();
+
+      // Register a test tileset if needed
+      if (TilesetRegistry.getAll().length === 0) {
+        // If no tilesets registered, the action will use 'forest' as default
+      }
+
+      // Register some test enemies
+      const testEnemy: EnemyDefinition = {
+        id: 'test-goblin',
+        name: 'Test Goblin',
+        unitType: 'monster',
+        unitClassId: 'monster',
+        baseHealth: 20,
+        baseMana: 10,
+        basePhysicalPower: 8,
+        baseMagicPower: 4,
+        baseSpeed: 7,
+        baseMovement: 3,
+        basePhysicalEvade: 10,
+        baseMagicEvade: 6,
+        baseCourage: 5,
+        baseAttunement: 5,
+        spriteId: 'test-sprite',
+        xpValue: 15,
+        goldValue: 8,
+      };
+      EnemyRegistry.register(testEnemy);
+    });
+
+    it('should generate a random encounter and activate combat', () => {
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const newState = action.execute(state);
+
+      // Should activate combat
+      expect(newState.combatState?.active).toBe(true);
+      expect(newState.combatState?.encounterId).toMatch(/^random-encounter/);
+    });
+
+    it('should create a registered encounter', () => {
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const newState = action.execute(state);
+
+      // The generated encounter should be registered
+      const encounterId = newState.combatState?.encounterId;
+      expect(encounterId).toBeDefined();
+
+      const encounter = CombatEncounter.getById(encounterId!);
+      expect(encounter).toBeDefined();
+      expect(encounter?.playerDeploymentZones).toBeDefined();
+      expect(encounter?.enemyPlacements).toBeDefined();
+    });
+
+    it('should create encounter with 8 deployment zones', () => {
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const newState = action.execute(state);
+
+      const encounterId = newState.combatState?.encounterId;
+      const encounter = CombatEncounter.getById(encounterId!);
+
+      // Should aim for 8 deployment zones (might be less if dungeon is very small)
+      expect(encounter?.playerDeploymentZones.length).toBeGreaterThan(0);
+      expect(encounter?.playerDeploymentZones.length).toBeLessThanOrEqual(8);
+    });
+
+    it('should place between 2-8 enemies', () => {
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const newState = action.execute(state);
+
+      const encounterId = newState.combatState?.encounterId;
+      const encounter = CombatEncounter.getById(encounterId!);
+
+      expect(encounter?.enemyPlacements.length).toBeGreaterThanOrEqual(2);
+      expect(encounter?.enemyPlacements.length).toBeLessThanOrEqual(8);
+    });
+
+    it('should not mutate original state', () => {
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const originalState = { ...state };
+
+      action.execute(state);
+
+      expect(state.combatState).toBe(originalState.combatState);
+    });
+
+    it('should serialize and deserialize correctly', () => {
+      const action = new GenerateRandomEncounter();
+      const json = action.toJSON();
+      const restored = GenerateRandomEncounter.fromJSON(json);
+
+      expect(restored).toBeInstanceOf(GenerateRandomEncounter);
+      expect(restored.type).toBe('GenerateRandomEncounter');
+    });
+
+    it('should return unchanged state if no enemies registered', () => {
+      // Clear all enemies
+      EnemyRegistry.clearRegistry();
+
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const newState = action.execute(state);
+
+      // Should return unchanged state
+      expect(newState).toEqual(state);
+    });
+  });
+
   describe('ActionFactory', () => {
     it('should create ShowMessage from JSON', () => {
       const json = { type: 'ShowMessage', message: 'test' };
       const action = ActionFactory.fromJSON(json);
       expect(action).toBeInstanceOf(ShowMessage);
+    });
+
+    it('should create GenerateRandomEncounter from JSON', () => {
+      const json = { type: 'GenerateRandomEncounter' };
+      const action = ActionFactory.fromJSON(json);
+      expect(action).toBeInstanceOf(GenerateRandomEncounter);
     });
 
     it('should throw error for unknown type', () => {
