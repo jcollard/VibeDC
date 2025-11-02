@@ -1,10 +1,12 @@
 import type { CombatAbility } from '../../CombatAbility';
+import type { CombatUnit } from '../../CombatUnit';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion } from './PanelContent';
 import { ITEM_NAME_COLOR, HOVERED_TEXT } from './colors';
 
 const MENU_OPTION_COLOR = '#ffffff';
+const LEARNED_COLOR = '#00ff00'; // Green for learned abilities
 
 /**
  * Panel content that displays detailed information about a combat ability.
@@ -12,14 +14,16 @@ const MENU_OPTION_COLOR = '#ffffff';
  */
 export class AbilityInfoContent implements PanelContent {
   private ability: CombatAbility;
+  private unit: CombatUnit;
   private padding: number = 4;
   private lineSpacing: number = 8;
   private hoveredOption: 'learn' | 'cancel' | null = null;
   private learnOptionBounds: { x: number; y: number; width: number; height: number } | null = null;
   private cancelOptionBounds: { x: number; y: number; width: number; height: number } | null = null;
 
-  constructor(ability: CombatAbility) {
+  constructor(ability: CombatAbility, unit: CombatUnit) {
     this.ability = ability;
+    this.unit = unit;
   }
 
   /**
@@ -117,9 +121,12 @@ export class AbilityInfoContent implements PanelContent {
 
     y += 8; // Extra spacing before options
 
-    // Render "Learn" option (centered)
-    const learnText = 'Learn';
-    const learnColor = this.hoveredOption === 'learn' ? HOVERED_TEXT : MENU_OPTION_COLOR;
+    // Check if ability is already learned
+    const isLearned = this.unit.learnedAbilities.has(this.ability);
+
+    // Render "Learn" or "Learned!" option (centered)
+    const learnText = isLearned ? 'Learned!' : 'Learn';
+    const learnColor = isLearned ? LEARNED_COLOR : (this.hoveredOption === 'learn' ? HOVERED_TEXT : MENU_OPTION_COLOR);
     const learnWidth = FontAtlasRenderer.measureText(learnText, font);
     const learnX = region.x + Math.floor((region.width - learnWidth) / 2);
     const learnY = y;
@@ -136,13 +143,17 @@ export class AbilityInfoContent implements PanelContent {
       learnColor
     );
 
-    // Store bounds for hover/click detection
-    this.learnOptionBounds = {
-      x: learnX - region.x,
-      y: learnY - region.y,
-      width: learnWidth,
-      height: this.lineSpacing
-    };
+    // Store bounds for hover/click detection (only if not learned)
+    if (!isLearned) {
+      this.learnOptionBounds = {
+        x: learnX - region.x,
+        y: learnY - region.y,
+        width: learnWidth,
+        height: this.lineSpacing
+      };
+    } else {
+      this.learnOptionBounds = null; // Disable clicking/hovering for learned abilities
+    }
 
     y += this.lineSpacing;
 

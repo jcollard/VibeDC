@@ -1152,9 +1152,11 @@ export const PartyManagementView: React.FC = () => {
                 }
 
                 // Show ability details in bottom panel
-                bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any));
-                detailPanelActiveRef.current = true;
-                needsRerender = true;
+                if (selectedMemberRef.current) {
+                  bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any, selectedMemberRef.current));
+                  detailPanelActiveRef.current = true;
+                  needsRerender = true;
+                }
               } else if (topInfoHoverResult.type === 'equipment-detail') {
                 // Cache original bottom panel content if not already cached
                 if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
@@ -1267,8 +1269,8 @@ export const PartyManagementView: React.FC = () => {
           } else if (clickResult && clickResult.type === 'ability-selected') {
             // Ability was clicked - show details in bottom panel (no caching in spend-xp mode)
             const ability = CombatAbility.getById(clickResult.abilityId);
-            if (ability) {
-              bottomPanelManager.setContent(new AbilityInfoContent(ability));
+            if (ability && selectedMemberRef.current) {
+              bottomPanelManager.setContent(new AbilityInfoContent(ability, selectedMemberRef.current));
               renderFrame();
             }
             return;
