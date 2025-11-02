@@ -194,9 +194,25 @@ describe('EventActions', () => {
       const encounterId = newState.combatState?.encounterId;
       const encounter = CombatEncounter.getById(encounterId!);
 
-      // Should aim for 8 deployment zones (might be less if dungeon is very small)
+      // Should aim for 8 deployment zones
       expect(encounter?.playerDeploymentZones.length).toBeGreaterThan(0);
       expect(encounter?.playerDeploymentZones.length).toBeLessThanOrEqual(8);
+    });
+
+    it('should generate fixed size 21x13 map', () => {
+      const action = new GenerateRandomEncounter();
+      const state = createTestState();
+      const newState = action.execute(state);
+
+      const encounterId = newState.combatState?.encounterId;
+      expect(encounterId).toBeDefined();
+
+      const encounter = CombatEncounter.getById(encounterId!);
+      expect(encounter).toBeDefined();
+
+      // Should be 21x13
+      expect(encounter!.map.width).toBe(21);
+      expect(encounter!.map.height).toBe(13);
     });
 
     it('should place between 2-8 enemies', () => {

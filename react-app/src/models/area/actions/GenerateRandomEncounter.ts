@@ -19,18 +19,18 @@ export class GenerateRandomEncounter implements EventAction {
 
   execute(state: GameState): GameState {
     try {
-      // Random dimensions between 10x8 and 21x13
-      const width = Math.floor(Math.random() * (21 - 10 + 1)) + 10;
-      const height = Math.floor(Math.random() * (13 - 8 + 1)) + 8;
+      // Fixed dimensions for consistency
+      const width = 21;
+      const height = 13;
 
-      // Generate dungeon
+      // Generate dungeon with focus on small rooms (3x3 to 5x5)
       const generator = new DungeonGenerator({
         width,
         height,
-        roomAttempts: Math.floor(Math.random() * 20) + 30, // 30-50 attempts
-        minRoomSize: 3,
-        maxRoomSize: 7,
-        extraConnections: true,
+        roomAttempts: 50, // More attempts for better room placement
+        minRoomSize: 3,   // Minimum 3x3 rooms
+        maxRoomSize: 5,   // Maximum 5x5 rooms (focused on smaller rooms)
+        extraConnections: false, // Sequential connections only
       });
 
       const { grid, rooms } = generator.generate();
@@ -141,7 +141,7 @@ export class GenerateRandomEncounter implements EventAction {
       const encounterData: any = {
         id: encounterId,
         name: `Random Encounter ${counter > 1 ? counter - 1 : ''}`,
-        description: `A randomly generated ${width}x${height} dungeon with ${enemyCount} enemies.`,
+        description: `A procedurally generated dungeon with ${rooms.length} small chambers and ${enemyCount} enemies.`,
         map: selectedTilesetId
           ? {
               tilesetId: selectedTilesetId,
@@ -149,11 +149,11 @@ export class GenerateRandomEncounter implements EventAction {
             }
           : {
               // ASCII-only format without tileset (for testing/when no tilesets available)
-              ascii: asciiMap,
-              tileTypes: {
-                '#': { terrain: 'wall', walkable: false },
-                '.': { terrain: 'floor', walkable: true },
-              },
+              grid: asciiMap,
+              tileTypes: [
+                { char: '#', terrain: 'wall', walkable: false, spriteId: undefined },
+                { char: '.', terrain: 'floor', walkable: true, spriteId: undefined },
+              ],
             },
         victoryConditions: [
           {
@@ -174,7 +174,7 @@ export class GenerateRandomEncounter implements EventAction {
       // Create the new encounter (this auto-registers it)
       CombatEncounter.fromJSON(encounterData as any);
 
-      console.log(`Generated random encounter: ${encounterId} (${width}x${height}, ${enemyCount} enemies, ${deploymentZones.length} deployment zones)`);
+      console.log(`Generated random encounter: ${encounterId} (${width}x${height}, ${rooms.length} rooms, ${enemyCount} enemies, ${deploymentZones.length} deployment zones)`);
 
       // Transition to combat with the generated encounter
       return {
