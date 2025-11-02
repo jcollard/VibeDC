@@ -35,11 +35,11 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     // Add helper text for Class XP
     (this as any).statHelperText['Class XP'] = 'XP available for your primary class can be used to learn abilities.';
 
-    // Add helper text for Spend XP button
-    (this as any).statHelperText['Spend XP'] = 'Spend XP to learn new abilities for this character.';
+    // Add helper text for Learn Abilities button
+    (this as any).statHelperText['Learn Abilities'] = 'Spend XP to learn new abilities for this character.';
 
-    // Update helper text for View Abilities & Equipment button
-    (this as any).statHelperText['View Abilities & Equipment'] = "View this unit's abilities and equipment";
+    // Update helper text for Set Abilities & Equipment button
+    (this as any).statHelperText['Set Abilities & Equipment'] = "Set this unit's abilities and equipment";
   }
 
   /**
@@ -51,7 +51,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   }
 
   /**
-   * Custom renderToggleButton that adds "Spend XP" option
+   * Custom renderToggleButton that adds "Learn Abilities" option
    * @returns Y position after buttons
    */
   private renderToggleButtonWithLearnAbilities(
@@ -64,7 +64,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
   ): number {
     const lineSpacing = (this as any).config.lineSpacing;
     const currentView = (this as any).currentView;
-    const buttonText = currentView === 'stats' ? 'View Abilities & Equipment' : 'Back';
+    const buttonText = currentView === 'stats' ? 'Set Abilities & Equipment' : 'Back';
 
     // Move options down by 2px
     let currentY = y + 2;
@@ -86,19 +86,19 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
 
     currentY += lineSpacing;
 
-    // Only render "Spend XP" in stats view
+    // Only render "Learn Abilities" in stats view
     if (currentView === 'stats') {
-      const spendXpText = 'Spend XP';
-      const spendXpTextWidth = FontAtlasRenderer.measureText(spendXpText, font);
-      const spendXpTextX = region.x + Math.floor((region.width - spendXpTextWidth) / 2);
+      const learnAbilitiesText = 'Learn Abilities';
+      const learnAbilitiesTextWidth = FontAtlasRenderer.measureText(learnAbilitiesText, font);
+      const learnAbilitiesTextX = region.x + Math.floor((region.width - learnAbilitiesTextWidth) / 2);
 
-      const spendXpButtonColor = this.isLearnAbilitiesButtonHovered ? HOVERED_TEXT : '#ffffff';
-      FontAtlasRenderer.renderText(ctx, spendXpText, spendXpTextX, currentY, fontId, fontAtlasImage, 1, 'left', spendXpButtonColor);
+      const learnAbilitiesButtonColor = this.isLearnAbilitiesButtonHovered ? HOVERED_TEXT : '#ffffff';
+      FontAtlasRenderer.renderText(ctx, learnAbilitiesText, learnAbilitiesTextX, currentY, fontId, fontAtlasImage, 1, 'left', learnAbilitiesButtonColor);
 
       this.learnAbilitiesButtonBounds = {
-        x: spendXpTextX - region.x,
+        x: learnAbilitiesTextX - region.x,
         y: currentY - region.y,
-        width: spendXpTextWidth,
+        width: learnAbilitiesTextWidth,
         height: lineSpacing
       };
 
@@ -331,11 +331,11 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     const config = (this as any).config;
     const padding = config.padding;
 
-    // Calculate Y position: below the "Spend XP" button (or "View Abilities & Equipment" if no Spend XP)
+    // Calculate Y position: below the "Learn Abilities" button (or "Set Abilities & Equipment" if no Learn Abilities)
     let selectorStartY: number;
 
     if (this.learnAbilitiesButtonBounds) {
-      // Position directly below "Spend XP" button (no extra spacing)
+      // Position directly below "Learn Abilities" button (no extra spacing)
       selectorStartY = this.learnAbilitiesButtonBounds.y + this.learnAbilitiesButtonBounds.height;
     } else {
       // Fallback to below main button (shouldn't happen in stats view, but just in case)
@@ -605,7 +605,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
     // If hovering button, set button text as "hovered stat" for helper text
     if ((this as any).isButtonHovered) {
       const currentView = (this as any).currentView;
-      const buttonText = currentView === 'stats' ? 'View Abilities & Equipment' : 'Back';
+      const buttonText = currentView === 'stats' ? 'Set Abilities & Equipment' : 'Back';
       if ((this as any).hoveredStatId !== buttonText || wasButtonHovered !== (this as any).isButtonHovered) {
         (this as any).hoveredStatId = buttonText;
         return { statId: buttonText, buttonHovered: true };
@@ -613,9 +613,9 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
       return null;
     }
 
-    // If hovering "Spend XP" button
+    // If hovering "Learn Abilities" button
     if (this.isLearnAbilitiesButtonHovered) {
-      const buttonText = 'Spend XP';
+      const buttonText = 'Learn Abilities';
       if ((this as any).hoveredStatId !== buttonText || wasLearnAbilitiesButtonHovered !== this.isLearnAbilitiesButtonHovered) {
         (this as any).hoveredStatId = buttonText;
         return { statId: buttonText, buttonHovered: true };
