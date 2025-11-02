@@ -274,6 +274,9 @@ export const PartyManagementView: React.FC = () => {
   const bottomPanelManager = useMemo(() => new InfoPanelManager(), []);
   const topInfoPanelManager = useMemo(() => new InfoPanelManager(), []);
 
+  // Spend XP panel content (created when needed)
+  const spendXpMainContentRef = useRef<SpendXpMainPanelContent | null>(null);
+
   // Initialize panel content
   useEffect(() => {
     // Bottom panel: Item details (initially empty)
@@ -620,23 +623,36 @@ export const PartyManagementView: React.FC = () => {
     if (!isDebugLogOnly) {
       // Check if we're in spend-xp mode
       if (panelMode === 'spend-xp') {
-        // Render spend-xp title panel
-        const spendXpTitleContent = new SpendXpTitlePanelContent();
-        spendXpTitleContent.render(
-          bufferCtx,
-          titlePanelRegion,
-          CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
-          fontAtlas
-        );
+        // Get current party member
+        const partyMemberConfigs = PartyMemberRegistry.getAll();
+        const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
+        const selectedMember = selectedMemberConfig ? PartyMemberRegistry.createPartyMember(selectedMemberConfig.id) : null;
 
-        // Render spend-xp main panel
-        const spendXpMainContent = new SpendXpMainPanelContent();
-        spendXpMainContent.render(
-          bufferCtx,
-          mainPanelBounds,
-          CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID,
-          fontAtlas
-        );
+        if (selectedMember) {
+          // Create or reuse spend-xp main content
+          if (!spendXpMainContentRef.current || (spendXpMainContentRef.current as any).unit !== selectedMember) {
+            spendXpMainContentRef.current = new SpendXpMainPanelContent(selectedMember);
+          }
+
+          // Render spend-xp title panel
+          const spendXpTitleContent = new SpendXpTitlePanelContent();
+          spendXpTitleContent.render(
+            bufferCtx,
+            titlePanelRegion,
+            CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
+            fontAtlas
+          );
+
+          // Render spend-xp main panel
+          spendXpMainContentRef.current.render(
+            bufferCtx,
+            mainPanelBounds,
+            CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID,
+            fontAtlas,
+            spriteImagesRef.current,
+            CombatConstants.SPRITE_SIZE
+          );
+        }
 
         // Render top info panel (party member stats - still shown)
         const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
@@ -958,82 +974,99 @@ export const PartyManagementView: React.FC = () => {
 
       let needsRerender = false;
 
-      // Check category tab hover (now in title panel)
-      const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
-      const titlePanelContent = titlePanelManager.getContent();
-      let newHoveredCategory: InventoryCategory | null = null;
+      // If in spend-xp mode, handle hover for class selection
+      if (panelMode === 'spend-xp' && spendXpMainContentRef.current) {
+        const relativeX = canvasX - mainPanelBounds.x;
+        const relativeY = canvasY - mainPanelBounds.y;
 
-      if (titlePanelContent instanceof InventoryTopPanelContent) {
-        const categoryTabs = titlePanelContent.getCategoryTabBounds(titlePanelRegion);
-        for (const tab of categoryTabs) {
+        if (relativeX >= 0 && relativeY >= 0 &&
+            relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
+          const hoverResult = spendXpMainContentRef.current.handleHover(relativeX, relativeY);
+          if (hoverResult) {
+            needsRerender = true;
+          }
+        }
+      }
+
+      // Skip inventory-specific hover logic when in spend-xp mode
+      if (panelMode !== 'spend-xp') {
+        // Check category tab hover (now in title panel)
+        const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
+        const titlePanelContent = titlePanelManager.getContent();
+        let newHoveredCategory: InventoryCategory | null = null;
+
+        if (titlePanelContent instanceof InventoryTopPanelContent) {
+          const categoryTabs = titlePanelContent.getCategoryTabBounds(titlePanelRegion);
+          for (const tab of categoryTabs) {
+            if (
+              canvasX >= tab.bounds.x &&
+              canvasX <= tab.bounds.x + tab.bounds.width &&
+              canvasY >= tab.bounds.y &&
+              canvasY <= tab.bounds.y + tab.bounds.height
+            ) {
+              newHoveredCategory = tab.category;
+              break;
+            }
+          }
+        }
+
+        if (newHoveredCategory !== viewState.hoveredCategory) {
+          setViewState((prev) => ({ ...prev, hoveredCategory: newHoveredCategory }));
+          needsRerender = true;
+        }
+
+        // Check sort dropdown hover (now in title panel)
+        let sortHovered = false;
+        if (titlePanelContent instanceof InventoryTopPanelContent) {
+          const sortBounds = titlePanelContent.getSortBounds(titlePanelRegion);
+          sortHovered =
+            canvasX >= sortBounds.x &&
+            canvasX <= sortBounds.x + sortBounds.width &&
+            canvasY >= sortBounds.y &&
+            canvasY <= sortBounds.y + sortBounds.height;
+        }
+
+        if (sortHovered !== viewState.hoveredSort) {
+          setViewState((prev) => ({ ...prev, hoveredSort: sortHovered }));
+          needsRerender = true;
+        }
+
+        // Check item hover
+        // Filter by slot compatibility if an equipment slot is selected
+        const selectedSlot = selectedEquipmentRef.current;
+        const isEquipmentSlotSelected = selectedSlot &&
+                                        selectedSlot.type === 'equipment' &&
+                                        selectedSlot.slotLabel &&
+                                        isEquipmentSlot(selectedSlot.slotLabel);
+
+        const itemRows = renderer.getItemRowBounds(currentPageItems, mainPanelBounds);
+        let newHoveredItemId: string | null = null;
+        for (const row of itemRows) {
           if (
-            canvasX >= tab.bounds.x &&
-            canvasX <= tab.bounds.x + tab.bounds.width &&
-            canvasY >= tab.bounds.y &&
-            canvasY <= tab.bounds.y + tab.bounds.height
+            canvasX >= row.bounds.x &&
+            canvasX <= row.bounds.x + row.bounds.width &&
+            canvasY >= row.bounds.y &&
+            canvasY <= row.bounds.y + row.bounds.height
           ) {
-            newHoveredCategory = tab.category;
+            // If equipment slot is selected, only allow hovering compatible items
+            if (isEquipmentSlotSelected) {
+              const equipment = Equipment.getById(row.equipmentId);
+              if (equipment && selectedSlot.slotLabel && isEquipmentCompatibleWithSlot(equipment, selectedSlot.slotLabel)) {
+                newHoveredItemId = row.equipmentId;
+              }
+              // Otherwise, don't set hovered item (incompatible item)
+            } else {
+              // No filter - allow hovering all items
+              newHoveredItemId = row.equipmentId;
+            }
             break;
           }
         }
-      }
 
-      if (newHoveredCategory !== viewState.hoveredCategory) {
-        setViewState((prev) => ({ ...prev, hoveredCategory: newHoveredCategory }));
-        needsRerender = true;
-      }
-
-      // Check sort dropdown hover (now in title panel)
-      let sortHovered = false;
-      if (titlePanelContent instanceof InventoryTopPanelContent) {
-        const sortBounds = titlePanelContent.getSortBounds(titlePanelRegion);
-        sortHovered =
-          canvasX >= sortBounds.x &&
-          canvasX <= sortBounds.x + sortBounds.width &&
-          canvasY >= sortBounds.y &&
-          canvasY <= sortBounds.y + sortBounds.height;
-      }
-
-      if (sortHovered !== viewState.hoveredSort) {
-        setViewState((prev) => ({ ...prev, hoveredSort: sortHovered }));
-        needsRerender = true;
-      }
-
-      // Check item hover
-      // Filter by slot compatibility if an equipment slot is selected
-      const selectedSlot = selectedEquipmentRef.current;
-      const isEquipmentSlotSelected = selectedSlot &&
-                                      selectedSlot.type === 'equipment' &&
-                                      selectedSlot.slotLabel &&
-                                      isEquipmentSlot(selectedSlot.slotLabel);
-
-      const itemRows = renderer.getItemRowBounds(currentPageItems, mainPanelBounds);
-      let newHoveredItemId: string | null = null;
-      for (const row of itemRows) {
-        if (
-          canvasX >= row.bounds.x &&
-          canvasX <= row.bounds.x + row.bounds.width &&
-          canvasY >= row.bounds.y &&
-          canvasY <= row.bounds.y + row.bounds.height
-        ) {
-          // If equipment slot is selected, only allow hovering compatible items
-          if (isEquipmentSlotSelected) {
-            const equipment = Equipment.getById(row.equipmentId);
-            if (equipment && selectedSlot.slotLabel && isEquipmentCompatibleWithSlot(equipment, selectedSlot.slotLabel)) {
-              newHoveredItemId = row.equipmentId;
-            }
-            // Otherwise, don't set hovered item (incompatible item)
-          } else {
-            // No filter - allow hovering all items
-            newHoveredItemId = row.equipmentId;
-          }
-          break;
+        if (newHoveredItemId !== viewState.hoveredItemId) {
+          setViewState((prev) => ({ ...prev, hoveredItemId: newHoveredItemId }));
+          needsRerender = true;
         }
-      }
-
-      if (newHoveredItemId !== viewState.hoveredItemId) {
-        setViewState((prev) => ({ ...prev, hoveredItemId: newHoveredItemId }));
-        needsRerender = true;
       }
 
       // Check if hovering over top info panel (party member stats)
@@ -1157,6 +1190,52 @@ export const PartyManagementView: React.FC = () => {
       const scaleY = CANVAS_HEIGHT / rect.height;
       const canvasX = (event.clientX - rect.left) * scaleX;
       const canvasY = (event.clientY - rect.top) * scaleY;
+
+      // If in spend-xp mode, handle click for class selection
+      if (panelMode === 'spend-xp' && spendXpMainContentRef.current) {
+        const relativeX = canvasX - mainPanelBounds.x;
+        const relativeY = canvasY - mainPanelBounds.y;
+
+        if (relativeX >= 0 && relativeY >= 0 &&
+            relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
+          const clickResult = spendXpMainContentRef.current.handleClick(relativeX, relativeY);
+          if (clickResult && clickResult.type === 'class-selected') {
+            // Class was selected, re-render
+            renderFrame();
+            return;
+          }
+        }
+      }
+
+      // Skip inventory-specific click logic when in spend-xp mode
+      if (panelMode === 'spend-xp') {
+        // Still allow top info panel clicks (for party member selection and view toggle)
+        const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+        const topInfoClickResult = topInfoPanelManager.handleClick(
+          canvasX,
+          canvasY,
+          topInfoPanelRegion
+        );
+        if (topInfoClickResult) {
+          // Handle view toggle and party member selection (same as inventory mode)
+          if (topInfoClickResult.type === 'view-toggled' && 'view' in topInfoClickResult) {
+            topInfoPanelViewRef.current = topInfoClickResult.view as 'stats' | 'abilities';
+            if (panelMode === 'spend-xp' && topInfoClickResult.view === 'abilities') {
+              setPanelMode('inventory');
+            }
+            renderFrame();
+            return;
+          }
+
+          if (topInfoClickResult.type === 'party-member' && 'index' in topInfoClickResult) {
+            // Clear the spend-xp content to force recreation with new unit
+            spendXpMainContentRef.current = null;
+            renderFrame();
+            return;
+          }
+        }
+        return; // Don't process other clicks in spend-xp mode
+      }
 
       // Check category tab click (now in title panel)
       const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
@@ -1282,12 +1361,6 @@ export const PartyManagementView: React.FC = () => {
         if (topInfoClickResult.type === 'view-toggled' && 'view' in topInfoClickResult) {
           // Update the view ref to preserve it across re-renders
           topInfoPanelViewRef.current = topInfoClickResult.view as 'stats' | 'abilities';
-
-          // If switching back to abilities view from spend-xp mode, return to inventory mode
-          if (panelMode === 'spend-xp' && topInfoClickResult.view === 'abilities') {
-            setPanelMode('inventory');
-          }
-
           renderFrame();
           return;
         }
