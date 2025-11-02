@@ -1525,15 +1525,57 @@ export const PartyManagementView: React.FC = () => {
         if (bottomClickResult) {
           // Handle set-primary-class
           if (bottomClickResult.type === 'set-primary-class' && 'classId' in bottomClickResult) {
-            addLogMessage(`Set primary class: Coming Soon`);
-            renderFrame();
+            const unitClass = UnitClass.getById(bottomClickResult.classId);
+            if (unitClass && selectedMemberRef.current) {
+              const humanoid = selectedMemberRef.current as HumanoidUnit;
+              humanoid.setPrimaryClass(unitClass);
+
+              // Update registry
+              const partyMemberConfigs = PartyMemberRegistry.getAll();
+              const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
+              if (selectedMemberConfig) {
+                PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
+              }
+
+              // Show confirmation message
+              addLogMessage(`Set primary class to ${unitClass.name}`);
+
+              // Clear cached references to force recreation from updated registry
+              selectedMemberRef.current = null;
+              spendXpMainContentRef.current = null;
+
+              // Trigger re-render of top info panel to show updated class
+              setPartyMemberVersion(v => v + 1);
+              renderFrame();
+            }
             return;
           }
 
           // Handle set-secondary-class
           if (bottomClickResult.type === 'set-secondary-class' && 'classId' in bottomClickResult) {
-            addLogMessage(`Set secondary class: Coming Soon`);
-            renderFrame();
+            const unitClass = UnitClass.getById(bottomClickResult.classId);
+            if (unitClass && selectedMemberRef.current) {
+              const humanoid = selectedMemberRef.current as HumanoidUnit;
+              humanoid.setSecondaryClass(unitClass);
+
+              // Update registry
+              const partyMemberConfigs = PartyMemberRegistry.getAll();
+              const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
+              if (selectedMemberConfig) {
+                PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
+              }
+
+              // Show confirmation message
+              addLogMessage(`Set secondary class to ${unitClass.name}`);
+
+              // Clear cached references to force recreation from updated registry
+              selectedMemberRef.current = null;
+              spendXpMainContentRef.current = null;
+
+              // Trigger re-render of top info panel to show updated class
+              setPartyMemberVersion(v => v + 1);
+              renderFrame();
+            }
             return;
           }
 

@@ -618,6 +618,14 @@ export class HumanoidUnit implements CombatUnit {
 
   // Class management methods
   /**
+   * Set the primary class for this unit
+   * @param unitClass The class to set as primary
+   */
+  setPrimaryClass(unitClass: UnitClass): void {
+    this._unitClass = unitClass;
+  }
+
+  /**
    * Set the secondary class for this unit
    * @param unitClass The class to set as secondary, or null to clear
    */

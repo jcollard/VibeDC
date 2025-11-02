@@ -432,6 +432,10 @@ export class PartyMemberRegistry {
     definition.passiveAbilityId = unit.passiveAbility?.id;
     definition.movementAbilityId = unit.movementAbility?.id;
 
+    // Update classes
+    definition.unitClassId = unit.unitClass.id;
+    definition.secondaryClassId = unit.secondaryClass?.id ?? undefined;
+
     // Update XP values
     definition.totalExperience = unit.totalExperience;
 
