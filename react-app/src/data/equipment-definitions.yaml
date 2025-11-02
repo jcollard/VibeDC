@@ -212,7 +212,7 @@ equipment:
     type: "OneHandedWeapon"
     modifiers:
       physicalPower: 8
-      speed: 5
+      speed: 2
     allowedClasses:
       - "rogue-001"
     minRange: 1

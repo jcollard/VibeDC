@@ -72,9 +72,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
 
   // Ability selection state (cached when entering ability mode)
   private selectedAbilityId: string | null = null;
-  private abilityTargetPosition: Position | null = null;
   private abilityRange: Position[] = []; // Valid target tiles for selected ability
-  private abilityRangeCachedPosition: Position | null = null; // Position used to calculate ability range
 
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState, hasMoved: boolean = false, _hasActed: boolean = false): void {
     this.activeUnit = unit;
@@ -91,9 +89,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.selectedAttackTarget = null;
     this.attackRangeCachedPosition = null;
     this.selectedAbilityId = null;
-    this.abilityTargetPosition = null;
     this.abilityRange = [];
-    this.abilityRangeCachedPosition = null;
 
     // Calculate movement range for this unit
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
@@ -128,9 +124,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.selectedAttackTarget = null;
     this.attackRangeCachedPosition = null;
     this.selectedAbilityId = null;
-    this.abilityTargetPosition = null;
     this.abilityRange = [];
-    this.abilityRangeCachedPosition = null;
   }
 
   update(
@@ -827,11 +821,10 @@ export class PlayerTurnStrategy implements TurnStrategy {
    * Called when player selects an ability from AbilityMenuContent
    */
   handleAbilitySelected(abilityId: string): void {
-    // Store selected ability and enter ability targeting mode
+    // Store selected ability
     this.selectedAbilityId = abilityId;
-    this.mode = 'abilitySelection';
 
-    // Exit other modes
+    // Exit other modes before entering ability selection
     if (this.mode === 'moveSelection') {
       this.exitMoveMode();
     }
@@ -839,12 +832,14 @@ export class PlayerTurnStrategy implements TurnStrategy {
       this.exitAttackMode();
     }
 
+    // Enter ability targeting mode
+    this.mode = 'abilitySelection';
+
     // Calculate ability range
     if (this.activeUnit && this.activePosition) {
       const ability = Array.from(this.activeUnit.learnedAbilities).find(a => a.id === abilityId);
       if (ability) {
         this.abilityRange = this.calculateAbilityRange(ability, this.activePosition);
-        this.abilityRangeCachedPosition = { ...this.activePosition };
       }
     }
   }
@@ -855,7 +850,6 @@ export class PlayerTurnStrategy implements TurnStrategy {
    */
   handleAbilityCancelled(): void {
     this.selectedAbilityId = null;
-    this.abilityTargetPosition = null;
     this.mode = 'normal';
   }
 
@@ -865,9 +859,7 @@ export class PlayerTurnStrategy implements TurnStrategy {
   private exitAbilityMode(): void {
     this.mode = 'normal';
     this.selectedAbilityId = null;
-    this.abilityTargetPosition = null;
     this.abilityRange = [];
-    this.abilityRangeCachedPosition = null;
   }
 
   /**
