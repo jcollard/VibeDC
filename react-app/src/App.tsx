@@ -7,6 +7,7 @@ import { InventoryViewRoute } from './components/inventory/InventoryViewRoute'
 import { TitleScreen } from './components/TitleScreen'
 import { DevRoute } from './components/DevRoute'
 import { FirstPersonView } from './components/firstperson/FirstPersonView'
+import { GuildHallTestRoute } from './components/guild/GuildHallTestRoute'
 import { loadAllGameData } from './data/DataLoader'
 import './App.css'
 
@@ -61,6 +62,11 @@ function App() {
         {/* Development-only route for testing first-person exploration */}
         {import.meta.env.DEV && (
           <Route path="/dev/test/:mapId" element={<FirstPersonTestRoute />} />
+        )}
+
+        {/* Development-only route for testing Guild Hall */}
+        {import.meta.env.DEV && (
+          <Route path="/dev/guild-hall" element={<GuildHallTestRoute />} />
         )}
       </Routes>
     </BrowserRouter>

@@ -2,6 +2,7 @@ import type { CompleteGameState, ExplorationState, PartyState, PartyManagementSt
 import type { GameState as EventGameState } from '../area/EventPrecondition';
 import { serializeCombatState, deserializeCombatState } from '../combat/CombatState';
 import type { CombatStateJSON } from '../combat/CombatState';
+import type { PartyMemberDefinitionJSON } from '../../utils/PartyMemberRegistry';
 
 /**
  * JSON representation of CompleteGameState for serialization
@@ -35,6 +36,7 @@ export interface PartyManagementStateJSON {
 
 export interface PartyStateJSON {
   members: unknown[]; // CombatUnit.toJSON() returns unknown
+  guildRoster: PartyMemberDefinitionJSON[]; // All created characters
   inventory: {
     items: Array<{ itemId: string; quantity: number }>;
     gold: number;
@@ -166,6 +168,37 @@ function deserializePartyManagementState(json: PartyManagementStateJSON): PartyM
 function serializePartyState(state: PartyState): PartyStateJSON {
   return {
     members: state.members.map(unit => unit.toJSON()),
+    guildRoster: state.guildRoster.map(def => ({
+      id: def.id,
+      name: def.name,
+      unitClassId: def.unitClassId,
+      baseHealth: def.baseHealth,
+      baseMana: def.baseMana,
+      basePhysicalPower: def.basePhysicalPower,
+      baseMagicPower: def.baseMagicPower,
+      baseSpeed: def.baseSpeed,
+      baseMovement: def.baseMovement,
+      basePhysicalEvade: def.basePhysicalEvade,
+      baseMagicEvade: def.baseMagicEvade,
+      baseCourage: def.baseCourage,
+      baseAttunement: def.baseAttunement,
+      spriteId: def.spriteId,
+      learnedAbilityIds: def.learnedAbilityIds,
+      reactionAbilityId: def.reactionAbilityId,
+      passiveAbilityId: def.passiveAbilityId,
+      movementAbilityId: def.movementAbilityId,
+      secondaryClassId: def.secondaryClassId,
+      leftHandId: def.leftHandId,
+      rightHandId: def.rightHandId,
+      headId: def.headId,
+      bodyId: def.bodyId,
+      accessoryId: def.accessoryId,
+      totalExperience: def.totalExperience,
+      classExperience: def.classExperience,
+      classExperienceSpent: def.classExperienceSpent,
+      tags: def.tags,
+      description: def.description,
+    })),
     inventory: {
       items: state.inventory.items,
       gold: state.inventory.gold,
@@ -183,6 +216,37 @@ function deserializePartyState(json: PartyStateJSON): PartyState | null {
 
     return {
       members: json.members as any[], // TODO: Properly deserialize CombatUnit instances
+      guildRoster: json.guildRoster.map(defJson => ({
+        id: defJson.id,
+        name: defJson.name,
+        unitClassId: defJson.unitClassId,
+        baseHealth: defJson.baseHealth,
+        baseMana: defJson.baseMana,
+        basePhysicalPower: defJson.basePhysicalPower,
+        baseMagicPower: defJson.baseMagicPower,
+        baseSpeed: defJson.baseSpeed,
+        baseMovement: defJson.baseMovement,
+        basePhysicalEvade: defJson.basePhysicalEvade,
+        baseMagicEvade: defJson.baseMagicEvade,
+        baseCourage: defJson.baseCourage,
+        baseAttunement: defJson.baseAttunement,
+        spriteId: defJson.spriteId,
+        learnedAbilityIds: defJson.learnedAbilityIds,
+        reactionAbilityId: defJson.reactionAbilityId,
+        passiveAbilityId: defJson.passiveAbilityId,
+        movementAbilityId: defJson.movementAbilityId,
+        secondaryClassId: defJson.secondaryClassId,
+        leftHandId: defJson.leftHandId,
+        rightHandId: defJson.rightHandId,
+        headId: defJson.headId,
+        bodyId: defJson.bodyId,
+        accessoryId: defJson.accessoryId,
+        totalExperience: defJson.totalExperience,
+        classExperience: defJson.classExperience,
+        classExperienceSpent: defJson.classExperienceSpent,
+        tags: defJson.tags,
+        description: defJson.description,
+      })),
       inventory: {
         items: json.inventory.items,
         gold: json.inventory.gold,

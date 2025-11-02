@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { CompleteGameState, ExplorationState, PartyState } from '../../models/game/GameState';
+import type { CompleteGameState, ExplorationState, PartyState, GameViewType } from '../../models/game/GameState';
 import { ResourceManager } from '../../services/ResourceManager';
 import { ViewTransitionManager } from '../../services/ViewTransitionManager';
 import { GameSaveManager } from '../../services/GameSaveManager';
@@ -10,6 +10,7 @@ import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { FirstPersonView } from '../firstperson/FirstPersonView';
 import { CombatView } from '../combat/CombatView';
 import { PartyManagementView } from '../inventory/PartyManagementView';
+import { GuildHallView } from '../guild/GuildHallView';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 
 interface GameViewProps {
@@ -53,6 +54,7 @@ export const GameView: React.FC<GameViewProps> = ({
     const loadResources = async () => {
       try {
         await resourceManager.loadFonts();
+        await resourceManager.loadSprites();
         setResourcesLoaded(true);
         onGameReady?.();
       } catch (error) {
@@ -138,10 +140,11 @@ export const GameView: React.FC<GameViewProps> = ({
 
     return {
       members,
+      guildRoster: gameState.partyState.guildRoster, // Preserve guild roster
       inventory: { items, gold },
       equipment: new Map(), // TODO: Extract equipment from members if needed
     };
-  }, []);
+  }, [gameState.partyState.guildRoster]);
 
   // ✅ GUIDELINE: View transition handlers
   const handleStartCombat = useCallback(async (encounterId: string) => {
@@ -222,6 +225,14 @@ export const GameView: React.FC<GameViewProps> = ({
     }));
   }, []);
 
+  // Callback for GuildHallView to sync party state changes
+  const handlePartyStateChange = useCallback((partyState: CompleteGameState['partyState']) => {
+    setGameState(prevState => ({
+      ...prevState,
+      partyState,
+    }));
+  }, []);
+
   // ✅ GUIDELINE: Party management transition handlers
   const handleOpenPartyManagement = useCallback(async (fromView: 'exploration' | 'combat') => {
     console.log('[GameView] Opening party management');
@@ -269,6 +280,55 @@ export const GameView: React.FC<GameViewProps> = ({
     setIsTransitioning(false);
   }, [gameState.partyManagementState, transitionManager, syncRegistriesToPartyState]);
 
+  // Helper for transitioning to guild hall view
+  const handleTransitionToGuildHall = useCallback(async () => {
+    console.log('[GameView] Transitioning to guild hall view');
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'guild-hall',
+      () => {
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'guild-hall',
+        }));
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager]);
+
+  // Helper for transitioning to menu view
+  const handleTransitionToMenu = useCallback(async () => {
+    console.log('[GameView] Transitioning to menu view');
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'menu',
+      () => {
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'menu',
+        }));
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager]);
+
+  // Navigation handler for views
+  const handleNavigate = useCallback(async (view: GameViewType, params?: any) => {
+    if (view === 'exploration') {
+      handleStartExploration();
+    } else if (view === 'menu') {
+      handleTransitionToMenu();
+    } else if (view === 'combat' && params?.encounterId) {
+      handleStartCombat(params.encounterId);
+    } else if (view === 'guild-hall') {
+      handleTransitionToGuildHall();
+    }
+  }, [handleStartExploration, handleTransitionToMenu, handleStartCombat, handleTransitionToGuildHall]);
+
   // 🛠️ DEVELOPER: Expose view transition functions for testing
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -303,12 +363,24 @@ export const GameView: React.FC<GameViewProps> = ({
         console.log(`  Items:`, PartyInventory.getAllItems());
       };
 
+      (window as any).startGuildHall = () => {
+        console.log('[DEV] Transitioning to guild hall view');
+        handleTransitionToGuildHall();
+      };
+
+      (window as any).startMenu = () => {
+        console.log('[DEV] Transitioning to menu view');
+        handleTransitionToMenu();
+      };
+
       console.log('[DEV] Developer functions available:');
       console.log('  - startEncounter(id): Start combat with encounter ID');
       console.log('  - startFirstPersonView(): Return to exploration view');
       console.log('  - openPartyManagement(): Open party management view');
       console.log('  - checkPartyXP(): Show party XP values from registry');
       console.log('  - checkInventory(): Show party inventory and gold');
+      console.log('  - startGuildHall(): Go to guild hall');
+      console.log('  - startMenu(): Go to menu');
 
       return () => {
         delete (window as any).startEncounter;
@@ -316,9 +388,11 @@ export const GameView: React.FC<GameViewProps> = ({
         delete (window as any).openPartyManagement;
         delete (window as any).checkPartyXP;
         delete (window as any).checkInventory;
+        delete (window as any).startGuildHall;
+        delete (window as any).startMenu;
       };
     }
-  }, [handleStartCombat, handleStartExploration, handleOpenPartyManagement]);
+  }, [handleStartCombat, handleStartExploration, handleOpenPartyManagement, handleTransitionToGuildHall, handleTransitionToMenu]);
 
   // Render loading screen
   if (!resourcesLoaded) {
@@ -406,6 +480,15 @@ export const GameView: React.FC<GameViewProps> = ({
             onClose={handleClosePartyManagement}
           />
         )}
+
+        {gameState.currentView === 'guild-hall' && (
+          <GuildHallView
+            partyState={gameState.partyState}
+            onPartyStateChange={handlePartyStateChange}
+            onNavigate={handleNavigate}
+            resourceManager={resourceManager}
+          />
+        )}
       </div>
     </div>
   );
@@ -437,6 +520,7 @@ function createNewGameState(initialMapId: string): CompleteGameState {
     },
     partyState: {
       members: partyMembers,
+      guildRoster: [],
       inventory: {
         items: [],
         gold: 0,

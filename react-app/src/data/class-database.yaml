@@ -34,6 +34,17 @@ classes:
       - "medium-armor"
       - "heavy-armor"
       - "shield"
+    starterConfig:
+      baseHealth: 45
+      baseMana: 5
+      basePhysicalPower: 10
+      baseMagicPower: 5
+      baseSpeed: 8
+      baseMovement: 4
+      basePhysicalEvade: 10
+      baseMagicEvade: 7
+      baseCourage: 12
+      baseAttunement: 6
 
   - id: "rogue"
     name: "Rogue"
@@ -67,6 +78,17 @@ classes:
       - "medium-weapon"
       - "light-armor"
       - "medium-armor"
+    starterConfig:
+      baseHealth: 30
+      baseMana: 15
+      basePhysicalPower: 8
+      baseMagicPower: 7
+      baseSpeed: 12
+      baseMovement: 5
+      basePhysicalEvade: 16
+      baseMagicEvade: 10
+      baseCourage: 10
+      baseAttunement: 10
 
   - id: "apprentice"
     name: "Apprentice"
@@ -99,6 +121,17 @@ classes:
       - "light-weapon"
       - "medium-weapon"
       - "light-armor"
+    starterConfig:
+      baseHealth: 25
+      baseMana: 30
+      basePhysicalPower: 5
+      baseMagicPower: 15
+      baseSpeed: 7
+      baseMovement: 3
+      basePhysicalEvade: 8
+      baseMagicEvade: 14
+      baseCourage: 8
+      baseAttunement: 16
 
   - id: "monster"
     name: "Monster"

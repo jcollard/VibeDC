@@ -36,6 +36,27 @@ export interface UnitClassDefinition {
   };
   requirements?: { [classId: string]: number };
   allowedEquipmentTypes?: string[];
+  starterConfig?: {
+    baseHealth: number;
+    baseMana: number;
+    basePhysicalPower: number;
+    baseMagicPower: number;
+    baseSpeed: number;
+    baseMovement: number;
+    basePhysicalEvade: number;
+    baseMagicEvade: number;
+    baseCourage: number;
+    baseAttunement: number;
+    leftHandId?: string;
+    rightHandId?: string;
+    headId?: string;
+    bodyId?: string;
+    accessoryId?: string;
+    learnedAbilityIds?: string[];
+    reactionAbilityId?: string;
+    passiveAbilityId?: string;
+    movementAbilityId?: string;
+  };
 }
 
 /**
@@ -74,7 +95,8 @@ export class UnitClassRegistry {
       definition.multipliers,
       requirements,
       definition.id,
-      definition.allowedEquipmentTypes
+      definition.allowedEquipmentTypes,
+      definition.starterConfig
     );
   }
 
@@ -128,7 +150,8 @@ export class UnitClassRegistry {
           },
           new Map(c.requirements),
           c.id,
-          [...c.allowedEquipmentTypes]
+          [...c.allowedEquipmentTypes],
+          c.starterConfig
         );
       }
     });
