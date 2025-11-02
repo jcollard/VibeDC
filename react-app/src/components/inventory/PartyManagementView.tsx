@@ -1118,7 +1118,7 @@ export const PartyManagementView: React.FC = () => {
         }
       }
 
-      // If in set-abilities mode, handle hover for ability selection
+      // If in set-abilities mode, handle hover for ability selection in main panel
       if (panelMode === 'set-abilities' && setAbilitiesMainContentRef.current) {
         const relativeX = canvasX - mainPanelBounds.x;
         const relativeY = canvasY - mainPanelBounds.y;
@@ -1311,6 +1311,51 @@ export const PartyManagementView: React.FC = () => {
             detailPanelActiveRef.current = false;
             originalBottomPanelContentRef.current = null;
             needsRerender = true;
+          }
+        }
+      }
+
+      // If in set-abilities mode, also handle hover for ability/equipment slots in top info panel
+      if (panelMode === 'set-abilities') {
+        const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+        if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
+            canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
+
+          // Check if hover result is ability or equipment detail
+          if (topInfoHoverResult && typeof topInfoHoverResult === 'object' && 'type' in topInfoHoverResult) {
+            if ('item' in topInfoHoverResult) {
+              if (topInfoHoverResult.type === 'ability-detail') {
+                // Cache original bottom panel content if not already cached
+                if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                  originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+                }
+
+                // Show ability details in bottom panel
+                if (selectedMemberRef.current) {
+                  bottomPanelManager.setContent(new AbilityInfoContent(topInfoHoverResult.item as any, selectedMemberRef.current));
+                  detailPanelActiveRef.current = true;
+                  needsRerender = true;
+                }
+              } else if (topInfoHoverResult.type === 'equipment-detail') {
+                // Cache original bottom panel content if not already cached
+                if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                  originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+                }
+
+                // Show equipment details in bottom panel
+                bottomPanelManager.setContent(new EquipmentInfoContent(topInfoHoverResult.item as any));
+                detailPanelActiveRef.current = true;
+                needsRerender = true;
+              }
+            }
+          } else {
+            // Mouse is in top info panel but not hovering an ability/equipment - restore original panel if needed
+            if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
+              bottomPanelManager.setContent(originalBottomPanelContentRef.current);
+              detailPanelActiveRef.current = false;
+              originalBottomPanelContentRef.current = null;
+              needsRerender = true;
+            }
           }
         }
       }
