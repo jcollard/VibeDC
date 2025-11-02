@@ -194,6 +194,9 @@ export class GuildRosterManager {
       }
     }
 
+    // Calculate total experience (sum of all class experience)
+    const totalExperience = Object.values(classExperience).reduce((sum, xp) => sum + xp, 0);
+
     // Generate unique ID
     const id = `character-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
 
@@ -222,7 +225,7 @@ export class GuildRosterManager {
       reactionAbilityId: classConfig.reactionAbilityId,
       passiveAbilityId: classConfig.passiveAbilityId,
       movementAbilityId: classConfig.movementAbilityId,
-      totalExperience: 0,
+      totalExperience,
       classExperience,
       classExperienceSpent,
       tags: ['player-created'],
