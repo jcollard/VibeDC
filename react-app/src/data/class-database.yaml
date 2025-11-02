@@ -96,6 +96,7 @@ classes:
       baseMagicEvade: 10
       baseCourage: 10
       baseAttunement: 10
+      leftHandId: "steel-dagger-001"
       rightHandId: "steel-dagger-001"
       bodyId: "leather-armor-001"
 
