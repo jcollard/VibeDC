@@ -1,6 +1,7 @@
 import type { PartyState } from '../models/game/GameState';
 import type { PartyMemberDefinition } from './PartyMemberRegistry';
 import { PartyMemberRegistry } from './PartyMemberRegistry';
+import { GuildRosterRegistry } from './GuildRosterRegistry';
 import { UnitClass } from '../models/combat/UnitClass';
 import { CombatAbility } from '../models/combat/CombatAbility';
 import type { CombatUnit } from '../models/combat/CombatUnit';
@@ -227,9 +228,8 @@ export class GuildRosterManager {
       tags: ['player-created'],
     };
 
-    // NOTE: Do NOT register with PartyMemberRegistry!
-    // PartyMemberRegistry is a global singleton for default party members only.
-    // Guild roster is managed in partyState.guildRoster and persisted via save/load.
+    // Register with GuildRosterRegistry for immediate availability
+    GuildRosterRegistry.register(character);
 
     // ⚠️ IMMUTABLE UPDATE: Create new state object with spread operator
     this.partyState = {
@@ -282,6 +282,10 @@ export class GuildRosterManager {
       members: [...this.partyState.members, combatUnit]
     };
 
+    // Sync to PartyMemberRegistry (active party only)
+    PartyMemberRegistry.register(character);
+    PartyMemberRegistry.updateFromUnit(character.id, combatUnit as any);
+
     this.notifyStateChange();
     return true;
   }
@@ -293,22 +297,28 @@ export class GuildRosterManager {
    */
   removeFromParty(characterId: string): boolean {
     // Try to find by ID in WeakMap first, then fall back to matching by name
-    const index = this.partyState.members.findIndex(c =>
+    const memberToRemove = this.partyState.members.find(c =>
       this.unitToIdMap.get(c) === characterId || c.name === characterId
     );
 
-    if (index === -1) {
+    if (!memberToRemove) {
       console.warn('[GuildRosterManager] Character not in party:', characterId);
       return false;
     }
+
+    // Get the actual character ID
+    const actualCharacterId = this.unitToIdMap.get(memberToRemove) || characterId;
 
     // ⚠️ IMMUTABLE UPDATE: Create new state object with filtered array
     this.partyState = {
       ...this.partyState,
       members: this.partyState.members.filter(c =>
-        this.unitToIdMap.get(c) !== characterId && c.name !== characterId
+        this.unitToIdMap.get(c) !== actualCharacterId && c.name !== memberToRemove.name
       )
     };
+
+    // Remove from PartyMemberRegistry (active party only)
+    PartyMemberRegistry.delete(actualCharacterId);
 
     this.notifyStateChange();
     return true;

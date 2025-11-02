@@ -5,6 +5,7 @@ import { ViewTransitionManager } from '../../services/ViewTransitionManager';
 import { GameSaveManager } from '../../services/GameSaveManager';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
+import { GuildRosterRegistry } from '../../utils/GuildRosterRegistry';
 import { PartyInventory } from '../../utils/inventory/PartyInventory';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { FirstPersonView } from '../firstperson/FirstPersonView';
@@ -105,14 +106,27 @@ export const GameView: React.FC<GameViewProps> = ({
   const syncPartyStateToRegistries = useCallback((partyState: PartyState): void => {
     console.log('[GameView] Syncing party state to registries');
 
-    // Update PartyMemberRegistry from partyState.members
+    // Clear both registries
+    PartyMemberRegistry.clear();
+    GuildRosterRegistry.clear();
+
+    // Sync to PartyMemberRegistry: ONLY active party members (max 4)
+    // PartyManagementView uses this registry exclusively
     partyState.members.forEach(member => {
-      const configs = PartyMemberRegistry.getAll();
-      // Match by name since CombatUnit doesn't have id property
-      const config = configs.find(c => c.name === member.name);
-      if (config) {
-        PartyMemberRegistry.updateFromUnit(config.id, member as any);
+      // Find the character definition in guild roster by name
+      const character = partyState.guildRoster.find(c => c.name === member.name);
+      if (character) {
+        // Register the definition
+        PartyMemberRegistry.register(character);
+        // Update it with current stats from the CombatUnit
+        PartyMemberRegistry.updateFromUnit(character.id, member as any);
       }
+    });
+
+    // Sync to GuildRosterRegistry: ALL guild characters
+    // GuildHallView uses this registry for the full roster
+    partyState.guildRoster.forEach(character => {
+      GuildRosterRegistry.register(character);
     });
 
     // Update PartyInventory from partyState.inventory
@@ -127,9 +141,13 @@ export const GameView: React.FC<GameViewProps> = ({
   const syncRegistriesToPartyState = useCallback((): PartyState => {
     console.log('[GameView] Syncing registries to party state');
 
-    const members = PartyMemberRegistry.getAll()
+    // Get active party from PartyMemberRegistry (max 4 members)
+    const partyMembers = PartyMemberRegistry.getAll()
       .map(config => PartyMemberRegistry.createPartyMember(config.id))
       .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    // Get full guild roster from GuildRosterRegistry
+    const guildRoster = GuildRosterRegistry.getAll();
 
     const items = PartyInventory.getAllItems().map(item => ({
       itemId: item.equipmentId,
@@ -139,12 +157,12 @@ export const GameView: React.FC<GameViewProps> = ({
     const gold = PartyInventory.getGold();
 
     return {
-      members,
-      guildRoster: gameState.partyState.guildRoster, // Preserve guild roster
+      members: partyMembers,
+      guildRoster: guildRoster,
       inventory: { items, gold },
       equipment: new Map(), // TODO: Extract equipment from members if needed
     };
-  }, [gameState.partyState.guildRoster]);
+  }, []);
 
   // ✅ GUIDELINE: View transition handlers
   const handleStartCombat = useCallback(async (encounterId: string) => {
