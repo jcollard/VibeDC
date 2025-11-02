@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { CompleteGameState } from '../../models/game/GameState';
+import type { CompleteGameState, ExplorationState } from '../../models/game/GameState';
 import { ResourceManager } from '../../services/ResourceManager';
 import { ViewTransitionManager } from '../../services/ViewTransitionManager';
 import { GameSaveManager } from '../../services/GameSaveManager';
@@ -156,6 +156,14 @@ export const GameView: React.FC<GameViewProps> = ({
     setIsTransitioning(false);
   }, [gameState.currentView, transitionManager]);
 
+  // Callback for FirstPersonView to sync exploration state changes
+  const handleExplorationStateChange = useCallback((explorationState: ExplorationState) => {
+    setGameState(prevState => ({
+      ...prevState,
+      explorationState,
+    }));
+  }, []);
+
   // 🛠️ DEVELOPER: Expose view transition functions for testing
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -242,6 +250,7 @@ export const GameView: React.FC<GameViewProps> = ({
           <FirstPersonView
             mapId={gameState.explorationState.currentMapId}
             onStartCombat={handleStartCombat}
+            onExplorationStateChange={handleExplorationStateChange}
             resourceManager={resourceManager}
             initialState={gameState.explorationState}
             partyState={gameState.partyState}

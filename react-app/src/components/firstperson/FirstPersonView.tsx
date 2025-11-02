@@ -26,6 +26,9 @@ interface FirstPersonViewProps {
   // NEW: Callback when combat encounter is triggered
   onStartCombat?: (encounterId: string) => void;
 
+  // NEW: Callback when exploration state changes (for syncing back to GameView)
+  onExplorationStateChange?: (state: ExplorationState) => void;
+
   // NEW: Shared resource manager from GameView
   resourceManager?: ResourceManager;
 
@@ -69,6 +72,8 @@ function getRevealedTiles(x: number, y: number): string[] {
 export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   mapId,
   onStartCombat,
+  onExplorationStateChange,
+  initialState,
   gameState: initialGameState,
 }) => {
   // Load area map
@@ -97,6 +102,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState | null>(() => {
     if (!areaMap || !defaultPartyMember) return null;
 
+    // Use initialState from props if provided (for loading saves or returning from combat)
+    if (initialState) {
+      return {
+        playerX: initialState.playerPosition.x,
+        playerY: initialState.playerPosition.y,
+        direction: initialState.playerDirection,
+        map: areaMap,
+        exploredTiles: initialState.exploredTiles,
+        partyMember: defaultPartyMember,
+        // Note: targetedObject from ExplorationState is simplified, just reset to null
+        targetedObject: null,
+      };
+    }
+
+    // Create new state from spawn point
     return {
       playerX: areaMap.playerSpawn.x,
       playerY: areaMap.playerSpawn.y,
@@ -155,6 +175,25 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       playerDirection: areaMap.playerSpawn.direction,
     };
   });
+
+  // Sync exploration state changes back to GameView
+  useEffect(() => {
+    if (firstPersonState && onExplorationStateChange) {
+      const explorationState: ExplorationState = {
+        currentMapId: mapId,
+        playerPosition: { x: firstPersonState.playerX, y: firstPersonState.playerY },
+        playerDirection: firstPersonState.direction,
+        exploredTiles: firstPersonState.exploredTiles,
+        targetedObject: firstPersonState.targetedObject
+          ? {
+              type: firstPersonState.targetedObject.type as 'door' | 'chest' | 'npc' | 'sign',
+              position: { x: firstPersonState.targetedObject.x, y: firstPersonState.targetedObject.y },
+            }
+          : null,
+      };
+      onExplorationStateChange(explorationState);
+    }
+  }, [firstPersonState, mapId, onExplorationStateChange]);
 
   // Canvas refs
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
