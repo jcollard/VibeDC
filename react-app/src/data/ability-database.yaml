@@ -89,6 +89,17 @@ abilities:
       - "physical"
       - "weapon-range"
       - "slow"
+    effects:
+      - type: "damage-physical"
+        target: "target"
+        value: 15
+      - type: "stat-penalty"
+        target: "target"
+        value: -3
+        duration: 3
+        chance: 0.5
+        params:
+          stat: "speed"
 
   # Fighter Reactions
   - id: "parry-001"
@@ -148,6 +159,10 @@ abilities:
     tags:
       - "physical"
       - "ranged"
+    effects:
+      - type: "damage-physical"
+        target: "target"
+        value: 10
 
   - id: "sneak-001"
     name: "Sneak"
@@ -288,6 +303,13 @@ abilities:
       - "magic"
       - "healing"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 6
+      - type: "heal"
+        target: "target"
+        value: 30
 
   - id: "minor-shield-001"
     name: "Minor Shield"
@@ -309,6 +331,16 @@ abilities:
       - "magic"
       - "buff"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 6
+      - type: "stat-bonus"
+        target: "target"
+        value: 5
+        duration: 3
+        params:
+          stat: "physicalPower"
 
   - id: "reflexes-001"
     name: "Reflexes"
@@ -319,6 +351,22 @@ abilities:
       - "magic"
       - "buff"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 10
+      - type: "stat-bonus"
+        target: "target"
+        value: 15
+        duration: 3
+        params:
+          stat: "physicalEvade"
+      - type: "stat-bonus"
+        target: "target"
+        value: 15
+        duration: 3
+        params:
+          stat: "magicalEvade"
 
   # Apprentice Actions - Offensive
   - id: "harm-001"
@@ -330,6 +378,13 @@ abilities:
       - "magic"
       - "damage"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 6
+      - type: "damage-magical"
+        target: "target"
+        value: 25
 
   - id: "weakness-001"
     name: "Weakness"
@@ -340,6 +395,16 @@ abilities:
       - "magic"
       - "debuff"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 6
+      - type: "stat-penalty"
+        target: "target"
+        value: -5
+        duration: 3
+        params:
+          stat: "physicalPower"
 
   - id: "sluggish-001"
     name: "Sluggish"
@@ -350,6 +415,16 @@ abilities:
       - "magic"
       - "debuff"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 10
+      - type: "stat-penalty"
+        target: "target"
+        value: -5
+        duration: 3
+        params:
+          stat: "speed"
 
   - id: "mesmerize-001"
     name: "Mesmerize"
@@ -360,6 +435,13 @@ abilities:
       - "magic"
       - "control"
       - "ranged"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 10
+      - type: "action-timer-modify"
+        target: "target"
+        value: 0
 
   # Apprentice Reactions
   - id: "quick-shield-001"
