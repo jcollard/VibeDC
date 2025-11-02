@@ -1305,7 +1305,7 @@ export const PartyManagementView: React.FC = () => {
           }
         }
 
-        // Check bottom panel click in spend-xp mode (for ClassInfoContent menu options)
+        // Check bottom panel click in spend-xp mode (for ClassInfoContent and AbilityInfoContent menu options)
         const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
         const bottomClickResult = bottomPanelManager.handleClick(
           canvasX,
@@ -1323,6 +1323,26 @@ export const PartyManagementView: React.FC = () => {
           // Handle set-secondary-class
           if (bottomClickResult.type === 'set-secondary-class' && 'classId' in bottomClickResult) {
             addLogMessage(`Set secondary class: Coming Soon`);
+            renderFrame();
+            return;
+          }
+
+          // Handle cancel-ability-view
+          if (bottomClickResult.type === 'cancel-ability-view') {
+            if (selectedMemberRef.current && spendXpMainContentRef.current) {
+              const selectedClassId = spendXpMainContentRef.current.getSelectedClassId();
+              const selectedClass = UnitClass.getById(selectedClassId);
+              if (selectedClass) {
+                bottomPanelManager.setContent(new ClassInfoContent(selectedClass, selectedMemberRef.current));
+                renderFrame();
+              }
+            }
+            return;
+          }
+
+          // Handle learn-ability
+          if (bottomClickResult.type === 'learn-ability' && 'abilityId' in bottomClickResult) {
+            addLogMessage(`Learn ability: Coming Soon`);
             renderFrame();
             return;
           }
