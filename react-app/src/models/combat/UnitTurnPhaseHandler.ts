@@ -27,6 +27,7 @@ import { MovementPathfinder } from './utils/MovementPathfinder';
 import { AttackAnimationSequence } from './AttackAnimationSequence';
 import { CombatCalculations } from './utils/CombatCalculations';
 import type { Equipment } from './Equipment';
+import { AbilityExecutor, type AbilityExecutionContext } from './abilities/AbilityExecutor';
 
 /**
  * Unit turn phase handler - manages individual unit turns using strategy pattern
@@ -627,7 +628,7 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
   }
 
   /**
-   * Execute a turn action (Delay or End Turn)
+   * Execute a turn action (Delay, End Turn, or Ability)
    * Updates the active unit's action timer and transitions back to action-timer phase
    */
   private executeAction(action: TurnAction, state: CombatState): CombatState {
@@ -650,6 +651,10 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         newActionTimer = 0;
         logMessage = `[color=${this.getUnitNameColor()}]${this.activeUnit.name}[/color] ends turn.`;
         break;
+
+      case 'ability':
+        // Execute ability and stay in unit-turn phase (don't end turn yet)
+        return this.executeAbility(action.abilityId, action.target, state);
 
       default:
         console.warn('[UnitTurnPhaseHandler] Unknown action type:', action);
@@ -682,6 +687,70 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       previousTurnOrder: previousTurnOrder.length > 0 ? previousTurnOrder : undefined,
       pendingActionTimerMutation: { unit: this.activeUnit, newValue: newActionTimer }
     };
+  }
+
+  /**
+   * Execute an ability
+   * Uses AbilityExecutor to resolve effects and update combat state
+   */
+  private executeAbility(abilityId: string, targetPosition: Position | undefined, state: CombatState): CombatState {
+    if (!this.activeUnit || !this.activeUnitPosition) {
+      console.warn('[UnitTurnPhaseHandler] Cannot execute ability - no active unit');
+      return state;
+    }
+
+    // Find the ability in the unit's learned abilities
+    const ability = Array.from(this.activeUnit.learnedAbilities).find(a => a.id === abilityId);
+    if (!ability) {
+      console.warn(`[UnitTurnPhaseHandler] Ability not found: ${abilityId}`);
+      return state;
+    }
+
+    // Get target unit if position specified
+    let targetUnit: CombatUnit | undefined;
+    if (targetPosition) {
+      targetUnit = state.unitManifest.getUnitAt(targetPosition);
+    }
+
+    // Create execution context
+    const context: AbilityExecutionContext = {
+      caster: this.activeUnit,
+      casterPosition: this.activeUnitPosition,
+      target: targetUnit,
+      targetPosition: targetPosition,
+      state: state
+    };
+
+    // Execute ability
+    const result = AbilityExecutor.execute(ability, context);
+
+    if (!result.success) {
+      // Ability failed - log messages should already be in result
+      for (const message of result.logMessages) {
+        this.pendingLogMessages.push(message);
+      }
+      return state;
+    }
+
+    // Ability succeeded - add combat log messages
+    for (const message of result.logMessages) {
+      this.pendingLogMessages.push(message);
+    }
+
+    // Mark unit as having acted (prevents further actions this turn)
+    this.hasActed = true;
+    this.canAct = false;
+
+    // Disable move reset (can't reset move after acting)
+    this.canResetMove = false;
+
+    // TODO Phase 2.6: Store animations for visual effects
+    // if (result.animations && result.animations.length > 0) {
+    //   this.abilityAnimations = result.animations;
+    // }
+
+    // Return updated state (don't end turn - player may want to move or explicitly end)
+    return result.newState;
   }
 
   /**

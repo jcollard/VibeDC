@@ -13,7 +13,9 @@ export type TurnAction =
   | { type: 'end-turn' }          // Set actionTimer to 0
   | { type: 'move'; destination: Position; path?: Position[] } // Move to destination (path optional, calculated if not provided)
   | { type: 'reset-move' }        // Reset to original position
-  | { type: 'attack'; target: Position }; // Attack target at position
+  | { type: 'attack'; target: Position } // Attack target at position
+  | { type: 'show-ability-menu' } // Show ability selection menu
+  | { type: 'ability'; abilityId: string; target?: Position }; // Execute ability (target optional for self-targeting abilities)
 
 /**
  * Strategy pattern for handling unit turns
