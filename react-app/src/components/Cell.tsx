@@ -31,8 +31,9 @@ export const Cell: React.FC<CellProps> = ({ worldX, worldZ, tileType, textures }
   const depthOffset = (worldX + worldZ * 0.1) * 0.0001; // Offset based on world position
 
   // Fallback colors based on tile type (used if no textures provided)
-  const isWall = tileType === '#';
-  const isDoor = tileType === '+';
+  // tileType can be either old format ('#', '+', '.') or new format ('wall', 'door', 'floor')
+  const isWall = tileType === '#' || tileType === 'wall';
+  const isDoor = tileType === '+' || tileType === 'door';
   const hasWalls = isWall || isDoor; // Both walls and doors render vertical surfaces
 
   const wallColor = isWall ? '#444444' : (isDoor ? '#8B4513' : '#666666');
