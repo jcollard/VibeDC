@@ -10,6 +10,7 @@ import type { CombatEncounter } from './CombatEncounter';
 import { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 import { CombatConstants } from './CombatConstants';
 import type { VictoryRewards } from './VictoryRewards';
+import { applyPartySizeBonus } from './VictoryRewards';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import { PartyInventory } from '../../utils/inventory/PartyInventory';
 
@@ -29,7 +30,12 @@ export class VictoryPhaseHandler extends PhaseBase {
   constructor(rewards: VictoryRewards) {
     super();
     this.renderer = new VictoryModalRenderer();
-    this.rewards = rewards;
+
+    // Apply party size bonus to rewards
+    const partySize = PartyMemberRegistry.getAll().length;
+    this.rewards = applyPartySizeBonus(rewards, partySize);
+
+    console.log(`[VictoryPhaseHandler] Party size: ${partySize}, XP bonus: ${this.rewards.xpBonusPercent}%, Base XP: ${this.rewards.xp}, Total XP: ${this.rewards.totalXP}`);
 
     // Note: imageSmoothingEnabled = false is set globally in CombatView/CombatRenderer
     // per GeneralGuidelines.md (no need to set here)
@@ -223,6 +229,9 @@ export class VictoryPhaseHandler extends PhaseBase {
   private applyRewardsToParty(): void {
     console.log('[VictoryPhaseHandler] Applying rewards to party');
 
+    // Use totalXP (includes party size bonus) instead of base XP
+    const xpToAward = this.rewards.totalXP ?? this.rewards.xp;
+
     // 1. Award XP to all party members (each gets XP for their primary class)
     // IMPORTANT: Add XP directly to registry data, NOT to combat units (they won't persist)
     const partyConfigs = PartyMemberRegistry.getAll();
@@ -234,12 +243,12 @@ export class VictoryPhaseHandler extends PhaseBase {
 
       // Add XP to primary class
       const currentXP = config.classExperience[config.unitClassId] || 0;
-      config.classExperience[config.unitClassId] = currentXP + this.rewards.xp;
+      config.classExperience[config.unitClassId] = currentXP + xpToAward;
 
       // Update total experience
-      config.totalExperience = (config.totalExperience || 0) + this.rewards.xp;
+      config.totalExperience = (config.totalExperience || 0) + xpToAward;
 
-      console.log(`[VictoryPhaseHandler] Awarded ${this.rewards.xp} XP to ${config.name} (${config.unitClassId})`);
+      console.log(`[VictoryPhaseHandler] Awarded ${xpToAward} XP to ${config.name} (${config.unitClassId})`);
       console.log(`[VictoryPhaseHandler] New total XP: ${config.totalExperience}, Class XP for ${config.unitClassId}: ${config.classExperience[config.unitClassId]}`);
     });
 
