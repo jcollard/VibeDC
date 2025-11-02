@@ -1,12 +1,12 @@
-# Party Management/Inventory View Hierarchy
+# Party Management System Hierarchy
 
 **Version:** 1.0
-**Last Updated:** Fri, Nov 01, 2025
-**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [CombatHierarchy.md](CombatHierarchy.md)
+**Last Updated:** Sat, Jan 11, 2025 <!-- Update using `date` command -->
+**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [CombatHierarchy.md](CombatHierarchy.md), [CODE_REVIEW_party-management-view.md](CODE_REVIEW_party-management-view.md)
 
 ## Purpose
 
-This document provides a token-efficient reference for AI agents to quickly understand the Party Management/Inventory View system architecture. Organized by directory structure and functionality.
+This document provides a token-efficient reference for AI agents to quickly understand the party management system architecture. Organized by both directory structure and functionality.
 
 ## How AI Agents Should Use This Document
 
@@ -21,70 +21,62 @@ Read ONLY the Quick Reference section first. It maps common tasks to relevant fi
 
 #### 2. **Read Targeted Sections**
 Use the Navigation Index to find the specific section you need. Examples:
-- Inventory filtering → Read `Components & UI Rendering` only
-- Equipment comparison → Read `Panels` only
-- Party member XP system → Read `Models` only
+- Adding inventory UI → Read `### 2. Inventory System` only
+- Panel content work → Read `### 3. Panel Content` only
+- XP/abilities → Read `### 4. XP & Ability System` only
 
 #### 3. **Use Search (Ctrl+F)**
-Search for specific file names (e.g., "EquipmentComparisonContent") or keywords (e.g., "equipment slot")
+Search for specific file names (e.g., "PartyInventory") or keywords (e.g., "equipment", "abilities")
 
 #### 4. **Read Data Flow ONLY if confused**
-If unclear how pieces connect, read `System Architecture & Data Flow` section
-
-#### 5. **For Feature Work**
-Read multiple targeted sections, NOT the whole file
-
-### What NOT to Do:
-- ❌ Don't read all sections before starting work
-- ❌ Don't include entire file in every conversation
-- ❌ Don't read sections unrelated to current task
-- ❌ Don't treat this as documentation to memorize - it's a quick reference map
+If unclear how pieces connect, read `## Data Flow Summary` section
 
 ### Token Budget Guidance:
 - **Quick lookup**: Read Quick Reference only (~200 tokens)
-- **Single file work**: Quick Reference + 1 section (~2,000 tokens)
-- **Feature work**: Quick Reference + 2-3 sections (~4,000 tokens)
-- **Architecture changes**: Quick Reference + Data Flow + sections (~6,000 tokens)
-- **Only as last resort**: Read entire file (~15,000 tokens)
+- **Single file work**: Quick Reference + 1 section (~1,500 tokens)
+- **Feature work**: Quick Reference + 2-3 sections (~3,000 tokens)
+- **Only as last resort**: Read entire file (~8,000 tokens)
+
+### For Human Users:
+When providing this file to an AI agent, you can say:
+> "Use PartyManagementHierarchy.md as a reference. Start with the Quick Reference section, then read only the sections relevant to [your task]. Do NOT read the entire file."
 
 ---
 
 ## Navigation Index
 
 ### By Task Type:
-- **Add inventory category** → `InventoryViewState.ts`, `InventoryRenderer.ts`
-- **Equipment comparison** → `EquipmentComparisonContent.ts`, `EquipmentSlotUtil.ts`
-- **Inventory filtering/sorting** → `PartyManagementView.tsx`, `PartyInventory.ts`
-- **Party member selection** → `PartyManagementUnitInfoContent.ts`
-- **Spend XP/learn abilities** → `SpendXpMainPanelContent.ts`, `SpendXpTitlePanelContent.ts`
-- **Inventory UI rendering** → `InventoryRenderer.ts`, `InventoryTopPanelContent.ts`
-- **Item management** → `PartyInventory.ts`
-- **Equipment validation** → `EquipmentSlotUtil.ts`
-- **Top panel (party stats)** → `PartyManagementUnitInfoContent.ts`
-- **Bottom panel (item details)** → `EquipmentComparisonContent.ts`, `EquipmentInfoContent.ts` (combat), `ClassInfoContent.ts`
+- **Inventory management** → `### 2. Inventory System`
+- **Equipment** → `#### EquipmentComparisonContent.ts`, `#### EquipmentSlotUtil.ts`
+- **Abilities** → `#### SetAbilitiesMainPanelContent.ts`, `### 4. XP & Ability System`
+- **XP spending** → `#### SpendXpMainPanelContent.ts`, `### 4. XP & Ability System`
+- **Class management** → `#### ClassInfoContent.ts`, HumanoidUnit extensions
+- **Panel content** → `### 3. Panel Content`
+- **Party member selection** → `#### PartyManagementUnitInfoContent.ts`
+- **State persistence** → `#### InventoryViewState.ts`
 
 ### By Component Type:
-- **Views** → `PartyManagementView.tsx` (main component)
-- **State Management** → `InventoryViewState.ts`, `InventoryRenderer.ts`
-- **Panel Content** → `panels/` directory
-- **Utilities** → `PartyInventory.ts`, `EquipmentSlotUtil.ts`
+- **View Components** → `### 1. View Components`
+- **Inventory Core** → `### 2. Inventory System`
+- **Panel Content** → `### 3. Panel Content`
+- **XP & Abilities** → `### 4. XP & Ability System`
+- **Utilities** → `### 5. Utilities`
+- **Combat Extensions** → `### 6. Combat System Extensions`
 
 ---
 
-## Quick Reference
+## Quick Reference: Common Tasks
 
-| Task | Files | Key Details |
-|------|-------|------------|
-| View/manage inventory | PartyManagementView.tsx | Main component, handles rendering, mouse events, state |
-| Filter by category | InventoryViewState.ts | 7 categories: all, weapons, shields, armor, accessories, held, quest-items |
-| Sort items | InventoryViewState.ts | 4 modes: name-asc, name-desc, type, recently-added |
-| Add/remove inventory | PartyInventory.ts | Singleton; static API for add/remove/query items and gold |
-| Equipment slots | EquipmentSlotUtil.ts | 5 slots: L.Hand, R.Hand, Head, Body, Accessory |
-| Party member UI | PartyManagementUnitInfoContent.ts | Extends UnitInfoContent; shows stats, abilities, equipment, XP, member selector |
-| Equipment comparison | EquipmentComparisonContent.ts | Shows current vs hovered item side-by-side with stat diffs |
-| Spend XP panel | SpendXpMainPanelContent.ts | Two-column layout: classes (left), abilities (right) |
-| Top panel info | InventoryTopPanelContent.ts | Shows gold, item counts, category tabs, sort options |
-| Render item grid | InventoryRenderer.ts | Calculates pagination, renders items with colors and quantities |
+- **Add inventory functionality** → `PartyInventory` singleton (static API)
+- **Modify inventory UI** → `InventoryRenderer` (rendering), `PartyManagementView` (orchestration)
+- **Add panel content** → Implement `PanelContent` interface
+- **Change equipment logic** → `EquipmentSlotUtil`, `EquipmentResult`, `HumanoidUnit` extensions
+- **Modify ability system** → `SetAbilitiesMainPanelContent`, `HumanoidUnit.learnedAbilities`
+- **Change XP/class system** → `SpendXpMainPanelContent`, `ClassInfoContent`, `HumanoidUnit` XP methods
+- **Add filtering/sorting** → `InventoryViewState`, `PartyInventory.filterItems()` / `sortItems()`
+- **Modify party member UI** → `PartyManagementUnitInfoContent`
+- **Change state persistence** → `InventoryViewState` serialization
+- **Add equipment comparison** → `EquipmentComparisonContent`
 
 ---
 
@@ -93,538 +85,775 @@ Read multiple targeted sections, NOT the whole file
 ```
 react-app/src/
 ├── components/inventory/
-│   ├── InventoryViewRoute.tsx (route handler)
-│   ├── PartyManagementView.tsx (main component - 1810 lines)
-│   └── index.ts (exports)
+│   ├── PartyManagementView.tsx          # Main party management view
+│   ├── InventoryViewRoute.tsx           # Routing wrapper
+│   └── index.ts                         # Export barrel
+│
 ├── models/inventory/
-│   ├── InventoryViewState.ts (state types & persistence)
-│   ├── InventoryRenderer.ts (UI rendering logic)
-│   └── panels/
-│       ├── PartyManagementUnitInfoContent.ts (top panel - party stats)
-│       ├── InventoryTopPanelContent.ts (title panel - filters/sort)
-│       ├── EquipmentComparisonContent.ts (bottom panel - comparison)
-│       ├── EmptySlotInfoContent.ts (bottom panel - empty slots)
-│       ├── InventoryStatsContent.ts (inventory statistics)
-│       ├── ClassInfoContent.ts (class description & buttons)
-│       ├── SpendXpMainPanelContent.ts (main panel - spend XP)
-│       └── SpendXpTitlePanelContent.ts (title panel - spend XP mode)
+│   ├── InventoryRenderer.ts             # Stateless rendering for inventory UI
+│   ├── InventoryViewState.ts            # Type-safe state management
+│   └── panels/                          # Panel content implementations
+│       ├── ClassInfoContent.ts
+│       ├── EmptySlotInfoContent.ts
+│       ├── EquipmentComparisonContent.ts
+│       ├── InventoryStatsContent.ts
+│       ├── InventoryTopPanelContent.ts
+│       ├── PartyManagementUnitInfoContent.ts
+│       ├── SetAbilitiesMainPanelContent.ts
+│       ├── SetAbilitiesTitlePanelContent.ts
+│       ├── SpendXpMainPanelContent.ts
+│       └── SpendXpTitlePanelContent.ts
+│
+├── models/combat/
+│   └── HumanoidUnit.ts                  # Extended for XP/class management
+│
 └── utils/
     ├── inventory/
-    │   └── PartyInventory.ts (inventory singleton)
-    └── EquipmentSlotUtil.ts (equipment compatibility)
+    │   ├── PartyInventory.ts            # Singleton inventory management
+    │   └── PartyInventory.test.ts       # Comprehensive test suite (728 lines)
+    ├── EquipmentResult.ts               # Equipment operation results
+    ├── EquipmentSlotUtil.ts             # Slot compatibility utilities
+    └── PartyMemberRegistry.ts           # Extended for class/ability updates
 ```
 
 ---
 
-## System Architecture & Data Flow
+## File Hierarchy by Category
 
-### 5-Panel Layout (same as CombatView)
+### 1. View Components
 
-```
-┌─────────────────────────────────────────┐
-│ Title Panel  │   Top Info Panel (Party) │  (top third)
-├─────────────────────────────────────────┤
-│                                         │
-│         Main Panel (Inventory Grid)     │  (middle third)
-│                                         │
-├─────────────────────────────────────────┤
-│ Log Panel   │  Bottom Info Panel (Item) │  (bottom third)
-└─────────────────────────────────────────┘
-```
+#### `components/inventory/PartyManagementView.tsx`
+**Purpose:** Main orchestration component for party management (inventory, abilities, XP)
+**Exports:** `PartyManagementView`
+**Key Methods:** renderFrame(), event handlers (handleMouseMove, handleClick)
+**Panel Modes:**
+- 'inventory' - Browse, filter, sort, and equip items
+- 'spend-xp' - Select classes and learn abilities with XP
+- 'set-abilities' - Set reaction/passive/movement abilities
+**State Management:**
+- Uses refs for cached panel content (prevents recreation)
+- localStorage persistence for view state
+- Refs for panel mode state (spendXpSelectedClassIdRef, setAbilitiesSlotTypeRef)
+**Layout:**
+- 5-panel layout (title, main, log, top info, bottom info)
+- Reuses CombatLayoutManager for panel regions
+- Custom panel regions (8px adjustments for inventory-specific sizing)
+**Rendering:**
+- Double buffering for canvas rendering
+- Mode-specific rendering (inventory/spend-xp/set-abilities)
+- Debug panel visualization support
+**Event Handling:**
+- Mouse move for hover states
+- Click for selection and actions
+- Coordinate transformation (canvas → panel-relative)
+**Dependencies:** PartyInventory, InventoryRenderer, InventoryViewState, all panel content classes, CombatLayoutManager, CombatLogManager, InfoPanelManager
+**Used By:** InventoryViewRoute
+**Notes:** Large file (1,700+ lines) - consider extracting event handlers and mode-specific rendering
 
-### Core Flow: User selects equipment slot → sees compatible items → clicks to equip
-
-1. **PartyManagementView** renders all panels via `renderFrame()`
-2. **handleMouseMove()** detects hover on equipment/ability slot in top panel → shows comparison
-3. **handleMouseDown()** on inventory item → calls `equipLeftHand()`, `equipRightHand()`, etc.
-4. **PartyInventory** updated → triggers re-render
-5. **PartyMemberRegistry** persists changes
-
-### State Management
-
-**PartyManagementView.tsx** holds all UI state:
-- `viewState`: category, sortMode, currentPage, hoveredItemId, hoveredCategory, hoveredSort, hoveredPagination
-- `panelMode`: 'inventory' or 'spend-xp'
-- `selectedPartyMemberIndex`: which party member displayed
-- `selectedEquipmentRef`: currently selected equipment slot (for comparison mode)
-- `spendXpMainContentRef`: Spend XP panel content (created when needed)
-
-**InventoryViewState.ts** defines:
-- `InventoryViewState` interface (all UI state)
-- Category and sort mode types
-- localStorage persistence (load/save functions)
-
-### Panel Content Architecture
-
-All panels inherit from or implement `PanelContent` interface:
-- `render()`: Draw to canvas context
-- `handleHover()`: Detect mouse hover, return hover info
-- `handleClick()`: Handle mouse clicks, return click results
-
-**Title Panel** (InventoryTopPanelContent):
-- Shows: "Inventory" title, Gold, Item count
-- Shows category tabs (clickable)
-- Shows sort dropdown (clickable)
-
-**Top Info Panel** (PartyManagementUnitInfoContent):
-- Extends CombatView's UnitInfoContent
-- Adds: "Learn Abilities" button, party member selector, XP display
-- Shows: stats grid, ability slots, equipment slots
-- Allows: clicking equipment slot to select it for comparison
-- Returns: equipment-detail, ability-detail, empty-slot-detail, party-member, learn-abilities
-
-**Main Panel** (InventoryRenderer):
-- Renders: item list (name, quantity), pagination buttons
-- Colors: yellow (hover), orange (class-restricted), gray (disabled/incompatible)
-- Hit testing: getItemRowBounds(), getPaginationButtonBounds()
-
-**Bottom Info Panel** (EquipmentComparisonContent, EquipmentInfoContent, ClassInfoContent):
-- **Comparison mode** (when equipment slot selected): Shows current vs hovered item
-  - Stat diffs highlighted (green+, red-)
-  - Cancel/Remove Item buttons
-- **Normal mode** (no slot selected): Shows hovered item details
-- **Spend XP mode**: Shows class info and learn ability buttons
-
-### Data Persistence
-
-**localStorage keys:**
-- `inventoryViewState`: category, sortMode, currentPage, selectedItemId (resets on load)
-
-**PartyMemberRegistry:**
-- Stores party member equipment assignments
-- Updates via `PartyMemberRegistry.updateEquipment(id, slot, equipmentId)`
-
-**PartyInventory:**
-- Singleton managing all items and gold
-- Static API: addItem, removeItem, addGold, removeGold, getItemCount, getAllItems, etc.
+#### `components/inventory/InventoryViewRoute.tsx`
+**Purpose:** Routing wrapper for party management view
+**Exports:** `InventoryViewRoute`
+**Key Methods:** render()
+**Dependencies:** PartyManagementView
+**Used By:** App routing
 
 ---
 
-## Component & File Details
+### 2. Inventory System
 
-### Main Component
-
-#### PartyManagementView.tsx
-**Purpose:** Main React component for inventory view. Manages all UI state, rendering, and event handling.
-
+#### `models/inventory/InventoryRenderer.ts`
+**Purpose:** Stateless renderer for inventory UI (category tabs, item list, pagination)
+**Exports:** `InventoryRenderer`, `InventoryItemWithQuantity`, `Bounds`
 **Key Methods:**
-- `renderFrame()`: Canvas rendering loop using double buffering
-- `handleMouseMove()`: Hover detection for categories, items, pagination, panels
-- `handleMouseDown()`: Click handling for equipment equip/unequip, category tabs, sort, pagination
-- Expose window functions: `giveItem()`, `giveGold()`, `clearInventory()`, `listEquipment()`, `showInventoryPanels()`, `addLogMessage()`
+- `render()` - Main rendering (item list, pagination)
+- `calculateItemsPerPage()` - Calculate visible items based on panel height
+- `getItemRowBounds()` - Get bounds for hit testing
+- `getPaginationButtonBounds()` - Get pagination button bounds
+**Rendering Features:**
+- Item list with quantity display (e.g., "Potion x3")
+- Context-aware empty messages by category
+- Pagination controls (< Prev, Next >)
+- Color coding: Disabled (#666666), Class-restricted (#ff8800), Quest items (orange), Hover (yellow)
+**Layout:**
+- Items rendered in main panel (no tabs/sort - moved to top panel)
+- Pagination at bottom (only if totalPages > 1)
+- Padding and spacing from CombatConstants.INVENTORY_VIEW
+**Dependencies:** FontAtlasRenderer, CombatConstants, Equipment
+**Used By:** PartyManagementView
+**Notes:** Pure rendering class - no state management
 
-**Key State:**
-- `viewState`: filters, sort, pagination, hover states
-- `panelMode`: 'inventory' or 'spend-xp'
-- `selectedPartyMemberIndex`: active party member
-- `selectedEquipmentRef`: currently selected equipment slot for comparison
-- `spendXpMainContentRef`: Spend XP content (lazy-created)
-
-**Panels Used:**
-- Title: InventoryTopPanelContent
-- Top Info: PartyManagementUnitInfoContent
-- Main: InventoryRenderer
-- Bottom Info: EquipmentComparisonContent, EquipmentInfoContent, EmptySlotInfoContent, ClassInfoContent
-
-**Dependencies:** React, partyInventory, Equipment, CombatLayoutManager, CombatLogManager, InfoPanelManager, FontAtlasLoader
-
-**Used By:** InventoryViewRoute, Game component
-
----
-
-### State Management
-
-#### InventoryViewState.ts
-**Purpose:** Type definitions and persistence for inventory UI state.
-
-**Key Types:**
-- `InventoryViewState`: Full UI state (category, sortMode, currentPage, selectedItemId, hovers, pagination)
-- `InventoryCategory`: 'all' | 'weapons' | 'shields' | 'armor' | 'accessories' | 'held' | 'quest-items'
-- `InventorySortMode`: 'name-asc' | 'name-desc' | 'type' | 'recently-added'
-
-**Key Functions:**
-- `createDefaultInventoryViewState()`: Returns default state
-- `serializeInventoryViewState()`: Convert to JSON (excludes transient hovers)
-- `deserializeInventoryViewState()`: Create from JSON (resets to defaults on load)
-- `loadInventoryViewStateFromLocalStorage()`: Loads from localStorage or returns default
-- `saveInventoryViewStateToLocalStorage()`: Saves to localStorage
-- `isValidCategory()`, `isValidSortMode()`: Validation helpers
-
-**Note:** Hover states are transient and reset on load; only category, sortMode, currentPage, selectedItemId persist.
-
-**Used By:** PartyManagementView.tsx, TypeScript type system
-
----
-
-### Rendering
-
-#### InventoryRenderer.ts
-**Purpose:** Stateless canvas renderer for inventory UI (item list, pagination).
-
-**Key Methods:**
-- `render()`: Main render method for main panel
-  - Renders item list with colors (hover, quest-item, class-restricted, disabled)
-  - Renders pagination buttons
-- `renderItemList()`: Renders items with quantity, color coding
-- `renderPagination()`: Renders prev/next buttons and page indicator
-- `calculateItemsPerPage()`: Calculates rows per page based on panel height
-- `getItemRowBounds()`: Returns clickable bounds for each item (for hit testing)
-- `getPaginationButtonBounds()`: Returns clickable bounds for pagination buttons
-
-**Parameters:**
-- `disabledItemIds`: Set of equipment IDs incompatible with selected slot (render gray)
-- `classRestrictedItemIds`: Set of equipment IDs restricted by class (render orange)
-
-**Color Scheme:**
-- Normal item: white text
-- Hovered item: yellow text
-- Quest item: cyan text
-- Class-restricted (normal): orange text
-- Class-restricted (hovered): yellow text
-- Disabled: dark gray text
-
-**Used By:** PartyManagementView.tsx
-
----
-
-### Panel Content Files
-
-#### PartyManagementUnitInfoContent.ts
-**Purpose:** Extended version of UnitInfoContent for party management. Shows party stats, abilities, equipment, XP, and party member selector.
-
-**Key Features:**
-- Extends: UnitInfoContent (from CombatView)
-- Adds: "Learn Abilities" button, party member sprite selector
-- Shows: Class XP (instead of Action Timer), available XP amount
-- Allows: clicking equipment/ability slots to select them for comparison
-- Allows: clicking ability to show details in bottom panel
-
-**Key Methods:**
-- `setSelectedEquipmentSlot()`: Highlight a selected slot in green
-- `handleHover()`: Detects hovers on slots, buttons, party selector
-  - Returns: equipment-detail, ability-detail, empty-slot-detail, party-member-hover
-- `handleClick()`: Handles clicks on slots, buttons, members
-  - Returns: equipment-detail, ability-detail, empty-slot, party-member, learn-abilities
-
-**Party Member Selector:**
-- Renders below "Learn Abilities" button
-- Shows 12x12 sprites in a row (centered)
-- Yellow border = selected member
-- Name shows on hover
-- Click to switch to that member
-
-**Dependencies:** FontAtlasRenderer, SpriteRenderer, FontRegistry, UnitInfoContent
-
-**Used By:** PartyManagementView.tsx (top panel)
-
----
-
-#### InventoryTopPanelContent.ts
-**Purpose:** Title panel showing inventory stats and filters (category tabs, sort options).
-
-**Key Features:**
-- Shows: "Inventory" title, gold label+value, item counts
-- Shows: Category tabs (all, weapons, shields, armor, accessories, held, quest-items)
-- Shows: Sort dropdown (cycles through sort modes)
-- Layout: Compact, single panel (not two-row like top info panel)
-
-**Key Methods:**
-- `render()`: Renders title, gold, category tabs, sort options
-- `getCategoryTabBounds()`: Returns clickable bounds for each category tab
-- `getSortBounds()`: Returns clickable bounds for sort dropdown
-- `update()`: Updates stats and state (for re-renders)
-
-**Styling:**
-- Title: 7px font, light blue
-- Values: white text
-- Labels: light blue
-- Hovered tab: yellow background
-- Active tab: green background
-- Hovered sort: yellow text
-
-**Used By:** PartyManagementView.tsx (title panel)
-
----
-
-#### EquipmentComparisonContent.ts
-**Purpose:** Shows side-by-side comparison of two equipment items with stat differences.
-
-**Key Features:**
-- Shows: Current item (left) vs Hovered/selected item (right)
-- If current item is empty: shows "Empty"
-- If no comparison item is null: shows "??"
-- Highlights stat differences: green (+better), red (-worse)
-- Shows: Cancel Selection and Remove Item buttons
-
-**Key Methods:**
-- `render()`: Renders comparison table with stats
-- `handleHover()`: Detects hovers on Cancel/Remove buttons
-- `handleClick()`: Handles clicks on Cancel/Remove buttons
-  - Returns: { type: 'button', buttonId: 'cancel-selection' | 'remove-item' }
-
-**Stat Comparison:**
-- Calculates difference for each stat
-- Green color for improvements, red for reductions
-- Shows "??" for unavailable comparison stats
-
-**Used By:** PartyManagementView.tsx (bottom panel, when equipment slot selected)
-
----
-
-#### EmptySlotInfoContent.ts
-**Purpose:** Shows message when hovering over an empty equipment or ability slot.
-
-**Key Features:**
-- Shows: "Empty [slot type]" message
-- Shows: "Click to equip" or "Click to set" hint
-- Can be empty-slot-detail (hover) or selected for comparison
-
-**Used By:** PartyManagementView.tsx (bottom panel, when empty slot hovered)
-
----
-
-#### SpendXpMainPanelContent.ts
-**Purpose:** Main panel for Spend XP mode. Two-column layout: classes (left), abilities (right).
-
-**Key Features:**
-- Left column: List of player classes (selectable)
-- Right column: Abilities for selected class
-- Shows: Class name, unspent XP for each class
-- Shows: Ability name, XP cost, "Learned!" or "Learn" button
-
-**Key Methods:**
-- `render()`: Renders two-column layout with classes and abilities
-- `handleHover()`: Detects hovers on classes and abilities
-- `handleClick()`: Handles clicks on classes and abilities
-  - Returns: { type: 'class-selected', classId } or { type: 'ability-selected', abilityId }
-- `getSelectedClassId()`: Returns currently selected class ID
-
-**Styling:**
-- Normal class: white text
-- Hovered class: yellow text
-- Selected class: green text
-- Header: dark orange
-- Divider: vertical sprite between columns
-
-**Used By:** PartyManagementView.tsx (main panel in spend-xp mode)
-
----
-
-#### SpendXpTitlePanelContent.ts
-**Purpose:** Title panel for Spend XP mode. Shows "Spend XP" title and party member info.
-
-**Key Methods:**
-- `render()`: Renders title and party member name
-
-**Used By:** PartyManagementView.tsx (title panel in spend-xp mode)
-
----
-
-#### ClassInfoContent.ts
-**Purpose:** Shows class description and buttons to set as primary/secondary class or learn abilities.
-
-**Key Features:**
-- Shows: Class name, description
-- Shows: Buttons for "Set Primary Class", "Set Secondary Class", "View Abilities"
-- Styled with class theme colors
-
-**Used By:** PartyManagementView.tsx (bottom panel when class selected in spend-xp mode)
-
----
-
-### Utilities
-
-#### PartyInventory.ts
-**Purpose:** Singleton managing the party's shared inventory (items and gold).
-
-**Key API (all static):**
-
-**Adding/Removing:**
-- `addItem(equipmentId, quantity=1)`: Add items to inventory
-- `removeItem(equipmentId, quantity=1)`: Remove items (fails for quest items)
-- `addGold(amount)`: Add gold
-- `removeGold(amount)`: Remove gold (fails if insufficient)
-
-**Querying:**
-- `getItemCount(equipmentId)`: Get quantity of specific item
-- `getTotalItemCount()`: Sum of all quantities
-- `getTotalUniqueItems()`: Number of unique item types
-- `getGold()`: Current gold
-- `hasItem(equipmentId, quantity=1)`: Check if has enough
-- `hasGold(amount)`: Check if has enough gold
-- `getAllItems()`: Get array of all items
-- `getItemsByCategory()`: Get items filtered by category
-- `filterItems()`: Get items with Equipment data (for rendering)
-- `sortItems()`: Sort array by mode (name, type, recently-added)
-- `getItemDetails()`: Get Equipment + quantity for single item
-
+#### `models/inventory/InventoryViewState.ts`
+**Purpose:** Type-safe state management for inventory view
+**Exports:** `InventoryViewState`, `InventoryCategory`, `InventorySortMode`, serialization functions
+**State Fields:**
+- `category` - Current filter (all, weapons, shields, armor, accessories, held, quest-items)
+- `sortMode` - Current sort (name-asc, name-desc, type, recently-added)
+- `currentPage` - Pagination (0-indexed)
+- `selectedItemId` - Selected item equipment ID
+- `hoveredItemId` - Hovered item equipment ID
+- `hoveredCategory` - Hovered category tab
+- `hoveredSort` - Hovered sort dropdown
+- `hoveredPagination` - Hovered pagination button ('prev' | 'next')
 **Serialization:**
-- `toJSON()`: Convert to JSON for save
-- `fromJSON()`: Load from JSON
-- `clear()`: Clear all items and gold
-
-**Internal Implementation:**
-- Uses Map<equipmentId, quantity> for items
-- Tracks insertion order for "recently-added" sorting
-- Prevents quest items from being removed
-- Validates equipment exists in Equipment registry
-
-**Important:** All items are Equipment instances managed by equipment ID. No separate Item class.
-
-**Used By:** PartyManagementView.tsx, various panels
-
----
-
-#### EquipmentSlotUtil.ts
-**Purpose:** Utility functions for equipment slot compatibility checking.
-
+- Excludes transient hover states
+- Runtime validation on load (isValidCategory, isValidSortMode)
+- Graceful fallback to defaults on error
+- localStorage integration
 **Key Functions:**
-- `getCompatibleEquipmentTypes(slotLabel)`: Returns array of compatible EquipmentType values
-  - 'L.Hand' | 'R.Hand' → ['OneHandedWeapon', 'TwoHandedWeapon', 'Shield', 'Held']
-  - 'Head' → ['Head']
-  - 'Body' → ['Body']
-  - 'Accessory' → ['Accessory']
-- `isEquipmentCompatibleWithSlot(equipment, slotLabel)`: Boolean check
-- `isEquipmentSlot(slotLabel)`: Check if it's an equipment slot (not ability slot)
+- `createDefaultInventoryViewState()` - Factory for default state
+- `serializeInventoryViewState()` - Convert to JSON
+- `deserializeInventoryViewState()` - Restore from JSON (resets to defaults)
+- `loadInventoryViewStateFromLocalStorage()` - Load with validation
+- `saveInventoryViewStateToLocalStorage()` - Save to localStorage
+**Dependencies:** None (pure state management)
+**Used By:** PartyManagementView
+**Notes:** Filter, sort, and selection intentionally reset to defaults on load
 
-**Equipment Slots:** L.Hand, R.Hand, Head, Body, Accessory (5 total)
-**Ability Slots:** Reaction, Passive, Movement (not in this utility)
+#### `utils/inventory/PartyInventory.ts`
+**Purpose:** Global singleton managing party's shared inventory
+**Exports:** `PartyInventory` (class with static API), `PartyInventoryJSON`, `InventoryItem`
+**Singleton Pattern:**
+- Private constructor prevents instantiation
+- Static API for all operations
+- Single global inventory instance
+**Key Methods (Static API):**
+- **Add:** `addItem()`, `addGold()`
+- **Remove:** `removeItem()`, `removeGold()`
+- **Query:** `getItemCount()`, `getTotalItemCount()`, `getTotalUniqueItems()`, `getGold()`, `hasItem()`, `hasGold()`, `getAllItems()`
+- **Filter/Sort:** `getItemsByCategory()`, `filterItems()`, `sortItems()`
+- **Details:** `getItemDetails()`
+- **Serialization:** `toJSON()`, `fromJSON()`, `clear()`
+**Business Rules:**
+- Quest items cannot be removed (typeTags includes 'quest-item')
+- Equipment validated via Equipment.getById()
+- Quantity must be sufficient for removal
+- Gold must be sufficient for removal
+**Filtering:**
+- All 7 categories: all, weapons, shields, armor, accessories, held, quest-items
+- Equipment.type matching (OneHandedWeapon, TwoHandedWeapon, Shield, Head, Body, Accessory, Held)
+- Quest items detected via typeTags
+**Sorting:**
+- name-asc / name-desc - Alphabetical by name
+- type - Group by Equipment.type, then alphabetically
+- recently-added - Most recent first (insertion order tracking)
+**Insertion Order Tracking:**
+- insertionOrder Map tracks timestamp for each equipmentId
+- nextTimestamp auto-increments on each addItem
+- Used for recently-added sorting
+**Dependencies:** Equipment
+**Used By:** PartyManagementView, potentially other inventory-related views
+**Notes:** Fully tested (728 lines of tests), 100% coverage of static API
 
-**Used By:** PartyManagementView.tsx, EquipmentComparisonContent.ts, panels
-
----
-
-## Dependency Map
-
-### PartyManagementView.tsx depends on:
-```
-├── react (useState, useRef, useEffect, useCallback, useMemo)
-├── PartyInventory (getAllItems, addItem, removeItem, addGold)
-├── Equipment (getById, getAll, type system)
-├── InventoryViewState (types, load/save functions)
-├── InventoryRenderer (render, calculateItemsPerPage)
-├── CombatLayoutManager (panel regions)
-├── CombatLogManager (logging)
-├── InfoPanelManager (panel rendering)
-├── Panel Content classes (InventoryTopPanelContent, PartyManagementUnitInfoContent, etc.)
-├── FontAtlasLoader, FontAtlasRenderer
-├── PartyMemberRegistry (createPartyMember, updateEquipment)
-├── EquipmentSlotUtil (isEquipmentCompatibleWithSlot, isEquipmentSlot)
-└── CombatConstants (dimensions, fonts, colors)
-```
-
-### Panel Content classes depend on:
-```
-├── FontAtlasRenderer (text rendering)
-├── Equipment (getById, types)
-├── CombatUnit, HumanoidUnit (unit data)
-├── UnitClass (class data)
-└── PanelContent interface (base implementation)
-```
-
-### PartyInventory.ts depends on:
-```
-└── Equipment (getById registry validation)
-```
-
----
-
-## Common Tasks & Solutions
-
-### Add new equipment category
-1. Add to `InventoryCategory` type in InventoryViewState.ts
-2. Add case to `getEmptyMessage()` in InventoryRenderer.ts
-3. Add filter logic to `matchesCategory()` in PartyInventory.ts
-4. Add category tab to InventoryTopPanelContent.ts
-
-### Change equipment comparison layout
-1. Edit `render()` in EquipmentComparisonContent.ts
-2. Update stat calculation and color logic
-3. Update button layout if needed
-
-### Add new equipment slot
-1. Add slot label to equipment slots array in EquipmentSlotUtil.ts
-2. Add to `getCompatibleEquipmentTypes()` switch
-3. Add to slot labels in PartyManagementUnitInfoContent.ts (`getSlotLabelAtPosition()`)
-4. Add equip method to HumanoidUnit if needed
-5. Update PartyManagementView.tsx slot mapping
-
-### Debug panel rendering
-1. Call `window.showInventoryPanels(true)` in console
-2. Panels show as colored overlays:
-   - Red: Title Panel
-   - Green: Top Info Panel
-   - Blue: Main Panel
-   - Yellow: Log Panel
-   - Magenta: Bottom Info Panel
-
-### Add inventory to save/load
-1. Save: `PartyInventory.toJSON()` → serialize
-2. Load: `PartyInventory.fromJSON(json)` → deserialize
-3. Use localStorage key: `inventoryState`
+#### `utils/inventory/PartyInventory.test.ts`
+**Purpose:** Comprehensive test suite for PartyInventory
+**Test Coverage:**
+- Adding items (valid, invalid, quantity increments, gold)
+- Removing items (valid, insufficient, quest item protection, gold)
+- Querying (counts, hasItem, hasGold)
+- Filtering (all 7 categories, edge cases)
+- Sorting (all 4 modes)
+- Serialization (toJSON, fromJSON, invalid items on load)
+**Key Test Cases:**
+- Quest items cannot be removed
+- Invalid equipment IDs rejected
+- Quantity validation
+- Category filtering accuracy
+- Sort mode correctness
+- Graceful handling of missing equipment on deserialization
+**Notes:** 728 lines, 40+ test cases, ensures business rules enforced
 
 ---
 
-## Performance Notes
+### 3. Panel Content
 
-- **Double buffering:** OffscreenCanvas for smooth rendering
-- **requestAnimationFrame:** Animation loop updates combat log only
-- **Memoization:** useMemo for filteredAndSortedItems, currentPageItems, pagination
-- **Lazy creation:** SpendXpMainPanelContent created only when entering spend-xp mode
-- **Ref tracking:** selectedMemberRef caches unit to avoid recreating each frame
-- **Hit testing:** bounds cached in renderer (getItemRowBounds, getPaginationButtonBounds)
+#### `models/inventory/panels/InventoryTopPanelContent.ts`
+**Purpose:** Top panel for inventory stats, category tabs, and sort dropdown
+**Exports:** `InventoryTopPanelContent`, `InventoryStats`
+**Key Methods:** render(), handleClick(), handleHover()
+**Display Elements:**
+- Inventory stats (Total: X | Unique: Y | Gold: Z)
+- Category tabs (All, Wpn, Shd, Arm, Acc, Held, Quest)
+- Sort dropdown (Name ↑, Name ↓, Type, Recent)
+**Color Coding:**
+- Normal: White (#ffffff)
+- Hovered: Yellow (#ffff00)
+- Active category: Orange (#ff8c00)
+**Layout:**
+- Stats centered at top
+- Category tabs below stats
+- Sort dropdown below tabs
+- 1px padding, 8px line spacing
+**Dependencies:** FontAtlasRenderer, CombatConstants
+**Used By:** PartyManagementView (title panel in inventory mode)
+
+#### `models/inventory/panels/PartyManagementUnitInfoContent.ts`
+**Purpose:** Extended UnitInfoContent for party management with party member selection
+**Exports:** `PartyManagementUnitInfoContent`
+**Extends:** `UnitInfoContent` (from combat system)
+**Key Methods:** render(), handleHover(), handleClick(), updatePartyMembers(), setSelectedEquipmentSlot()
+**Extensions:**
+- Party member selector (sprite grid below buttons)
+- "Learn Abilities" button (in stats view)
+- Class XP display (replaces Action Timer)
+- Green highlight for selected equipment/ability slots
+**Party Selector:**
+- Shows all party member sprites (12×12px each)
+- Yellow border for selected member
+- Hover shows member name
+- Click switches party member
+- Only visible in stats view when no helper text shown
+**Custom Rendering:**
+- Overrides renderHeader() to show Class XP instead of Action Timer
+- Overrides renderToggleButton() to add "Learn Abilities" option
+- Overrides renderAbilitySlot() and renderEquipmentSlot() for green highlighting
+**Selected Slot Highlighting:**
+- Slots turn green (#00ff00) when selected
+- Used for equipment comparison and ability setting
+- Priority: Selected (green) > Hovered (yellow) > Normal (white)
+**Stat Helper Text:**
+- Adds "Class XP" helper text
+- Adds "Learn Abilities" helper text
+- Updates "Set Abilities & Equipment" helper text
+**Dependencies:** UnitInfoContent, CombatUnit, FontAtlasRenderer, SpriteRenderer, FontRegistry, colors.ts
+**Used By:** PartyManagementView (top info panel)
+**Notes:** Uses `as any` to access/override private parent methods - acceptable pattern for extending base class
+
+#### `models/inventory/panels/EquipmentComparisonContent.ts`
+**Purpose:** Side-by-side equipment comparison panel
+**Exports:** `EquipmentComparisonContent`
+**Key Methods:** render(), handleClick(), handleHover()
+**Display Modes:**
+- **Comparison Mode:** Shows "Current vs Hovered" with stat differences
+- **Selection Mode:** Shows "Current vs ??" with Remove/Cancel options
+**Comparison Features:**
+- Title: "{Current} vs {Comparison}" (yellow)
+- Stat differences highlighted (green for positive, red for negative)
+- Two-column layout for stats
+- Full-width stats if labels too long
+- [Wpn] and [Held] indicators for weapons/held items
+**Selection Mode:**
+- "Remove Item" option (if current item exists)
+- "Cancel" option (always visible)
+- Helper text based on hover state
+- Text wrapping for long helper messages
+**Color Coding:**
+- Title: Yellow (#ffff00)
+- Hover: Yellow (#ffff00)
+- Normal: White (#ffffff)
+- Helper: Grey (#888888)
+- Positive stat: Green
+- Negative stat: Red
+**Dependencies:** Equipment, FontAtlasRenderer, FontRegistry, PanelContent
+**Used By:** PartyManagementView (bottom panel when equipment slot selected)
+**Notes:** 625 lines - comprehensive comparison logic with stat diffing
+
+#### `models/inventory/panels/EmptySlotInfoContent.ts`
+**Purpose:** Display info for empty equipment/ability slots
+**Exports:** `EmptySlotInfoContent`
+**Key Methods:** render()
+**Display:**
+- Slot label (e.g., "L.Hand", "Reaction")
+- Slot type description
+- Helper text: "Select an item to equip" or "Select an ability to set"
+**Slot Descriptions:**
+- L.Hand: "Left hand equipment slot"
+- R.Hand: "Right hand equipment slot"
+- Head: "Head armor slot"
+- Body: "Body armor slot"
+- Accessory: "Accessory slot"
+- Reaction: "Reaction ability slot"
+- Passive: "Passive ability slot"
+- Movement: "Movement ability slot"
+**Dependencies:** FontAtlasRenderer, PanelContent
+**Used By:** PartyManagementView (bottom panel for empty slots)
+
+#### `models/inventory/panels/SetAbilitiesMainPanelContent.ts`
+**Purpose:** Ability selection panel for specific slot type
+**Exports:** `SetAbilitiesMainPanelContent`
+**Key Methods:** render(), handleClick(), handleHover(), getAbilityByIndex()
+**Display:**
+- Filtered abilities by slot type (Reaction, Passive, Movement)
+- Color-coded: Equipped (green), Hovered (yellow), Normal (white)
+- Empty state: "You do not have any {slotType} abilities"
+**Construction:**
+- Takes unit and slotType ('Reaction' | 'Passive' | 'Movement')
+- Filters unit.learnedAbilities by abilityType
+- Stores currently equipped ability for highlighting
+**Click Handling:**
+- Returns `{ type: 'ability-clicked', abilityId, slotType }`
+**Hover Handling:**
+- Returns `{ type: 'ability-hovered', index }` or `{ type: 'hover-cleared' }`
+**Dependencies:** CombatUnit, CombatAbility, FontAtlasRenderer, PanelContent
+**Used By:** PartyManagementView (main panel in set-abilities mode)
+
+#### `models/inventory/panels/SetAbilitiesTitlePanelContent.ts`
+**Purpose:** Title panel for set abilities mode
+**Exports:** `SetAbilitiesTitlePanelContent`
+**Key Methods:** render()
+**Display:** "Set Abilities" in dragonslant title font (centered)
+**Dependencies:** FontAtlasRenderer, CombatConstants
+**Used By:** PartyManagementView (title panel in set-abilities mode)
+
+#### `models/inventory/panels/SpendXpMainPanelContent.ts`
+**Purpose:** XP spending interface for learning abilities
+**Exports:** `SpendXpMainPanelContent`
+**Key Methods:** render(), handleClick(), handleHover(), setSelectedClass(), getSelectedClassId()
+**Display:**
+- Primary class (always shown, orange if selected)
+- Secondary class (if exists, orange if selected)
+- Available abilities for selected class
+- Ability states: Learned (green), Can Learn (white), Can't Afford (dark grey), Disabled (grey)
+**Class Selection:**
+- Click class to select (turns orange)
+- Selected class persists across panel recreations
+- Default: Primary class selected
+**Ability Display:**
+- Shows all abilities for selected class
+- Color indicates state:
+  - Green (#00ff00): Already learned
+  - White (#ffffff): Can afford to learn
+  - Dark grey (#666666): Can't afford (show cost in red)
+  - Grey (#808080): Disabled (show "MAX" tag)
+**Ability Click:**
+- Returns `{ type: 'ability-clicked', abilityId, canLearn: boolean }`
+- canLearn = true if: Not learned AND can afford AND not disabled
+**Hover Handling:**
+- Class hover: Shows class description in bottom panel
+- Ability hover: Shows ability details in bottom panel
+**Dependencies:** CombatUnit, CombatAbility, UnitClass, FontAtlasRenderer, PanelContent
+**Used By:** PartyManagementView (main panel in spend-xp mode)
+**Notes:** Complex state management for ability affordability and learned status
+
+#### `models/inventory/panels/SpendXpTitlePanelContent.ts`
+**Purpose:** Title panel for spend XP mode
+**Exports:** `SpendXpTitlePanelContent`
+**Key Methods:** render()
+**Display:** "Spend XP" in dragonslant title font (centered)
+**Dependencies:** FontAtlasRenderer, CombatConstants
+**Used By:** PartyManagementView (title panel in spend-xp mode)
+
+#### `models/inventory/panels/ClassInfoContent.ts`
+**Purpose:** Class information panel with set primary/secondary class buttons
+**Exports:** `ClassInfoContent`
+**Key Methods:** render(), handleClick(), handleHover()
+**Display:**
+- Class name (centered, orange)
+- Class description (wrapped)
+- "Set Primary Class" button
+- "Set Secondary Class" button (if unit can have secondary)
+**Button Behavior:**
+- Hover: Yellow (#ffff00)
+- Click: Returns `{ type: 'set-primary-class' }` or `{ type: 'set-secondary-class' }`
+**Layout:**
+- Name at top
+- Description below (wrapped to fit)
+- Buttons at bottom (2px spacing between)
+**Dependencies:** UnitClass, CombatUnit, FontAtlasRenderer, FontRegistry, PanelContent
+**Used By:** PartyManagementView (bottom panel in spend-xp mode)
+
+#### `models/inventory/panels/InventoryStatsContent.ts`
+**Purpose:** Display inventory statistics (unused - functionality moved to InventoryTopPanelContent)
+**Status:** Not currently used in PartyManagementView
+**Note:** May be removed in future cleanup
 
 ---
 
-## Testing Tips
+### 4. XP & Ability System
 
-**Developer console functions:**
-```javascript
-giveItem(equipmentId?, quantity=1)      // Add item to inventory
-giveGold(amount=100)                    // Add gold
-clearInventory()                        // Remove all items
-listEquipment()                         // Show all available equipment
-showInventoryPanels(true/false)         // Toggle panel boundaries overlay
-addLogMessage(message?)                 // Add message to log
-showOnlyLog()                           // Debug: show only log panel full-screen
-restoreLayout()                         // Debug: restore normal layout
+#### Extended Methods in `models/combat/HumanoidUnit.ts`
+
+**XP Management:**
+- `addExperience(xp: number, unitClass: UnitClass)` - Add XP to specific class
+- `getUnspentClassExperience(unitClass: UnitClass)` - Calculate available XP (earned - spent)
+- `learnAbility(ability: CombatAbility, unitClass: UnitClass)` - Learn ability with XP cost
+- `canLearnAbility(ability: CombatAbility, unitClass: UnitClass)` - Check if can afford and not already learned
+
+**Class Management:**
+- `setPrimaryClass(unitClass: UnitClass)` - Set primary class
+- `setSecondaryClass(unitClass: UnitClass)` - Set secondary class (nullable)
+
+**Ability Management:**
+- `learnedAbilities: Set<CombatAbility>` - Set of all learned abilities across all classes
+- `setReactionAbility(ability: CombatAbility | null)` - Equip reaction ability
+- `setPassiveAbility(ability: CombatAbility | null)` - Equip passive ability
+- `setMovementAbility(ability: CombatAbility | null)` - Equip movement ability
+
+**XP Tracking:**
+- Internal map: `classExperience: Map<string, { earned: number, spent: number }>`
+- Tracks earned and spent XP separately per class ID
+- Unspent XP = earned - spent
+
+**Dependencies:** UnitClass, CombatAbility, Equipment
+**Used By:** PartyManagementView, SpendXpMainPanelContent, SetAbilitiesMainPanelContent
+**Notes:** Extensions added for party management - core combat unit logic unchanged
+
+---
+
+### 5. Utilities
+
+#### `utils/EquipmentSlotUtil.ts`
+**Purpose:** Slot compatibility utilities
+**Exports:** `isEquipmentSlot()`, `isEquipmentCompatibleWithSlot()`
+**Key Functions:**
+- `isEquipmentSlot(slotLabel: string): boolean` - Check if label is equipment slot (L.Hand, R.Hand, Head, Body, Accessory)
+- `isEquipmentCompatibleWithSlot(equipment: Equipment, slotLabel: string): boolean` - Check type compatibility
+**Compatibility Rules:**
+- L.Hand: OneHandedWeapon, Shield, Held
+- R.Hand: OneHandedWeapon, TwoHandedWeapon, Shield, Held
+- Head: Head
+- Body: Body
+- Accessory: Accessory
+**Dependencies:** Equipment
+**Used By:** PartyManagementView, EquipmentComparisonContent
+
+#### `utils/EquipmentResult.ts`
+**Purpose:** Result types for equipment operations
+**Exports:** `EquipmentResult`, `EquipmentSuccess`, `EquipmentError`, helper functions
+**Result Types:**
+- Success: `{ success: true, message: string, unequippedItems: Equipment[] }`
+- Error: `{ success: false, error: string }`
+**Helper Functions:**
+- `success(message: string, unequipped: Equipment[] = []): EquipmentSuccess`
+- `error(errorMessage: string): EquipmentError`
+**Use Cases:**
+- Equipping items (return unequipped items for inventory)
+- Validation errors (class restrictions, slot compatibility)
+- Two-handed weapon logic (unequip both hands)
+**Dependencies:** Equipment
+**Used By:** Equipment operations in party management
+
+#### Extended `utils/PartyMemberRegistry.ts`
+
+**New Methods:**
+- `updateFromUnit(partyMemberId: string, unit: CombatUnit)` - Update registry from unit instance
+  - Saves equipment changes
+  - Saves ability changes
+  - Saves XP changes (earned, spent per class)
+  - Saves class changes (primary, secondary)
+
+**Update Logic:**
+- Equipment: Stores IDs for all 5 slots (leftHand, rightHand, head, body, accessory)
+- Abilities: Stores IDs for learned abilities and equipped abilities (reaction, passive, movement)
+- XP: Stores Map<classId, { earned, spent }> serialized to object
+- Classes: Stores primary class ID and optional secondary class ID
+
+**Persistence:**
+- Updates localStorage immediately
+- Maintains referential integrity (validates IDs exist in registries)
+- Graceful handling of missing equipment/abilities on load
+
+**Dependencies:** CombatUnit, HumanoidUnit, Equipment, CombatAbility, UnitClass
+**Used By:** PartyManagementView for persisting party member changes
+
+---
+
+### 6. Combat System Extensions
+
+#### Modified Files (Not in inventory/ directory)
+
+**`models/combat/HumanoidUnit.ts`:**
+- See [Section 4: XP & Ability System](#4-xp--ability-system)
+
+**`utils/PartyMemberRegistry.ts`:**
+- See [Section 5: Utilities](#5-utilities)
+
+**`models/combat/CombatConstants.ts`:**
+- Added `INVENTORY_VIEW` constants section
+- Colors for disabled items, class-restricted items, hover states
+- Layout dimensions and spacing
+- Font IDs and styling
+
+**`models/combat/managers/panels/AbilityInfoContent.ts`:**
+- Enhanced for inventory view usage (no changes to interface)
+
+**`models/combat/managers/panels/EquipmentInfoContent.ts`:**
+- Enhanced for inventory view usage (no changes to interface)
+
+**`models/combat/VictoryPhaseHandler.ts`:**
+- Handles XP rewards from victory
+- Calls `PartyMemberRegistry.updateFromUnit()` to persist XP gains
+
+---
+
+## Data Flow Summary
+
+### Inventory Management Flow
+
+1. **PartyInventory (Singleton)**
+   - Global inventory state
+   - Static API for CRUD operations
+   - Persistence via serialization
+
+2. **PartyManagementView (Orchestrator)**
+   - Loads state from localStorage
+   - Renders inventory UI via InventoryRenderer
+   - Handles events (hover, click)
+   - Updates state and triggers re-render
+
+3. **InventoryRenderer (Stateless)**
+   - Pure rendering functions
+   - No state management
+   - Calculates layout and hit detection
+
+4. **InventoryViewState (State)**
+   - Type-safe state container
+   - Serialization for localStorage
+   - Runtime validation
+
+### Equipment Management Flow
+
+1. **Click Equipment Slot (in PartyManagementUnitInfoContent)**
+   - Triggers equipment selection mode
+   - Highlights slot in green
+
+2. **PartyManagementView Updates Bottom Panel**
+   - Shows EquipmentComparisonContent
+   - Current equipment vs "??" (or vs hovered item)
+
+3. **Hover Inventory Item**
+   - If compatible with slot: Shows comparison
+   - If incompatible: Disabled (dark grey) or class-restricted (orange)
+
+4. **Click Compatible Item**
+   - Equips item to slot
+   - Unequips previous item (returns to inventory)
+   - Updates PartyMemberRegistry
+   - Persists to localStorage
+
+### Ability Management Flow
+
+1. **Click Ability Slot (in PartyManagementUnitInfoContent)**
+   - Triggers set-abilities mode
+   - Shows SetAbilitiesMainPanelContent with filtered abilities
+
+2. **Hover Ability**
+   - Shows AbilityInfoContent in bottom panel
+   - Highlights ability in yellow
+
+3. **Click Ability**
+   - Equips ability to slot
+   - Updates unit instance
+   - Updates PartyMemberRegistry
+   - Persists to localStorage
+   - Returns to inventory mode
+
+### XP Spending Flow
+
+1. **Click "Learn Abilities" Button**
+   - Triggers spend-xp mode
+   - Shows SpendXpMainPanelContent
+
+2. **Select Class**
+   - Shows abilities for selected class
+   - Color-codes by state (learned, affordable, can't afford)
+
+3. **Hover Ability**
+   - Shows AbilityInfoContent in bottom panel
+
+4. **Click Learnable Ability**
+   - Deducts XP from class
+   - Adds to unit.learnedAbilities
+   - Updates PartyMemberRegistry
+   - Persists to localStorage
+   - Refreshes ability list
+
+### Class Management Flow
+
+1. **Click Class (in SpendXpMainPanelContent)**
+   - Shows ClassInfoContent in bottom panel
+
+2. **Click "Set Primary Class" or "Set Secondary Class"**
+   - Checks for swap condition:
+     - Setting primary to current secondary → Swap
+     - Setting secondary to current primary → Swap
+   - Updates unit classes
+   - Updates PartyMemberRegistry
+   - Persists to localStorage
+   - Refreshes panels
+
+---
+
+## Event Handling Architecture
+
+### Coordinate Systems
+
+1. **Canvas Coordinates** (0-384px width, 0-216px height)
+   - Mouse events converted by InputHandler
+   - Used for panel region checks
+
+2. **Panel-Relative Coordinates**
+   - Calculated: `relativeX = canvasX - region.x`
+   - Used by all PanelContent implementations
+   - Hit detection in panel-local space
+
+### Event Flow
+
+1. **Mouse Move (Canvas)**
+   → PartyManagementView.handleMouseMove()
+   → InputHandler.getCanvasCoordinates()
+   → Check panel regions (title, main, top info, bottom info)
+   → Transform to panel-relative coordinates
+   → PanelContent.handleHover(relativeX, relativeY)
+   → Update hover state
+   → Re-render if changed
+
+2. **Mouse Click (Canvas)**
+   → PartyManagementView.handleClick()
+   → Similar flow to mouse move
+   → PanelContent.handleClick(relativeX, relativeY)
+   → Execute action (equip, learn, select)
+   → Update state
+   → Re-render
+
+### Hover State Management
+
+- **Inventory Items:** hoveredItemId (equipment ID)
+- **Category Tabs:** hoveredCategory (InventoryCategory)
+- **Pagination:** hoveredPagination ('prev' | 'next')
+- **Panel Content:** Internal hover state (ability index, button hover, etc.)
+
+---
+
+## Performance Patterns
+
+### Singleton Pattern
+- **PartyInventory** uses singleton pattern
+- Static API prevents re-instantiation
+- Single source of truth for inventory
+- No prop drilling required
+
+### Memoization
+- `filteredAndSortedItems` memoized by category/sort/version
+- `itemsPerPage` memoized by panel height
+- `totalPages` memoized by item count
+- Prevents expensive re-computations
+
+### Double Buffering
+- Off-screen buffer canvas for rendering
+- Swap to display canvas when complete
+- Prevents flickering and partial updates
+
+### Cached Panel Content
+- Panel content instances cached in refs
+- Prevents recreation every frame
+- Maintains hover state across renders
+- Only recreated on mode change or party member change
+
+### State Preservation
+- Selected class ID preserved across panel recreations
+- Selected ability slot preserved across mode changes
+- Scroll position could be preserved (future enhancement)
+
+---
+
+## Testing Strategy
+
+### Unit Tests
+- **PartyInventory.test.ts** - 728 lines
+  - All CRUD operations
+  - Filtering by all categories
+  - Sorting by all modes
+  - Quest item protection
+  - Serialization/deserialization
+  - Error cases
+
+### Integration Tests (Future)
+- PartyManagementView event handling
+- Panel mode transitions
+- Equipment operations
+- Ability learning
+- Class management
+- State persistence
+
+### Manual Testing Checklist
+See [CODE_REVIEW_party-management-view.md](CODE_REVIEW_party-management-view.md) Section 5.3
+
+---
+
+## Common Patterns
+
+### Adding New Panel Content
+
+1. **Implement PanelContent interface:**
+```typescript
+export class MyPanelContent implements PanelContent {
+  render(ctx, region, fontId, fontAtlasImage): void { /* ... */ }
+  handleClick?(relativeX, relativeY): any { /* ... */ }
+  handleHover?(relativeX, relativeY): any { /* ... */ }
+}
 ```
 
-**Test scenarios:**
-1. Select equipment slot → only compatible items render in yellow
-2. Class-restricted item → orange color, can't equip to restricted class
-3. Equipment comparison → stat diffs show in green (better) or red (worse)
-4. Learn ability → XP deducted, "Learned!" button appears
-5. Pagination → "< Prev" disabled on first page, "Next >" disabled on last page
+2. **Use panel-relative coordinates:**
+```typescript
+handleClick(relativeX: number, relativeY: number): any {
+  // All coordinates relative to panel region origin
+  if (relativeX >= buttonX && relativeX <= buttonX + buttonWidth) {
+    // Handle click
+  }
+}
+```
+
+3. **Cache in parent component:**
+```typescript
+const myPanelContentRef = useRef<MyPanelContent | null>(null);
+
+if (!myPanelContentRef.current) {
+  myPanelContentRef.current = new MyPanelContent(...);
+}
+```
+
+### Adding Inventory Functionality
+
+1. **Use PartyInventory static API:**
+```typescript
+PartyInventory.addItem('iron-sword', 1);
+const count = PartyInventory.getItemCount('iron-sword');
+const items = PartyInventory.filterItems('weapons');
+```
+
+2. **Update InventoryViewState:**
+```typescript
+setViewState({ ...viewState, hoveredItemId: equipmentId });
+```
+
+3. **Trigger re-render:**
+```typescript
+setInventoryVersion(v => v + 1); // Force re-computation
+```
+
+### Persisting Party Member Changes
+
+1. **Update unit instance:**
+```typescript
+humanoid.setPrimaryClass(newClass);
+humanoid.learnAbility(ability, unitClass);
+```
+
+2. **Save to registry:**
+```typescript
+PartyMemberRegistry.updateFromUnit(partyMemberId, humanoid);
+```
+
+3. **Trigger UI update:**
+```typescript
+setPartyMemberVersion(v => v + 1);
+```
 
 ---
 
-## Modified Combat Files
+## File Count Summary
 
-### PanelContent.ts (interface)
-- Added support for bottom panel click results (button, remove-item, cancel-selection)
-- Used by EquipmentComparisonContent.ts
+**Total Files:** 17
 
-### UnitInfoContent.ts (parent of PartyManagementUnitInfoContent)
-- Extended to support equipment/ability slot selection
-- PartyManagementUnitInfoContent overrides render methods
-
-### EquipmentInfoContent.ts (shows equipment details)
-- Reused in inventory bottom panel for non-comparison mode
-- Shows equipment stats and description
-
-### AbilityInfoContent.ts (shows ability details)
-- Reused in inventory for ability hover details
-- Shows ability description and effects
-
-### InfoPanelManager.ts (panel rendering manager)
-- Handles rendering panel content (title, top, bottom)
-- Reused across views
-
-### CombatLayoutManager.ts (layout calculation)
-- Provides panel region calculations
-- Inventory view uses custom region adjustments via helper functions
+**Breakdown:**
+- **View Components:** 2 files (PartyManagementView, InventoryViewRoute)
+- **Inventory Core:** 2 files (InventoryRenderer, InventoryViewState)
+- **Panel Content:** 10 files (all panels/)
+- **Utilities:** 3 files (PartyInventory + test, EquipmentResult, EquipmentSlotUtil)
+- **Modified Combat Files:** ~6 files (HumanoidUnit, PartyMemberRegistry, CombatConstants, AbilityInfoContent, EquipmentInfoContent, VictoryPhaseHandler)
 
 ---
 
-End of PartyManagementHierarchy.md
+**Version:** 1.0
+**Status:** ✅ Complete reference for party management system
+**Next Update:** When new party management features are added
