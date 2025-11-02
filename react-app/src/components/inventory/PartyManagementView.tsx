@@ -1528,7 +1528,17 @@ export const PartyManagementView: React.FC = () => {
             const unitClass = UnitClass.getById(bottomClickResult.classId);
             if (unitClass && selectedMemberRef.current) {
               const humanoid = selectedMemberRef.current as HumanoidUnit;
-              humanoid.setPrimaryClass(unitClass);
+
+              // Check if trying to set primary class to current secondary class - swap them
+              if (humanoid.secondaryClass && humanoid.secondaryClass.id === unitClass.id) {
+                const oldPrimary = humanoid.unitClass;
+                humanoid.setPrimaryClass(unitClass);
+                humanoid.setSecondaryClass(oldPrimary);
+                addLogMessage(`Swapped primary and secondary classes`);
+              } else {
+                humanoid.setPrimaryClass(unitClass);
+                addLogMessage(`Set primary class to ${unitClass.name}`);
+              }
 
               // Update registry
               const partyMemberConfigs = PartyMemberRegistry.getAll();
@@ -1536,9 +1546,6 @@ export const PartyManagementView: React.FC = () => {
               if (selectedMemberConfig) {
                 PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
               }
-
-              // Show confirmation message
-              addLogMessage(`Set primary class to ${unitClass.name}`);
 
               // Clear cached references to force recreation from updated registry
               selectedMemberRef.current = null;
@@ -1556,7 +1563,27 @@ export const PartyManagementView: React.FC = () => {
             const unitClass = UnitClass.getById(bottomClickResult.classId);
             if (unitClass && selectedMemberRef.current) {
               const humanoid = selectedMemberRef.current as HumanoidUnit;
-              humanoid.setSecondaryClass(unitClass);
+
+              // Check if trying to set secondary class to current primary class - swap them
+              if (humanoid.unitClass.id === unitClass.id) {
+                const oldPrimary = humanoid.unitClass;
+                const oldSecondary = humanoid.secondaryClass;
+
+                // Only swap if there's a secondary class to swap with
+                if (oldSecondary) {
+                  humanoid.setPrimaryClass(oldSecondary);
+                  humanoid.setSecondaryClass(oldPrimary);
+                  addLogMessage(`Swapped primary and secondary classes`);
+                } else {
+                  // No secondary class to swap with - can't set secondary to same as primary
+                  addLogMessage(`Cannot set secondary class to same as primary class`);
+                  renderFrame();
+                  return;
+                }
+              } else {
+                humanoid.setSecondaryClass(unitClass);
+                addLogMessage(`Set secondary class to ${unitClass.name}`);
+              }
 
               // Update registry
               const partyMemberConfigs = PartyMemberRegistry.getAll();
@@ -1564,9 +1591,6 @@ export const PartyManagementView: React.FC = () => {
               if (selectedMemberConfig) {
                 PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
               }
-
-              // Show confirmation message
-              addLogMessage(`Set secondary class to ${unitClass.name}`);
 
               // Clear cached references to force recreation from updated registry
               selectedMemberRef.current = null;
