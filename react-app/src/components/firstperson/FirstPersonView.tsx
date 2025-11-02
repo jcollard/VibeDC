@@ -29,6 +29,9 @@ interface FirstPersonViewProps {
   // NEW: Callback when party management is requested
   onOpenPartyManagement?: () => void;
 
+  // NEW: Callback when guild hall is requested
+  onOpenGuildHall?: () => void;
+
   // NEW: Callback when exploration state changes (for syncing back to GameView)
   onExplorationStateChange?: (state: ExplorationState) => void;
 
@@ -76,6 +79,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   mapId,
   onStartCombat,
   onOpenPartyManagement,
+  onOpenGuildHall,
   onExplorationStateChange,
   initialState,
   partyState,
@@ -172,7 +176,15 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
         }
       },
     },
-  ], [onOpenPartyManagement]);
+    {
+      label: 'Guild Hall',
+      action: () => {
+        if (onOpenGuildHall) {
+          onOpenGuildHall();
+        }
+      },
+    },
+  ], [onOpenPartyManagement, onOpenGuildHall]);
 
   // Event processor (Guidelines Compliance: useMemo creates stable reference)
   const eventProcessor = useMemo(() => new EventProcessor(), []);
