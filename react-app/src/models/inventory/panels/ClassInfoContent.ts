@@ -147,12 +147,13 @@ export class ClassInfoContent implements PanelContent {
     const primaryColor = this.hoveredOption === 'primary' ? HOVERED_TEXT : MENU_OPTION_COLOR;
     const primaryWidth = FontAtlasRenderer.measureText(primaryText, font);
     const primaryX = region.x + Math.floor((region.width - primaryWidth) / 2);
+    const primaryY = y;
 
     FontAtlasRenderer.renderText(
       ctx,
       primaryText,
       primaryX,
-      y,
+      primaryY,
       fontId,
       fontAtlasImage,
       1,
@@ -163,45 +164,23 @@ export class ClassInfoContent implements PanelContent {
     // Store bounds for hover/click detection
     this.primaryOptionBounds = {
       x: primaryX - region.x,
-      y: y - region.y,
+      y: primaryY - region.y,
       width: primaryWidth,
       height: lineSpacing
     };
-
-    y += lineSpacing;
-
-    // Render helper text for primary class (only if hovered)
-    if (this.hoveredOption === 'primary') {
-      const helperText = 'You earn XP for your primary class';
-      const helperWidth = FontAtlasRenderer.measureText(helperText, font);
-      const helperX = region.x + Math.floor((region.width - helperWidth) / 2);
-
-      FontAtlasRenderer.renderText(
-        ctx,
-        helperText,
-        helperX,
-        y,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        HELPER_TEXT_COLOR
-      );
-
-      y += lineSpacing;
-    }
 
     // Render "Set Secondary Class" option
     const secondaryText = 'Set Secondary Class';
     const secondaryColor = this.hoveredOption === 'secondary' ? HOVERED_TEXT : MENU_OPTION_COLOR;
     const secondaryWidth = FontAtlasRenderer.measureText(secondaryText, font);
     const secondaryX = region.x + Math.floor((region.width - secondaryWidth) / 2);
+    const secondaryY = primaryY + lineSpacing;
 
     FontAtlasRenderer.renderText(
       ctx,
       secondaryText,
       secondaryX,
-      y,
+      secondaryY,
       fontId,
       fontAtlasImage,
       1,
@@ -212,33 +191,90 @@ export class ClassInfoContent implements PanelContent {
     // Store bounds for hover/click detection
     this.secondaryOptionBounds = {
       x: secondaryX - region.x,
-      y: y - region.y,
+      y: secondaryY - region.y,
       width: secondaryWidth,
       height: lineSpacing
     };
 
-    y += lineSpacing;
+    // Render helper text below both options (with extra spacing)
+    y = secondaryY + lineSpacing + 8;
 
-    // Render helper text for secondary class (only if hovered)
-    if (this.hoveredOption === 'secondary') {
+    if (this.hoveredOption === 'primary') {
+      const helperText = 'You earn XP for your primary class';
+      const lines = this.wrapText(helperText, region.width - padding * 2, font);
+
+      for (const line of lines) {
+        const lineWidth = FontAtlasRenderer.measureText(line, font);
+        const lineX = region.x + Math.floor((region.width - lineWidth) / 2);
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          line,
+          lineX,
+          y,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          HELPER_TEXT_COLOR
+        );
+
+        y += lineSpacing;
+      }
+    } else if (this.hoveredOption === 'secondary') {
       const helperText = `Gives access to the ${this.unitClass.name} menu in combat`;
-      const helperWidth = FontAtlasRenderer.measureText(helperText, font);
-      const helperX = region.x + Math.floor((region.width - helperWidth) / 2);
+      const lines = this.wrapText(helperText, region.width - padding * 2, font);
 
-      FontAtlasRenderer.renderText(
-        ctx,
-        helperText,
-        helperX,
-        y,
-        fontId,
-        fontAtlasImage,
-        1,
-        'left',
-        HELPER_TEXT_COLOR
-      );
+      for (const line of lines) {
+        const lineWidth = FontAtlasRenderer.measureText(line, font);
+        const lineX = region.x + Math.floor((region.width - lineWidth) / 2);
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          line,
+          lineX,
+          y,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          HELPER_TEXT_COLOR
+        );
+
+        y += lineSpacing;
+      }
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Wrap text to fit within a maximum width
+   */
+  private wrapText(text: string, maxWidth: number, font: any): string[] {
+    const words = text.split(' ');
+    const lines: string[] = [];
+    let currentLine = '';
+
+    for (const word of words) {
+      const testLine = currentLine === '' ? word : `${currentLine} ${word}`;
+      const testWidth = FontAtlasRenderer.measureText(testLine, font);
+
+      if (testWidth <= maxWidth) {
+        currentLine = testLine;
+      } else {
+        if (currentLine !== '') {
+          lines.push(currentLine);
+        }
+        currentLine = word;
+      }
+    }
+
+    if (currentLine !== '') {
+      lines.push(currentLine);
+    }
+
+    return lines.length > 0 ? lines : [text];
   }
 
   /**
