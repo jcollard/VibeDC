@@ -1359,6 +1359,16 @@ export const PartyManagementView: React.FC = () => {
                   addLogMessage(`Learned ${ability.name}!`);
                   // Refresh the bottom panel to show "Learned!" status
                   bottomPanelManager.setContent(new AbilityInfoContent(ability, selectedMemberRef.current));
+
+                  // Update party member definition in registry
+                  const partyMemberConfigs = PartyMemberRegistry.getAll();
+                  const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
+                  if (selectedMemberConfig) {
+                    PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
+                  }
+
+                  // Trigger re-render of top info panel (to update XP display) and main panel (to update XP spent)
+                  setPartyMemberVersion(v => v + 1);
                 } else {
                   // Check if not enough XP
                   const unspentXp = humanoid.getUnspentClassExperience(selectedClass);

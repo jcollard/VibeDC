@@ -411,4 +411,38 @@ export class PartyMemberRegistry {
 
     return true;
   }
+
+  /**
+   * Update learned abilities and XP for a party member definition from a HumanoidUnit
+   * @param id The party member ID
+   * @param unit The HumanoidUnit with updated abilities and XP
+   * @returns true if updated successfully, false if party member not found
+   */
+  static updateFromUnit(id: string, unit: HumanoidUnit): boolean {
+    const definition = this.registry.get(id);
+    if (!definition) {
+      return false;
+    }
+
+    // Update learned abilities
+    definition.learnedAbilityIds = Array.from(unit.learnedAbilities).map(ability => ability.id);
+
+    // Update XP values
+    definition.totalExperience = unit.totalExperience;
+
+    // Convert Maps to Records for storage
+    const classExpRecord: Record<string, number> = {};
+    unit.classExperience.forEach((value, key) => {
+      classExpRecord[key] = value;
+    });
+    definition.classExperience = classExpRecord;
+
+    const classExpSpentRecord: Record<string, number> = {};
+    unit.classExperienceSpent.forEach((value, key) => {
+      classExpSpentRecord[key] = value;
+    });
+    definition.classExperienceSpent = classExpSpentRecord;
+
+    return true;
+  }
 }
