@@ -427,6 +427,11 @@ export class PartyMemberRegistry {
     // Update learned abilities
     definition.learnedAbilityIds = Array.from(unit.learnedAbilities).map(ability => ability.id);
 
+    // Update assigned abilities
+    definition.reactionAbilityId = unit.reactionAbility?.id;
+    definition.passiveAbilityId = unit.passiveAbility?.id;
+    definition.movementAbilityId = unit.movementAbility?.id;
+
     // Update XP values
     definition.totalExperience = unit.totalExperience;
 

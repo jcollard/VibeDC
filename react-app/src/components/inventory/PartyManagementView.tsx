@@ -1581,14 +1581,12 @@ export const PartyManagementView: React.FC = () => {
                 // Show confirmation message
                 addLogMessage(`Set ${slotType} ability to ${ability.name}`);
 
-                // Clear the selected slot highlight in top info panel
-                const topContent = topInfoPanelManager.getContent();
-                if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
-                  (topContent as any).setSelectedEquipmentSlot(null);
-                }
-
                 // Return to inventory mode
                 setPanelMode('inventory');
+
+                // Clear cached references to force recreation from updated registry
+                selectedMemberRef.current = null;
+                setAbilitiesMainContentRef.current = null;
 
                 // Trigger re-render of top info panel to show updated ability slot
                 setPartyMemberVersion(v => v + 1);
