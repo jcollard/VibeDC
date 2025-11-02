@@ -251,12 +251,8 @@ export class PartyMemberRegistry {
       }
     }
 
-    // Add experience if specified
-    if (definition.totalExperience) {
-      unit.addExperience(definition.totalExperience);
-    }
-
     // Add class-specific experience
+    // Note: totalExperience is derived from classExperience, so we only need to add class-specific experience
     if (definition.classExperience) {
       for (const [classId, experience] of Object.entries(definition.classExperience)) {
         const experienceClass = UnitClass.getById(classId);
