@@ -130,6 +130,11 @@ export const EventEditorModal: React.FC<EventEditorModalProps> = ({
           encounterId: 'encounter-id',
         });
         break;
+      case 'GenerateRandomEncounter':
+        newAction = ActionFactory.fromJSON({
+          type: 'GenerateRandomEncounter',
+        });
+        break;
       default:
         return;
     }
@@ -535,6 +540,13 @@ export const EventEditorModal: React.FC<EventEditorModalProps> = ({
             />
           </>
         )}
+
+        {type === 'GenerateRandomEncounter' && (
+          <div style={{ fontSize: '10px', color: '#aaa', fontStyle: 'italic' }}>
+            Generates a random combat encounter with procedural dungeon (21x13), enemies, and loot.
+            All parameters are procedurally generated based on party stats and equipment.
+          </div>
+        )}
       </div>
     );
   };
@@ -772,6 +784,7 @@ export const EventEditorModal: React.FC<EventEditorModalProps> = ({
               <option value="Teleport">Teleport</option>
               <option value="Rotate">Rotate</option>
               <option value="StartEncounter">StartEncounter</option>
+              <option value="GenerateRandomEncounter">GenerateRandomEncounter</option>
             </select>
           </div>
         </div>

@@ -4,6 +4,7 @@ import { Teleport } from './Teleport';
 import { Rotate } from './Rotate';
 import { StartEncounter } from './StartEncounter';
 import { SetGlobalVariable } from './SetGlobalVariable';
+import { GenerateRandomEncounter } from './GenerateRandomEncounter';
 
 /**
  * Factory for creating action instances from JSON.
@@ -22,6 +23,8 @@ export class ActionFactory {
         return StartEncounter.fromJSON(json);
       case "SetGlobalVariable":
         return SetGlobalVariable.fromJSON(json);
+      case "GenerateRandomEncounter":
+        return GenerateRandomEncounter.fromJSON(json);
       default:
         throw new Error(`Unknown action type: ${json.type}`);
     }

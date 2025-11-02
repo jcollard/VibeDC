@@ -535,6 +535,104 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     return () => window.removeEventListener('keydown', handleDebugToggle);
   }, []);
 
+  // Expose developer teleport function
+  useEffect(() => {
+    // @ts-ignore - Developer function
+    window.teleport = (mapId: string, x: number, y: number) => {
+      console.log(`[FirstPersonView] Teleporting to map '${mapId}' at position (${x}, ${y})`);
+
+      const newMap = AreaMapRegistry.getById(mapId);
+      if (!newMap) {
+        console.error(`[FirstPersonView] Map '${mapId}' not found in registry`);
+        return;
+      }
+
+      const targetTile = newMap.getTile(x, y);
+      if (!targetTile) {
+        console.error(`[FirstPersonView] Position (${x}, ${y}) is out of bounds for map '${mapId}'`);
+        return;
+      }
+
+      if (!targetTile.walkable) {
+        console.warn(`[FirstPersonView] Position (${x}, ${y}) is not walkable (tile type: ${targetTile.behavior})`);
+      }
+
+      setFirstPersonState(prev => {
+        if (!prev) return prev;
+
+        return {
+          ...prev,
+          map: newMap,
+          playerX: x,
+          playerY: y,
+          exploredTiles: new Set(getRevealedTiles(x, y)),
+        };
+      });
+
+      // Update game state to match
+      setGameState(prev => ({
+        ...prev,
+        currentMapId: mapId,
+        playerPosition: { x, y },
+      }));
+
+      combatLogManager.addMessage(`Teleported to ${newMap.name}`);
+    };
+
+    return () => {
+      // @ts-ignore
+      delete window.teleport;
+    };
+  }, [combatLogManager]);
+
+  // Expose developer random battle function
+  useEffect(() => {
+    // @ts-ignore - Developer function
+    window.startRandomBattle = () => {
+      console.log('[FirstPersonView] Starting random battle via developer function');
+
+      // Import the action and helper dynamically
+      Promise.all([
+        import('../../models/area/actions/GenerateRandomEncounter'),
+        import('../../models/area/actions/RandomEnemyGenerator')
+      ]).then(([{ GenerateRandomEncounter }, { calculatePartyStatRanges }]) => {
+        // Calculate party stat ranges for difficulty scaling
+        let partyStatRanges;
+        let partyMembers;
+        if (partyState && partyState.members.length > 0) {
+          partyStatRanges = calculatePartyStatRanges(partyState.members);
+          partyMembers = partyState.members;
+          console.log('[FirstPersonView] Scaling enemies to party stats:', partyStatRanges);
+        }
+
+        const action = new GenerateRandomEncounter(partyStatRanges, partyMembers);
+        const newState = action.execute(gameState);
+
+        // Check if combat was triggered
+        if (newState.combatState?.active && newState.combatState.encounterId) {
+          const encounterId = newState.combatState.encounterId;
+          console.log(`[FirstPersonView] Random encounter generated: ${encounterId}`);
+          combatLogManager.addMessage(`Random encounter: ${encounterId}`);
+
+          // Trigger combat transition via GameView callback
+          if (onStartCombat) {
+            onStartCombat(encounterId);
+          }
+        } else {
+          console.error('[FirstPersonView] Failed to generate random encounter');
+          combatLogManager.addMessage('Failed to generate random encounter');
+        }
+      }).catch((error) => {
+        console.error('[FirstPersonView] Failed to load GenerateRandomEncounter:', error);
+      });
+    };
+
+    return () => {
+      // @ts-ignore
+      delete window.startRandomBattle;
+    };
+  }, [combatLogManager, gameState, onStartCombat, partyState]);
+
   // Helper function to process events after movement
   const processMovementEvents = useCallback((previousX: number, previousY: number, newX: number, newY: number) => {
     if (!firstPersonState) return;

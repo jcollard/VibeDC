@@ -7,6 +7,7 @@ import { EquipmentBrowser } from './EquipmentBrowser';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { UnitClass } from '../../models/combat/UnitClass';
 import { Equipment } from '../../models/combat/Equipment';
+import { EquipmentRegistry } from '../../utils/EquipmentRegistry';
 import { TagFilter } from './TagFilter';
 
 interface EnemyRegistryPanelProps {
@@ -263,6 +264,23 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
         yaml += `    description: "${enemy.description}"\n`;
       }
 
+      // XP and Gold rewards
+      yaml += `    xpValue: ${enemy.xpValue}\n`;
+      yaml += `    goldValue: ${enemy.goldValue}\n`;
+
+      // Loot table
+      if (enemy.lootTable && enemy.lootTable.entries.length > 0) {
+        yaml += `    lootTable:\n`;
+        yaml += `      entries:\n`;
+        for (const entry of enemy.lootTable.entries) {
+          yaml += `        - equipmentId: "${entry.equipmentId}"\n`;
+          yaml += `          dropRate: ${entry.dropRate}\n`;
+          if (entry.quantity && entry.quantity > 1) {
+            yaml += `          quantity: ${entry.quantity}\n`;
+          }
+        }
+      }
+
       yaml += '\n';
     }
 
@@ -333,6 +351,210 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
     setEditError('');
   };
 
+  // Handle generating a random enemy
+  const handleGenerateEnemy = () => {
+    try {
+      // Define available sprite categories based on the sprite list
+      const monsterSprites = [
+        'monsters-0', 'monsters-4', 'monsters-8', 'monsters-12', 'monsters-16',
+        'monsters-20', 'monsters-24', 'monsters-28', 'monsters-32', 'monsters-36',
+        'monsters-42', 'monsters-44', 'monsters-48', 'monsters-56', 'monsters-60'
+      ];
+
+      const monsters2Sprites = [
+        'monsters2-0', 'monsters2-4', 'monsters2-8', 'monsters2-12', 'monsters2-16',
+        'monsters2-20', 'monsters2-24', 'monsters2-28', 'monsters2-32', 'monsters2-36',
+        'monsters2-40', 'monsters2-44', 'monsters2-50', 'monsters2-52', 'monsters2-56',
+        'monsters2-60', 'monsters2-64', 'monsters2-68', 'monsters2-72', 'monsters2-76',
+        'monsters2-80', 'monsters2-84', 'monsters2-88', 'monsters2-92', 'monsters2-96',
+        'monsters2-100', 'monsters2-104', 'monsters2-108', 'monsters2-112', 'monsters2-116',
+        'monsters2-120', 'monsters2-124', 'monsters2-128', 'monsters2-132', 'monsters2-136',
+        'monsters2-140'
+      ];
+
+      const humanoidSprites = [
+        'crystalwarriors-0', 'crystalwarriors-1', 'crystalwarriors-2', 'crystalwarriors-3',
+        'crystalwarriors-14', 'crystalwarriors-15', 'crystalwarriors-16', 'crystalwarriors-17',
+        'crystalwarriors-4', 'crystalwarriors-5', 'crystalwarriors-6', 'crystalwarriors-7',
+        'crystalwarriors-18', 'crystalwarriors-19',
+        'crystalwarriors-8', 'crystalwarriors-9', 'crystalwarriors-10', 'crystalwarriors-11',
+        'crystalwarriors-12', 'crystalwarriors-13',
+        'monsters-52'
+      ];
+
+      // Randomly choose between monster and humanoid (70% monster, 30% humanoid)
+      const isHumanoid = Math.random() < 0.3;
+      const unitType: UnitType = isHumanoid ? 'humanoid' : 'monster';
+
+      // Select a random sprite from the appropriate category
+      let spriteId: string;
+      if (isHumanoid) {
+        spriteId = humanoidSprites[Math.floor(Math.random() * humanoidSprites.length)];
+      } else {
+        // 60% chance for monsters sheet, 40% for monsters2 sheet
+        const useMonsters2 = Math.random() < 0.4;
+        const spriteArray = useMonsters2 ? monsters2Sprites : monsterSprites;
+        spriteId = spriteArray[Math.floor(Math.random() * spriteArray.length)];
+      }
+
+      // Get available classes for the unit type
+      const allClasses = UnitClass.getAll();
+      const appropriateClasses = isHumanoid
+        ? allClasses.filter(c => !['monster', 'beast'].includes(c.id.toLowerCase()))
+        : allClasses.filter(c => ['monster', 'beast'].includes(c.id.toLowerCase()));
+
+      const unitClassId = appropriateClasses.length > 0
+        ? appropriateClasses[Math.floor(Math.random() * appropriateClasses.length)].id
+        : 'monster';
+
+      // Generate random stats based on a difficulty tier (1-5)
+      const tier = Math.floor(Math.random() * 5) + 1;
+
+      const baseHealth = 15 + Math.floor(Math.random() * 10) * tier;
+      const baseMana = 5 + Math.floor(Math.random() * 10) * tier;
+      const basePhysicalPower = 3 + Math.floor(Math.random() * 3) * tier;
+      const baseMagicPower = 3 + Math.floor(Math.random() * 3) * tier;
+      const baseSpeed = 4 + Math.floor(Math.random() * 3) * tier;
+      const baseMovement = 3 + Math.floor(Math.random() * 2);
+      const basePhysicalEvade = 3 + Math.floor(Math.random() * 3) * tier;
+      const baseMagicEvade = 3 + Math.floor(Math.random() * 3) * tier;
+      const baseCourage = 3 + Math.floor(Math.random() * 3) * tier;
+      const baseAttunement = 3 + Math.floor(Math.random() * 3) * tier;
+
+      // Calculate XP and Gold based on tier
+      const xpValue = 10 * tier + Math.floor(Math.random() * 10);
+      const goldValue = 5 * tier + Math.floor(Math.random() * 10);
+
+      // Randomly assign 1-3 learned abilities
+      const actionAbilities = availableAbilities.filter(a => a.abilityType === 'Action');
+      const numAbilities = Math.floor(Math.random() * 3) + 1;
+      const learnedAbilityIds: string[] = [];
+      for (let i = 0; i < numAbilities && actionAbilities.length > 0; i++) {
+        const randomAbility = actionAbilities[Math.floor(Math.random() * actionAbilities.length)];
+        if (!learnedAbilityIds.includes(randomAbility.id)) {
+          learnedAbilityIds.push(randomAbility.id);
+        }
+      }
+
+      // Generate a unique ID
+      let newId = 'generated-enemy';
+      let counter = 1;
+      while (EnemyRegistry.has(newId)) {
+        newId = `generated-enemy-${counter}`;
+        counter++;
+      }
+
+      // Generate a name based on the sprite
+      const spriteBaseName = spriteId.split('-')[0];
+      const spriteNames: Record<string, string[]> = {
+        monsters: ['Goblin', 'Dragon', 'Spider', 'Knight', 'Gargoyle', 'Serpent', 'Beast', 'Ooze'],
+        monsters2: ['Slime', 'Specter', 'Bat', 'Ghost', 'Skeleton', 'Troll', 'Demon', 'Flame', 'Dragon'],
+        crystalwarriors: ['Warrior', 'Rogue', 'Mage', 'Knight', 'Archer', 'Wizard']
+      };
+
+      const namePool = spriteNames[spriteBaseName] || ['Creature'];
+      const baseName = namePool[Math.floor(Math.random() * namePool.length)];
+      const tierNames = ['Weak', 'Lesser', '', 'Greater', 'Elite'];
+      const tierPrefix = tierNames[tier - 1];
+      const name = tierPrefix ? `${tierPrefix} ${baseName}` : baseName;
+
+      // Create the enemy definition
+      const newEnemy: EnemyDefinition = {
+        id: newId,
+        name,
+        unitType,
+        unitClassId,
+        baseHealth,
+        baseMana,
+        basePhysicalPower,
+        baseMagicPower,
+        baseSpeed,
+        baseMovement,
+        basePhysicalEvade,
+        baseMagicEvade,
+        baseCourage,
+        baseAttunement,
+        spriteId,
+        learnedAbilityIds,
+        tags: ['generated'],
+        description: `A randomly generated ${unitType} enemy.`,
+        xpValue,
+        goldValue,
+      };
+
+      // Randomly add equipment for humanoids (50% chance per slot)
+      if (isHumanoid) {
+        const allEquipment = EquipmentRegistry.getAll();
+        const weapons = allEquipment.filter(e =>
+          e.type === 'OneHandedWeapon' || e.type === 'TwoHandedWeapon' || e.type === 'Shield' || e.type === 'Held'
+        );
+        const headArmor = allEquipment.filter(e => e.type === 'Head');
+        const bodyArmor = allEquipment.filter(e => e.type === 'Body');
+        const accessories = allEquipment.filter(e => e.type === 'Accessory');
+
+        if (Math.random() < 0.5 && weapons.length > 0) {
+          newEnemy.leftHandId = weapons[Math.floor(Math.random() * weapons.length)].id;
+        }
+        if (Math.random() < 0.3 && weapons.length > 0) {
+          newEnemy.rightHandId = weapons[Math.floor(Math.random() * weapons.length)].id;
+        }
+        if (Math.random() < 0.3 && headArmor.length > 0) {
+          newEnemy.headId = headArmor[Math.floor(Math.random() * headArmor.length)].id;
+        }
+        if (Math.random() < 0.4 && bodyArmor.length > 0) {
+          newEnemy.bodyId = bodyArmor[Math.floor(Math.random() * bodyArmor.length)].id;
+        }
+        if (Math.random() < 0.2 && accessories.length > 0) {
+          newEnemy.accessoryId = accessories[Math.floor(Math.random() * accessories.length)].id;
+        }
+      }
+
+      // 20% chance to have a loot table with 1-2 items
+      if (Math.random() < 0.2) {
+        const allEquipment = EquipmentRegistry.getAll();
+        if (allEquipment.length > 0) {
+          const numLootItems = Math.floor(Math.random() * 2) + 1;
+          const lootEntries = [];
+
+          for (let i = 0; i < numLootItems; i++) {
+            const randomEquipment = allEquipment[Math.floor(Math.random() * allEquipment.length)];
+            const dropRate = 5 + Math.floor(Math.random() * 10); // 5-15% drop rate
+            lootEntries.push({
+              equipmentId: randomEquipment.id,
+              dropRate,
+            });
+          }
+
+          newEnemy.lootTable = { entries: lootEntries };
+        }
+      }
+
+      // Register the new enemy
+      EnemyRegistry.register(newEnemy);
+
+      // Update local state
+      setEnemies(EnemyRegistry.getAll());
+      setSelectedEnemy(newEnemy);
+
+      // Update tags
+      const tagsSet = new Set<string>();
+      EnemyRegistry.getAll().forEach(enemy => {
+        enemy.tags?.forEach(tag => tagsSet.add(tag));
+      });
+      setAllTags(Array.from(tagsSet).sort());
+
+      // Start editing the new enemy immediately
+      setEditedEnemy({ ...newEnemy });
+      setIsEditing(true);
+      setEditError('');
+
+      console.log(`Generated enemy: ${newId} (${name}, Tier ${tier})`);
+    } catch (error) {
+      console.error('Failed to generate enemy:', error);
+      alert(`Failed to generate enemy: ${error}`);
+    }
+  };
+
   // Handle field changes during edit
   const handleFieldChange = (field: keyof EnemyDefinition, value: any) => {
     if (!editedEnemy) return;
@@ -394,6 +616,32 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
       >
         <div style={{ fontWeight: 'bold', fontSize: '16px' }}>Enemy Registry Browser</div>
         <div style={{ display: 'flex', gap: '12px', alignItems: 'center' }}>
+          <button
+            onClick={handleGenerateEnemy}
+            style={{
+              padding: '6px 12px',
+              background: 'rgba(156, 39, 176, 0.3)',
+              border: '1px solid rgba(156, 39, 176, 0.6)',
+              borderRadius: '4px',
+              color: '#fff',
+              fontSize: '11px',
+              cursor: 'pointer',
+              fontFamily: 'monospace',
+              fontWeight: 'bold',
+              transition: 'all 0.2s',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(156, 39, 176, 0.5)';
+              e.currentTarget.style.borderColor = 'rgba(156, 39, 176, 0.8)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'rgba(156, 39, 176, 0.3)';
+              e.currentTarget.style.borderColor = 'rgba(156, 39, 176, 0.6)';
+            }}
+            title="Generate a random enemy with stats, abilities, and loot"
+          >
+            Generate Enemy
+          </button>
           <button
             onClick={handleCreateNew}
             style={{
@@ -1139,6 +1387,231 @@ export const EnemyRegistryPanel: React.FC<EnemyRegistryPanelProps> = ({ onClose 
                   ) : (
                     <div style={{ color: '#fff' }}>{selectedEnemy.baseAttunement}</div>
                   )}
+                </div>
+              </div>
+
+              {/* Rewards Section */}
+              <div style={{
+                background: 'rgba(255, 193, 7, 0.1)',
+                border: '1px solid rgba(255, 193, 7, 0.3)',
+                borderRadius: '4px',
+                padding: '12px',
+                marginTop: '12px',
+              }}>
+                <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '12px', color: 'rgba(255, 193, 7, 0.9)' }}>
+                  Rewards
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '11px' }}>
+                  {/* XP Value */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>XP Value:</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedEnemy?.xpValue || 0}
+                        onChange={(e) => handleFieldChange('xpValue', Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ color: '#fff' }}>{selectedEnemy.xpValue}</div>
+                    )}
+                  </div>
+
+                  {/* Gold Value */}
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '4px', color: '#aaa' }}>Gold Value:</label>
+                    {isEditing ? (
+                      <input
+                        type="number"
+                        value={editedEnemy?.goldValue || 0}
+                        onChange={(e) => handleFieldChange('goldValue', Number(e.target.value))}
+                        style={{
+                          width: '100%',
+                          padding: '6px',
+                          background: 'rgba(0, 0, 0, 0.5)',
+                          border: '1px solid #666',
+                          borderRadius: '3px',
+                          color: '#fff',
+                          fontFamily: 'monospace',
+                          fontSize: '11px',
+                        }}
+                      />
+                    ) : (
+                      <div style={{ color: '#fff' }}>{selectedEnemy.goldValue}</div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Loot Table */}
+                <div style={{ marginTop: '12px' }}>
+                  <label style={{ display: 'block', marginBottom: '4px', color: '#aaa', fontSize: '11px' }}>
+                    Loot Table:
+                  </label>
+                  <div style={{
+                    background: 'rgba(0, 0, 0, 0.3)',
+                    borderRadius: '3px',
+                    padding: '6px',
+                    minHeight: '30px',
+                  }}>
+                    {(isEditing ? editedEnemy?.lootTable?.entries : selectedEnemy.lootTable?.entries)?.map((entry, index) => {
+                      const equipment = EquipmentRegistry.getById(entry.equipmentId);
+                      return (
+                        <div
+                          key={index}
+                          style={{
+                            display: 'flex',
+                            justifyContent: 'space-between',
+                            alignItems: 'center',
+                            padding: '4px 0',
+                            borderBottom: '1px solid rgba(255, 193, 7, 0.2)',
+                            fontSize: '10px',
+                          }}
+                        >
+                          <span>
+                            {equipment ? equipment.name : entry.equipmentId}
+                            {entry.quantity && entry.quantity > 1 ? ` x${entry.quantity}` : ''}
+                          </span>
+                          <span style={{ color: '#aaa' }}>
+                            {entry.dropRate}%
+                            {isEditing && (
+                              <button
+                                onClick={() => {
+                                  if (!editedEnemy?.lootTable) return;
+                                  const newEntries = editedEnemy.lootTable.entries.filter((_, i) => i !== index);
+                                  handleFieldChange('lootTable', {
+                                    entries: newEntries
+                                  });
+                                }}
+                                style={{
+                                  background: 'none',
+                                  border: 'none',
+                                  color: '#f44336',
+                                  cursor: 'pointer',
+                                  padding: '0 0 0 8px',
+                                  fontSize: '14px',
+                                }}
+                              >
+                                ×
+                              </button>
+                            )}
+                          </span>
+                        </div>
+                      );
+                    }) || (
+                      <div style={{ fontSize: '10px', color: '#666', fontStyle: 'italic' }}>No loot table</div>
+                    )}
+                    {isEditing && (
+                      <div style={{ marginTop: '6px', display: 'flex', gap: '4px', fontSize: '10px' }}>
+                        <select
+                          id="loot-equipment-select"
+                          style={{
+                            flex: 1,
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        >
+                          <option value="">Select equipment...</option>
+                          {EquipmentRegistry.getAll().map(eq => (
+                            <option key={eq.id} value={eq.id}>
+                              {eq.name}
+                            </option>
+                          ))}
+                        </select>
+                        <input
+                          id="loot-drop-rate"
+                          type="number"
+                          placeholder="Drop %"
+                          min="0"
+                          max="100"
+                          defaultValue="10"
+                          style={{
+                            width: '60px',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                        <input
+                          id="loot-quantity"
+                          type="number"
+                          placeholder="Qty"
+                          min="1"
+                          defaultValue="1"
+                          style={{
+                            width: '50px',
+                            padding: '4px',
+                            background: 'rgba(0, 0, 0, 0.5)',
+                            border: '1px solid #666',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            fontFamily: 'monospace',
+                          }}
+                        />
+                        <button
+                          onClick={() => {
+                            const equipmentSelect = document.getElementById('loot-equipment-select') as HTMLSelectElement;
+                            const dropRateInput = document.getElementById('loot-drop-rate') as HTMLInputElement;
+                            const quantityInput = document.getElementById('loot-quantity') as HTMLInputElement;
+
+                            const equipmentId = equipmentSelect.value;
+                            const dropRate = Number(dropRateInput.value);
+                            const quantity = Number(quantityInput.value);
+
+                            if (!equipmentId || !dropRate) return;
+
+                            const currentLootTable = editedEnemy?.lootTable || { entries: [] };
+                            const newEntry = {
+                              equipmentId,
+                              dropRate,
+                              ...(quantity > 1 ? { quantity } : {}),
+                            };
+
+                            handleFieldChange('lootTable', {
+                              entries: [...currentLootTable.entries, newEntry]
+                            });
+
+                            // Reset form
+                            equipmentSelect.value = '';
+                            dropRateInput.value = '10';
+                            quantityInput.value = '1';
+                          }}
+                          style={{
+                            padding: '4px 8px',
+                            background: 'rgba(255, 193, 7, 0.3)',
+                            border: '1px solid rgba(255, 193, 7, 0.6)',
+                            borderRadius: '3px',
+                            color: '#fff',
+                            fontSize: '10px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                            whiteSpace: 'nowrap',
+                          }}
+                        >
+                          Add
+                        </button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
 

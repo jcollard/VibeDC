@@ -22,7 +22,7 @@ interface GameViewProps {
 }
 
 export const GameView: React.FC<GameViewProps> = ({
-  initialMapId = 'event-demo-map',
+  initialMapId = 'mycelium',
   autoLoadSave = true,
   onGameReady
 }) => {

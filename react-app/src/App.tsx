@@ -34,7 +34,7 @@ function App() {
         {/* Main game route - now using GameView orchestrator */}
         <Route path="/" element={
           <GameView
-            initialMapId="event-demo-map"
+            initialMapId="mycelium"
             autoLoadSave={true}
             onGameReady={() => console.log('[App] Game ready')}
           />
