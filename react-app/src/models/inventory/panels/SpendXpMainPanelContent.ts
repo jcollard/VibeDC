@@ -8,6 +8,7 @@ import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 import { SpriteRegistry } from '../../../utils/SpriteRegistry';
 import type { PanelContent, PanelRegion } from '../../combat/managers/panels/PanelContent';
 import type { CombatUnit } from '../../combat/CombatUnit';
+import type { HumanoidUnit } from '../../combat/HumanoidUnit';
 import { UnitClass } from '../../combat/UnitClass';
 
 const HOVERED_CLASS_COLOR = '#ffff00'; // Yellow for hovered class
@@ -25,13 +26,27 @@ export class SpendXpMainPanelContent implements PanelContent {
   private hoveredClassIndex: number | null = null;
   private classBounds: Array<{ x: number; y: number; width: number; height: number; classId: string }> = [];
   private playerClasses: UnitClass[] = [];
+  private unit: CombatUnit;
 
   constructor(unit: CombatUnit) {
+    this.unit = unit;
+
     // Get all classes with 'player' tag
     this.playerClasses = UnitClass.getAll().filter(cls => cls.tags.includes('player'));
 
     // Set initial selected class to the unit's primary class
     this.selectedClassId = unit.unitClass.id;
+  }
+
+  /**
+   * Helper method to get unspent XP for a class (only works with HumanoidUnit)
+   */
+  private getUnspentXp(cls: UnitClass): number {
+    const humanoid = this.unit as HumanoidUnit;
+    if (humanoid.getUnspentClassExperience) {
+      return humanoid.getUnspentClassExperience(cls);
+    }
+    return 0;
   }
 
   /**
@@ -66,17 +81,27 @@ export class SpendXpMainPanelContent implements PanelContent {
     const dividerWidth = 12; // Width of the divider sprite
     const headerText = 'Available Classes';
 
-    // Calculate left column width based on widest text (header or class names)
-    let maxWidth = FontAtlasRenderer.measureTextByFontId(headerText, fontId);
+    // Calculate left column width based on widest class name plus space for XP
+    let maxClassNameWidth = FontAtlasRenderer.measureTextByFontId(headerText, fontId);
+    let maxXpWidth = 0;
+
     for (const cls of this.playerClasses) {
-      const classWidth = FontAtlasRenderer.measureTextByFontId(cls.name, fontId);
-      if (classWidth > maxWidth) {
-        maxWidth = classWidth;
+      const classNameWidth = FontAtlasRenderer.measureTextByFontId(cls.name, fontId);
+      if (classNameWidth > maxClassNameWidth) {
+        maxClassNameWidth = classNameWidth;
+      }
+
+      const xp = this.getUnspentXp(cls);
+      const xpText = `${xp}`;
+      const xpWidth = FontAtlasRenderer.measureTextByFontId(xpText, fontId);
+      if (xpWidth > maxXpWidth) {
+        maxXpWidth = xpWidth;
       }
     }
 
-    // Add small padding to the width
-    const leftColumnWidth = maxWidth + 4;
+    // Left column width: class name + gap + XP number + padding
+    const xpGap = 8; // Gap between class name and XP number
+    const leftColumnWidth = maxClassNameWidth + xpGap + maxXpWidth + 4;
 
     // Column positions
     const leftX = region.x + padding;
@@ -117,7 +142,7 @@ export class SpendXpMainPanelContent implements PanelContent {
         color = HOVERED_CLASS_COLOR;
       }
 
-      // Render class name
+      // Render class name on left
       FontAtlasRenderer.renderText(
         ctx,
         cls.name,
@@ -130,12 +155,29 @@ export class SpendXpMainPanelContent implements PanelContent {
         color
       );
 
-      // Store bounds for click detection
-      const textWidth = FontAtlasRenderer.measureTextByFontId(cls.name, fontId);
+      // Get unspent XP for this class and render right-aligned
+      const xp = this.getUnspentXp(cls);
+      const xpText = `${xp}`;
+      const xpWidth = FontAtlasRenderer.measureTextByFontId(xpText, fontId);
+      const xpX = dividerX - xpWidth - 4; // 4px padding before divider
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        xpText,
+        xpX,
+        currentY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        color
+      );
+
+      // Store bounds for click detection (entire row width)
       this.classBounds.push({
         x: leftX - region.x,
         y: currentY - region.y,
-        width: textWidth,
+        width: leftColumnWidth,
         height: lineSpacing,
         classId: cls.id
       });
