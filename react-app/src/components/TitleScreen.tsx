@@ -10,11 +10,15 @@ import { CombatRenderer } from '../models/combat/rendering/CombatRenderer';
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels
 const CANVAS_HEIGHT = CombatConstants.CANVAS_HEIGHT; // 216 pixels
 
+interface TitleScreenProps {
+  onContinue?: () => void;
+}
+
 /**
  * Title screen component that displays the game title, background story, and a Continue button.
  * Uses canvas rendering similar to CombatView for consistency.
  */
-export const TitleScreen: React.FC = () => {
+export const TitleScreen: React.FC<TitleScreenProps> = ({ onContinue }) => {
   const displayCanvasRef = useRef<HTMLCanvasElement>(null);
   const bufferCanvasRef = useRef<HTMLCanvasElement | null>(null);
   const animationFrameRef = useRef<number | null>(null);
@@ -484,9 +488,9 @@ Now, most of **Phlegm** lies in ruin, overrun by zombifying spores, corrupted my
 
     if (isClicked) {
       console.log('[TitleScreen] Continue button clicked!');
-      // TODO: Navigate to game or next screen
+      onContinue?.();
     }
-  }, [getContinueButtonBounds]);
+  }, [getContinueButtonBounds, onContinue]);
 
   return (
     <div

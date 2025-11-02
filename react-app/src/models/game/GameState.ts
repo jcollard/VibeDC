@@ -21,7 +21,7 @@ export interface CompleteGameState {
 }
 
 
-export type GameViewType = 'exploration' | 'combat' | 'party-management' | 'menu' | 'loading' | 'guild-hall';
+export type GameViewType = 'exploration' | 'combat' | 'party-management' | 'menu' | 'loading' | 'guild-hall' | 'title-screen';
 
 export interface PartyManagementState {
   returnToView: 'exploration' | 'combat';

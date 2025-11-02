@@ -12,6 +12,7 @@ import { FirstPersonView } from '../firstperson/FirstPersonView';
 import { CombatView } from '../combat/CombatView';
 import { PartyManagementView } from '../inventory/PartyManagementView';
 import { GuildHallView } from '../guild/GuildHallView';
+import { TitleScreen } from '../TitleScreen';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 
 interface GameViewProps {
@@ -332,6 +333,24 @@ export const GameView: React.FC<GameViewProps> = ({
     setIsTransitioning(false);
   }, [gameState.currentView, transitionManager]);
 
+  // Helper for transitioning from title screen to guild hall
+  const handleContinueFromTitle = useCallback(async () => {
+    console.log('[GameView] Transitioning from title screen to guild hall');
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'guild-hall',
+      () => {
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'guild-hall',
+        }));
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager]);
+
   // Navigation handler for views
   const handleNavigate = useCallback(async (view: GameViewType, params?: any) => {
     if (view === 'exploration') {
@@ -468,6 +487,10 @@ export const GameView: React.FC<GameViewProps> = ({
           transition: `opacity ${transitionManager.getTransitionDuration() / 2}ms ease-in-out`,
         }}
       >
+        {gameState.currentView === 'title-screen' && (
+          <TitleScreen onContinue={handleContinueFromTitle} />
+        )}
+
         {gameState.currentView === 'exploration' && gameState.explorationState && (
           <FirstPersonView
             mapId={gameState.explorationState.currentMapId}
@@ -528,7 +551,7 @@ function createNewGameState(initialMapId: string): CompleteGameState {
 
   // ✅ GUIDELINE: Immutable state object creation
   return {
-    currentView: 'exploration',
+    currentView: 'title-screen',
     explorationState: {
       currentMapId: initialMapId,
       playerPosition: { x: map.playerSpawn.x, y: map.playerSpawn.y },
