@@ -185,7 +185,13 @@ The `ability-database.yaml` file currently contains **32 abilities** across thre
 
 **Current State**: All abilities are defined with `id`, `name`, `description`, `abilityType`, `experiencePrice`, and `tags`. However, the `effects` field and runtime execution system **are not yet implemented**.
 
-**Implementation Priority**: Focus on **stat buffs and debuffs** which are essential for many abilities:
+**Implementation Scope**: This system **does NOT include status effects** (Stun, Confusion, Bleeding, Blindness, Haste, etc.). The focus is on:
+- **Stat Buffs/Debuffs**: Temporary and permanent stat modifications
+- **Damage/Healing**: Direct HP/Mana changes
+- **Movement Effects**: Teleport, movement bonuses
+- **Resource Costs**: Mana, health, action timer costs
+
+**Implementable Abilities** (using stat modifiers):
 - **Strength** (Apprentice) - Increases Physical Power
 - **Weakness** (Apprentice) - Decreases Physical Power
 - **Reflexes** (Apprentice) - Increases Physical and Magical Evasion
@@ -194,11 +200,16 @@ The `ability-database.yaml` file currently contains **32 abilities** across thre
 - **Meat Shield** (Fighter Passive) - Increases max HP by 50
 - **Dodge** (Rogue Passive) - Increases Physical Evasion
 
-**Deferred Mechanics** (for future implementation):
-- Knockback, Confusion, Stun, Bleeding, Blindness, Disarm
-- These require additional status effect infrastructure beyond stat modifiers
+**Out of Scope** (require status effect system NOT being implemented):
+- Knockback, Confusion, Stun, Bleeding, Blindness, Disarm, Haste
+- Shield absorption effects
+- Damage-over-time effects
+- Control effects (interrupts, mesmerize)
+- Equipment permission changes
 
-**Implementation Document**: See [StatModifierSystem.md](./StatModifierSystem.md) for focused implementation plan on buff/debuff system.
+**Note**: YAML examples in this document include some out-of-scope abilities for **reference only**. When implementing, focus on abilities that use `stat-bonus`, `stat-penalty`, `damage-physical`, `damage-magical`, and `heal` effect types.
+
+**Implementation Document**: See [StatModifierSystem.md](./StatModifierSystem.md) for the **stat modifier system** (✅ COMPLETE - Phases 1-5).
 
 ## Core Requirements
 
@@ -311,30 +322,32 @@ export interface AbilityEffect {
 }
 
 export type EffectType =
-  // Damage and Healing
+  // Damage and Healing (IMPLEMENTABLE)
   | 'damage-physical'
   | 'damage-magical'
   | 'heal'
-  // Stats
+  // Stats (IMPLEMENTABLE)
   | 'stat-bonus'           // Temporary stat increase
   | 'stat-penalty'         // Temporary stat decrease
-  | 'stat-permanent'       // Permanent stat change
-  // Movement
+  | 'stat-permanent'       // Permanent stat change (passives)
+  // Movement (IMPLEMENTABLE)
   | 'teleport'
-  | 'knockback'
-  | 'pull'
   | 'movement-bonus'
-  // Status Effects
-  | 'status-apply'         // Apply status effect (stun, blind, etc.)
-  | 'status-remove'        // Remove status effect
-  // Special
+  // Special (IMPLEMENTABLE)
   | 'mana-restore'
   | 'action-timer-modify'
-  | 'interrupt'
-  | 'shield-absorb'        // Damage absorption shield
-  // Equipment
-  | 'disarm'               // Remove equipped weapon
-  | 'disable-equipment';   // Prevent equipment use
+  // OUT OF SCOPE - Require Status Effect System (NOT IMPLEMENTED)
+  | 'knockback'            // Requires position/movement system
+  | 'pull'                 // Requires position/movement system
+  | 'status-apply'         // Requires status effect system
+  | 'status-remove'        // Requires status effect system
+  | 'interrupt'            // Requires action interruption system
+  | 'shield-absorb'        // Requires shield/absorption system
+  | 'disarm'               // Requires equipment status system
+  | 'disable-equipment'    // Requires equipment status system
+  | 'equipment-permission' // Requires equipment system changes
+  | 'damage-redirect'      // Requires damage routing system
+  | 'experience-gain';     // Special XP mechanics
 
 export type EffectTarget =
   | 'self'                 // The ability user
@@ -1177,6 +1190,17 @@ static fromJSON(json: HumanoidUnitJSON): HumanoidUnit | null
 
 ## Complete YAML Examples
 
+**⚠️ IMPORTANT NOTE**: This section includes YAML examples for **all 32 abilities**, including many that use **out-of-scope effects** (status effects, knockback, shields, etc.). These examples are provided for **reference and future implementation only**.
+
+**For current implementation**, focus ONLY on abilities using these effect types:
+- `stat-bonus` / `stat-penalty` - Temporary stat changes (Strength, Weakness, Sluggish, Reflexes)
+- `stat-permanent` - Permanent stat changes (Meat Shield, Fast, Dodge, Focused)
+- `damage-physical` / `damage-magical` - Direct damage (basic attacks, Harm)
+- `heal` - Healing (Heal ability)
+- `mana-restore` - Mana recovery (Meditate)
+
+**Abilities marked with 🚫 use out-of-scope effects** and should be skipped during initial implementation.
+
 This section provides **complete, copy-paste ready YAML** for all example abilities. Parameters are **consolidated for reusability** across similar abilities.
 
 ### Reusable Parameter Patterns
@@ -1207,7 +1231,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Fighter Action Abilities
 
-#### Charge
+#### 🚫 Charge (OUT OF SCOPE - uses knockback)
 ```yaml
 - id: "charge-001"
   name: "Charge"
@@ -1222,13 +1246,13 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
       value: "PPower * 1.0"
       params:
         autoHit: true
-    - type: "knockback"
+    - type: "knockback"  # OUT OF SCOPE
       target: "target"
       value: 1
       chance: 0.5
 ```
 
-#### Bash
+#### 🚫 Bash (OUT OF SCOPE - uses interrupt)
 ```yaml
 - id: "bash-001"
   name: "Bash"
@@ -1243,11 +1267,11 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     - type: "damage-physical"
       target: "target"
       value: "PPower * 0.8"
-    - type: "interrupt"
+    - type: "interrupt"  # OUT OF SCOPE
       target: "target"
 ```
 
-#### Head Strike
+#### 🚫 Head Strike (OUT OF SCOPE - uses status-apply)
 ```yaml
 - id: "head-strike-001"
   name: "Head Strike"
@@ -1260,7 +1284,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     - type: "damage-physical"
       target: "target"
       value: "PPower * 1.2"
-    - type: "status-apply"
+    - type: "status-apply"  # OUT OF SCOPE
       target: "target"
       chance: 0.3
       duration: 3
@@ -1268,7 +1292,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         status: "confusion"
 ```
 
-#### Body Strike
+#### 🚫 Body Strike (OUT OF SCOPE - uses status-apply)
 ```yaml
 - id: "body-strike-001"
   name: "Body Strike"
@@ -1281,7 +1305,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     - type: "damage-physical"
       target: "target"
       value: "PPower * 1.0"
-    - type: "status-apply"
+    - type: "status-apply"  # OUT OF SCOPE
       target: "target"
       chance: 0.4
       duration: 2
@@ -1289,7 +1313,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         status: "stun"
 ```
 
-#### Leg Strike
+#### ✅ Leg Strike (IMPLEMENTABLE - uses stat-penalty)
 ```yaml
 - id: "leg-strike-001"
   name: "Leg Strike"
@@ -1302,7 +1326,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     - type: "damage-physical"
       target: "target"
       value: "PPower * 0.9"
-    - type: "stat-penalty"
+    - type: "stat-penalty"  # IMPLEMENTABLE
       target: "target"
       value: -3
       duration: 3
@@ -1315,7 +1339,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Fighter Reaction Abilities
 
-#### Parry
+#### 🚫 Parry (OUT OF SCOPE - uses trigger-based stat-bonus)
 ```yaml
 - id: "parry-001"
   name: "Parry"
@@ -1336,7 +1360,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Fighter Passive Abilities
 
-#### Meat Shield
+#### ✅ Meat Shield (IMPLEMENTABLE - uses stat-permanent)
 ```yaml
 - id: "meat-shield-001"
   name: "Meat Shield"
@@ -1352,7 +1376,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         stat: "maxHealth"
 ```
 
-#### Shield Bearer
+#### 🚫 Shield Bearer (OUT OF SCOPE - uses equipment-permission)
 ```yaml
 - id: "shield-bearer-001"
   name: "Shield Bearer"
@@ -1371,7 +1395,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Fighter Movement Abilities
 
-#### Journeyman
+#### 🚫 Journeyman (OUT OF SCOPE - uses experience-gain)
 ```yaml
 - id: "journeyman-001"
   name: "Journeyman"
@@ -1391,7 +1415,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Rogue Action Abilities
 
-#### Throw Stone
+#### ✅ Throw Stone (IMPLEMENTABLE - uses damage-physical)
 ```yaml
 - id: "throw-stone-001"
   name: "Throw Stone"
@@ -1406,7 +1430,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
       value: "PPower * 0.5"
 ```
 
-#### Sneak
+#### 🚫 Sneak (OUT OF SCOPE - uses movement-bonus)
 ```yaml
 - id: "sneak-001"
   name: "Sneak"
@@ -1415,14 +1439,14 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 100
   tags: ["movement", "stealth"]
   effects:
-    - type: "movement-bonus"
+    - type: "movement-bonus"  # OUT OF SCOPE
       target: "self"
       value: "movement"
       params:
         ignoreEnemies: true
 ```
 
-#### Cut
+#### 🚫 Cut (OUT OF SCOPE - uses status-apply/bleeding)
 ```yaml
 - id: "cut-001"
   name: "Cut"
@@ -1435,7 +1459,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     - type: "damage-physical"
       target: "target"
       value: "PPower * 1.0"
-    - type: "status-apply"
+    - type: "status-apply"  # OUT OF SCOPE
       target: "target"
       chance: 0.4
       duration: 3
@@ -1444,7 +1468,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         damagePerTurn: 5
 ```
 
-#### Pocket Sand
+#### 🚫 Pocket Sand (OUT OF SCOPE - uses status-apply/blindness)
 ```yaml
 - id: "pocket-sand-001"
   name: "Pocket Sand"
@@ -1454,14 +1478,14 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   tags: ["special", "ranged", "blindness"]
   range: "1-2"  # Close range attack
   effects:
-    - type: "status-apply"
+    - type: "status-apply"  # OUT OF SCOPE
       target: "target"
       duration: 2
       params:
         status: "blindness"
 ```
 
-#### Sneak Attack
+#### ✅ Sneak Attack (IMPLEMENTABLE - uses damage-physical with conditions)
 ```yaml
 - id: "sneak-attack-001"
   name: "Sneak Attack"
@@ -1471,7 +1495,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   tags: ["physical", "weapon-range", "backstab", "conditional"]
   range: "weapon"  # Uses equipped weapon's range
   effects:
-    - type: "damage-physical"
+    - type: "damage-physical"  # IMPLEMENTABLE
       target: "target"
       value: "PPower * 2.0"
       params:
@@ -1479,7 +1503,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         autoHit: true
 ```
 
-#### Disarm
+#### 🚫 Disarm (OUT OF SCOPE - uses disarm)
 ```yaml
 - id: "disarm-001"
   name: "Disarm"
@@ -1489,7 +1513,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   tags: ["physical", "weapon-range", "disarm"]
   range: "weapon"  # Uses equipped weapon's range
   effects:
-    - type: "disarm"
+    - type: "disarm"  # OUT OF SCOPE
       target: "target"
       chance: 0.5
       duration: 2
@@ -1499,7 +1523,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Rogue Reaction Abilities
 
-#### Slippery
+#### 🚫 Slippery (OUT OF SCOPE - uses status-apply/haste)
 ```yaml
 - id: "slippery-001"
   name: "Slippery"
@@ -1508,7 +1532,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 500
   tags: ["defensive", "haste"]
   effects:
-    - type: "status-apply"
+    - type: "status-apply"  # OUT OF SCOPE
       target: "self"
       duration: 2
       params:
@@ -1516,7 +1540,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         status: "haste"
 ```
 
-#### Repost
+#### 🚫 Repost (OUT OF SCOPE - reaction triggers not implemented)
 ```yaml
 - id: "repost-001"
   name: "Repost"
@@ -1526,10 +1550,10 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   tags: ["offensive", "counter"]
   effects:
     - type: "damage-physical"
-      target: "attacker"
+      target: "attacker"  # Reaction system not implemented
       value: "PPower * 1.0"
       params:
-        trigger: "after-being-attacked"
+        trigger: "after-being-attacked"  # OUT OF SCOPE
         requiresWeaponRange: true
 ```
 
@@ -1537,7 +1561,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Rogue Passive Abilities
 
-#### Fast
+#### ✅ Fast (IMPLEMENTABLE - uses stat-permanent)
 ```yaml
 - id: "fast-001"
   name: "Fast"
@@ -1546,14 +1570,14 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 400
   tags: ["speed"]
   effects:
-    - type: "stat-permanent"
+    - type: "stat-permanent"  # IMPLEMENTABLE
       target: "self"
       value: 3
       params:
         stat: "speed"
 ```
 
-#### Ready
+#### 🚫 Ready (OUT OF SCOPE - combat-start timing not implemented)
 ```yaml
 - id: "ready-001"
   name: "Ready"
@@ -1562,14 +1586,14 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 300
   tags: ["initiative"]
   effects:
-    - type: "action-timer-modify"
+    - type: "action-timer-modify"  # IMPLEMENTABLE type but timing is OUT OF SCOPE
       target: "self"
       value: 50
       params:
-        timing: "combat-start"
+        timing: "combat-start"  # OUT OF SCOPE
 ```
 
-#### Dodge
+#### ✅ Dodge (IMPLEMENTABLE - uses stat-permanent)
 ```yaml
 - id: "dodge-001"
   name: "Dodge"
@@ -1578,7 +1602,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 500
   tags: ["defensive", "evasion"]
   effects:
-    - type: "stat-permanent"
+    - type: "stat-permanent"  # IMPLEMENTABLE
       target: "self"
       value: 10
       params:
@@ -1589,7 +1613,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Rogue Movement Abilities
 
-#### Extra Movement
+#### 🚫 Extra Movement (OUT OF SCOPE - movement abilities not fully implemented)
 ```yaml
 - id: "extra-movement-001"
   name: "+1 Movement"
@@ -1609,7 +1633,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Apprentice Support Actions
 
-#### Heal
+#### ✅ Heal (IMPLEMENTABLE - uses heal)
 ```yaml
 - id: "heal-001"
   name: "Heal"
@@ -1626,12 +1650,12 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: false
     validTargets: ["ally", "self"]
   effects:
-    - type: "heal"
+    - type: "heal"  # IMPLEMENTABLE
       target: "target"
       value: "MPower + Attunement"
 ```
 
-#### Minor Shield
+#### 🚫 Minor Shield (OUT OF SCOPE - uses shield-absorb)
 ```yaml
 - id: "minor-shield-001"
   name: "Minor Shield"
@@ -1648,7 +1672,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: false
     validTargets: ["ally", "self"]
   effects:
-    - type: "shield-absorb"
+    - type: "shield-absorb"  # OUT OF SCOPE
       target: "target"
       value: 20
       duration: 0
@@ -1656,7 +1680,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         oneTime: true
 ```
 
-#### Strength
+#### ✅ Strength (IMPLEMENTABLE - uses stat-bonus)
 ```yaml
 - id: "strength-001"
   name: "Strength"
@@ -1673,7 +1697,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: false
     validTargets: ["ally", "self"]
   effects:
-    - type: "stat-bonus"
+    - type: "stat-bonus"  # IMPLEMENTABLE
       target: "target"
       value: 6
       duration: 5
@@ -1681,7 +1705,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         stat: "physicalPower"
 ```
 
-#### Reflexes
+#### ✅ Reflexes (IMPLEMENTABLE - uses stat-bonus)
 ```yaml
 - id: "reflexes-001"
   name: "Reflexes"
@@ -1698,13 +1722,13 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: false
     validTargets: ["ally", "self"]
   effects:
-    - type: "stat-bonus"
+    - type: "stat-bonus"  # IMPLEMENTABLE
       target: "target"
       value: 10
       duration: 5
       params:
         stat: "physicalEvade"
-    - type: "stat-bonus"
+    - type: "stat-bonus"  # IMPLEMENTABLE
       target: "target"
       value: 10
       duration: 5
@@ -1716,7 +1740,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Apprentice Offensive Actions
 
-#### Harm
+#### ✅ Harm (IMPLEMENTABLE - uses damage-magical)
 ```yaml
 - id: "harm-001"
   name: "Harm"
@@ -1729,12 +1753,12 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
       amount: 6
   range: "los"  # Line of sight attack
   effects:
-    - type: "damage-magical"
+    - type: "damage-magical"  # IMPLEMENTABLE
       target: "target"
       value: "MPower + Attunement"
 ```
 
-#### Weakness
+#### ✅ Weakness (IMPLEMENTABLE - uses stat-penalty)
 ```yaml
 - id: "weakness-001"
   name: "Weakness"
@@ -1751,7 +1775,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: false
     validTargets: ["enemy"]
   effects:
-    - type: "stat-penalty"
+    - type: "stat-penalty"  # IMPLEMENTABLE
       target: "target"
       value: -6
       duration: 5
@@ -1759,7 +1783,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         stat: "physicalPower"
 ```
 
-#### Sluggish
+#### ✅ Sluggish (IMPLEMENTABLE - uses stat-penalty)
 ```yaml
 - id: "sluggish-001"
   name: "Sluggish"
@@ -1776,7 +1800,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: false
     validTargets: ["enemy"]
   effects:
-    - type: "stat-penalty"
+    - type: "stat-penalty"  # IMPLEMENTABLE
       target: "target"
       value: -5
       duration: 5
@@ -1784,7 +1808,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
         stat: "speed"
 ```
 
-#### Mesmerize
+#### ✅ Mesmerize (IMPLEMENTABLE - uses action-timer-modify)
 ```yaml
 - id: "mesmerize-001"
   name: "Mesmerize"
@@ -1801,7 +1825,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     requiresLineOfSight: true
     validTargets: ["enemy"]
   effects:
-    - type: "action-timer-modify"
+    - type: "action-timer-modify"  # IMPLEMENTABLE
       target: "target"
       value: -100
 ```
@@ -1810,7 +1834,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Apprentice Reaction Abilities
 
-#### Quick Shield
+#### 🚫 Quick Shield (OUT OF SCOPE - uses shield-absorb)
 ```yaml
 - id: "quick-shield-001"
   name: "Quick Shield"
@@ -1822,7 +1846,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
     - type: "mana"
       amount: 6
   effects:
-    - type: "shield-absorb"
+    - type: "shield-absorb"  # OUT OF SCOPE
       target: "self"
       value: 20
       params:
@@ -1834,7 +1858,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Apprentice Passive Abilities
 
-#### Focused
+#### ✅ Focused (IMPLEMENTABLE - uses stat-permanent)
 ```yaml
 - id: "focused-001"
   name: "Focused"
@@ -1843,14 +1867,14 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 500
   tags: ["mana"]
   effects:
-    - type: "stat-permanent"
+    - type: "stat-permanent"  # IMPLEMENTABLE
       target: "self"
       value: 50
       params:
         stat: "maxMana"
 ```
 
-#### Mana Shield
+#### 🚫 Mana Shield (OUT OF SCOPE - uses damage-redirect)
 ```yaml
 - id: "mana-shield-001"
   name: "Mana Shield"
@@ -1859,7 +1883,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 500
   tags: ["mana", "defensive"]
   effects:
-    - type: "damage-redirect"
+    - type: "damage-redirect"  # OUT OF SCOPE
       target: "self"
       params:
         from: "health"
@@ -1870,7 +1894,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
 
 ### Apprentice Movement Abilities
 
-#### Meditate
+#### ✅ Meditate (IMPLEMENTABLE - uses mana-restore)
 ```yaml
 - id: "meditate-001"
   name: "Meditate"
@@ -1879,7 +1903,7 @@ This section provides **complete, copy-paste ready YAML** for all example abilit
   experiencePrice: 200
   tags: ["mana", "regeneration"]
   effects:
-    - type: "mana-restore"
+    - type: "mana-restore"  # IMPLEMENTABLE
       target: "self"
       value: "maxMana * 0.1"
       params:
