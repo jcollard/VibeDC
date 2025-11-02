@@ -109,6 +109,12 @@ abilities:
     tags:
       - "defensive"
       - "health"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 50
+        params:
+          stat: "maxHealth"
 
   - id: "shield-bearer-001"
     name: "Shield Bearer"
@@ -229,6 +235,12 @@ abilities:
     experiencePrice: 400
     tags:
       - "speed"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 3
+        params:
+          stat: "speed"
 
   - id: "ready-001"
     name: "Ready"
@@ -246,6 +258,12 @@ abilities:
     tags:
       - "defensive"
       - "evasion"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 10
+        params:
+          stat: "physicalEvade"
 
   # Rogue Movement
   - id: "extra-movement-001"
@@ -362,6 +380,12 @@ abilities:
     experiencePrice: 500
     tags:
       - "mana"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 50
+        params:
+          stat: "maxMana"
 
   - id: "mana-shield-001"
     name: "Mana Shield"

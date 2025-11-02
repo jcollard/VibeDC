@@ -703,6 +703,11 @@ export class HumanoidUnit implements CombatUnit {
    * @returns true if assigned successfully, false otherwise
    */
   assignPassiveAbility(ability: CombatAbility | null): boolean {
+    // Remove stat modifiers from previous passive ability
+    if (this._passiveAbility) {
+      this.removeStatModifiersBySource(this._passiveAbility.id);
+    }
+
     if (ability === null) {
       this._passiveAbility = null;
       return true;
@@ -717,6 +722,10 @@ export class HumanoidUnit implements CombatUnit {
     }
 
     this._passiveAbility = ability;
+
+    // Apply stat modifiers from new passive ability
+    this.applyPassiveAbilityModifiers(ability);
+
     return true;
   }
 
@@ -787,6 +796,55 @@ export class HumanoidUnit implements CombatUnit {
       return true;
     });
     return removed;
+  }
+
+  /**
+   * Apply stat modifiers from a passive ability
+   * @param ability The passive ability to apply modifiers from
+   */
+  private applyPassiveAbilityModifiers(ability: CombatAbility): void {
+    // Filter for stat-permanent and stat-bonus effects
+    const statEffects = ability.effects?.filter(
+      effect => effect.type === 'stat-permanent' || effect.type === 'stat-bonus'
+    ) ?? [];
+
+    for (const effect of statEffects) {
+      if (!effect.params?.stat) {
+        console.warn(`Stat effect in ability ${ability.id} missing stat parameter`);
+        continue;
+      }
+
+      if (!this.isValidStatType(effect.params.stat)) {
+        console.warn(`Invalid stat type in ability ${ability.id}: ${effect.params.stat}`);
+        continue;
+      }
+
+      const modifier: StatModifier = {
+        id: `${ability.id}-${effect.params.stat}`,
+        stat: effect.params.stat as StatType,
+        value: typeof effect.value === 'number' ? effect.value : 0,
+        duration: -1, // Permanent while assigned
+        source: ability.id,
+        sourceName: ability.name,
+        icon: ability.icon
+      };
+
+      this.addStatModifier(modifier);
+    }
+  }
+
+  /**
+   * Validate that a string is a valid StatType
+   * @param stat The stat string to validate
+   * @returns true if valid StatType, false otherwise
+   */
+  private isValidStatType(stat: string): stat is StatType {
+    const validStats: StatType[] = [
+      'maxHealth', 'maxMana', 'physicalPower', 'magicPower',
+      'speed', 'movement', 'physicalEvade', 'magicEvade',
+      'courage', 'attunement'
+    ];
+    return validStats.includes(stat as StatType);
   }
 
   /**

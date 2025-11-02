@@ -5,7 +5,7 @@ import { UnitClass } from '../models/combat/UnitClass';
 import { CombatEncounter } from '../models/combat/CombatEncounter';
 import type { CombatEncounterJSON } from '../models/combat/CombatEncounter';
 import type { EquipmentType } from '../models/combat/Equipment';
-import type { AbilityType } from '../models/combat/CombatAbility';
+import type { AbilityType, AbilityEffect } from '../models/combat/CombatAbility';
 import { SpriteRegistry } from '../utils/SpriteRegistry';
 import type { SpriteDefinitionJSON } from '../utils/SpriteRegistry';
 import { EnemyRegistry } from '../utils/EnemyRegistry';
@@ -49,6 +49,8 @@ interface AbilityData {
   abilityType: AbilityType;
   experiencePrice: number;
   tags?: string[];
+  effects?: AbilityEffect[];
+  icon?: string;
 }
 
 /**
@@ -116,7 +118,9 @@ export function loadAbilities(): void {
       abilityData.abilityType,
       abilityData.experiencePrice,
       abilityData.tags || [],
-      abilityData.id
+      abilityData.id,
+      abilityData.effects,
+      abilityData.icon
     );
   }
 
