@@ -1,8 +1,8 @@
 # FirstPersonView System Hierarchy
 
-**Version:** 1.0
-**Last Updated:** 2025-11-01
-**Related:** [FirstPersonViewOverview.md](GDD/FirstPersonView/FirstPersonViewOverview.md), [FirstPersonViewImplementationPlan.md](GDD/FirstPersonView/FirstPersonViewImplementationPlan.md), [AreaMapHierarchy.md](AreaMapHierarchy.md), [GeneralGuidelines.md](GeneralGuidelines.md)
+**Version:** 1.1
+**Last Updated:** Sat, Nov 01, 2025 (GameView integration: state callbacks, initialState loading, combat triggering)
+**Related:** [FirstPersonViewOverview.md](GDD/FirstPersonView/FirstPersonViewOverview.md), [FirstPersonViewImplementationPlan.md](GDD/FirstPersonView/FirstPersonViewImplementationPlan.md), [AreaMapHierarchy.md](AreaMapHierarchy.md), [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/GameView/GameViewFeatureOverview.md](GDD/GameView/GameViewFeatureOverview.md)
 
 ## Purpose
 
@@ -104,12 +104,24 @@ Located in: `react-app/src/components/firstperson/`
 
 #### `FirstPersonView.tsx`
 **Purpose:** Main container for first-person exploration mode
-**Lines:** 610+ lines (updated with event system integration)
-**Props:** `{ mapId: string }`
+**Lines:** 700+ lines (updated with event system and GameView integration)
+**Props:**
+```typescript
+{
+  mapId: string;
+  onStartCombat?: (encounterId: string) => void;
+  onExplorationStateChange?: (state: ExplorationState) => void;
+  resourceManager?: ResourceManager;
+  initialState?: ExplorationState;
+  partyState?: PartyState;
+  gameState?: GameState;
+}
+```
 **State:** FirstPersonState, GameState (for events), spritesLoaded, windowSize, canvasDisplayStyle
 **Key Features:**
 - Manages overall state and input handling
 - **Event System Integration:** Processes movement-based events, handles Teleport/StartEncounter actions
+- **GameView Integration:** Syncs exploration state back to parent, supports loading from initialState
 - Double-buffered canvas rendering (384×216 native)
 - Integer scaling for pixel-perfect display
 - 5-panel layout (Top, Map/3D, Combat Log, Minimap, Stats)
@@ -137,8 +149,17 @@ Located in: `react-app/src/components/firstperson/`
 2. EventProcessor.processMovement() called with previous and current positions
 3. Returns new GameState with updated variables, messages, combat state, etc.
 4. handleEventStateChanges() processes side effects (map transitions, combat triggers)
-**Dependencies:** FirstPersonState, GameState, EventProcessor, FirstPersonInputHandler, FirstPersonLayoutManager, ThreeJSViewport, MinimapRenderer, PartyMemberStatsPanel, AreaMapRegistry, MovementValidator, CombatLogManager
-**Used By:** App routing (/dev/test/:mapId)
+5. If StartEncounter action triggered, calls onStartCombat(encounterId) callback
+
+**GameView Integration:**
+- **State Initialization:** If initialState prop provided, loads from ExplorationState (for save/load, combat returns)
+- **State Synchronization:** useEffect monitors firstPersonState changes and calls onExplorationStateChange(state)
+- **Combat Triggering:** Calls onStartCombat(encounterId) when StartEncounter event action fires
+- **Bidirectional Communication:** Syncs position, direction, explored tiles back to GameView
+- **Enables:** Persistent exploration state across view transitions, save/load system, seamless combat integration
+
+**Dependencies:** FirstPersonState, GameState, ExplorationState, PartyState, EventProcessor, FirstPersonInputHandler, FirstPersonLayoutManager, ThreeJSViewport, MinimapRenderer, PartyMemberStatsPanel, AreaMapRegistry, MovementValidator, CombatLogManager, ResourceManager
+**Used By:** App routing (/dev/test/:mapId), GameView orchestrator
 
 ---
 
@@ -233,8 +254,11 @@ Located in: `react-app/src/models/firstperson/`
 - exploredTiles: Set<string> (fog of war, format: "x,y")
 - partyMember: CombatUnit (HP/MP/equipment)
 - targetedObject: InteractiveObject | null
+**Related Types (from GameState.ts):**
+- ExplorationState: Serializable subset for GameView save/load (position, direction, mapId, exploredTiles, targetedObject)
+- PartyState: Party members, inventory, equipment (from GameState.ts)
 **Dependencies:** AreaMap, CardinalDirection, CombatUnit, InteractiveObject
-**Used By:** FirstPersonView, all FP components
+**Used By:** FirstPersonView, all FP components, GameView (via ExplorationState conversion)
 
 #### `FirstPersonLayoutManager.ts`
 **Purpose:** Layout manager for 5-panel UI, extends CombatLayoutManager

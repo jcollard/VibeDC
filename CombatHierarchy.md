@@ -1,8 +1,8 @@
 # Combat System Hierarchy
 
-**Version:** 2.3
-**Last Updated:** Fri, Oct 31, 2025 (Victory screen: VictoryPhaseHandler, VictoryModalRenderer, VictoryRewards, item selection with continue button) <!-- Update using `date` command -->
-**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md), [GDD/DefeatScreen/DefeatScreenManifest.md](GDD/DefeatScreen/DefeatScreenManifest.md), [GDD/VictoryScreen/VictoryScreenImplementationPlan.md](GDD/VictoryScreen/VictoryScreenImplementationPlan.md)
+**Version:** 2.4
+**Last Updated:** Sat, Nov 01, 2025 (GameView integration: shouldEndCombat flag, onCombatEnd callback, victory/defeat exit to exploration) <!-- Update using `date` command -->
+**Related:** [GeneralGuidelines.md](GeneralGuidelines.md), [GDD/KnockedOutFeature/KOFeatureOverview.md](GDD/KnockedOutFeature/KOFeatureOverview.md), [GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md](GDD/EnemyPathFinding/EnemyTargetDistanceCalculation.md), [GDD/DefeatScreen/DefeatScreenManifest.md](GDD/DefeatScreen/DefeatScreenManifest.md), [GDD/VictoryScreen/VictoryScreenImplementationPlan.md](GDD/VictoryScreen/VictoryScreenImplementationPlan.md), [GDD/GameView/GameViewFeatureOverview.md](GDD/GameView/GameViewFeatureOverview.md)
 
 ## Purpose
 
@@ -172,6 +172,7 @@ react-app/src/
 - `pendingSlideAnimation` (boolean): Flag to trigger immediate slide animation when entering action-timer phase after Delay/End Turn action. Cleared by ActionTimerPhaseHandler after triggering the slide.
 - `previousTurnOrder` (CombatUnit[]): Previous turn order (unit instances) before Delay/End Turn action. Used to animate FROM this order TO the new order. Cleared by ActionTimerPhaseHandler after starting the animation.
 - `pendingActionTimerMutation` ({ unit, newValue }): Pending action timer mutation to apply when entering action-timer phase. Delays the mutation until after phase transition to avoid showing new turn order in unit-turn phase for one frame. Applied by ActionTimerPhaseHandler at start of updatePhase().
+- `shouldEndCombat` (boolean): Flag indicating combat should end and return to exploration view. Set by VictoryPhaseHandler (Continue button) and DefeatPhaseHandler (Skip Encounter button). Monitored by CombatView to trigger onCombatEnd callback.
 **Dependencies:** CombatMap, CombatUnitManifest
 **Used By:** All phase handlers, CombatView, renderers, serialization
 
@@ -526,13 +527,18 @@ react-app/src/
 - Hover detection for "Try Again" and "Skip Encounter" buttons with visual feedback
 - Click handling for button interactions
 - **Try Again:** Restarts encounter from deployment phase with fresh combat state
-- **Skip Encounter:** Placeholder for future functionality (not yet implemented)
+- **Skip Encounter:** Sets shouldEndCombat flag to return to exploration view
 **Try Again Implementation:**
 - Creates fresh CombatState with empty unitManifest and phase='deployment'
 - DeploymentPhaseHandler reloads party members from PartyMemberRegistry
 - EnemyDeploymentPhaseHandler creates fresh enemies from encounter.createEnemyUnits()
 - Combat log cleared and intro cinematic replayed (handled in CombatView)
 - Returns `playCinematic: true` flag to trigger screen fade-in animation
+**Skip Encounter Implementation:**
+- Sets shouldEndCombat flag in CombatState
+- CombatView detects flag and calls onCombatEnd(false) callback
+- GameView transitions back to exploration view
+- TODO Phase 7: Apply defeat consequences to party state (penalties, tracking)
 **Design Decision:**
 - Uses full restart approach instead of snapshot restoration
 - Simpler implementation without serialization complexity
@@ -577,7 +583,10 @@ react-app/src/
 **Continue Button:**
 - Disabled (grey) until all items are selected
 - Enabled: white (normal) or yellow (hover)
-- Click triggers handleContinue() (currently logs items, returns to world in future)
+- Click triggers handleContinue() which sets shouldEndCombat flag
+- Returns new CombatState with shouldEndCombat: true
+- CombatView detects flag and calls onCombatEnd(true) callback
+- TODO Phase 7: Apply rewards to party state (XP, gold, items)
 **UI Rendering:**
 - renderUI() renders complete victory modal on top of all other UI
 - Uses VictoryModalRenderer for visual rendering (overlay, panel, rewards, item grid, button)
@@ -1830,6 +1839,7 @@ DEFAULT_ENEMY_BEHAVIORS = [
 ### `components/combat/CombatView.tsx`
 **Purpose:** React component coordinating entire combat view
 **Exports:** `CombatView` React component
+**Props:** `{ encounter: CombatEncounter, onCombatEnd?: (victory: boolean) => void }`
 **Key Responsibilities:**
 - Canvas management (display + buffer)
 - Animation loop (60 FPS)
@@ -1842,6 +1852,7 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Save/load operations with LoadingView integration
 - **Quick save/load UI** in Developer Settings panel (4 slots)
 - **Defeat screen handling** with Try Again functionality
+- **Combat end signaling** via onCombatEnd callback (for GameView integration)
 
 **Encounter Loading Pattern:**
 - Props: `encounter: CombatEncounter` (initial encounter from route)
@@ -1882,8 +1893,16 @@ DEFAULT_ENEMY_BEHAVIORS = [
 - Exposes window.forceVictory(itemCount?) for testing victory screen (DEV mode only)
   - Optional itemCount parameter forces specific number of item drops (0-6)
 
+**Combat End Monitoring:**
+- Monitors `combatState.shouldEndCombat` flag via useEffect
+- When flag is set by VictoryPhaseHandler or DefeatPhaseHandler:
+  - Determines victory/defeat based on current phase (victory or defeat)
+  - Calls `onCombatEnd(victory)` callback if provided
+  - Enables GameView orchestrator to transition back to exploration view
+- Flag is transient (not serialized) and cleared on combat restart
+
 **Dependencies:** Nearly all combat model files, LoadingView, CombatEncounter registry, combatStorage utilities
-**Used By:** CombatViewRoute
+**Used By:** CombatViewRoute, GameView (via onCombatEnd callback)
 
 ### `components/combat/LoadingView.tsx`
 **Purpose:** Generic loading transition overlay with dithered fade effects
