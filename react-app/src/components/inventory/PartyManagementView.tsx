@@ -32,6 +32,7 @@ import { UISettings } from '../../config/UISettings';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
+import { CombatAbility } from '../../models/combat/CombatAbility';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
@@ -1220,6 +1221,21 @@ export const PartyManagementView: React.FC = () => {
           if (clickResult && clickResult.type === 'class-selected') {
             // Class was selected, re-render
             renderFrame();
+            return;
+          } else if (clickResult && clickResult.type === 'ability-selected') {
+            // Ability was clicked - show details in bottom panel
+            const ability = CombatAbility.getById(clickResult.abilityId);
+            if (ability) {
+              // Cache original bottom panel content if not already cached
+              if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+              }
+
+              // Show ability details in bottom panel
+              bottomPanelManager.setContent(new AbilityInfoContent(ability));
+              detailPanelActiveRef.current = true;
+              renderFrame();
+            }
             return;
           }
         }

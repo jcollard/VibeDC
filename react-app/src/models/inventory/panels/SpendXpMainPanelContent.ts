@@ -14,6 +14,7 @@ import { UnitClass } from '../../combat/UnitClass';
 const HOVERED_CLASS_COLOR = '#ffff00'; // Yellow for hovered class
 const SELECTED_CLASS_COLOR = '#00ff00'; // Green for selected class
 const NORMAL_CLASS_COLOR = '#ffffff'; // White for normal class
+const HOVERED_ABILITY_COLOR = '#ffff00'; // Yellow for hovered ability
 const HEADER_COLOR = '#ff8c00'; // Dark orange for headers
 const DIVIDER_SPRITE = 'frames-3'; // 12x12 sprite for vertical divider
 
@@ -24,7 +25,9 @@ const DIVIDER_SPRITE = 'frames-3'; // 12x12 sprite for vertical divider
 export class SpendXpMainPanelContent implements PanelContent {
   private selectedClassId: string;
   private hoveredClassIndex: number | null = null;
+  private hoveredAbilityIndex: number | null = null;
   private classBounds: Array<{ x: number; y: number; width: number; height: number; classId: string }> = [];
+  private abilityBounds: Array<{ x: number; y: number; width: number; height: number; abilityId: string; canAfford: boolean; isLearned: boolean }> = [];
   private playerClasses: UnitClass[] = [];
   private unit: CombatUnit;
 
@@ -241,9 +244,24 @@ export class SpendXpMainPanelContent implements PanelContent {
 
       let abilityY = rightColumnY + lineSpacing + 2;
 
+      // Get available XP for this class
+      const availableXp = this.getUnspentXp(selectedClass);
+
+      // Clear ability bounds array
+      this.abilityBounds = [];
+
+      // Calculate ability row width (from rightX to right edge of region)
+      const abilityRowWidth = region.x + region.width - rightX;
+
       // Render each learnable ability
-      for (const ability of selectedClass.learnableAbilities) {
+      for (let i = 0; i < selectedClass.learnableAbilities.length; i++) {
+        const ability = selectedClass.learnableAbilities[i];
         const isLearned = this.unit.learnedAbilities.has(ability);
+        const canAfford = availableXp >= ability.experiencePrice;
+        const isHovered = this.hoveredAbilityIndex === i;
+
+        // Determine ability name color based on hover state
+        const nameColor = isHovered ? HOVERED_ABILITY_COLOR : '#ffffff';
 
         // Render ability name
         FontAtlasRenderer.renderText(
@@ -255,13 +273,23 @@ export class SpendXpMainPanelContent implements PanelContent {
           fontAtlasImage,
           1,
           'left',
-          '#ffffff'
+          nameColor
         );
 
         // Render cost or "Learned" label (right-aligned)
         const costText = isLearned ? 'Learned' : `${ability.experiencePrice}`;
         const costWidth = FontAtlasRenderer.measureTextByFontId(costText, fontId);
         const costX = region.x + region.width - padding - costWidth;
+
+        // Determine cost color: gray if learned, red if can't afford, yellow if hovered, white otherwise
+        let costColor = '#ffffff';
+        if (isLearned) {
+          costColor = '#888888';
+        } else if (isHovered) {
+          costColor = HOVERED_ABILITY_COLOR;
+        } else if (!canAfford) {
+          costColor = '#ff0000'; // Red for unaffordable abilities
+        }
 
         FontAtlasRenderer.renderText(
           ctx,
@@ -272,8 +300,19 @@ export class SpendXpMainPanelContent implements PanelContent {
           fontAtlasImage,
           1,
           'left',
-          isLearned ? '#888888' : '#ffffff'
+          costColor
         );
+
+        // Store bounds for hover/click detection
+        this.abilityBounds.push({
+          x: rightX - region.x,
+          y: abilityY - region.y,
+          width: abilityRowWidth,
+          height: lineSpacing,
+          abilityId: ability.id,
+          canAfford,
+          isLearned
+        });
 
         abilityY += lineSpacing;
       }
@@ -286,7 +325,8 @@ export class SpendXpMainPanelContent implements PanelContent {
    * Handle hover event
    */
   handleHover(relativeX: number, relativeY: number): unknown {
-    let newHoveredIndex: number | null = null;
+    let newHoveredClassIndex: number | null = null;
+    let newHoveredAbilityIndex: number | null = null;
 
     // Check if hovering over any class
     for (let i = 0; i < this.classBounds.length; i++) {
@@ -297,15 +337,40 @@ export class SpendXpMainPanelContent implements PanelContent {
         relativeY >= bounds.y &&
         relativeY <= bounds.y + bounds.height
       ) {
-        newHoveredIndex = i;
+        newHoveredClassIndex = i;
         break;
       }
     }
 
-    // Return true if hover state changed
-    if (newHoveredIndex !== this.hoveredClassIndex) {
-      this.hoveredClassIndex = newHoveredIndex;
-      return { type: 'class-hover', classIndex: newHoveredIndex };
+    // Check if hovering over any ability
+    for (let i = 0; i < this.abilityBounds.length; i++) {
+      const bounds = this.abilityBounds[i];
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        newHoveredAbilityIndex = i;
+        break;
+      }
+    }
+
+    // Check if hover state changed
+    const classChanged = newHoveredClassIndex !== this.hoveredClassIndex;
+    const abilityChanged = newHoveredAbilityIndex !== this.hoveredAbilityIndex;
+
+    if (classChanged || abilityChanged) {
+      this.hoveredClassIndex = newHoveredClassIndex;
+      this.hoveredAbilityIndex = newHoveredAbilityIndex;
+
+      if (newHoveredAbilityIndex !== null) {
+        return { type: 'ability-hover', abilityIndex: newHoveredAbilityIndex };
+      } else if (newHoveredClassIndex !== null) {
+        return { type: 'class-hover', classIndex: newHoveredClassIndex };
+      } else {
+        return { type: 'hover-cleared' };
+      }
     }
 
     return null;
@@ -315,6 +380,24 @@ export class SpendXpMainPanelContent implements PanelContent {
    * Handle click event
    */
   handleClick(relativeX: number, relativeY: number): any {
+    // Check if clicking on any ability first (abilities take precedence)
+    for (const bounds of this.abilityBounds) {
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        // Click on ability
+        return {
+          type: 'ability-selected',
+          abilityId: bounds.abilityId,
+          canAfford: bounds.canAfford,
+          isLearned: bounds.isLearned
+        };
+      }
+    }
+
     // Check if clicking on any class
     for (const bounds of this.classBounds) {
       if (
