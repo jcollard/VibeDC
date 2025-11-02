@@ -78,6 +78,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   onOpenPartyManagement,
   onExplorationStateChange,
   initialState,
+  partyState,
   gameState: initialGameState,
 }) => {
   // Load area map
@@ -92,15 +93,23 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
   // Load default party member for testing
   const defaultPartyMember = useMemo(() => {
-    // TODO: Later, allow selecting which party member to use
-    // For now, use first available party member or create a test one
-    const partyMember = PartyMemberRegistry.createPartyMember('knight-001');
-    if (!partyMember) {
-      console.error('[FirstPersonView] Failed to create default party member');
-      return null;
+    // Use first party member from partyState if available
+    if (partyState && partyState.members.length > 0) {
+      return partyState.members[0];
     }
-    return partyMember;
-  }, []);
+
+    // Fallback: try to get first available party member from registry
+    const allPartyMembers = PartyMemberRegistry.getAll();
+    if (allPartyMembers.length > 0) {
+      const partyMember = PartyMemberRegistry.createPartyMember(allPartyMembers[0].id);
+      if (partyMember) {
+        return partyMember;
+      }
+    }
+
+    console.error('[FirstPersonView] Failed to create default party member');
+    return null;
+  }, [partyState]);
 
   // Initialize state
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState | null>(() => {
