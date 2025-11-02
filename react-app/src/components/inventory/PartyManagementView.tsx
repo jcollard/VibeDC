@@ -37,7 +37,7 @@ import type { PanelContent, PanelRegion } from '../../models/combat/managers/pan
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { UnitClass } from '../../models/combat/UnitClass';
-import type { HumanoidUnit } from '../../models/combat/HumanoidUnit';
+import { HumanoidUnit } from '../../models/combat/HumanoidUnit';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
@@ -416,6 +416,53 @@ export const PartyManagementView: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Developer function to add XP to all classes for currently selected unit
+  useEffect(() => {
+    (window as any).addXP = () => {
+      const partyMemberConfigs = PartyMemberRegistry.getAll();
+      if (partyMemberConfigs.length === 0) {
+        console.log('No party members found');
+        return;
+      }
+
+      const selectedConfig = partyMemberConfigs[selectedPartyMemberIndex];
+      if (!selectedConfig) {
+        console.log('No party member selected');
+        return;
+      }
+
+      const unit = PartyMemberRegistry.createPartyMember(selectedConfig.id);
+      if (!unit || !(unit instanceof HumanoidUnit)) {
+        console.log('Failed to create party member or not a HumanoidUnit');
+        return;
+      }
+
+      // Add 1000 XP to primary class
+      if (unit.unitClass) {
+        unit.addExperience(1000, unit.unitClass);
+        console.log(`Added 1000 XP to ${unit.unitClass.name} for ${unit.name}`);
+      }
+
+      // Add 1000 XP to secondary class if it exists
+      if (unit.secondaryClass) {
+        unit.addExperience(1000, unit.secondaryClass);
+        console.log(`Added 1000 XP to ${unit.secondaryClass.name} for ${unit.name}`);
+      }
+
+      // Update registry with changes
+      PartyMemberRegistry.updateFromUnit(selectedConfig.id, unit);
+
+      // Force UI update
+      setPartyMemberVersion(v => v + 1);
+
+      console.log(`Total XP for ${unit.name}: ${unit.totalExperience}`);
+    };
+
+    return () => {
+      delete (window as any).addXP;
+    };
+  }, [selectedPartyMemberIndex]);
 
   // Load fonts
   useEffect(() => {
