@@ -73,6 +73,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
   // Ability selection state (cached when entering ability mode)
   private selectedAbilityId: string | null = null;
   private abilityTargetPosition: Position | null = null;
+  private abilityRange: Position[] = []; // Valid target tiles for selected ability
+  private abilityRangeCachedPosition: Position | null = null; // Position used to calculate ability range
 
   onTurnStart(unit: CombatUnit, position: Position, state: CombatState, hasMoved: boolean = false, _hasActed: boolean = false): void {
     this.activeUnit = unit;
@@ -90,6 +92,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.attackRangeCachedPosition = null;
     this.selectedAbilityId = null;
     this.abilityTargetPosition = null;
+    this.abilityRange = [];
+    this.abilityRangeCachedPosition = null;
 
     // Calculate movement range for this unit
     this.movementRange = MovementRangeCalculator.calculateReachableTiles({
@@ -125,6 +129,8 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.attackRangeCachedPosition = null;
     this.selectedAbilityId = null;
     this.abilityTargetPosition = null;
+    this.abilityRange = [];
+    this.abilityRangeCachedPosition = null;
   }
 
   update(
@@ -761,8 +767,14 @@ export class PlayerTurnStrategy implements TurnStrategy {
       this.exitAttackMode();
     }
 
-    // TODO Phase 2.5: Calculate ability range and show targeting overlay
-    // For now, abilities can target any unit (simplified targeting)
+    // Calculate ability range
+    if (this.activeUnit && this.activePosition) {
+      const ability = Array.from(this.activeUnit.learnedAbilities).find(a => a.id === abilityId);
+      if (ability) {
+        this.abilityRange = this.calculateAbilityRange(ability, this.activePosition);
+        this.abilityRangeCachedPosition = { ...this.activePosition };
+      }
+    }
   }
 
   /**
@@ -782,19 +794,77 @@ export class PlayerTurnStrategy implements TurnStrategy {
     this.mode = 'normal';
     this.selectedAbilityId = null;
     this.abilityTargetPosition = null;
+    this.abilityRange = [];
+    this.abilityRangeCachedPosition = null;
+  }
+
+  /**
+   * Calculate valid target tiles for an ability based on its range
+   */
+  private calculateAbilityRange(ability: import('../CombatAbility').CombatAbility, casterPosition: Position): Position[] {
+    const validTiles: Position[] = [];
+    const range = ability.range;
+
+    // If no range specified, assume melee (adjacent only)
+    if (range === undefined) {
+      // Adjacent tiles only
+      const adjacentOffsets = [
+        { dx: -1, dy: 0 }, { dx: 1, dy: 0 },
+        { dx: 0, dy: -1 }, { dx: 0, dy: 1 }
+      ];
+      for (const offset of adjacentOffsets) {
+        const targetPos = {
+          x: casterPosition.x + offset.dx,
+          y: casterPosition.y + offset.dy
+        };
+        // Validate position is on map
+        if (this.currentState &&
+            targetPos.x >= 0 && targetPos.x < this.currentState.map.width &&
+            targetPos.y >= 0 && targetPos.y < this.currentState.map.height) {
+          validTiles.push(targetPos);
+        }
+      }
+      return validTiles;
+    }
+
+    // Range 0 = self only
+    if (range === 0) {
+      return [{ ...casterPosition }];
+    }
+
+    // Ranged abilities: calculate all tiles within Manhattan distance
+    if (!this.currentState) return [];
+
+    for (let y = 0; y < this.currentState.map.height; y++) {
+      for (let x = 0; x < this.currentState.map.width; x++) {
+        const manhattanDist = Math.abs(x - casterPosition.x) + Math.abs(y - casterPosition.y);
+        if (manhattanDist > 0 && manhattanDist <= range) {
+          validTiles.push({ x, y });
+        }
+      }
+    }
+
+    return validTiles;
   }
 
   /**
    * Handle click during ability mode
-   * Simplified targeting - allows clicking any unit for now
+   * Validates range before executing ability
    */
   private handleAbilityClick(position: Position): PhaseEventResult {
     if (!this.selectedAbilityId || !this.currentState) {
       return { handled: true };
     }
 
-    // Get target unit at position (optional - some abilities are self-targeting)
-    const targetUnit = this.currentState.unitManifest.getUnitAt(position);
+    // Validate click is within ability range
+    const isInRange = this.abilityRange.some(
+      tile => tile.x === position.x && tile.y === position.y
+    );
+
+    if (!isInRange) {
+      // Click is out of range - ignore
+      return { handled: true };
+    }
 
     // Execute ability
     this.pendingAction = {

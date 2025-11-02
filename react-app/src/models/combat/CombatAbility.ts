@@ -119,6 +119,11 @@ export class CombatAbility {
    */
   public readonly icon?: string;
 
+  /**
+   * Range in tiles for targeting (undefined = melee/adjacent only, 0 = self only, >0 = ranged)
+   */
+  public readonly range?: number;
+
   constructor(
     name: string,
     description: string,
@@ -127,7 +132,8 @@ export class CombatAbility {
     tags: string[] = [],
     id?: string,
     effects?: AbilityEffect[],
-    icon?: string
+    icon?: string,
+    range?: number
   ) {
     this.id = id ?? crypto.randomUUID();
     this.name = name;
@@ -137,6 +143,7 @@ export class CombatAbility {
     this.tags = tags;
     this.effects = effects;
     this.icon = icon;
+    this.range = range;
 
     // Register this ability in the registry
     CombatAbility.registry.set(this.id, this);

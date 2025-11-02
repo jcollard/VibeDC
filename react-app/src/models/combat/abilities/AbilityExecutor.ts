@@ -135,6 +135,30 @@ export class AbilityExecutor {
       return false;
     }
 
+    // Check range validation
+    if (requiresTarget && context.targetPosition && context.casterPosition) {
+      const range = ability.range;
+      const manhattanDist = Math.abs(context.targetPosition.x - context.casterPosition.x) +
+                            Math.abs(context.targetPosition.y - context.casterPosition.y);
+
+      // If no range specified, assume melee (adjacent only, distance = 1)
+      if (range === undefined) {
+        if (manhattanDist !== 1) {
+          return false;
+        }
+      }
+      // Range 0 = self only
+      else if (range === 0) {
+        if (manhattanDist !== 0) {
+          return false;
+        }
+      }
+      // Ranged abilities: check Manhattan distance
+      else if (manhattanDist > range) {
+        return false;
+      }
+    }
+
     return true;
   }
 

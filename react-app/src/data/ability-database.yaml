@@ -85,6 +85,7 @@ abilities:
     description: "Aim for an enemy's leg dealing damage and has a chance to reduce their Speed"
     abilityType: "Action"
     experiencePrice: 200
+    range: 1
     tags:
       - "physical"
       - "weapon-range"
@@ -156,6 +157,7 @@ abilities:
     description: "Basic ranged attack"
     abilityType: "Action"
     experiencePrice: 50
+    range: 5
     tags:
       - "physical"
       - "ranged"
@@ -299,6 +301,7 @@ abilities:
     description: "Heals a unit (6 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 100
+    range: 3
     tags:
       - "magic"
       - "healing"
@@ -327,6 +330,7 @@ abilities:
     description: "Increases a unit's Physical Attack (6 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 200
+    range: 3
     tags:
       - "magic"
       - "buff"
@@ -347,6 +351,7 @@ abilities:
     description: "Increases a unit's Physical and Magical Evasion (10 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 400
+    range: 3
     tags:
       - "magic"
       - "buff"
@@ -374,6 +379,7 @@ abilities:
     description: "Harms a unit (6 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 100
+    range: 3
     tags:
       - "magic"
       - "damage"
@@ -391,6 +397,7 @@ abilities:
     description: "Decreases a unit's Physical Attack (6 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 200
+    range: 3
     tags:
       - "magic"
       - "debuff"
@@ -411,6 +418,7 @@ abilities:
     description: "Decreases a unit's Speed (10 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 300
+    range: 3
     tags:
       - "magic"
       - "debuff"
@@ -431,6 +439,7 @@ abilities:
     description: "Mesmerizes a unit resetting its Action Timer (10 mana, range 3, single target)"
     abilityType: "Action"
     experiencePrice: 500
+    range: 3
     tags:
       - "magic"
       - "control"
