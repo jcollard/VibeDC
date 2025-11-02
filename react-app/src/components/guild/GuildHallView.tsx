@@ -554,7 +554,12 @@ export const GuildHallView: React.FC<GuildHallViewProps> = ({
       // Check if remove arrow clicked
       if (PartyMemberCardRenderer.isRemoveButtonHovered(mouseX, mouseY, cardX, cardY)) {
         console.log('[GuildHallView] Remove arrow clicked for', member.name);
-        guildManager.removeFromParty(memberId);
+        const success = guildManager.removeFromParty(memberId);
+        if (!success && activeParty.length === 1) {
+          // Show error message (cannot remove last member)
+          console.warn(C.ERROR_LAST_MEMBER);
+          alert(C.ERROR_LAST_MEMBER); // TODO: Replace with proper UI message
+        }
         return;
       }
     }

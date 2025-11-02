@@ -296,6 +296,12 @@ export class GuildRosterManager {
    * @returns true if removed successfully, false otherwise
    */
   removeFromParty(characterId: string): boolean {
+    // Prevent removing the last party member
+    if (this.partyState.members.length <= 1) {
+      console.warn('[GuildRosterManager] Cannot remove last party member');
+      return false;
+    }
+
     // Try to find by ID in WeakMap first, then fall back to matching by name
     const memberToRemove = this.partyState.members.find(c =>
       this.unitToIdMap.get(c) === characterId || c.name === characterId

@@ -131,6 +131,7 @@ export const GuildHallConstants = {
 
   // Error Messages
   ERROR_PARTY_FULL: 'Party is full! (Max 4 members)',
+  ERROR_LAST_MEMBER: 'Cannot remove last party member!',
   ERROR_NAME_EXISTS: 'Name already exists',
   ERROR_INVALID_NAME: 'Name must be 1-12 letters (A-Z)',
 
