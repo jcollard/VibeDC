@@ -1,12 +1,15 @@
 # Ability System - Combat Integration Plan
 
-**Version:** 1.0
+**Version:** 1.1
 **Created:** 2025-11-01
-**Related:** [AbilitySystemOverview.md](AbilitySystemOverview.md), [StatModifierSystem.md](StatModifierSystem.md), [CombatHierarchy.md](../../CombatHierarchy.md)
+**Updated:** 2025-11-02 (Added GeneralGuidelines.md and CombatHierarchy.md compliance)
+**Related:** [AbilitySystemOverview.md](AbilitySystemOverview.md), [StatModifierSystem.md](StatModifierSystem.md), [CombatHierarchy.md](../../CombatHierarchy.md), [GeneralGuidelines.md](../../GeneralGuidelines.md)
 
 ## Purpose
 
 This document provides a detailed implementation plan for integrating the ability system into the existing combat infrastructure. It focuses **exclusively** on combat execution for units with already-assigned abilities. Learning abilities, setting abilities, and setting classes will be implemented in a separate feature.
+
+**Compliance**: This plan follows all patterns documented in GeneralGuidelines.md and CombatHierarchy.md for performance, caching, rendering, and combat integration.
 
 ## Scope
 
@@ -135,6 +138,31 @@ private isValidStatType(stat: string | undefined): stat is StatType {
 }
 ```
 
+#### 1.1.5 Phase Handler Lifecycle Awareness
+
+**CRITICAL**: Per CombatHierarchy.md, phase handlers are **recreated** on each phase entry.
+
+**Implication for Passive Abilities**:
+- Passive stat modifiers are stored in `HumanoidUnit._statModifiers` (persists)
+- Phase handlers are recreated each turn (don't persist)
+- ✅ Stat modifiers survive phase transitions (correct design)
+- ❌ Don't store passive ability state in phase handler instance variables
+
+**Pattern**:
+```typescript
+class UnitTurnPhaseHandler {
+  // ❌ DON'T: Store ability state here - lost on phase re-entry
+  private activePassiveBonus: number = 0;
+
+  // ✅ DO: Read from unit's persistent state
+  updatePhase(state: CombatState, ...): CombatState | null {
+    const unit = this.activeUnit!;
+    // Passive modifiers already in unit.statModifiers - just use stat getters
+    const totalPower = unit.physicalPower; // Includes passive bonuses automatically
+  }
+}
+```
+
 #### 1.2 Add CombatAbility.effects Field
 
 **File**: [react-app/src/models/combat/CombatAbility.ts](../../react-app/src/models/combat/CombatAbility.ts)
@@ -234,6 +262,8 @@ Test cases:
 
 **New File**: [react-app/src/models/combat/abilities/AbilityExecutor.ts](../../react-app/src/models/combat/abilities/AbilityExecutor.ts)
 
+**Performance Pattern**: Per GeneralGuidelines.md "WeakMap for Animation Data", use WeakMap for per-unit tracking to avoid duplicate name issues:
+
 ```typescript
 export interface AbilityExecutionContext {
   caster: CombatUnit;
@@ -248,8 +278,8 @@ export interface AbilityExecutionResult {
   newState: CombatState;
   animations?: CinematicSequence[];
   logMessages: string[];
-  damages?: Map<CombatUnit, number>; // For UI feedback
-  heals?: Map<CombatUnit, number>;
+  damages?: WeakMap<CombatUnit, number>; // ✅ WeakMap prevents duplicate name bugs
+  heals?: WeakMap<CombatUnit, number>;
 }
 
 export class AbilityExecutor {
@@ -265,8 +295,8 @@ export class AbilityExecutor {
       newState: context.state,
       animations: [],
       logMessages: [],
-      damages: new Map(),
-      heals: new Map()
+      damages: new WeakMap(), // ✅ Use WeakMap for per-unit tracking
+      heals: new WeakMap()
     };
 
     // Validate ability can be executed
@@ -284,183 +314,87 @@ export class AbilityExecutor {
     return results;
   }
 
-  private static canExecute(
-    ability: CombatAbility,
-    context: AbilityExecutionContext
-  ): boolean {
-    // Check mana cost
-    const manaCost = this.getManaCost(ability);
-    if (manaCost > 0 && context.caster.currentMana < manaCost) {
-      return false;
-    }
-
-    // Check range (if targeting)
-    if (context.targetPosition) {
-      const range = this.getRange(ability);
-      const distance = Math.abs(context.casterPosition.x - context.targetPosition.x) +
-                      Math.abs(context.casterPosition.y - context.targetPosition.y);
-      if (distance > range) {
-        return false;
-      }
-    }
-
-    return true;
-  }
-
-  private static applyEffect(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext,
-    results: AbilityExecutionResult
-  ): void {
-    switch (effect.type) {
-      case 'mana-cost':
-        this.applyManaCost(effect, context, results);
-        break;
-      case 'damage-physical':
-      case 'damage-magical':
-        this.applyDamage(effect, context, results);
-        break;
-      case 'heal':
-        this.applyHealing(effect, context, results);
-        break;
-      case 'mana-restore':
-        this.applyManaRestore(effect, context, results);
-        break;
-      case 'stat-bonus':
-      case 'stat-penalty':
-        this.applyStatModifier(effect, context, results);
-        break;
-      default:
-        console.warn(`Unknown effect type: ${effect.type}`);
-    }
-  }
-
-  private static applyManaCost(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext,
-    results: AbilityExecutionResult
-  ): void {
-    const caster = context.caster;
-    const cost = effect.value;
-    caster.currentMana = Math.max(0, caster.currentMana - cost);
-    results.logMessages.push(`${caster.name} spent ${cost} mana`);
-  }
-
-  private static applyDamage(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext,
-    results: AbilityExecutionResult
-  ): void {
-    const target = this.resolveTarget(effect, context);
-    if (!target) return;
-
-    const isMagical = effect.type === 'damage-magical';
-    const baseDamage = this.calculateBaseDamage(effect, context.caster, isMagical);
-
-    // Hit roll
-    const hitChance = isMagical
-      ? CombatCalculations.calculateMagicHitChance(context.caster, target)
-      : CombatCalculations.calculatePhysicalHitChance(context.caster, target, null); // No weapon for abilities
-
-    const roll = Math.random() * 100;
-    if (roll > hitChance) {
-      results.logMessages.push(`${target.name} evaded!`);
-      return;
-    }
-
-    // Apply damage
-    target.wounds = Math.min(target.maxHealth, target.wounds + baseDamage);
-    results.damages?.set(target, baseDamage);
-    results.logMessages.push(`${target.name} took ${baseDamage} damage!`);
-  }
-
-  private static applyHealing(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext,
-    results: AbilityExecutionResult
-  ): void {
-    const target = this.resolveTarget(effect, context);
-    if (!target) return;
-
-    // Base healing uses magic power and attunement
-    const baseHeal = Math.floor(
-      context.caster.magicPower * 0.5 +
-      context.caster.attunement * effect.value
-    );
-
-    const actualHeal = Math.min(baseHeal, target.wounds);
-    target.wounds = Math.max(0, target.wounds - actualHeal);
-    results.heals?.set(target, actualHeal);
-    results.logMessages.push(`${target.name} restored ${actualHeal} HP!`);
-  }
-
-  private static applyManaRestore(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext,
-    results: AbilityExecutionResult
-  ): void {
-    const target = this.resolveTarget(effect, context);
-    if (!target) return;
-
-    const restore = effect.value;
-    const actualRestore = Math.min(restore, target.maxMana - target.currentMana);
-    target.currentMana = Math.min(target.maxMana, target.currentMana + actualRestore);
-    results.logMessages.push(`${target.name} restored ${actualRestore} mana!`);
-  }
-
-  private static applyStatModifier(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext,
-    results: AbilityExecutionResult
-  ): void {
-    const target = this.resolveTarget(effect, context);
-    if (!target || !('addStatModifier' in target)) return;
-
-    const modifier: StatModifier = {
-      id: `${context.caster.name}-ability-${Date.now()}`,
-      stat: effect.stat!,
-      value: effect.type === 'stat-penalty' ? -effect.value : effect.value,
-      duration: effect.duration ?? 3,
-      source: 'ability',
-      sourceName: context.caster.name
-    };
-
-    (target as HumanoidUnit).addStatModifier(modifier);
-    results.logMessages.push(
-      `${target.name}'s ${effect.stat} ${effect.type === 'stat-bonus' ? 'increased' : 'decreased'}!`
-    );
-  }
-
-  private static resolveTarget(
-    effect: AbilityEffect,
-    context: AbilityExecutionContext
-  ): CombatUnit | null {
-    if (effect.target === 'self') {
-      return context.caster;
-    }
-    return context.target ?? null;
-  }
-
-  private static calculateBaseDamage(
-    effect: AbilityEffect,
-    caster: CombatUnit,
-    isMagical: boolean
-  ): number {
-    const power = isMagical ? caster.magicPower : caster.physicalPower;
-    return Math.floor(power * effect.value);
-  }
-
-  private static getManaCost(ability: CombatAbility): number {
-    const manaCostEffect = ability.effects?.find(e => e.type === 'mana-cost');
-    return manaCostEffect?.value ?? 0;
-  }
-
-  private static getRange(ability: CombatAbility): number {
-    const rangeEffect = ability.effects?.find(e => e.range !== undefined);
-    return rangeEffect?.range ?? 1;
-  }
+  // ... rest of implementation
 }
 ```
+
+**Why WeakMap**: Prevents bugs when multiple units share the same name (e.g., 3 "Goblin" units). Per GeneralGuidelines.md, this pattern avoids the "Using Object Properties as Unique Keys" pitfall.
+
+#### 2.1.6 Combat Log Color Coding
+
+Per CombatHierarchy.md, combat log uses colored names for player/enemy distinction:
+
+```typescript
+private static applyDamage(
+  effect: AbilityEffect,
+  context: AbilityExecutionContext,
+  results: AbilityExecutionResult
+): void {
+  const target = this.resolveTarget(effect, context);
+  if (!target) return;
+
+  const isMagical = effect.type === 'damage-magical';
+  const baseDamage = this.calculateBaseDamage(effect, context.caster, isMagical);
+
+  // Hit roll
+  const hitChance = isMagical
+    ? CombatCalculations.calculateMagicHitChance(context.caster, target)
+    : CombatCalculations.calculatePhysicalHitChance(context.caster, target, null);
+
+  const roll = Math.random() * 100;
+  if (roll > hitChance) {
+    results.logMessages.push(`${target.name} evaded!`);
+    return;
+  }
+
+  // Apply damage
+  target.wounds = Math.min(target.maxHealth, target.wounds + baseDamage);
+  results.damages?.set(target, baseDamage);
+
+  // ✅ Use colored names for combat log (per CombatHierarchy.md)
+  const casterColor = context.caster.isPlayerControlled ? '#00ff00' : '#ff0000';
+  const targetColor = target.isPlayerControlled ? '#00ff00' : '#ff0000';
+
+  results.logMessages.push(
+    `<color=${casterColor}>${context.caster.name}</color> used ${ability.name}! ` +
+    `<color=${targetColor}>${target.name}</color> took ${baseDamage} damage!`
+  );
+}
+```
+
+**Create** color constants in [colors.ts](../../react-app/src/models/combat/managers/panels/colors.ts):
+```typescript
+export const ABILITY_USED_COLOR = '#00ffff';    // Cyan for ability names
+export const BUFF_COLOR = '#00ff00';            // Green for buffs
+export const DEBUFF_COLOR = '#ff8800';          // Orange for debuffs
+```
+
+#### 2.1.7 Ability Execution and Serialization
+
+**IMPORTANT**: Ability animations are **transient** - don't serialize mid-animation state.
+
+Per CombatHierarchy.md serialization patterns:
+- `CombatState` fields are serialized
+- Phase handler instance variables are NOT serialized
+- Animations must complete before save, or be discarded
+
+**Pattern**:
+```typescript
+// In CombatView save handler
+const handleSave = () => {
+  // ❌ DON'T: Save during ability animation
+  if (phaseHandlerRef.current.isAbilityAnimating?.()) {
+    console.warn('Cannot save during ability animation');
+    return;
+  }
+
+  // ✅ DO: Only save when phase is in stable state
+  const savedState = serializeCombatState(combatState);
+  // ...
+}
+```
+
+**Rationale**: Mid-animation state can't be reliably restored (animation progress, tinting buffers, etc.).
 
 #### 2.2 Update UnitTurnPhaseHandler
 
@@ -518,6 +452,29 @@ executeAction(action: TurnAction): CombatState {
   // ... existing code ...
 }
 ```
+
+#### 2.2.4 Ability Targeting Mouse Events
+
+Per GeneralGuidelines.md "Mouse Event Performance":
+
+**❌ DON'T**: Call renderFrame() in mouse move handlers
+```typescript
+// BAD: Blocks animation loop
+handleMouseMove(x, y) {
+  this.updateAbilityTargetHover(x, y);
+  renderFrame(); // Can fire 100+ times/second!
+}
+```
+
+**✅ DO**: Update state only, let animation loop render
+```typescript
+handleMouseMove(x, y) {
+  this.updateAbilityTargetHover(x, y);
+  // Animation loop will render on next frame (~16ms)
+}
+```
+
+**Rationale**: Mouse events can fire 100+ times/sec. Synchronous rendering blocks animation loop.
 
 #### 2.3 Add Ability Actions Menu Panel
 
@@ -581,6 +538,41 @@ export class AbilityMenuContent implements PanelContent {
 }
 ```
 
+#### 2.3.1 Cache AbilityMenuContent Instance
+
+Per GeneralGuidelines.md state management patterns, cache UI components with state:
+
+**File**: [UnitTurnPhaseHandler.ts](../../react-app/src/models/combat/UnitTurnPhaseHandler.ts)
+
+```typescript
+class UnitTurnPhaseHandler {
+  private cachedAbilityMenu: AbilityMenuContent | null = null;
+
+  // Cache ability menu to preserve hover state
+  private getAbilityMenuContent(): AbilityMenuContent {
+    if (!this.cachedAbilityMenu) {
+      const actionAbilities = this.activeUnit!.abilities.filter(
+        a => a.abilityType === 'Action'
+      );
+      this.cachedAbilityMenu = new AbilityMenuContent(
+        actionAbilities,
+        (abilityId) => this.onAbilitySelect(abilityId),
+        () => this.onCancelAbility()
+      );
+    }
+    return this.cachedAbilityMenu;
+  }
+
+  onTurnEnd(): void {
+    // Clear cached menu when turn ends
+    this.cachedAbilityMenu = null;
+    super.onTurnEnd();
+  }
+}
+```
+
+**Rationale**: Per GeneralGuidelines.md, "Cache instances that maintain state" - ability menu has hover state that must persist across frames.
+
 #### 2.4 Update ActionsMenuContent
 
 Add "Ability" button to actions menu:
@@ -608,6 +600,98 @@ private onAbilityClick(): void {
   this.onAction({ type: 'show-ability-menu' });
 }
 ```
+
+#### 2.5 Ability Targeting UI
+
+Create targeting overlay for abilities with range requirements:
+
+#### 2.5.1 Ability Targeting Coordinate Systems
+
+Per GeneralGuidelines.md "Coordinate Systems":
+
+**Three coordinate spaces**:
+1. **Canvas Coordinates** (0-384px × 0-216px) - Mouse events
+2. **Tile Coordinates** (0-31 cols × 0-17 rows) - Map logic
+3. **Panel-Relative Coordinates** - UI panels
+
+**Ability Targeting Flow**:
+```typescript
+// 1. Mouse event → Canvas coordinates
+handleMouseMove(event: MouseEvent) {
+  const canvasCoords = inputHandler.getCanvasCoordinates(event);
+
+  // 2. Canvas → Tile coordinates
+  const tileCoords = CombatMapRenderer.canvasToTileCoordinates(
+    canvasCoords.x,
+    canvasCoords.y,
+    mapOffset,
+    tileSize
+  );
+
+  // 3. Validate tile is in ability range
+  if (this.isInAbilityRange(tileCoords)) {
+    this.highlightedTarget = tileCoords;
+  }
+}
+```
+
+**Why**: Prevents off-by-one errors in targeting calculations.
+
+- Show valid target tiles in range
+- Display ability name and description on hover
+- Show projected damage/healing values
+- Highlight selected target
+
+#### 2.6 Ability Visual Effects Z-Ordering
+
+Per GeneralGuidelines.md "Render Pipeline Z-Ordering":
+
+**Ability Effect Rendering**:
+- **`render()` (Before Units)**: Area-of-effect indicators, ground targeting circles
+- **`renderUI()` (After Units)**: Floating damage numbers, healing text, buff/debuff icons
+
+**Example - Damage Numbers in UnitTurnPhaseHandler**:
+```typescript
+renderUI(state: CombatState, encounter: CombatEncounter, context: PhaseRenderContext): void {
+  // ... existing cursor rendering ...
+
+  // Render floating damage numbers AFTER units (overlay)
+  if (this.abilityAnimations.length > 0) {
+    for (const anim of this.abilityAnimations) {
+      anim.renderUI(context); // Floating text appears ON TOP of units
+    }
+  }
+}
+```
+
+**Why**: Floating numbers/text must appear above units, ground effects must appear below.
+
+#### 2.6.2 Cache Animation Buffers
+
+Per GeneralGuidelines.md "Animation Sequence Pattern":
+
+```typescript
+export class AbilityAnimationSequence implements CinematicSequence {
+  // Cache off-screen canvas for effect rendering
+  private offscreenCanvas: HTMLCanvasElement | null = null;
+  private offscreenCtx: CanvasRenderingContext2D | null = null;
+
+  render(state, encounter, context): void {
+    if (!this.offscreenCanvas) {
+      this.offscreenCanvas = document.createElement('canvas');
+      this.offscreenCanvas.width = 12; // Tile size
+      this.offscreenCanvas.height = 12;
+      this.offscreenCtx = this.offscreenCanvas.getContext('2d');
+      if (this.offscreenCtx) {
+        this.offscreenCtx.imageSmoothingEnabled = false;
+      }
+    }
+    // Reuse cached canvas every frame...
+  }
+}
+```
+
+**Why**: Avoids creating new canvas 60 times/sec (GC pressure).
 
 #### 2.5 Testing
 
@@ -736,88 +820,105 @@ export class ReactionHandler {
 
 Add reaction trigger points:
 
+#### 3.3.1 Account for Dual-Wield Attack Animations
+
+Per CombatHierarchy.md, UnitTurnPhaseHandler supports dual-wield with **two sequential 3s animations**.
+
+**Reaction Trigger Points Must Handle**:
+- Single weapon: 1 before-attack → 1 attack → 1 after-attack sequence
+- Dual-wield: 2 before-attack → 2 attacks → 2 after-attack sequences
+
+**Pattern**:
 ```typescript
 executeAttack(targetPosition: Position): CombatState {
   const target = this.currentState!.unitManifest.getUnitAt(targetPosition);
   if (!target) return this.currentState!;
 
+  const weapons = this.getEquippedWeapons(); // May return 1 or 2 weapons
   let newState = this.currentState!;
 
-  // TRIGGER: before-attack (attacker's reaction)
-  const beforeAttackReaction = ReactionHandler.checkReaction({
-    triggerType: 'before-attack',
-    reactor: this.activeUnit!,
-    reactorPosition: this.activePosition!,
-    target,
-    targetPosition,
-    state: newState
-  });
+  for (const weapon of weapons) {
+    // TRIGGER: before-attack (per weapon)
+    const beforeAttackReaction = ReactionHandler.checkReaction({
+      triggerType: 'before-attack',
+      reactor: this.activeUnit!,
+      reactorPosition: this.activePosition!,
+      target,
+      targetPosition,
+      state: newState
+    });
 
-  if (beforeAttackReaction.shouldExecute) {
-    newState = beforeAttackReaction.newState;
-    for (const msg of beforeAttackReaction.logMessages) {
-      newState = CombatLogManager.addMessage(newState, msg);
+    if (beforeAttackReaction.shouldExecute) {
+      newState = beforeAttackReaction.newState;
+      for (const msg of beforeAttackReaction.logMessages) {
+        newState = CombatLogManager.addMessage(newState, msg);
+      }
     }
-  }
 
-  // TRIGGER: before-attacked (defender's reaction)
-  const beforeAttackedReaction = ReactionHandler.checkReaction({
-    triggerType: 'before-attacked',
-    reactor: target,
-    reactorPosition: targetPosition,
-    attacker: this.activeUnit!,
-    attackerPosition: this.activePosition!,
-    state: newState
-  });
+    // TRIGGER: before-attacked (defender's reaction, per weapon)
+    const beforeAttackedReaction = ReactionHandler.checkReaction({
+      triggerType: 'before-attacked',
+      reactor: target,
+      reactorPosition: targetPosition,
+      attacker: this.activeUnit!,
+      attackerPosition: this.activePosition!,
+      state: newState
+    });
 
-  if (beforeAttackedReaction.shouldExecute) {
-    newState = beforeAttackedReaction.newState;
-    for (const msg of beforeAttackedReaction.logMessages) {
-      newState = CombatLogManager.addMessage(newState, msg);
+    if (beforeAttackedReaction.shouldExecute) {
+      newState = beforeAttackedReaction.newState;
+      for (const msg of beforeAttackedReaction.logMessages) {
+        newState = CombatLogManager.addMessage(newState, msg);
+      }
     }
-  }
 
-  // ... existing attack logic (hit roll, damage) ...
+    // Execute attack with this weapon
+    const attackResult = this.performAttack(weapon, targetPosition, newState);
+    newState = attackResult.newState;
+    const damageAmount = attackResult.damage;
 
-  // TRIGGER: after-attacked (defender's reaction)
-  const afterAttackedReaction = ReactionHandler.checkReaction({
-    triggerType: 'after-attacked',
-    reactor: target,
-    reactorPosition: targetPosition,
-    attacker: this.activeUnit!,
-    attackerPosition: this.activePosition!,
-    damageDealt: damageAmount,
-    state: newState
-  });
+    // TRIGGER: after-attacked (defender's reaction, per weapon)
+    const afterAttackedReaction = ReactionHandler.checkReaction({
+      triggerType: 'after-attacked',
+      reactor: target,
+      reactorPosition: targetPosition,
+      attacker: this.activeUnit!,
+      attackerPosition: this.activePosition!,
+      damageDealt: damageAmount,
+      state: newState
+    });
 
-  if (afterAttackedReaction.shouldExecute) {
-    newState = afterAttackedReaction.newState;
-    for (const msg of afterAttackedReaction.logMessages) {
-      newState = CombatLogManager.addMessage(newState, msg);
+    if (afterAttackedReaction.shouldExecute) {
+      newState = afterAttackedReaction.newState;
+      for (const msg of afterAttackedReaction.logMessages) {
+        newState = CombatLogManager.addMessage(newState, msg);
+      }
     }
-  }
 
-  // TRIGGER: after-attack (attacker's reaction)
-  const afterAttackReaction = ReactionHandler.checkReaction({
-    triggerType: 'after-attack',
-    reactor: this.activeUnit!,
-    reactorPosition: this.activePosition!,
-    target,
-    targetPosition,
-    damageDealt: damageAmount,
-    state: newState
-  });
+    // TRIGGER: after-attack (attacker's reaction, per weapon)
+    const afterAttackReaction = ReactionHandler.checkReaction({
+      triggerType: 'after-attack',
+      reactor: this.activeUnit!,
+      reactorPosition: this.activePosition!,
+      target,
+      targetPosition,
+      damageDealt: damageAmount,
+      state: newState
+    });
 
-  if (afterAttackReaction.shouldExecute) {
-    newState = afterAttackReaction.newState;
-    for (const msg of afterAttackReaction.logMessages) {
-      newState = CombatLogManager.addMessage(newState, msg);
+    if (afterAttackReaction.shouldExecute) {
+      newState = afterAttackReaction.newState;
+      for (const msg of afterAttackReaction.logMessages) {
+        newState = CombatLogManager.addMessage(newState, msg);
+      }
     }
   }
 
   return newState;
 }
 ```
+
+**Why**: Reactions must fire for each weapon in dual-wield scenarios.
 
 #### 3.4 Update ability-database.yaml
 
@@ -859,6 +960,7 @@ Test cases:
 - ✅ Reaction ability execution
 - ✅ Combat log messages
 - ✅ Unit without reaction ability (no-op)
+- ✅ Dual-wield triggers reactions twice
 
 ---
 
@@ -1286,6 +1388,9 @@ Add mana visualization to UnitInfoContent:
 - Effect handlers are lightweight (no heavy calculations)
 - Stat modifiers already optimized (Phase 1-5 complete)
 - Animation sequences reuse existing infrastructure
+- **WeakMap** used for per-unit tracking (prevents duplicate name bugs)
+- **UI components cached** to preserve hover state (per GeneralGuidelines.md)
+- **Animation buffers cached** to avoid GC pressure (per GeneralGuidelines.md)
 
 ### Extensibility
 - Effect system designed for easy addition of new types
@@ -1305,3 +1410,20 @@ Add mana visualization to UnitInfoContent:
 - Conditional abilities (add requirement checks)
 - Combo abilities (add ability chaining system)
 - Equipment-based abilities (add equipment integration)
+
+---
+
+## Compliance Checklist
+
+Per GeneralGuidelines.md and CombatHierarchy.md:
+
+- ✅ **WeakMap for per-unit tracking** - prevents duplicate name bugs (Phase 2.1)
+- ✅ **Cache UI components** - AbilityMenuContent cached for hover state (Phase 2.3.1)
+- ✅ **Z-ordering correct** - render() for underlays, renderUI() for overlays (Phase 2.6)
+- ✅ **No renderFrame() in mouse handlers** - state-only updates (Phase 2.2.4)
+- ✅ **Phase handler lifecycle** - stat modifiers in HumanoidUnit, not phase handler (Phase 1.1.5)
+- ✅ **Cache animation buffers** - off-screen canvas cached (Phase 2.6.2)
+- ✅ **Dual-wield support** - reactions trigger per weapon (Phase 3.3.1)
+- ✅ **Combat log color coding** - player green, enemy red (Phase 2.1.6)
+- ✅ **Serialization pattern** - don't save mid-animation (Phase 2.1.7)
+- ✅ **Coordinate transformations** - canvas → tile → validation (Phase 2.5.1)
