@@ -735,6 +735,9 @@ export const PartyManagementView: React.FC = () => {
           if (!spendXpMainContentRef.current) {
             spendXpMainContentRef.current = new SpendXpMainPanelContent(selectedMember);
 
+            // Check if we're restoring a previously selected class
+            const isRestoringClass = spendXpSelectedClassIdRef.current !== null;
+
             // Restore previously selected class if available
             if (spendXpSelectedClassIdRef.current) {
               spendXpMainContentRef.current.setSelectedClass(spendXpSelectedClassIdRef.current);
@@ -745,8 +748,10 @@ export const PartyManagementView: React.FC = () => {
             const selectedClass = UnitClass.getById(selectedClassId);
             if (selectedClass) {
               bottomPanelManager.setContent(new ClassInfoContent(selectedClass, selectedMember));
-              // Add class description to combat log with orange class name
-              addLogMessage(`[color=#ff8c00]${selectedClass.name}[/color] - ${selectedClass.description}`);
+              // Only add class description to combat log if this is the first time (not restoring)
+              if (!isRestoringClass) {
+                addLogMessage(`[color=#ff8c00]${selectedClass.name}[/color] - ${selectedClass.description}`);
+              }
             }
           }
 
@@ -1474,12 +1479,18 @@ export const PartyManagementView: React.FC = () => {
             // Class was selected - show class info in bottom panel (no caching in spend-xp mode)
             const unitClass = UnitClass.getById(clickResult.classId);
             if (unitClass && selectedMemberRef.current) {
+              // Only show log message if the class actually changed
+              const classChanged = spendXpSelectedClassIdRef.current !== clickResult.classId;
+
               // Save the selected class ID
               spendXpSelectedClassIdRef.current = clickResult.classId;
 
               bottomPanelManager.setContent(new ClassInfoContent(unitClass, selectedMemberRef.current));
-              // Add class description to combat log with orange class name
-              addLogMessage(`[color=#ff8c00]${unitClass.name}[/color] - ${unitClass.description}`);
+
+              // Add class description to combat log with orange class name (only if class changed)
+              if (classChanged) {
+                addLogMessage(`[color=#ff8c00]${unitClass.name}[/color] - ${unitClass.description}`);
+              }
             }
             renderFrame();
             return;
