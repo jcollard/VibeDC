@@ -1783,30 +1783,38 @@ export const PartyManagementView: React.FC = () => {
                 return;
               }
             } else if (hoverResult.type === 'empty-slot-detail' && 'slotLabel' in hoverResult && 'slotType' in hoverResult) {
-              // Clicking on empty slot - show empty slot info and select the slot
+              // Clicking on empty slot
               const slotLabel = hoverResult.slotLabel as string;
               const slotType = hoverResult.slotType as 'equipment' | 'ability';
+              const currentView = topInfoPanelViewRef.current;
+              const isAbilitySlot = slotLabel === 'Reaction' || slotLabel === 'Passive' || slotLabel === 'Movement';
 
-              // Set as selected (no item, just slot info)
-              selectedEquipmentRef.current = {
-                type: slotType,
-                item: null,
-                slotLabel: slotLabel
-              };
+              // Skip empty ability slots in abilities view - let the click handler below handle them
+              if (currentView === 'abilities' && isAbilitySlot) {
+                // Skip - let the click handler below handle ability slot clicks in abilities view
+              } else {
+                // Clicking on empty equipment slot - show empty slot info and select the slot
+                // Set as selected (no item, just slot info)
+                selectedEquipmentRef.current = {
+                  type: slotType,
+                  item: null,
+                  slotLabel: slotLabel
+                };
 
-              // Increment version to trigger re-render
-              setEquipmentSlotSelectionVersion(v => v + 1);
+                // Increment version to trigger re-render
+                setEquipmentSlotSelectionVersion(v => v + 1);
 
-              // Update the top info panel to highlight the selected slot
-              if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
-                (topContent as any).setSelectedEquipmentSlot(slotLabel);
+                // Update the top info panel to highlight the selected slot
+                if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                  (topContent as any).setSelectedEquipmentSlot(slotLabel);
+                }
+
+                // Show empty slot info in bottom panel
+                bottomPanelManager.setContent(new EmptySlotInfoContent(slotLabel, slotType));
+                detailPanelActiveRef.current = true;
+                renderFrame();
+                return;
               }
-
-              // Show empty slot info in bottom panel
-              bottomPanelManager.setContent(new EmptySlotInfoContent(slotLabel, slotType));
-              detailPanelActiveRef.current = true;
-              renderFrame();
-              return;
             }
           }
         }

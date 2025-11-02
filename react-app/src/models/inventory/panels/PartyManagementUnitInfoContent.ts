@@ -750,22 +750,23 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
         const isEmpty = this.isSlotEmpty(slotLabel);
         const slotType = this.getSlotType(slotLabel);
 
-        if (isEmpty) {
-          // Empty slot clicked
+        // Check if this is an ability slot (Reaction, Passive, or Movement)
+        const abilitySlots = ['Reaction', 'Passive', 'Movement'] as const;
+        const isAbilitySlot = abilitySlots.includes(slotLabel as any);
+
+        if (isAbilitySlot) {
+          // Both empty and filled ability slots trigger set abilities panel
+          return {
+            type: 'ability-slot-clicked',
+            slotType: slotLabel as 'Reaction' | 'Passive' | 'Movement'
+          };
+        } else if (isEmpty && slotType === 'equipment') {
+          // Empty equipment slot clicked
           return {
             type: 'empty-slot',
             slotLabel: slotLabel,
             slotType: slotType
-          } as any; // Using 'as any' since we're adding a new click result type
-        } else if (slotType === 'ability') {
-          // Filled ability slot clicked - trigger set abilities panel
-          const abilitySlots = ['Reaction', 'Passive', 'Movement'] as const;
-          if (abilitySlots.includes(slotLabel as any)) {
-            return {
-              type: 'ability-slot-clicked',
-              slotType: slotLabel as 'Reaction' | 'Passive' | 'Movement'
-            };
-          }
+          } as any;
         }
       }
     }
