@@ -201,11 +201,15 @@ class EmptyPanelContent implements PanelContent {
   }
 }
 
+interface PartyManagementViewProps {
+  onClose?: () => void;
+}
+
 /**
  * PartyManagementView component
  * Displays the party's inventory with filtering, sorting, pagination, and item details
  */
-export const PartyManagementView: React.FC = () => {
+export const PartyManagementView: React.FC<PartyManagementViewProps> = ({ onClose }) => {
   // Load initial state from localStorage
   const [viewState, setViewState] = useState<InventoryViewState>(() =>
     loadInventoryViewStateFromLocalStorage()
@@ -422,6 +426,21 @@ export const PartyManagementView: React.FC = () => {
     window.addEventListener('resize', handleResize);
     return () => window.removeEventListener('resize', handleResize);
   }, []);
+
+  // Handle ESC key to close party management
+  useEffect(() => {
+    if (!onClose) return;
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        onClose();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
 
   // Developer function to add XP to all classes for currently selected unit
   useEffect(() => {

@@ -1,13 +1,15 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import type { CompleteGameState, ExplorationState } from '../../models/game/GameState';
+import type { CompleteGameState, ExplorationState, PartyState } from '../../models/game/GameState';
 import { ResourceManager } from '../../services/ResourceManager';
 import { ViewTransitionManager } from '../../services/ViewTransitionManager';
 import { GameSaveManager } from '../../services/GameSaveManager';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
+import { PartyInventory } from '../../utils/inventory/PartyInventory';
 import { CombatEncounter } from '../../models/combat/CombatEncounter';
 import { FirstPersonView } from '../firstperson/FirstPersonView';
 import { CombatView } from '../combat/CombatView';
+import { PartyManagementView } from '../inventory/PartyManagementView';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 
 interface GameViewProps {
@@ -61,6 +63,15 @@ export const GameView: React.FC<GameViewProps> = ({
 
     loadResources();
   }, [resourceManager, onGameReady]);
+
+  // ✅ GUIDELINE: Sync to registries if loading into party management view
+  useEffect(() => {
+    if (gameState.currentView === 'party-management') {
+      console.log('[GameView] Loaded into party management view - syncing to registries');
+      syncPartyStateToRegistries(gameState.partyState);
+    }
+  }, []); // Only run once on mount
+  // eslint-disable-next-line react-hooks/exhaustive-deps
 
   // ✅ GUIDELINE: F5 quick save handler
   const handleQuickSave = useCallback(() => {
@@ -164,6 +175,97 @@ export const GameView: React.FC<GameViewProps> = ({
     }));
   }, []);
 
+  // ✅ GUIDELINE: Sync party state TO registries (before opening party management)
+  const syncPartyStateToRegistries = useCallback((partyState: PartyState): void => {
+    console.log('[GameView] Syncing party state to registries');
+
+    // Update PartyMemberRegistry from partyState.members
+    partyState.members.forEach(member => {
+      const configs = PartyMemberRegistry.getAll();
+      // Match by name since CombatUnit doesn't have id property
+      const config = configs.find(c => c.name === member.name);
+      if (config) {
+        PartyMemberRegistry.updateFromUnit(config.id, member as any);
+      }
+    });
+
+    // Update PartyInventory from partyState.inventory
+    PartyInventory.clear();
+    partyState.inventory.items.forEach(item => {
+      PartyInventory.addItem(item.itemId, item.quantity);
+    });
+    PartyInventory.addGold(partyState.inventory.gold);
+  }, []);
+
+  // ✅ GUIDELINE: Sync party state FROM registries (after closing party management)
+  const syncRegistriesToPartyState = useCallback((): PartyState => {
+    console.log('[GameView] Syncing registries to party state');
+
+    const members = PartyMemberRegistry.getAll()
+      .map(config => PartyMemberRegistry.createPartyMember(config.id))
+      .filter((unit): unit is CombatUnit => unit !== undefined);
+
+    const items = PartyInventory.getAllItems().map(item => ({
+      itemId: item.equipmentId,
+      quantity: item.quantity,
+    }));
+
+    const gold = PartyInventory.getGold();
+
+    return {
+      members,
+      inventory: { items, gold },
+      equipment: new Map(), // TODO: Extract equipment from members if needed
+    };
+  }, []);
+
+  // ✅ GUIDELINE: Party management transition handlers
+  const handleOpenPartyManagement = useCallback(async (fromView: 'exploration' | 'combat') => {
+    console.log('[GameView] Opening party management');
+
+    // Sync party state TO registries before opening
+    syncPartyStateToRegistries(gameState.partyState);
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'party-management',
+      () => {
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'party-management',
+          partyManagementState: {
+            returnToView: fromView,
+          },
+        }));
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, gameState.partyState, transitionManager, syncPartyStateToRegistries]);
+
+  const handleClosePartyManagement = useCallback(async () => {
+    const returnTo = gameState.partyManagementState?.returnToView || 'exploration';
+    console.log(`[GameView] Closing party management, returning to ${returnTo}`);
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      'party-management',
+      returnTo,
+      () => {
+        // Sync party state FROM registries before closing
+        const updatedPartyState = syncRegistriesToPartyState();
+
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: returnTo,
+          partyState: updatedPartyState,
+          partyManagementState: undefined,
+        }));
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.partyManagementState, transitionManager, syncRegistriesToPartyState]);
+
   // 🛠️ DEVELOPER: Expose view transition functions for testing
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -177,16 +279,23 @@ export const GameView: React.FC<GameViewProps> = ({
         handleStartExploration();
       };
 
+      (window as any).openPartyManagement = () => {
+        console.log('[DEV] Opening party management');
+        handleOpenPartyManagement('exploration');
+      };
+
       console.log('[DEV] Developer functions available:');
       console.log('  - startEncounter(id): Start combat with encounter ID');
       console.log('  - startFirstPersonView(): Return to exploration view');
+      console.log('  - openPartyManagement(): Open party management view');
 
       return () => {
         delete (window as any).startEncounter;
         delete (window as any).startFirstPersonView;
+        delete (window as any).openPartyManagement;
       };
     }
-  }, [handleStartCombat, handleStartExploration]);
+  }, [handleStartCombat, handleStartExploration, handleOpenPartyManagement]);
 
   // Render loading screen
   if (!resourcesLoaded) {
@@ -250,6 +359,7 @@ export const GameView: React.FC<GameViewProps> = ({
           <FirstPersonView
             mapId={gameState.explorationState.currentMapId}
             onStartCombat={handleStartCombat}
+            onOpenPartyManagement={() => handleOpenPartyManagement('exploration')}
             onExplorationStateChange={handleExplorationStateChange}
             resourceManager={resourceManager}
             initialState={gameState.explorationState}
@@ -265,6 +375,12 @@ export const GameView: React.FC<GameViewProps> = ({
             onCombatEnd={handleCombatEnd}
             resourceManager={resourceManager}
             partyState={gameState.partyState}
+          />
+        )}
+
+        {gameState.currentView === 'party-management' && (
+          <PartyManagementView
+            onClose={handleClosePartyManagement}
           />
         )}
       </div>

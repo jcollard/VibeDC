@@ -11,6 +11,7 @@ export interface CompleteGameState {
   currentView: GameViewType;
   explorationState?: ExplorationState;
   combatState?: CombatState; // Reuses existing type
+  partyManagementState?: PartyManagementState;
   partyState: PartyState;
   gameState: EventGameState; // Reuses existing type
   saveSlotInfo?: SaveSlotInfo;
@@ -18,7 +19,11 @@ export interface CompleteGameState {
   totalPlaytime: number;
 }
 
-export type GameViewType = 'exploration' | 'combat' | 'menu' | 'loading';
+export type GameViewType = 'exploration' | 'combat' | 'party-management' | 'menu' | 'loading';
+
+export interface PartyManagementState {
+  returnToView: 'exploration' | 'combat';
+}
 
 export interface ExplorationState {
   currentMapId: string;

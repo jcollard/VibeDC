@@ -10,7 +10,6 @@ import type { CombatEncounter } from './CombatEncounter';
 import { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 import { CombatConstants } from './CombatConstants';
 import type { VictoryRewards } from './VictoryRewards';
-import { PartyInventory } from '../../utils/inventory/PartyInventory';
 
 /**
  * Phase handler for the victory screen.

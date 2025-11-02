@@ -1,4 +1,4 @@
-import type { CompleteGameState, ExplorationState, PartyState } from './GameState';
+import type { CompleteGameState, ExplorationState, PartyState, PartyManagementState } from './GameState';
 import type { GameState as EventGameState } from '../area/EventPrecondition';
 import { serializeCombatState, deserializeCombatState } from '../combat/CombatState';
 import type { CombatStateJSON } from '../combat/CombatState';
@@ -10,6 +10,7 @@ export interface CompleteGameStateJSON {
   currentView: string;
   explorationState?: ExplorationStateJSON;
   combatState?: CombatStateJSON;
+  partyManagementState?: PartyManagementStateJSON;
   partyState: PartyStateJSON;
   gameState: EventGameStateJSON;
   saveSlotInfo?: SaveSlotInfoJSON;
@@ -26,6 +27,10 @@ export interface ExplorationStateJSON {
     type: string;
     position: { x: number; y: number };
   } | null;
+}
+
+export interface PartyManagementStateJSON {
+  returnToView: 'exploration' | 'combat';
 }
 
 export interface PartyStateJSON {
@@ -65,6 +70,7 @@ export function serializeCompleteGameState(state: CompleteGameState): CompleteGa
     currentView: state.currentView,
     explorationState: state.explorationState ? serializeExplorationState(state.explorationState) : undefined,
     combatState: state.combatState ? serializeCombatState(state.combatState) : undefined,
+    partyManagementState: state.partyManagementState ? serializePartyManagementState(state.partyManagementState) : undefined,
     partyState: serializePartyState(state.partyState),
     gameState: serializeEventGameState(state.gameState),
     saveSlotInfo: state.saveSlotInfo ? serializeSaveSlotInfo(state.saveSlotInfo) : undefined,
@@ -106,6 +112,7 @@ export function deserializeCompleteGameState(json: CompleteGameStateJSON): Compl
       currentView: json.currentView as any, // Trust the serialized value
       explorationState: json.explorationState ? deserializeExplorationState(json.explorationState) : undefined,
       combatState,
+      partyManagementState: json.partyManagementState ? deserializePartyManagementState(json.partyManagementState) : undefined,
       partyState,
       gameState,
       saveSlotInfo: json.saveSlotInfo ? deserializeSaveSlotInfo(json.saveSlotInfo) : undefined,
@@ -137,6 +144,20 @@ function deserializeExplorationState(json: ExplorationStateJSON): ExplorationSta
     playerDirection: json.playerDirection as any,
     exploredTiles: new Set(json.exploredTiles),
     targetedObject: json.targetedObject as any,
+  };
+}
+
+// ===== PartyManagementState Serialization =====
+
+function serializePartyManagementState(state: PartyManagementState): PartyManagementStateJSON {
+  return {
+    returnToView: state.returnToView,
+  };
+}
+
+function deserializePartyManagementState(json: PartyManagementStateJSON): PartyManagementState {
+  return {
+    returnToView: json.returnToView,
   };
 }
 

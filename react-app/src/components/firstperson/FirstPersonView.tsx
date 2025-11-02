@@ -26,6 +26,9 @@ interface FirstPersonViewProps {
   // NEW: Callback when combat encounter is triggered
   onStartCombat?: (encounterId: string) => void;
 
+  // NEW: Callback when party management is requested
+  onOpenPartyManagement?: () => void;
+
   // NEW: Callback when exploration state changes (for syncing back to GameView)
   onExplorationStateChange?: (state: ExplorationState) => void;
 
@@ -72,6 +75,7 @@ function getRevealedTiles(x: number, y: number): string[] {
 export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   mapId,
   onStartCombat,
+  onOpenPartyManagement,
   onExplorationStateChange,
   initialState,
   gameState: initialGameState,
@@ -580,6 +584,13 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     if (!firstPersonState) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Handle party management hotkey (I key)
+      if ((event.key === 'i' || event.key === 'I') && onOpenPartyManagement) {
+        event.preventDefault();
+        onOpenPartyManagement();
+        return;
+      }
+
       const command = inputHandler.processKeyDown(event);
       if (!command) return;
 
@@ -712,7 +723,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [firstPersonState, inputHandler, combatLogManager, processMovementEvents]);
+  }, [firstPersonState, inputHandler, combatLogManager, processMovementEvents, onOpenPartyManagement]);
 
   // Show error if map not found
   if (!areaMap || !firstPersonState) {
