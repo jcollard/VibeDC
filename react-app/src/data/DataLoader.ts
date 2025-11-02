@@ -79,6 +79,27 @@ interface ClassData {
   multipliers?: Record<string, number>;
   requirements?: Record<string, number>;
   allowedEquipmentTypes?: string[];
+  starterConfig?: {
+    baseHealth: number;
+    baseMana: number;
+    basePhysicalPower: number;
+    baseMagicPower: number;
+    baseSpeed: number;
+    baseMovement: number;
+    basePhysicalEvade: number;
+    baseMagicEvade: number;
+    baseCourage: number;
+    baseAttunement: number;
+    leftHandId?: string;
+    rightHandId?: string;
+    headId?: string;
+    bodyId?: string;
+    accessoryId?: string;
+    learnedAbilityIds?: string[];
+    reactionAbilityId?: string;
+    passiveAbilityId?: string;
+    movementAbilityId?: string;
+  };
 }
 
 /**
@@ -161,7 +182,8 @@ export function loadClasses(): void {
       classData.multipliers,
       requirements,
       classData.id,
-      classData.allowedEquipmentTypes
+      classData.allowedEquipmentTypes,
+      classData.starterConfig
     );
   }
 

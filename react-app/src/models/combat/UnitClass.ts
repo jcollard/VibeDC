@@ -39,6 +39,32 @@ export class UnitClass {
    */
   public readonly allowedEquipmentTypes: readonly string[];
 
+  /**
+   * Starter configuration for creating new characters with this class
+   * Defines base stats and initial equipment for new characters
+   */
+  public readonly starterConfig?: {
+    baseHealth: number;
+    baseMana: number;
+    basePhysicalPower: number;
+    baseMagicPower: number;
+    baseSpeed: number;
+    baseMovement: number;
+    basePhysicalEvade: number;
+    baseMagicEvade: number;
+    baseCourage: number;
+    baseAttunement: number;
+    leftHandId?: string;
+    rightHandId?: string;
+    headId?: string;
+    bodyId?: string;
+    accessoryId?: string;
+    learnedAbilityIds?: string[];
+    reactionAbilityId?: string;
+    passiveAbilityId?: string;
+    movementAbilityId?: string;
+  };
+
   constructor(
     name: string,
     description: string,
@@ -70,7 +96,28 @@ export class UnitClass {
     }>,
     requirements: Map<string, number> = new Map(),
     id?: string,
-    allowedEquipmentTypes?: string[]
+    allowedEquipmentTypes?: string[],
+    starterConfig?: {
+      baseHealth: number;
+      baseMana: number;
+      basePhysicalPower: number;
+      baseMagicPower: number;
+      baseSpeed: number;
+      baseMovement: number;
+      basePhysicalEvade: number;
+      baseMagicEvade: number;
+      baseCourage: number;
+      baseAttunement: number;
+      leftHandId?: string;
+      rightHandId?: string;
+      headId?: string;
+      bodyId?: string;
+      accessoryId?: string;
+      learnedAbilityIds?: string[];
+      reactionAbilityId?: string;
+      passiveAbilityId?: string;
+      movementAbilityId?: string;
+    }
   ) {
     this.id = id ?? crypto.randomUUID();
     this.name = name;
@@ -80,6 +127,7 @@ export class UnitClass {
     this.modifiers = new CombatUnitModifiers(modifiers, multipliers);
     this.requirements = requirements;
     this.allowedEquipmentTypes = allowedEquipmentTypes ?? [];
+    this.starterConfig = starterConfig;
 
     // Register this class in the registry
     UnitClass.registry.set(this.id, this);

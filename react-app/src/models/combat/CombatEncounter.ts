@@ -158,6 +158,7 @@ export class CombatEncounter {
       const equipment = EquipmentRegistry.getById(equipId);
       if (equipment) {
         items.push({
+          equipmentId: equipId,
           name: equipment.name,
         });
       } else {

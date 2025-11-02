@@ -264,4 +264,117 @@ export const CombatConstants = {
     // Combat log
     VICTORY_MESSAGE: 'You are victorious!' as const,
   } as const,
+
+  /**
+   * Constants for inventory view UI
+   * Follows same layout as CombatView (5-panel layout)
+   */
+  INVENTORY_VIEW: {
+    // Top info panel - Inventory statistics (gold, total items, weight, etc.)
+    TOP_INFO: {
+      FONT_ID: '7px-04b03' as const,
+      TEXT_COLOR: '#ffffff' as const,
+      LABEL_COLOR: '#ffff00' as const,  // Yellow for labels
+      VALUE_COLOR: '#ffffff' as const,  // White for values
+      SPACING: 8 as const,
+    },
+
+    // Main panel - Item grid with category tabs, sort dropdown, and pagination
+    MAIN_PANEL: {
+      // Category tabs (All, Weapons, Shields, Armor, Accessories, Held, Quest Items)
+      CATEGORY_TABS: {
+        HEIGHT: 14 as const,           // 2 rows of tabs (7px each)
+        TAB_SPACING: 2 as const,
+        TAB_PADDING: 2 as const,
+        FONT_ID: '7px-04b03' as const,
+        ACTIVE_COLOR: '#ffff00' as const,      // Yellow for active tab
+        INACTIVE_COLOR: '#888888' as const,    // Grey for inactive tabs
+        HOVER_COLOR: '#aaaaaa' as const,       // Light grey for hover
+        BACKGROUND_ACTIVE: '#333333' as const, // Dark grey for active tab background
+        BACKGROUND_INACTIVE: '#1a1a1a' as const, // Darker grey for inactive
+      },
+
+      // Sort dropdown (Name Asc, Name Desc, Type, Recently Added)
+      SORT_DROPDOWN: {
+        HEIGHT: 9 as const,             // Single row (7px + 2px spacing)
+        FONT_ID: '7px-04b03' as const,
+        LABEL_COLOR: '#ffff00' as const,  // Yellow for "Sort:" label
+        VALUE_COLOR: '#ffffff' as const,  // White for selected value
+        HOVER_COLOR: '#ffff00' as const,  // Yellow for hover
+      },
+
+      // Item list (scrollable grid)
+      ITEM_LIST: {
+        ROW_HEIGHT: 8 as const,         // 7px font + 1px spacing
+        ITEM_PADDING: 2 as const,
+        FONT_ID: '7px-04b03' as const,
+        ITEM_NAME_COLOR: '#ffffff' as const,     // White for item name
+        ITEM_QUANTITY_COLOR: '#aaaaaa' as const, // Grey for quantity
+        HOVER_COLOR: '#ffff00' as const,         // Yellow for hover
+        SELECTED_COLOR: '#00ff00' as const,      // Green for selected
+        QUEST_ITEM_COLOR: '#ffa500' as const,    // Orange for quest items
+      },
+
+      // Pagination (only visible when totalPages > 1)
+      PAGINATION: {
+        HEIGHT: 9 as const,             // Single row (7px + 2px spacing)
+        FONT_ID: '7px-04b03' as const,
+        TEXT_COLOR: '#ffffff' as const,
+        BUTTON_COLOR_NORMAL: '#ffffff' as const,
+        BUTTON_COLOR_HOVER: '#ffff00' as const,    // Yellow for hover
+        BUTTON_COLOR_DISABLED: '#666666' as const, // Grey for disabled
+      },
+
+      // Layout spacing
+      PADDING_TOP: 4 as const,
+      PADDING_BOTTOM: 2 as const,
+      PADDING_LEFT: 4 as const,
+      PADDING_RIGHT: 4 as const,
+    },
+
+    // Bottom info panel - Selected item details (stats, description)
+    BOTTOM_INFO: {
+      FONT_ID: '7px-04b03' as const,
+      TITLE_COLOR: '#ffff00' as const,    // Yellow for item name
+      LABEL_COLOR: '#aaaaaa' as const,    // Grey for stat labels
+      VALUE_COLOR: '#ffffff' as const,    // White for stat values
+      DESCRIPTION_COLOR: '#cccccc' as const, // Light grey for description
+      SPACING: 2 as const,
+    },
+
+    // Combat log panel - Shows inventory actions (item added, removed, equipped, etc.)
+    LOG: {
+      FONT_ID: '7px-04b03' as const,
+      ACTION_ADD_COLOR: '#00ff00' as const,    // Green for "Item added"
+      ACTION_REMOVE_COLOR: '#ff0000' as const, // Red for "Item removed"
+      ACTION_EQUIP_COLOR: '#ffff00' as const,  // Yellow for "Item equipped"
+      DEFAULT_COLOR: '#ffffff' as const,       // White for other messages
+    },
+
+    // Text content
+    TEXT: {
+      TITLE: 'Inventory' as const,
+      CATEGORIES: {
+        ALL: 'All' as const,
+        WEAPONS: 'Weapons' as const,
+        SHIELDS: 'Shields' as const,
+        ARMOR: 'Armor' as const,
+        ACCESSORIES: 'Accessories' as const,
+        HELD: 'Held' as const,
+        QUEST_ITEMS: 'Quest' as const,
+      },
+      SORT_LABEL: 'Sort:' as const,
+      SORT_OPTIONS: {
+        NAME_ASC: 'Name (A-Z)' as const,
+        NAME_DESC: 'Name (Z-A)' as const,
+        TYPE: 'Type' as const,
+        RECENTLY_ADDED: 'Recent' as const,
+      },
+      EMPTY_INVENTORY: 'Your inventory is empty' as const,
+      NO_ITEMS_IN_CATEGORY: 'No items in this category' as const,
+      GOLD_LABEL: 'Gold:' as const,
+      ITEMS_LABEL: 'Items:' as const,
+      WEIGHT_LABEL: 'Weight:' as const,
+    },
+  } as const,
 } as const;

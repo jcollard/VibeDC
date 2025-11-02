@@ -60,6 +60,13 @@ export class UnitInfoContent implements PanelContent {
   }
 
   /**
+   * Get the unit this panel is displaying
+   */
+  public getUnit(): CombatUnit {
+    return this.unit;
+  }
+
+  /**
    * Toggle between stats view and abilities view
    */
   private toggleView(): void {

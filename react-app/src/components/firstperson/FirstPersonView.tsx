@@ -12,7 +12,7 @@ import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/First
 import { UISettings } from '../../config/UISettings';
 import { ThreeJSViewport, type ThreeJSViewportHandle } from './ThreeJSViewport';
 import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
-import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
+import { MenuPanel, type MenuOption } from '../../models/firstperson/rendering/MenuPanel';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { EventProcessor } from '../../utils/EventProcessor';
@@ -25,6 +25,9 @@ interface FirstPersonViewProps {
 
   // NEW: Callback when combat encounter is triggered
   onStartCombat?: (encounterId: string) => void;
+
+  // NEW: Callback when party management is requested
+  onOpenPartyManagement?: () => void;
 
   // NEW: Callback when exploration state changes (for syncing back to GameView)
   onExplorationStateChange?: (state: ExplorationState) => void;
@@ -72,8 +75,10 @@ function getRevealedTiles(x: number, y: number): string[] {
 export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
   mapId,
   onStartCombat,
+  onOpenPartyManagement,
   onExplorationStateChange,
   initialState,
+  partyState,
   gameState: initialGameState,
 }) => {
   // Load area map
@@ -88,15 +93,23 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
   // Load default party member for testing
   const defaultPartyMember = useMemo(() => {
-    // TODO: Later, allow selecting which party member to use
-    // For now, use first available party member or create a test one
-    const partyMember = PartyMemberRegistry.createPartyMember('knight-001');
-    if (!partyMember) {
-      console.error('[FirstPersonView] Failed to create default party member');
-      return null;
+    // Use first party member from partyState if available
+    if (partyState && partyState.members.length > 0) {
+      return partyState.members[0];
     }
-    return partyMember;
-  }, []);
+
+    // Fallback: try to get first available party member from registry
+    const allPartyMembers = PartyMemberRegistry.getAll();
+    if (allPartyMembers.length > 0) {
+      const partyMember = PartyMemberRegistry.createPartyMember(allPartyMembers[0].id);
+      if (partyMember) {
+        return partyMember;
+      }
+    }
+
+    console.error('[FirstPersonView] Failed to create default party member');
+    return null;
+  }, [partyState]);
 
   // Initialize state
   const [firstPersonState, setFirstPersonState] = useState<FirstPersonState | null>(() => {
@@ -145,6 +158,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
   // Layout manager
   const layoutManager = useMemo(() => new FirstPersonLayoutManager(), []);
+
+  // Menu panel
+  const menuPanel = useMemo(() => new MenuPanel(), []);
+
+  // Menu options
+  const menuOptions = useMemo<MenuOption[]>(() => [
+    {
+      label: 'Manage Party',
+      action: () => {
+        if (onOpenPartyManagement) {
+          onOpenPartyManagement();
+        }
+      },
+    },
+  ], [onOpenPartyManagement]);
 
   // Event processor (Guidelines Compliance: useMemo creates stable reference)
   const eventProcessor = useMemo(() => new EventProcessor(), []);
@@ -396,11 +424,11 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       spriteImagesRef.current
     );
 
-    // Render party member stats in bottom info panel
+    // Render menu panel in bottom info panel
     if (fontAtlasRef.current) {
-      PartyMemberStatsPanel.render(
+      menuPanel.render(
         ctx,
-        firstPersonState.partyMember,
+        menuOptions,
         bottomInfoRegion.x,
         bottomInfoRegion.y,
         bottomInfoRegion.width,
@@ -465,7 +493,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       displayCtx.imageSmoothingEnabled = false;
       displayCtx.drawImage(bufferCanvas, 0, 0);
     }
-  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef, showDebugRectangles]);
+  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef, showDebugRectangles, menuPanel, menuOptions]);
 
   // Animation loop
   useEffect(() => {
@@ -580,6 +608,13 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     if (!firstPersonState) return;
 
     const handleKeyDown = (event: KeyboardEvent) => {
+      // Handle party management hotkey (I key)
+      if ((event.key === 'i' || event.key === 'I') && onOpenPartyManagement) {
+        event.preventDefault();
+        onOpenPartyManagement();
+        return;
+      }
+
       const command = inputHandler.processKeyDown(event);
       if (!command) return;
 
@@ -712,7 +747,66 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [firstPersonState, inputHandler, combatLogManager, processMovementEvents]);
+  }, [firstPersonState, inputHandler, combatLogManager, processMovementEvents, onOpenPartyManagement]);
+
+  // Handle mouse events for menu interaction
+  useEffect(() => {
+    const canvas = displayCanvasRef.current;
+    if (!canvas) return;
+
+    const getCanvasCoordinates = (event: MouseEvent): { x: number; y: number } | null => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+
+      const canvasX = (event.clientX - rect.left) * scaleX;
+      const canvasY = (event.clientY - rect.top) * scaleY;
+
+      return { x: canvasX, y: canvasY };
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const coords = getCanvasCoordinates(event);
+      if (!coords) return;
+
+      const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+      const changed = menuPanel.handleMouseMove(
+        coords.x,
+        coords.y,
+        menuOptions,
+        bottomInfoRegion.x,
+        bottomInfoRegion.y,
+        bottomInfoRegion.width
+      );
+
+      if (changed) {
+        renderFrame();
+      }
+    };
+
+    const handleMouseClick = (event: MouseEvent) => {
+      const coords = getCanvasCoordinates(event);
+      if (!coords) return;
+
+      const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+      menuPanel.handleMouseClick(
+        coords.x,
+        coords.y,
+        menuOptions,
+        bottomInfoRegion.x,
+        bottomInfoRegion.y,
+        bottomInfoRegion.width
+      );
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('click', handleMouseClick);
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('click', handleMouseClick);
+    };
+  }, [menuPanel, menuOptions, layoutManager, renderFrame]);
 
   // Show error if map not found
   if (!areaMap || !firstPersonState) {
@@ -764,7 +858,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
             objectFit: 'contain',
             cursor: 'default',
             position: 'relative',
-            pointerEvents: 'none',
+            pointerEvents: 'auto',
           } as React.CSSProperties}
         />
 

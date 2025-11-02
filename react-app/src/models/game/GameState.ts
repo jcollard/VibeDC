@@ -2,6 +2,7 @@ import type { CombatState } from '../combat/CombatState';
 import type { CombatUnit } from '../combat/CombatUnit';
 import type { GameState as EventGameState } from '../area/EventPrecondition';
 import type { CardinalDirection } from '../../types';
+import type { PartyMemberDefinition } from '../../utils/PartyMemberRegistry';
 
 /**
  * Complete game state - represents the entire game session
@@ -11,6 +12,7 @@ export interface CompleteGameState {
   currentView: GameViewType;
   explorationState?: ExplorationState;
   combatState?: CombatState; // Reuses existing type
+  partyManagementState?: PartyManagementState;
   partyState: PartyState;
   gameState: EventGameState; // Reuses existing type
   saveSlotInfo?: SaveSlotInfo;
@@ -18,7 +20,12 @@ export interface CompleteGameState {
   totalPlaytime: number;
 }
 
-export type GameViewType = 'exploration' | 'combat' | 'menu' | 'loading';
+
+export type GameViewType = 'exploration' | 'combat' | 'party-management' | 'menu' | 'loading' | 'guild-hall' | 'title-screen';
+
+export interface PartyManagementState {
+  returnToView: 'exploration' | 'combat';
+}
 
 export interface ExplorationState {
   currentMapId: string;
@@ -32,7 +39,8 @@ export interface ExplorationState {
 }
 
 export interface PartyState {
-  members: CombatUnit[]; // Reuses existing type
+  members: CombatUnit[]; // Active party members (max 4)
+  guildRoster: PartyMemberDefinition[]; // All created characters
   inventory: {
     items: InventoryItem[];
     gold: number;
