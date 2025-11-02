@@ -2,8 +2,10 @@ import type { CombatUnit } from './CombatUnit';
 import { Equipment } from './Equipment';
 import { UnitClass } from './UnitClass';
 import { CombatAbility } from './CombatAbility';
+import type { StatModifier, StatType } from './StatModifier';
 import type { EquipmentResult } from '../../utils/EquipmentResult';
 import { EquipmentResultFactory } from '../../utils/EquipmentResult';
+
 
 /**
  * JSON representation of a HumanoidUnit for serialization
@@ -32,6 +34,7 @@ export interface HumanoidUnitJSON {
   wounds: number;
   manaUsed: number;
   actionTimer: number;
+  statModifiers: StatModifier[];
   leftHandId: string | null;
   rightHandId: string | null;
   headId: string | null;
@@ -73,6 +76,9 @@ export class HumanoidUnit implements CombatUnit {
   private _wounds: number = 0;
   private _manaUsed: number = 0;
   private _actionTimer: number = 0;
+
+  // Stat modifiers (buffs and debuffs)
+  private _statModifiers: StatModifier[] = [];
 
   // Equipment slots
   private _leftHand: Equipment | null = null;
@@ -162,7 +168,7 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get maxHealth(): number {
-    return this.baseHealth;
+    return Math.max(0, this.baseHealth + this.getStatModifierTotal('maxHealth'));
   }
 
   get wounds(): number {
@@ -174,7 +180,7 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get maxMana(): number {
-    return this.baseMana;
+    return Math.max(0, this.baseMana + this.getStatModifierTotal('maxMana'));
   }
 
   get manaUsed(): number {
@@ -182,15 +188,15 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get physicalPower(): number {
-    return this.basePhysicalPower;
+    return Math.max(0, this.basePhysicalPower + this.getStatModifierTotal('physicalPower'));
   }
 
   get magicPower(): number {
-    return this.baseMagicPower;
+    return Math.max(0, this.baseMagicPower + this.getStatModifierTotal('magicPower'));
   }
 
   get speed(): number {
-    return this.baseSpeed;
+    return Math.max(0, this.baseSpeed + this.getStatModifierTotal('speed'));
   }
 
   get actionTimer(): number {
@@ -198,23 +204,23 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get movement(): number {
-    return this.baseMovement;
+    return Math.max(0, this.baseMovement + this.getStatModifierTotal('movement'));
   }
 
   get physicalEvade(): number {
-    return this.basePhysicalEvade;
+    return Math.max(0, this.basePhysicalEvade + this.getStatModifierTotal('physicalEvade'));
   }
 
   get magicEvade(): number {
-    return this.baseMagicEvade;
+    return Math.max(0, this.baseMagicEvade + this.getStatModifierTotal('magicEvade'));
   }
 
   get courage(): number {
-    return this.baseCourage;
+    return Math.max(0, this.baseCourage + this.getStatModifierTotal('courage'));
   }
 
   get attunement(): number {
-    return this.baseAttunement;
+    return Math.max(0, this.baseAttunement + this.getStatModifierTotal('attunement'));
   }
 
   get spriteId(): string {
@@ -737,6 +743,96 @@ export class HumanoidUnit implements CombatUnit {
     return true;
   }
 
+  // Stat modifier management methods
+  /**
+   * Get all active stat modifiers
+   */
+  get statModifiers(): ReadonlyArray<StatModifier> {
+    return this._statModifiers;
+  }
+
+  /**
+   * Add a stat modifier (buff or debuff)
+   * @param modifier The stat modifier to add
+   */
+  addStatModifier(modifier: StatModifier): void {
+    this._statModifiers.push(modifier);
+  }
+
+  /**
+   * Remove a stat modifier by ID
+   * @param modifierId The ID of the modifier to remove
+   * @returns The removed modifier, or undefined if not found
+   */
+  removeStatModifier(modifierId: string): StatModifier | undefined {
+    const index = this._statModifiers.findIndex(m => m.id === modifierId);
+    if (index === -1) {
+      return undefined;
+    }
+    return this._statModifiers.splice(index, 1)[0];
+  }
+
+  /**
+   * Remove all stat modifiers from a specific source
+   * @param source The ability ID that created the modifiers
+   * @returns Array of removed modifiers
+   */
+  removeStatModifiersBySource(source: string): StatModifier[] {
+    const removed: StatModifier[] = [];
+    this._statModifiers = this._statModifiers.filter(m => {
+      if (m.source === source) {
+        removed.push(m);
+        return false;
+      }
+      return true;
+    });
+    return removed;
+  }
+
+  /**
+   * Get the total modifier value for a specific stat
+   * @param stat The stat type to calculate
+   * @returns The sum of all modifiers for that stat
+   */
+  private getStatModifierTotal(stat: StatType): number {
+    return this._statModifiers
+      .filter(m => m.stat === stat)
+      .reduce((total, m) => total + m.value, 0);
+  }
+
+  /**
+   * Decrement duration on all temporary modifiers
+   * Called at the end of this unit's turn
+   * @returns Array of expired modifiers that were removed
+   */
+  decrementModifierDurations(): StatModifier[] {
+    const expired: StatModifier[] = [];
+
+    // Decrement durations and collect expired modifiers
+    this._statModifiers.forEach(m => {
+      if (m.duration > 0) {
+        m.duration--;
+        // If it just reached 0, it expired
+        if (m.duration === 0) {
+          expired.push(m);
+        }
+      }
+      // If duration is -1, it's permanent and never decrements
+    });
+
+    // Remove expired modifiers (those that reached 0 this turn)
+    this._statModifiers = this._statModifiers.filter(m => !expired.includes(m));
+
+    return expired;
+  }
+
+  /**
+   * Clear all stat modifiers
+   */
+  clearAllStatModifiers(): void {
+    this._statModifiers = [];
+  }
+
   // Serialization methods
   /**
    * Convert this HumanoidUnit to a JSON-serializable object
@@ -767,6 +863,7 @@ export class HumanoidUnit implements CombatUnit {
       wounds: this._wounds,
       manaUsed: this._manaUsed,
       actionTimer: this._actionTimer,
+      statModifiers: this._statModifiers,
       leftHandId: this._leftHand?.id ?? null,
       rightHandId: this._rightHand?.id ?? null,
       headId: this._head?.id ?? null,
@@ -866,6 +963,9 @@ export class HumanoidUnit implements CombatUnit {
     unit._wounds = json.wounds;
     unit._manaUsed = json.manaUsed;
     unit._actionTimer = json.actionTimer;
+
+    // Restore stat modifiers
+    unit._statModifiers = json.statModifiers ?? [];
 
     // Restore equipment
     if (json.leftHandId) {
