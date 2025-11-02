@@ -24,6 +24,8 @@ import { AbilityInfoContent } from '../../models/combat/managers/panels/AbilityI
 import { PartyManagementUnitInfoContent } from '../../models/inventory/panels/PartyManagementUnitInfoContent';
 import { EmptySlotInfoContent } from '../../models/inventory/panels/EmptySlotInfoContent';
 import { EquipmentComparisonContent } from '../../models/inventory/panels/EquipmentComparisonContent';
+import { SpendXpTitlePanelContent } from '../../models/inventory/panels/SpendXpTitlePanelContent';
+import { SpendXpMainPanelContent } from '../../models/inventory/panels/SpendXpMainPanelContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { isEquipmentCompatibleWithSlot, isEquipmentSlot } from '../../utils/EquipmentSlotUtil';
 import { UISettings } from '../../config/UISettings';
@@ -209,6 +211,9 @@ export const PartyManagementView: React.FC = () => {
 
   // Track selected party member index for top info panel
   const [selectedPartyMemberIndex, setSelectedPartyMemberIndex] = useState(0);
+
+  // Track current panel mode ('inventory' or 'spend-xp')
+  const [panelMode, setPanelMode] = useState<'inventory' | 'spend-xp'>('inventory');
 
   // Track ability/equipment detail panel state (for swapping bottom panel on hover)
   const detailPanelActiveRef = useRef(false);
@@ -602,18 +607,6 @@ export const PartyManagementView: React.FC = () => {
       }
     }
 
-    // Render main panel (inventory grid)
-    renderer.render(
-      bufferCtx,
-      viewState,
-      currentPageItems,
-      totalPages,
-      mainPanelBounds,
-      fontAtlas,
-      disabledItemIds,
-      classRestrictedItemIds
-    );
-
     // Check if we're in debug log-only mode
     const isDebugLogOnly = (window as any).isDebugLogOnly?.() || false;
 
@@ -625,32 +618,85 @@ export const PartyManagementView: React.FC = () => {
       : getInventoryLogPanelRegion(layoutManager);
 
     if (!isDebugLogOnly) {
-      // Render title panel (inventory stats, category tabs, and sort options)
-      titlePanelManager.render(
-        bufferCtx,
-        titlePanelRegion,
-        CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
-        fontAtlas
-      );
+      // Check if we're in spend-xp mode
+      if (panelMode === 'spend-xp') {
+        // Render spend-xp title panel
+        const spendXpTitleContent = new SpendXpTitlePanelContent();
+        spendXpTitleContent.render(
+          bufferCtx,
+          titlePanelRegion,
+          CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
+          fontAtlas
+        );
 
-      // Render top info panel (party member stats)
-      const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
-      topInfoPanelManager.render(
-        bufferCtx,
-        topInfoPanelRegion,
-        CombatConstants.FONTS.UI_FONT_ID,
-        fontAtlas,
-        spriteImagesRef.current,
-        CombatConstants.SPRITE_SIZE
-      );
+        // Render spend-xp main panel
+        const spendXpMainContent = new SpendXpMainPanelContent();
+        spendXpMainContent.render(
+          bufferCtx,
+          mainPanelBounds,
+          CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID,
+          fontAtlas
+        );
 
-      // Render bottom info panel (item details)
-      bottomPanelManager.render(
-        bufferCtx,
-        bottomPanelRegion,
-        CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
-        fontAtlas
-      );
+        // Render top info panel (party member stats - still shown)
+        const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+        topInfoPanelManager.render(
+          bufferCtx,
+          topInfoPanelRegion,
+          CombatConstants.FONTS.UI_FONT_ID,
+          fontAtlas,
+          spriteImagesRef.current,
+          CombatConstants.SPRITE_SIZE
+        );
+
+        // Render bottom info panel (item details - still shown)
+        bottomPanelManager.render(
+          bufferCtx,
+          bottomPanelRegion,
+          CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
+          fontAtlas
+        );
+      } else {
+        // Render inventory mode panels
+        // Render main panel (inventory grid)
+        renderer.render(
+          bufferCtx,
+          viewState,
+          currentPageItems,
+          totalPages,
+          mainPanelBounds,
+          fontAtlas,
+          disabledItemIds,
+          classRestrictedItemIds
+        );
+
+        // Render title panel (inventory stats, category tabs, and sort options)
+        titlePanelManager.render(
+          bufferCtx,
+          titlePanelRegion,
+          CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
+          fontAtlas
+        );
+
+        // Render top info panel (party member stats)
+        const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+        topInfoPanelManager.render(
+          bufferCtx,
+          topInfoPanelRegion,
+          CombatConstants.FONTS.UI_FONT_ID,
+          fontAtlas,
+          spriteImagesRef.current,
+          CombatConstants.SPRITE_SIZE
+        );
+
+        // Render bottom info panel (item details)
+        bottomPanelManager.render(
+          bufferCtx,
+          bottomPanelRegion,
+          CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
+          fontAtlas
+        );
+      }
     }
 
     // Skip rendering other panels if in debug log-only mode
@@ -758,6 +804,7 @@ export const PartyManagementView: React.FC = () => {
     showDebugPanels,
     selectedPartyMemberIndex,
     bottomPanelVersion,
+    panelMode,
   ]);
 
   // Expose developer mode functions to window (for testing)
@@ -1224,10 +1271,23 @@ export const PartyManagementView: React.FC = () => {
         topInfoPanelRegion
       );
       if (topInfoClickResult) {
+        // Handle Spend XP button click
+        if (topInfoClickResult.type === 'learn-abilities') {
+          setPanelMode('spend-xp');
+          renderFrame();
+          return;
+        }
+
         // Handle view toggle
         if (topInfoClickResult.type === 'view-toggled' && 'view' in topInfoClickResult) {
           // Update the view ref to preserve it across re-renders
           topInfoPanelViewRef.current = topInfoClickResult.view as 'stats' | 'abilities';
+
+          // If switching back to abilities view from spend-xp mode, return to inventory mode
+          if (panelMode === 'spend-xp' && topInfoClickResult.view === 'abilities') {
+            setPanelMode('inventory');
+          }
+
           renderFrame();
           return;
         }
@@ -1502,7 +1562,7 @@ export const PartyManagementView: React.FC = () => {
         return;
       }
     },
-    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, combatLogManager, layoutManager, topInfoPanelManager]
+    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, combatLogManager, layoutManager, topInfoPanelManager, panelMode, selectedPartyMemberIndex, bottomPanelManager, addLogMessage, topInfoPanelViewRef]
   );
 
   return (

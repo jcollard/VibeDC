@@ -23,6 +23,7 @@ export type PanelClickResult =
   | { type: 'cancel-attack' }
   | { type: 'perform-attack' }
   | { type: 'empty-slot'; slotLabel: string; slotType: 'equipment' | 'ability' }
+  | { type: 'learn-abilities' }
   | null;
 
 /**
@@ -34,7 +35,7 @@ export function isPanelClickResult(value: unknown): value is PanelClickResult {
   if (!('type' in value)) return false;
 
   const result = value as { type: string };
-  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected', 'view-toggled', 'combat-log-message', 'cancel-attack', 'perform-attack', 'empty-slot'].includes(result.type);
+  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected', 'view-toggled', 'combat-log-message', 'cancel-attack', 'perform-attack', 'empty-slot', 'learn-abilities'].includes(result.type);
 }
 
 /**

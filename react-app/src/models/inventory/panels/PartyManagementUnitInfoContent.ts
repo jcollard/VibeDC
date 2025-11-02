@@ -715,9 +715,7 @@ export class PartyManagementUnitInfoContent extends UnitInfoContent {
       const { x, y, width, height } = this.learnAbilitiesButtonBounds;
       if (relativeX >= x && relativeX <= x + width &&
           relativeY >= y && relativeY <= y + height) {
-        // TODO: Implement Learn Abilities functionality
-        // For now, do nothing
-        return { type: 'learn-abilities' } as any;
+        return { type: 'learn-abilities' };
       }
     }
 
