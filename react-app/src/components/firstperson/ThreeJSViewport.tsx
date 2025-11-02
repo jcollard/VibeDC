@@ -5,7 +5,10 @@ import { Cell } from '../Cell';
 import { AnimatedPerspectiveCamera, type CameraAnimationHandle } from '../AnimatedPerspectiveCamera';
 import { CameraLights } from '../CameraLights';
 import { SpriteSheetLoader } from '../../utils/SpriteSheetLoader';
-import { getTileTextureMapping } from '../../utils/tileTextureConfig';
+import type { TileTextureMapping, SpriteCoordinates } from '../../utils/SpriteSheetLoader';
+import { TileSetTextureMapper } from '../../utils/TileSetTextureMapper';
+import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
+import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import type { AreaMap } from '../../models/area/AreaMap';
 
 interface ThreeJSViewportProps {
@@ -57,23 +60,39 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
     }
   }));
 
-  // Load sprite sheet (tileset sprites)
+  // Load sprite sheet and texture mappings from tileset
   useEffect(() => {
-    // TODO: Load tileset sprites based on areaMap.tilesetId
-    const loader = new SpriteSheetLoader('/tiles/world-tiles.png', 12, 12);
-    loader.load()
-      .then(() => {
+    const loadTilesetAssets = async () => {
+      // Get the tileset from registry
+      const tileset = AreaMapTileSetRegistry.getById(areaMap.tilesetId);
+      if (!tileset) {
+        console.error(`[ThreeJSViewport] Tileset '${areaMap.tilesetId}' not found in registry`);
+        setTexturesLoaded(true); // Continue without textures
+        return;
+      }
+
+      // Get sprite sheet path from tileset
+      const spriteSheetPath = TileSetTextureMapper.getSpriteSheetPath(tileset);
+      console.log(`[ThreeJSViewport] Loading sprite sheet: ${spriteSheetPath} for tileset: ${tileset.name}`);
+
+      // Load sprite sheet
+      const loader = new SpriteSheetLoader(spriteSheetPath, 12, 12);
+      try {
+        await loader.load();
         setSpriteSheetLoader(loader);
         setTexturesLoaded(true);
-      })
-      .catch((error) => {
+        console.log(`[ThreeJSViewport] Successfully loaded sprite sheet for tileset: ${tileset.name}`);
+      } catch (error) {
         console.error('[ThreeJSViewport] Failed to load spritesheet:', error);
         setTexturesLoaded(true); // Continue without textures
-      });
+      }
+    };
+
+    loadTilesetAssets();
 
     return () => {
-      if (loader) {
-        loader.dispose();
+      if (spriteSheetLoader) {
+        spriteSheetLoader.dispose();
       }
     };
   }, [areaMap.tilesetId]);
@@ -140,7 +159,7 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
 
   // Calculate visible cells from AreaMap
   const visibleCells = useMemo(() => {
-    const cells: Array<{ worldX: number; worldZ: number; tileType: string }> = [];
+    const cells: Array<{ worldX: number; worldZ: number; spriteId: string; behavior: string }> = [];
     const viewDistance = 8;
     const viewWidth = 6;
 
@@ -150,24 +169,19 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
         const tile = areaMap.getTile(gridX, gridY);
 
         if (!tile) {
-          // Out of bounds - render as wall
-          cells.push({ worldX: gridX, worldZ: gridY, tileType: '#' });
+          // Out of bounds - use default wall sprite from first wall tile in tileset
+          // This will be handled in the rendering section
+          cells.push({ worldX: gridX, worldZ: gridY, spriteId: 'out-of-bounds', behavior: 'wall' });
           continue;
         }
 
-        // Map tile behavior to character for texture lookup
-        // Use behavior to determine tile type
-        let tileType = '.'; // Default floor
-
-        if (!tile.passable) {
-          tileType = '#'; // Wall
-        } else if (tile.behavior === 'door') {
-          tileType = '+'; // Door
-        } else if (tile.walkable) {
-          tileType = '.'; // Floor
-        }
-
-        cells.push({ worldX: gridX, worldZ: gridY, tileType });
+        // Use the tile's spriteId and behavior from AreaMap
+        cells.push({
+          worldX: gridX,
+          worldZ: gridY,
+          spriteId: tile.spriteId,
+          behavior: tile.behavior
+        });
       }
     }
 
@@ -202,15 +216,48 @@ export const ThreeJSViewport = forwardRef<ThreeJSViewportHandle, ThreeJSViewport
         />
 
         {visibleCells.map((cell, index) => {
-          const textureMapping = getTileTextureMapping(cell.tileType);
-          const textures = spriteSheetLoader ? spriteSheetLoader.getTileTextures(textureMapping) : undefined;
+          // Get sprite coordinates from spriteId
+          let textureMapping: TileTextureMapping | undefined;
+
+          if (cell.spriteId === 'out-of-bounds') {
+            // Use first wall tile from tileset for out-of-bounds tiles
+            const tileset = AreaMapTileSetRegistry.getById(areaMap.tilesetId);
+            const wallTile = tileset?.tileTypes.find(t => t.behavior === 'wall');
+            if (wallTile) {
+              textureMapping = TileSetTextureMapper.createMappingForTile(tileset!, wallTile.char);
+            }
+          } else {
+            // Look up sprite in SpriteRegistry
+            const sprite = SpriteRegistry.getById(cell.spriteId);
+            if (sprite) {
+              const spriteCoords: SpriteCoordinates = { x: sprite.x, y: sprite.y };
+
+              // Create texture mapping based on tile behavior
+              textureMapping = {
+                floor: spriteCoords,
+                ceiling: spriteCoords,
+              };
+
+              // Walls get wall textures on all 4 sides
+              if (cell.behavior === 'wall') {
+                textureMapping.wallFront = spriteCoords;
+                textureMapping.wallBack = spriteCoords;
+                textureMapping.wallLeft = spriteCoords;
+                textureMapping.wallRight = spriteCoords;
+              }
+            }
+          }
+
+          const textures = spriteSheetLoader && textureMapping
+            ? spriteSheetLoader.getTileTextures(textureMapping)
+            : undefined;
 
           return (
             <Cell
               key={`${cell.worldX}-${cell.worldZ}-${index}`}
               worldX={cell.worldX}
               worldZ={cell.worldZ}
-              tileType={cell.tileType}
+              tileType={cell.behavior}
               textures={textures}
             />
           );
