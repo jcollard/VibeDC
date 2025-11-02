@@ -1950,6 +1950,20 @@ export const PartyManagementView: React.FC<PartyManagementViewProps> = ({ onClos
           }
         }
 
+        // Check bottom panel click for exit button
+        const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
+        const bottomClickResult = bottomPanelManager.handleClick(
+          canvasX,
+          canvasY,
+          bottomPanelRegion
+        );
+        if (bottomClickResult && bottomClickResult.type === 'exit-party-management') {
+          if (onClose) {
+            onClose();
+          }
+          return;
+        }
+
         return; // Don't process other clicks in set-abilities mode
       }
 
