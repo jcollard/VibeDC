@@ -45,6 +45,9 @@ classes:
       baseMagicEvade: 7
       baseCourage: 12
       baseAttunement: 6
+      rightHandId: "iron-sword-001"
+      leftHandId: "wooden-shield-001"
+      bodyId: "leather-armor-001"
 
   - id: "rogue"
     name: "Rogue"
@@ -89,6 +92,8 @@ classes:
       baseMagicEvade: 10
       baseCourage: 10
       baseAttunement: 10
+      rightHandId: "steel-dagger-001"
+      bodyId: "leather-armor-001"
 
   - id: "apprentice"
     name: "Apprentice"
@@ -132,6 +137,8 @@ classes:
       baseMagicEvade: 14
       baseCourage: 8
       baseAttunement: 16
+      rightHandId: "magic-staff-001"
+      bodyId: "wizards-robe-001"
 
   - id: "monster"
     name: "Monster"
