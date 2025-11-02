@@ -591,9 +591,19 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     window.startRandomBattle = () => {
       console.log('[FirstPersonView] Starting random battle via developer function');
 
-      // Import the action dynamically to avoid circular dependencies
-      import('../../models/area/actions/GenerateRandomEncounter').then(({ GenerateRandomEncounter }) => {
-        const action = new GenerateRandomEncounter();
+      // Import the action and helper dynamically
+      Promise.all([
+        import('../../models/area/actions/GenerateRandomEncounter'),
+        import('../../models/area/actions/RandomEnemyGenerator')
+      ]).then(([{ GenerateRandomEncounter }, { calculatePartyStatRanges }]) => {
+        // Calculate party stat ranges for difficulty scaling
+        let partyStatRanges;
+        if (partyState && partyState.members.length > 0) {
+          partyStatRanges = calculatePartyStatRanges(partyState.members);
+          console.log('[FirstPersonView] Scaling enemies to party stats:', partyStatRanges);
+        }
+
+        const action = new GenerateRandomEncounter(partyStatRanges);
         const newState = action.execute(gameState);
 
         // Check if combat was triggered
@@ -608,7 +618,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
           }
         } else {
           console.error('[FirstPersonView] Failed to generate random encounter');
-          combatLogManager.addMessage('Failed to generate random encounter (no enemies available?)');
+          combatLogManager.addMessage('Failed to generate random encounter');
         }
       }).catch((error) => {
         console.error('[FirstPersonView] Failed to load GenerateRandomEncounter:', error);
@@ -619,7 +629,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       // @ts-ignore
       delete window.startRandomBattle;
     };
-  }, [combatLogManager, gameState, onStartCombat]);
+  }, [combatLogManager, gameState, onStartCombat, partyState]);
 
   // Helper function to process events after movement
   const processMovementEvents = useCallback((previousX: number, previousY: number, newX: number, newY: number) => {

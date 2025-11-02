@@ -6,16 +6,21 @@ import type { EnemyPlacement } from '../../combat/CombatEncounter';
 import { DungeonGenerator } from '../../../utils/DungeonGenerator';
 import { TilesetRegistry } from '../../../utils/TilesetRegistry';
 import { EnemyRegistry } from '../../../utils/EnemyRegistry';
+import { generateRandomEnemy, type PartyStatRanges } from './RandomEnemyGenerator';
 
 /**
  * Generates a random combat encounter with procedurally generated dungeon layout.
  * Creates a dungeon with rooms and corridors, places 8 deployment zones clustered together,
- * and spawns random enemies.
+ * and spawns random enemies scaled to party strength.
  */
 export class GenerateRandomEncounter implements EventAction {
   readonly type = "GenerateRandomEncounter";
 
-  constructor() {}
+  private partyStatRanges?: PartyStatRanges;
+
+  constructor(partyStatRanges?: PartyStatRanges) {
+    this.partyStatRanges = partyStatRanges;
+  }
 
   execute(state: GameState): GameState {
     try {
@@ -98,16 +103,9 @@ export class GenerateRandomEncounter implements EventAction {
         }
       }
 
-      // Place 2-8 random enemies
+      // Generate 2-8 random enemies on-the-fly
       const enemyCount = Math.floor(Math.random() * 7) + 2; // 2 to 8
       const enemyPlacements: EnemyPlacement[] = [];
-      const allEnemyIds = EnemyRegistry.getAllIds();
-
-      if (allEnemyIds.length === 0) {
-        console.error('Failed to generate random encounter: No enemies found in registry');
-        // Return unchanged state if no enemies available
-        return state;
-      }
 
       // Filter walkable tiles to exclude deployment zones
       const availableForEnemies = walkableTiles.filter(tile =>
@@ -120,11 +118,14 @@ export class GenerateRandomEncounter implements EventAction {
         const position = availableForEnemies[randomIndex];
         availableForEnemies.splice(randomIndex, 1); // Remove from available
 
-        // Pick a random enemy
-        const enemyId = allEnemyIds[Math.floor(Math.random() * allEnemyIds.length)];
+        // Generate a new random enemy (scaled to party stats if available)
+        const enemy = generateRandomEnemy(this.partyStatRanges);
+
+        // Register the generated enemy so it can be used in combat
+        EnemyRegistry.register(enemy);
 
         enemyPlacements.push({
-          enemyId,
+          enemyId: enemy.id,
           position,
         });
       }
@@ -174,7 +175,7 @@ export class GenerateRandomEncounter implements EventAction {
       // Create the new encounter (this auto-registers it)
       CombatEncounter.fromJSON(encounterData as any);
 
-      console.log(`Generated random encounter: ${encounterId} (${width}x${height}, ${rooms.length} rooms, ${enemyCount} enemies, ${deploymentZones.length} deployment zones)`);
+      console.log(`Generated random encounter: ${encounterId} (${width}x${height}, ${rooms.length} rooms, ${enemyCount} procedural enemies, ${deploymentZones.length} deployment zones)`);
 
       // Transition to combat with the generated encounter
       return {

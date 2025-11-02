@@ -10,7 +10,6 @@ import type { GameState } from '../EventPrecondition';
 import { CombatEncounter } from '../../combat/CombatEncounter';
 import { TilesetRegistry } from '../../../utils/TilesetRegistry';
 import { EnemyRegistry } from '../../../utils/EnemyRegistry';
-import type { EnemyDefinition } from '../../../utils/EnemyRegistry';
 
 describe('EventActions', () => {
   const createTestState = (): GameState => ({
@@ -132,33 +131,14 @@ describe('EventActions', () => {
     beforeEach(() => {
       // Clear registries before each test
       CombatEncounter.clearRegistry();
+      EnemyRegistry.clearRegistry();
 
       // Register a test tileset if needed
       if (TilesetRegistry.getAll().length === 0) {
-        // If no tilesets registered, the action will use 'forest' as default
+        // If no tilesets registered, the action will use ASCII format
       }
 
-      // Register some test enemies
-      const testEnemy: EnemyDefinition = {
-        id: 'test-goblin',
-        name: 'Test Goblin',
-        unitType: 'monster',
-        unitClassId: 'monster',
-        baseHealth: 20,
-        baseMana: 10,
-        basePhysicalPower: 8,
-        baseMagicPower: 4,
-        baseSpeed: 7,
-        baseMovement: 3,
-        basePhysicalEvade: 10,
-        baseMagicEvade: 6,
-        baseCourage: 5,
-        baseAttunement: 5,
-        spriteId: 'test-sprite',
-        xpValue: 15,
-        goldValue: 8,
-      };
-      EnemyRegistry.register(testEnemy);
+      // Note: No need to register enemies - they are generated procedurally
     });
 
     it('should generate a random encounter and activate combat', () => {
@@ -246,16 +226,23 @@ describe('EventActions', () => {
       expect(restored.type).toBe('GenerateRandomEncounter');
     });
 
-    it('should return unchanged state if no enemies registered', () => {
-      // Clear all enemies
-      EnemyRegistry.clearRegistry();
-
+    it('should generate unique enemy IDs for each enemy', () => {
       const action = new GenerateRandomEncounter();
       const state = createTestState();
       const newState = action.execute(state);
 
-      // Should return unchanged state
-      expect(newState).toEqual(state);
+      const encounterId = newState.combatState?.encounterId;
+      const encounter = CombatEncounter.getById(encounterId!);
+
+      // Each enemy should have a unique ID
+      const enemyIds = encounter?.enemyPlacements.map(p => p.enemyId) || [];
+      const uniqueIds = new Set(enemyIds);
+      expect(uniqueIds.size).toBe(enemyIds.length);
+
+      // All enemies should be registered
+      enemyIds.forEach(id => {
+        expect(EnemyRegistry.getById(id)).toBeDefined();
+      });
     });
   });
 
