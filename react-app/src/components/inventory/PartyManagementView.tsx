@@ -676,7 +676,10 @@ export const PartyManagementView: React.FC = () => {
             bufferCtx,
             titlePanelRegion,
             CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
-            fontAtlas
+            fontAtlas,
+            spriteImagesRef.current,
+            CombatConstants.SPRITE_SIZE,
+            fontAtlasImagesRef.current
           );
 
           // Render spend-xp main panel
@@ -1403,6 +1406,7 @@ export const PartyManagementView: React.FC = () => {
         // Handle Spend XP button click
         if (topInfoClickResult.type === 'learn-abilities') {
           setPanelMode('spend-xp');
+          addLogMessage('Select a class to spend XP');
           renderFrame();
           return;
         }

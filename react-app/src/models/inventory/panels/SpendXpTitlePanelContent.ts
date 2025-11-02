@@ -1,28 +1,38 @@
 /**
  * Panel content for the Spend XP title panel
- * Shows: "Unit Abilities Coming Soon" (stub)
+ * Shows: "Learn Abilities" in dragonslant title font
  */
 
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
+import { CombatConstants } from '../../combat/CombatConstants';
 import type { PanelContent, PanelRegion } from '../../combat/managers/panels/PanelContent';
 
 /**
- * Stub panel content that displays "Unit Abilities Coming Soon" in title panel
+ * Panel content that displays "Learn Abilities" in title panel using dragonslant font
  */
 export class SpendXpTitlePanelContent implements PanelContent {
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
-    fontId: string,
-    fontAtlasImage: HTMLImageElement | null
+    _fontId: string,
+    _fontAtlasImage: HTMLImageElement | null,
+    _spriteImages?: Map<string, HTMLImageElement>,
+    _spriteSize?: number,
+    fonts?: Map<string, HTMLImageElement>
   ): void {
-    if (!fontAtlasImage) return;
+    if (!fonts) return;
+
+    // Use dragonslant title font
+    const titleFontId = CombatConstants.FONTS.TITLE_FONT_ID;
+    const titleFontImage = fonts.get(titleFontId);
+
+    if (!titleFontImage) return;
 
     ctx.save();
     ctx.imageSmoothingEnabled = false;
 
     // Center the text in the panel
-    const text = 'Unit Abilities Coming Soon';
+    const text = 'Learn Abilities';
     const centerX = region.x + Math.floor(region.width / 2);
     const centerY = region.y + Math.floor(region.height / 2);
 
@@ -31,8 +41,8 @@ export class SpendXpTitlePanelContent implements PanelContent {
       text,
       centerX,
       centerY,
-      fontId,
-      fontAtlasImage,
+      titleFontId,
+      titleFontImage,
       1,
       'center',
       '#ffffff'
