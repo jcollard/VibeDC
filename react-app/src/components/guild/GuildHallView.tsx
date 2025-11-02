@@ -419,6 +419,9 @@ export const GuildHallView: React.FC<GuildHallViewProps> = ({
   };
 
   const renderPartyMemberCard = (ctx: CanvasRenderingContext2D, member: CombatUnit, x: number, y: number, fontAtlas: HTMLImageElement) => {
+    // Find character definition in guild roster by name
+    const characterDef = partyState.guildRoster.find(c => c.name === member.name);
+
     // ⚠️ Use PartyMemberCardRenderer for proper rendering!
     PartyMemberCardRenderer.render(
       ctx,
@@ -428,6 +431,7 @@ export const GuildHallView: React.FC<GuildHallViewProps> = ({
         y,
         isSelected: false,
         isHovered: false,
+        characterDef,
       },
       spriteImagesRef.current,
       fontAtlas

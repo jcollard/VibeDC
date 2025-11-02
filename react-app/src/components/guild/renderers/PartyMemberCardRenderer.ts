@@ -1,4 +1,6 @@
 import type { CombatUnit } from '../../../models/combat/CombatUnit';
+import type { PartyMemberDefinition } from '../../../utils/PartyMemberRegistry';
+import { UnitClass } from '../../../models/combat/UnitClass';
 import { GuildHallConstants as C } from '../../../constants/GuildHallConstants';
 import { SpriteRenderer } from '../../../utils/SpriteRenderer';
 import { FontAtlasRenderer } from '../../../utils/FontAtlasRenderer';
@@ -8,6 +10,7 @@ export interface PartyMemberCardOptions {
   y: number;
   isSelected?: boolean;
   isHovered?: boolean;
+  characterDef?: PartyMemberDefinition;
 }
 
 export class PartyMemberCardRenderer {
@@ -15,7 +18,7 @@ export class PartyMemberCardRenderer {
    * Render a party member card
    * @param ctx Canvas rendering context
    * @param member Combat unit to render
-   * @param options Rendering options (position, state)
+   * @param options Rendering options (position, state, character definition)
    * @param spriteImages Map of sprite sheet paths to loaded images
    * @param fontAtlasImage Loaded font atlas image
    */
@@ -26,26 +29,12 @@ export class PartyMemberCardRenderer {
     spriteImages: Map<string, HTMLImageElement>,
     fontAtlasImage: HTMLImageElement
   ): void {
-    const { x, y, isSelected, isHovered } = options;
+    const { x, y } = options;
     const card = C.PARTY_MEMBER_CARD;
 
-    // Draw background
+    // Draw background (no border)
     ctx.fillStyle = '#000000';
     ctx.fillRect(x, y, card.WIDTH, card.HEIGHT);
-
-    // Draw border
-    if (isSelected) {
-      ctx.strokeStyle = card.BORDER_SELECTED;
-      ctx.lineWidth = 2;
-    } else if (isHovered) {
-      ctx.strokeStyle = card.BORDER_HOVER;
-      ctx.lineWidth = 1;
-    } else {
-      ctx.strokeStyle = card.BORDER_NORMAL;
-      ctx.lineWidth = 1;
-    }
-    ctx.strokeRect(x, y, card.WIDTH, card.HEIGHT);
-    ctx.lineWidth = 1;
 
     // ⚠️ RENDERING GUIDELINE: Use SpriteRenderer + round coordinates!
     SpriteRenderer.renderSpriteById(
@@ -72,10 +61,20 @@ export class PartyMemberCardRenderer {
       card.NAME_COLOR
     );
 
-    // Render class
+    // Render primary class / secondary class
+    const characterDef = options.characterDef;
+    let classText = member.unitClass.name;
+
+    if (characterDef?.secondaryClassId) {
+      const secondaryClass = UnitClass.getById(characterDef.secondaryClassId);
+      if (secondaryClass) {
+        classText = `${member.unitClass.name}/${secondaryClass.name}`;
+      }
+    }
+
     FontAtlasRenderer.renderText(
       ctx,
-      member.unitClass.name,
+      classText,
       Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2),
       Math.floor(y + card.PADDING + 8),
       '7px-04b03',
@@ -85,11 +84,11 @@ export class PartyMemberCardRenderer {
       card.CLASS_COLOR
     );
 
-    // Render level (TODO: calculate from totalExperience)
-    const level = 1;
+    // Render total XP
+    const totalXP = characterDef?.totalExperience ?? 0;
     FontAtlasRenderer.renderText(
       ctx,
-      `Lv. ${level}`,
+      `XP: ${totalXP}`,
       Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2),
       Math.floor(y + card.PADDING + 16),
       '7px-04b03',
@@ -97,30 +96,6 @@ export class PartyMemberCardRenderer {
       1,
       'left',
       card.LEVEL_COLOR
-    );
-
-    // Render HP bar
-    const hpPercent = member.health / member.maxHealth;
-    this.renderStatBar(
-      ctx,
-      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2),
-      Math.floor(y + card.PADDING + 24),
-      card.BAR_WIDTH,
-      card.BAR_HEIGHT,
-      hpPercent,
-      card.HP_BAR_COLOR
-    );
-
-    // Render MP bar
-    const mpPercent = member.mana / member.maxMana;
-    this.renderStatBar(
-      ctx,
-      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2),
-      Math.floor(y + card.PADDING + 28),
-      card.BAR_WIDTH,
-      card.BAR_HEIGHT,
-      mpPercent,
-      card.MANA_BAR_COLOR
     );
 
     // Render right arrow (remove button) - always visible
@@ -139,32 +114,6 @@ export class PartyMemberCardRenderer {
       arrowSize,
       arrowSize
     );
-  }
-
-  /**
-   * Render a stat bar (HP/MP)
-   * @private
-   */
-  private static renderStatBar(
-    ctx: CanvasRenderingContext2D,
-    x: number,
-    y: number,
-    width: number,
-    height: number,
-    percent: number,
-    color: string
-  ): void {
-    // Draw background
-    ctx.fillStyle = '#333333';
-    ctx.fillRect(x, y, width, height);
-
-    // Draw fill
-    ctx.fillStyle = color;
-    ctx.fillRect(x, y, width * percent, height);
-
-    // Draw border
-    ctx.strokeStyle = '#ffffff';
-    ctx.strokeRect(x, y, width, height);
   }
 
   /**
