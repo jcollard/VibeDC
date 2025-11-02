@@ -27,6 +27,8 @@ import { EquipmentComparisonContent } from '../../models/inventory/panels/Equipm
 import { SpendXpTitlePanelContent } from '../../models/inventory/panels/SpendXpTitlePanelContent';
 import { SpendXpMainPanelContent } from '../../models/inventory/panels/SpendXpMainPanelContent';
 import { ClassInfoContent } from '../../models/inventory/panels/ClassInfoContent';
+import { SetAbilitiesTitlePanelContent } from '../../models/inventory/panels/SetAbilitiesTitlePanelContent';
+import { SetAbilitiesMainPanelContent } from '../../models/inventory/panels/SetAbilitiesMainPanelContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { isEquipmentCompatibleWithSlot, isEquipmentSlot } from '../../utils/EquipmentSlotUtil';
 import { UISettings } from '../../config/UISettings';
@@ -229,8 +231,8 @@ export const PartyManagementView: React.FC = () => {
   // Track selected party member index for top info panel
   const [selectedPartyMemberIndex, setSelectedPartyMemberIndex] = useState(0);
 
-  // Track current panel mode ('inventory' or 'spend-xp')
-  const [panelMode, setPanelMode] = useState<'inventory' | 'spend-xp'>('inventory');
+  // Track current panel mode ('inventory', 'spend-xp', or 'set-abilities')
+  const [panelMode, setPanelMode] = useState<'inventory' | 'spend-xp' | 'set-abilities'>('inventory');
 
   // Track ability/equipment detail panel state (for swapping bottom panel on hover)
   const detailPanelActiveRef = useRef(false);
@@ -293,6 +295,10 @@ export const PartyManagementView: React.FC = () => {
 
   // Spend XP panel content (created when needed)
   const spendXpMainContentRef = useRef<SpendXpMainPanelContent | null>(null);
+
+  // Set Abilities panel content (created when needed)
+  const setAbilitiesMainContentRef = useRef<SetAbilitiesMainPanelContent | null>(null);
+  const setAbilitiesSlotTypeRef = useRef<'Reaction' | 'Passive' | 'Movement' | null>(null);
 
   // Cache the selected party member to avoid recreating it every frame
   const selectedMemberRef = useRef<CombatUnit | null>(null);
@@ -727,6 +733,75 @@ export const PartyManagementView: React.FC = () => {
           CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
           fontAtlas
         );
+      } else if (panelMode === 'set-abilities') {
+        // Get current party member - only create if not cached or if selected index changed
+        const partyMemberConfigs = PartyMemberRegistry.getAll();
+        const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
+
+        // Check if we need to create a new member instance
+        if (!selectedMemberRef.current ||
+            !selectedMemberConfig ||
+            selectedMemberRef.current.name !== selectedMemberConfig.name) {
+          if (selectedMemberConfig) {
+            const newMember = PartyMemberRegistry.createPartyMember(selectedMemberConfig.id);
+            selectedMemberRef.current = newMember ?? null;
+          } else {
+            selectedMemberRef.current = null;
+          }
+          // Clear set-abilities content to force recreation with new member
+          setAbilitiesMainContentRef.current = null;
+        }
+
+        const selectedMember = selectedMemberRef.current;
+        const slotType = setAbilitiesSlotTypeRef.current;
+
+        if (selectedMember && slotType) {
+          // Create set-abilities main content only if not already created
+          if (!setAbilitiesMainContentRef.current) {
+            setAbilitiesMainContentRef.current = new SetAbilitiesMainPanelContent(selectedMember, slotType);
+          }
+
+          // Render set-abilities title panel
+          const setAbilitiesTitleContent = new SetAbilitiesTitlePanelContent();
+          setAbilitiesTitleContent.render(
+            bufferCtx,
+            titlePanelRegion,
+            CombatConstants.INVENTORY_VIEW.TOP_INFO.FONT_ID,
+            fontAtlas,
+            spriteImagesRef.current,
+            CombatConstants.SPRITE_SIZE,
+            fontAtlasImagesRef.current
+          );
+
+          // Render set-abilities main panel
+          setAbilitiesMainContentRef.current.render(
+            bufferCtx,
+            mainPanelBounds,
+            CombatConstants.INVENTORY_VIEW.MAIN_PANEL.CATEGORY_TABS.FONT_ID,
+            fontAtlas,
+            spriteImagesRef.current,
+            CombatConstants.SPRITE_SIZE
+          );
+        }
+
+        // Render top info panel (party member stats - still shown)
+        const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+        topInfoPanelManager.render(
+          bufferCtx,
+          topInfoPanelRegion,
+          CombatConstants.FONTS.UI_FONT_ID,
+          fontAtlas,
+          spriteImagesRef.current,
+          CombatConstants.SPRITE_SIZE
+        );
+
+        // Render bottom info panel (ability details)
+        bottomPanelManager.render(
+          bufferCtx,
+          bottomPanelRegion,
+          CombatConstants.INVENTORY_VIEW.BOTTOM_INFO.FONT_ID,
+          fontAtlas
+        );
       } else {
         // Render inventory mode panels
         // Render main panel (inventory grid)
@@ -1043,8 +1118,22 @@ export const PartyManagementView: React.FC = () => {
         }
       }
 
-      // Skip inventory-specific hover logic when in spend-xp mode
-      if (panelMode !== 'spend-xp') {
+      // If in set-abilities mode, handle hover for ability selection
+      if (panelMode === 'set-abilities' && setAbilitiesMainContentRef.current) {
+        const relativeX = canvasX - mainPanelBounds.x;
+        const relativeY = canvasY - mainPanelBounds.y;
+
+        if (relativeX >= 0 && relativeY >= 0 &&
+            relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
+          const hoverResult = setAbilitiesMainContentRef.current.handleHover(relativeX, relativeY);
+          if (hoverResult) {
+            needsRerender = true;
+          }
+        }
+      }
+
+      // Skip inventory-specific hover logic when in spend-xp or set-abilities mode
+      if (panelMode !== 'spend-xp' && panelMode !== 'set-abilities') {
         // Check category tab hover (now in title panel)
         const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
         const titlePanelContent = titlePanelManager.getContent();
@@ -1137,8 +1226,8 @@ export const PartyManagementView: React.FC = () => {
 
       // Handle ability/equipment detail panel swapping (similar to CombatView)
       // Skip hover changes if equipment/ability is selected (clicked)
-      // Skip this logic entirely in spend-xp mode (bottom panel managed differently)
-      if (!selectedEquipmentRef.current && panelMode !== 'spend-xp') {
+      // Skip this logic entirely in spend-xp or set-abilities mode (bottom panel managed differently)
+      if (!selectedEquipmentRef.current && panelMode !== 'spend-xp' && panelMode !== 'set-abilities') {
         if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
             canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
 
@@ -1388,6 +1477,92 @@ export const PartyManagementView: React.FC = () => {
         return; // Don't process other clicks in spend-xp mode
       }
 
+      // If in set-abilities mode, handle click for ability selection
+      if (panelMode === 'set-abilities' && setAbilitiesMainContentRef.current) {
+        const relativeX = canvasX - mainPanelBounds.x;
+        const relativeY = canvasY - mainPanelBounds.y;
+
+        if (relativeX >= 0 && relativeY >= 0 &&
+            relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
+          const clickResult = setAbilitiesMainContentRef.current.handleClick(relativeX, relativeY);
+          if (clickResult && clickResult.type === 'ability-selected') {
+            // Get the ability and slot type
+            const ability = CombatAbility.getById(clickResult.abilityId);
+            const slotType = setAbilitiesSlotTypeRef.current;
+
+            if (ability && slotType && selectedMemberRef.current) {
+              // Cast to HumanoidUnit to access ability slot assignment methods
+              const humanoid = selectedMemberRef.current as HumanoidUnit;
+
+              // Update the appropriate ability slot on the unit
+              let success = false;
+              if (slotType === 'Reaction') {
+                success = humanoid.assignReactionAbility(ability);
+              } else if (slotType === 'Passive') {
+                success = humanoid.assignPassiveAbility(ability);
+              } else if (slotType === 'Movement') {
+                success = humanoid.assignMovementAbility(ability);
+              }
+
+              if (success) {
+                // Update party member definition in registry to persist the change
+                const partyMemberConfigs = PartyMemberRegistry.getAll();
+                const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
+                if (selectedMemberConfig) {
+                  PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
+                }
+
+                // Show confirmation message
+                addLogMessage(`Set ${slotType} ability to ${ability.name}`);
+
+                // Return to inventory mode
+                setPanelMode('inventory');
+
+                // Trigger re-render of top info panel to show updated ability slot
+                setPartyMemberVersion(v => v + 1);
+                renderFrame();
+              } else {
+                addLogMessage(`Cannot assign ${ability.name} - not learned or wrong type`);
+                renderFrame();
+              }
+            }
+            return;
+          }
+        }
+      }
+
+      // Skip inventory-specific click logic when in set-abilities mode
+      if (panelMode === 'set-abilities') {
+        // Still allow top info panel clicks (for party member selection and view toggle)
+        const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
+        const topInfoClickResult = topInfoPanelManager.handleClick(
+          canvasX,
+          canvasY,
+          topInfoPanelRegion
+        );
+        if (topInfoClickResult) {
+          // Handle view toggle and party member selection (same as inventory mode)
+          if (topInfoClickResult.type === 'view-toggled' && 'view' in topInfoClickResult) {
+            topInfoPanelViewRef.current = topInfoClickResult.view as 'stats' | 'abilities';
+            if (panelMode === 'set-abilities' && topInfoClickResult.view === 'stats') {
+              setPanelMode('inventory');
+            }
+            renderFrame();
+            return;
+          }
+
+          if (topInfoClickResult.type === 'party-member' && 'index' in topInfoClickResult) {
+            // Clear the set-abilities content to force recreation with new unit
+            selectedMemberRef.current = null;
+            setAbilitiesMainContentRef.current = null;
+            renderFrame();
+            return;
+          }
+        }
+
+        return; // Don't process other clicks in set-abilities mode
+      }
+
       // Check category tab click (now in title panel)
       const titlePanelRegion = getInventoryTitlePanelRegion(layoutManager);
       const titlePanelContent = titlePanelManager.getContent();
@@ -1430,6 +1605,7 @@ export const PartyManagementView: React.FC = () => {
       const topInfoPanelRegion = layoutManager.getTopInfoPanelRegion();
 
       // First check if clicking on ability/equipment to select it
+      // BUT: Skip this for ability slots in abilities view - let them be handled by the click handler below
       if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
           canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
 
@@ -1443,28 +1619,35 @@ export const PartyManagementView: React.FC = () => {
           // If clicking on equipment, ability, or empty slot, select it
           if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult) {
             if ('item' in hoverResult && (hoverResult.type === 'equipment-detail' || hoverResult.type === 'ability-detail')) {
-              // Clicking on filled equipment or ability slot
+              // Check if this is an ability slot in abilities view - if so, skip this handler and let the click handler below handle it
               const slotLabel = (topContent as any).hoveredStatId as string | null;
+              const currentView = topInfoPanelViewRef.current;
+              const isAbilitySlot = slotLabel === 'Reaction' || slotLabel === 'Passive' || slotLabel === 'Movement';
 
-              // Set as selected
-              selectedEquipmentRef.current = {
-                type: hoverResult.type === 'equipment-detail' ? 'equipment' : 'ability',
-                item: hoverResult.item,
-                slotLabel: slotLabel
-              };
+              if (currentView === 'abilities' && isAbilitySlot) {
+                // Skip - let the click handler below handle ability slot clicks in abilities view
+              } else {
+                // Clicking on filled equipment or ability slot (in stats view, or equipment in abilities view)
+                // Set as selected
+                selectedEquipmentRef.current = {
+                  type: hoverResult.type === 'equipment-detail' ? 'equipment' : 'ability',
+                  item: hoverResult.item,
+                  slotLabel: slotLabel
+                };
 
-              // Update the top info panel to highlight the selected equipment
-              if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
-                (topContent as any).setSelectedEquipmentSlot(slotLabel);
+                // Update the top info panel to highlight the selected equipment
+                if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                  (topContent as any).setSelectedEquipmentSlot(slotLabel);
+                }
+
+                detailPanelActiveRef.current = true;
+
+                // Increment version to trigger re-render (this will trigger useEffect which sets bottom panel content)
+                setEquipmentSlotSelectionVersion(v => v + 1);
+
+                // Don't call renderFrame() here - let the useEffect handle it
+                return;
               }
-
-              detailPanelActiveRef.current = true;
-
-              // Increment version to trigger re-render (this will trigger useEffect which sets bottom panel content)
-              setEquipmentSlotSelectionVersion(v => v + 1);
-
-              // Don't call renderFrame() here - let the useEffect handle it
-              return;
             } else if (hoverResult.type === 'empty-slot-detail' && 'slotLabel' in hoverResult && 'slotType' in hoverResult) {
               // Clicking on empty slot - show empty slot info and select the slot
               const slotLabel = hoverResult.slotLabel as string;
@@ -1505,6 +1688,16 @@ export const PartyManagementView: React.FC = () => {
         if (topInfoClickResult.type === 'learn-abilities') {
           setPanelMode('spend-xp');
           addLogMessage('Select a class to spend XP');
+          renderFrame();
+          return;
+        }
+
+        // Handle ability slot clicked (to set abilities)
+        if (topInfoClickResult.type === 'ability-slot-clicked' && 'slotType' in topInfoClickResult) {
+          setPanelMode('set-abilities');
+          setAbilitiesSlotTypeRef.current = topInfoClickResult.slotType as 'Reaction' | 'Passive' | 'Movement';
+          setAbilitiesMainContentRef.current = null; // Clear to force recreation
+          addLogMessage(`Select a ${topInfoClickResult.slotType} ability`);
           renderFrame();
           return;
         }

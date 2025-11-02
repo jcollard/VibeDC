@@ -18,13 +18,11 @@ const HEADER_COLOR = '#ff8c00'; // Dark orange for headers
  */
 export class SetAbilitiesMainPanelContent implements PanelContent {
   private slotType: 'Reaction' | 'Passive' | 'Movement';
-  private unit: CombatUnit;
   private abilities: CombatAbility[] = [];
   private hoveredAbilityIndex: number | null = null;
   private abilityBounds: Array<{ x: number; y: number; width: number; height: number; abilityId: string }> = [];
 
   constructor(unit: CombatUnit, slotType: 'Reaction' | 'Passive' | 'Movement') {
-    this.unit = unit;
     this.slotType = slotType;
 
     // Filter learned abilities by slot type
