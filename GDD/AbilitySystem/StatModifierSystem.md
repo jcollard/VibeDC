@@ -1,8 +1,45 @@
 # Stat Modifier System - Implementation Plan
 
-**Version:** 1.0
+**Version:** 1.1
 **Created:** 2025-11-01
+**Updated:** 2025-11-01
+**Status:** Core Implementation Complete (Phases 1-5)
 **Related:** [AbilitySystemOverview.md](./AbilitySystemOverview.md), [CombatUnit.ts](../../react-app/src/models/combat/CombatUnit.ts), [HumanoidUnit.ts](../../react-app/src/models/combat/HumanoidUnit.ts)
+
+## Implementation Status
+
+**Completed**: 2025-11-01
+
+The core StatModifier system has been successfully implemented with the following changes:
+
+### Files Created
+- [StatModifier.ts](../../react-app/src/models/combat/StatModifier.ts) - Core interfaces and types
+- [HumanoidUnit.statmodifier.test.ts](../../react-app/src/models/combat/HumanoidUnit.statmodifier.test.ts) - 24 comprehensive unit tests
+
+### Files Modified
+- [HumanoidUnit.ts](../../react-app/src/models/combat/HumanoidUnit.ts):
+  - Added `_statModifiers` array and getter
+  - Added `addStatModifier()`, `removeStatModifier()`, `removeStatModifiersBySource()` methods
+  - Added `decrementModifierDurations()` for turn-based expiration
+  - Added private `getStatModifierTotal()` helper
+  - Updated all 10 stat getters to include modifiers
+  - Updated `toJSON()` and `fromJSON()` for serialization
+
+### Test Results
+All 24 tests passing, covering:
+- Adding/removing modifiers
+- Positive and negative modifiers (buffs/debuffs)
+- Multiple modifiers stacking
+- Duration decrement and expiration
+- Permanent modifiers (duration -1)
+- Serialization/deserialization
+- All 10 stat types
+
+### Still Pending
+- **Phase 4**: Passive ability integration (auto-apply modifiers on assignment)
+- **Phase 6**: Duration tracking integration with UnitTurnPhaseHandler
+- **Phase 7**: Ability effect application helper functions
+- **Phase 8**: UI integration for displaying buffs/debuffs
 
 ## Purpose
 
@@ -24,7 +61,7 @@ The Stat Modifier System provides:
 A **Stat Modifier** is a change to a unit's stat value. Modifiers have:
 - **Target Stat**: Which stat to modify (health, speed, physicalPower, etc.)
 - **Value**: Amount to add/subtract (can be positive or negative)
-- **Duration**: Number of turns (0 = permanent, >0 = temporary)
+- **Duration**: Number of turns (-1 = permanent, >0 = temporary, 0 = expired)
 - **Source**: What applied this modifier (ability ID, equipment ID, etc.)
 
 ### Modifier Application
@@ -46,7 +83,7 @@ get physicalPower(): number {
 
 ### Duration Tracking
 
-- **Permanent Modifiers** (duration = 0): Never expire, removed only when source is removed
+- **Permanent Modifiers** (duration = -1): Never expire, removed only when source is removed
 - **Temporary Modifiers** (duration > 0): Countdown at end of affected unit's turn
 - **Expiration**: When duration reaches 0, modifier is removed
 
@@ -75,7 +112,7 @@ export interface StatModifier {
   value: number;
 
   /**
-   * Number of turns remaining (0 = permanent)
+   * Number of turns remaining (-1 = permanent, >0 = temporary, 0 = expired)
    * Counts down at end of affected unit's turn
    */
   duration: number;
@@ -364,7 +401,7 @@ assignPassiveAbility(ability: CombatAbility | null): boolean {
           id: `${ability.id}-${effect.params?.stat}-${Date.now()}`,
           stat: effect.params?.stat as StatType,
           value: typeof effect.value === 'number' ? effect.value : 0,
-          duration: 0, // Permanent while passive is equipped
+          duration: -1, // Permanent while passive is equipped
           source: ability.id,
           sourceName: ability.name,
           icon: ability.icon,
@@ -526,47 +563,47 @@ private endUnitTurn(unit: CombatUnit, state: CombatState): CombatState {
 
 ## Implementation Checklist
 
-### Phase 1: Core Data Structures
-- [ ] Create `StatModifier` interface in `models/combat/StatModifier.ts`
-- [ ] Create `StatType` type definition
-- [ ] Create `StatModifierJSON` interface for serialization
-- [ ] Write unit tests for data structures
+### Phase 1: Core Data Structures ✅ COMPLETE
+- [x] Create `StatModifier` interface in `models/combat/StatModifier.ts`
+- [x] Create `StatType` type definition
+- [x] Create `StatModifierJSON` interface for serialization
+- [x] Write unit tests for data structures
 
-### Phase 2: HumanoidUnit Integration
-- [ ] Add `_statModifiers` array to HumanoidUnit
-- [ ] Implement `addStatModifier()` method
-- [ ] Implement `removeStatModifier()` method
-- [ ] Implement `removeStatModifiersBySource()` method
-- [ ] Implement `getModifiersForStat()` method
-- [ ] Implement `decrementModifierDurations()` method
-- [ ] Implement `getStatModifierTotal()` private helper
-- [ ] Write unit tests for modifier management
+### Phase 2: HumanoidUnit Integration ✅ COMPLETE
+- [x] Add `_statModifiers` array to HumanoidUnit
+- [x] Implement `addStatModifier()` method
+- [x] Implement `removeStatModifier()` method
+- [x] Implement `removeStatModifiersBySource()` method
+- [x] Implement `getModifiersForStat()` method (implemented as private `getStatModifierTotal()`)
+- [x] Implement `decrementModifierDurations()` method
+- [x] Implement `getStatModifierTotal()` private helper
+- [x] Write unit tests for modifier management (24 comprehensive tests)
 
-### Phase 3: Stat Getter Updates
-- [ ] Update `maxHealth` getter to include modifiers
-- [ ] Update `maxMana` getter to include modifiers
-- [ ] Update `physicalPower` getter to include modifiers
-- [ ] Update `magicPower` getter to include modifiers
-- [ ] Update `speed` getter to include modifiers
-- [ ] Update `movement` getter to include modifiers
-- [ ] Update `physicalEvade` getter to include modifiers
-- [ ] Update `magicEvade` getter to include modifiers
-- [ ] Update `courage` getter to include modifiers
-- [ ] Update `attunement` getter to include modifiers
-- [ ] Write unit tests for modified stat calculations
+### Phase 3: Stat Getter Updates ✅ COMPLETE
+- [x] Update `maxHealth` getter to include modifiers
+- [x] Update `maxMana` getter to include modifiers
+- [x] Update `physicalPower` getter to include modifiers
+- [x] Update `magicPower` getter to include modifiers
+- [x] Update `speed` getter to include modifiers
+- [x] Update `movement` getter to include modifiers
+- [x] Update `physicalEvade` getter to include modifiers
+- [x] Update `magicEvade` getter to include modifiers
+- [x] Update `courage` getter to include modifiers
+- [x] Update `attunement` getter to include modifiers
+- [x] Write unit tests for modified stat calculations
 
-### Phase 4: Passive Ability Integration
+### Phase 4: Passive Ability Integration ⏳ PENDING
 - [ ] Update `assignPassiveAbility()` to apply stat modifiers
 - [ ] Update `assignPassiveAbility()` to remove old modifiers when changing
 - [ ] Test passive ability stat bonuses
 - [ ] Test passive ability swapping
 
-### Phase 5: Serialization
-- [ ] Add `statModifiers` field to `HumanoidUnitJSON`
-- [ ] Update `toJSON()` to serialize stat modifiers
-- [ ] Update `fromJSON()` to deserialize stat modifiers
-- [ ] Test save/load with active modifiers
-- [ ] Test save/load with expired modifiers
+### Phase 5: Serialization ✅ COMPLETE
+- [x] Add `statModifiers` field to `HumanoidUnitJSON`
+- [x] Update `toJSON()` to serialize stat modifiers
+- [x] Update `fromJSON()` to deserialize stat modifiers
+- [x] Test save/load with active modifiers
+- [x] Test save/load with expired modifiers
 
 ### Phase 6: Duration Tracking
 - [ ] Integrate `decrementModifierDurations()` into `UnitTurnPhaseHandler`
@@ -601,7 +638,7 @@ describe('StatModifier System', () => {
       id: 'test-1',
       stat: 'physicalPower',
       value: 10,
-      duration: 0,
+      duration: -1,
       source: 'test',
       sourceName: 'Test',
     });
@@ -642,7 +679,7 @@ describe('StatModifier System', () => {
       id: 'test-1',
       stat: 'physicalPower',
       value: -5,
-      duration: 0,
+      duration: -1,
       source: 'test',
       sourceName: 'Test',
     });
@@ -657,7 +694,7 @@ describe('StatModifier System', () => {
       id: 'test-1',
       stat: 'physicalPower',
       value: -1000,
-      duration: 0,
+      duration: -1,
       source: 'test',
       sourceName: 'Test',
     });
@@ -697,7 +734,7 @@ describe('StatModifier System', () => {
       id: 'test-1',
       stat: 'physicalPower',
       value: 10,
-      duration: 0,
+      duration: -1,
       source: 'test',
       sourceName: 'Test',
     });
@@ -707,7 +744,7 @@ describe('StatModifier System', () => {
     }
 
     expect(unit.statModifiers.length).toBe(1);
-    expect(unit.statModifiers[0].duration).toBe(0);
+    expect(unit.statModifiers[0].duration).toBe(-1);
   });
 
   test('Removing modifiers by source', () => {
@@ -717,7 +754,7 @@ describe('StatModifier System', () => {
       id: 'test-1',
       stat: 'physicalPower',
       value: 10,
-      duration: 0,
+      duration: -1,
       source: 'ability-1',
       sourceName: 'Ability 1',
     });
@@ -726,7 +763,7 @@ describe('StatModifier System', () => {
       id: 'test-2',
       stat: 'speed',
       value: 5,
-      duration: 0,
+      duration: -1,
       source: 'ability-1',
       sourceName: 'Ability 1',
     });
@@ -735,7 +772,7 @@ describe('StatModifier System', () => {
       id: 'test-3',
       stat: 'physicalPower',
       value: 5,
-      duration: 0,
+      duration: -1,
       source: 'ability-2',
       sourceName: 'Ability 2',
     });

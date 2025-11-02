@@ -1175,76 +1175,175 @@ static fromJSON(json: HumanoidUnitJSON): HumanoidUnit | null
 
 **Total Estimated Time**: 49-64 hours
 
-## YAML Examples
+## Complete YAML Examples
 
-### Example: Simple Damage Action
+This section provides **complete, copy-paste ready YAML** for all example abilities. Parameters are **consolidated for reusability** across similar abilities.
+
+### Reusable Parameter Patterns
+
+**Common Cost Types:**
+- `type: "mana", amount: N` - Mana cost
+- `type: "health", amount: N` - Health cost
+- `type: "action-timer", amount: N` - Action timer penalty
+
+**Range Field (for attack-based abilities):**
+- `range: "infinite"` - Can hit any target on map, ignores line of sight
+- `range: "los"` - Can hit any unit in line of sight
+- `range: "weapon"` - Uses equipped weapon's range
+- `range: "X-Y"` - Min range X, max range Y (e.g., "1-1" = adjacent, "2-6" = ranged, "3-5" = mid-range)
+  - Follows normal attack rules with line of sight
+
+**Targeting (for non-attack abilities like buffs/heals):**
+- `targeting` object with `minRange`, `maxRange`, `validTargets`, `requiresLineOfSight`
+- Use for abilities that need specific target type validation (ally vs enemy)
+
+**Common Effect Types:**
+- Stat Modifier: `type: "stat-bonus"` or `"stat-penalty"` with `params: { stat: "statName" }`
+- Damage: `type: "damage-physical"` or `"damage-magical"` with formula
+- Healing: `type: "heal"` with formula
+- Resource: `type: "mana-restore"` with formula
+
+---
+
+### Fighter Action Abilities
+
+#### Charge
 ```yaml
-- id: "fireball-001"
-  name: "Fireball"
-  description: "Hurl a ball of flame at an enemy dealing magical damage"
+- id: "charge-001"
+  name: "Charge"
+  description: "Deals damage to an adjacent unit and has a chance to knock them back (never misses)"
+  abilityType: "Action"
+  experiencePrice: 50
+  tags: ["physical", "melee", "knockback", "auto-hit"]
+  range: "1-1"  # Adjacent only
+  effects:
+    - type: "damage-physical"
+      target: "target"
+      value: "PPower * 1.0"
+      params:
+        autoHit: true
+    - type: "knockback"
+      target: "target"
+      value: 1
+      chance: 0.5
+```
+
+#### Bash
+```yaml
+- id: "bash-001"
+  name: "Bash"
+  description: "Bash an enemy with your shield interrupting their current action (requires shield equipped)"
+  abilityType: "Action"
+  experiencePrice: 100
+  tags: ["physical", "melee", "interrupt", "shield-required"]
+  requirements:
+    equipment: ["shield"]
+  range: "1-1"  # Adjacent only
+  effects:
+    - type: "damage-physical"
+      target: "target"
+      value: "PPower * 0.8"
+    - type: "interrupt"
+      target: "target"
+```
+
+#### Head Strike
+```yaml
+- id: "head-strike-001"
+  name: "Head Strike"
+  description: "Aim for an enemy's head dealing damage and has a chance to inflict confusion"
   abilityType: "Action"
   experiencePrice: 300
-  tags:
-    - "magic"
-    - "damage"
-    - "ranged"
-    - "fire"
-  costs:
-    - type: "mana"
-      amount: 10
-  targeting:
-    minRange: 2
-    maxRange: 6
-    requiresLineOfSight: true
-    validTargets:
-      - "enemy"
+  tags: ["physical", "weapon-range", "confusion"]
+  range: "weapon"  # Uses equipped weapon's range
   effects:
-    - type: "damage-magical"
+    - type: "damage-physical"
       target: "target"
-      value: "MPower * 1.5"  # Formula: uses caster's Magic Power
+      value: "PPower * 1.2"
+    - type: "status-apply"
+      target: "target"
+      chance: 0.3
+      duration: 3
+      params:
+        status: "confusion"
 ```
 
-### Example: Buff Action
+#### Body Strike
 ```yaml
-- id: "strength-001"
-  name: "Strength"
-  description: "Increases a unit's Physical Power by 6"
+- id: "body-strike-001"
+  name: "Body Strike"
+  description: "Aim for an enemy's body dealing damage and has a chance to stun them"
+  abilityType: "Action"
+  experiencePrice: 500
+  tags: ["physical", "weapon-range", "stun"]
+  range: "weapon"  # Uses equipped weapon's range
+  effects:
+    - type: "damage-physical"
+      target: "target"
+      value: "PPower * 1.0"
+    - type: "status-apply"
+      target: "target"
+      chance: 0.4
+      duration: 2
+      params:
+        status: "stun"
+```
+
+#### Leg Strike
+```yaml
+- id: "leg-strike-001"
+  name: "Leg Strike"
+  description: "Aim for an enemy's leg dealing damage and has a chance to reduce their Speed"
   abilityType: "Action"
   experiencePrice: 200
-  tags:
-    - "magic"
-    - "buff"
-    - "support"
-  costs:
-    - type: "mana"
-      amount: 6
-  targeting:
-    minRange: 0
-    maxRange: 3
-    requiresLineOfSight: false
-    validTargets:
-      - "ally"
-      - "self"
+  tags: ["physical", "weapon-range", "slow"]
+  range: "weapon"  # Uses equipped weapon's range
   effects:
-    - type: "stat-bonus"
+    - type: "damage-physical"
       target: "target"
-      value: 6
-      duration: 5  # 5 turns
+      value: "PPower * 0.9"
+    - type: "stat-penalty"
+      target: "target"
+      value: -3
+      duration: 3
+      chance: 0.5
       params:
-        stat: "physicalPower"
+        stat: "speed"
 ```
 
-### Example: Passive Stat Boost
+---
+
+### Fighter Reaction Abilities
+
+#### Parry
+```yaml
+- id: "parry-001"
+  name: "Parry"
+  description: "Increases your physical evasion based on your weapon"
+  abilityType: "Reaction"
+  experiencePrice: 500
+  tags: ["defensive", "evasion"]
+  effects:
+    - type: "stat-bonus"
+      target: "self"
+      value: "weaponPhysicalEvade"
+      params:
+        trigger: "before-physical-attack"
+        stat: "physicalEvade"
+```
+
+---
+
+### Fighter Passive Abilities
+
+#### Meat Shield
 ```yaml
 - id: "meat-shield-001"
   name: "Meat Shield"
   description: "Increases HP by 50"
   abilityType: "Passive"
   experiencePrice: 500
-  tags:
-    - "defensive"
-    - "health"
-    - "fighter"
+  tags: ["defensive", "health"]
   effects:
     - type: "stat-permanent"
       target: "self"
@@ -1253,44 +1352,588 @@ static fromJSON(json: HumanoidUnitJSON): HumanoidUnit | null
         stat: "maxHealth"
 ```
 
-### Example: Movement Ability
+#### Shield Bearer
 ```yaml
-- id: "meditate-001"
-  name: "Meditate"
-  description: "When this unit does not move, they gain 10% of their mana"
-  abilityType: "Movement"
-  experiencePrice: 200
-  tags:
-    - "mana"
-    - "regeneration"
-    - "apprentice"
+- id: "shield-bearer-001"
+  name: "Shield Bearer"
+  description: "Allows user to equip shield even if their class does not permit it"
+  abilityType: "Passive"
+  experiencePrice: 300
+  tags: ["equipment", "shield"]
   effects:
-    - type: "mana-restore"
+    - type: "equipment-permission"
       target: "self"
-      value: "maxMana * 0.1"  # 10% of max mana
       params:
-        condition: "no-movement"  # Only triggers if unit didn't move
+        equipmentType: "shield"
 ```
 
-### Example: Reaction Ability
+---
+
+### Fighter Movement Abilities
+
+#### Journeyman
+```yaml
+- id: "journeyman-001"
+  name: "Journeyman"
+  description: "Gain XP for every step you take"
+  abilityType: "Movement"
+  experiencePrice: 250
+  tags: ["experience", "passive-gain"]
+  effects:
+    - type: "experience-gain"
+      target: "self"
+      value: 1
+      params:
+        condition: "per-tile-moved"
+```
+
+---
+
+### Rogue Action Abilities
+
+#### Throw Stone
+```yaml
+- id: "throw-stone-001"
+  name: "Throw Stone"
+  description: "Basic ranged attack"
+  abilityType: "Action"
+  experiencePrice: 50
+  tags: ["physical", "ranged"]
+  range: "2-6"  # Ranged attack
+  effects:
+    - type: "damage-physical"
+      target: "target"
+      value: "PPower * 0.5"
+```
+
+#### Sneak
+```yaml
+- id: "sneak-001"
+  name: "Sneak"
+  description: "Take a move action ignoring enemies"
+  abilityType: "Action"
+  experiencePrice: 100
+  tags: ["movement", "stealth"]
+  effects:
+    - type: "movement-bonus"
+      target: "self"
+      value: "movement"
+      params:
+        ignoreEnemies: true
+```
+
+#### Cut
+```yaml
+- id: "cut-001"
+  name: "Cut"
+  description: "Deal damage and has a chance to cause Bleeding"
+  abilityType: "Action"
+  experiencePrice: 200
+  tags: ["physical", "weapon-range", "bleeding"]
+  range: "weapon"  # Uses equipped weapon's range
+  effects:
+    - type: "damage-physical"
+      target: "target"
+      value: "PPower * 1.0"
+    - type: "status-apply"
+      target: "target"
+      chance: 0.4
+      duration: 3
+      params:
+        status: "bleeding"
+        damagePerTurn: 5
+```
+
+#### Pocket Sand
+```yaml
+- id: "pocket-sand-001"
+  name: "Pocket Sand"
+  description: "Throw sand in an enemy's eyes causing Blindness"
+  abilityType: "Action"
+  experiencePrice: 200
+  tags: ["special", "ranged", "blindness"]
+  range: "1-2"  # Close range attack
+  effects:
+    - type: "status-apply"
+      target: "target"
+      duration: 2
+      params:
+        status: "blindness"
+```
+
+#### Sneak Attack
+```yaml
+- id: "sneak-attack-001"
+  name: "Sneak Attack"
+  description: "Attack from behind (never misses if enemy is facing away, otherwise automatic miss)"
+  abilityType: "Action"
+  experiencePrice: 500
+  tags: ["physical", "weapon-range", "backstab", "conditional"]
+  range: "weapon"  # Uses equipped weapon's range
+  effects:
+    - type: "damage-physical"
+      target: "target"
+      value: "PPower * 2.0"
+      params:
+        requiresFacingAway: true
+        autoHit: true
+```
+
+#### Disarm
+```yaml
+- id: "disarm-001"
+  name: "Disarm"
+  description: "Chance to disarm the target"
+  abilityType: "Action"
+  experiencePrice: 400
+  tags: ["physical", "weapon-range", "disarm"]
+  range: "weapon"  # Uses equipped weapon's range
+  effects:
+    - type: "disarm"
+      target: "target"
+      chance: 0.5
+      duration: 2
+```
+
+---
+
+### Rogue Reaction Abilities
+
+#### Slippery
+```yaml
+- id: "slippery-001"
+  name: "Slippery"
+  description: "After taking damage, gain Haste"
+  abilityType: "Reaction"
+  experiencePrice: 500
+  tags: ["defensive", "haste"]
+  effects:
+    - type: "status-apply"
+      target: "self"
+      duration: 2
+      params:
+        trigger: "after-taking-damage"
+        status: "haste"
+```
+
+#### Repost
 ```yaml
 - id: "repost-001"
   name: "Repost"
   description: "After being attacked, perform an attack on the enemy"
   abilityType: "Reaction"
   experiencePrice: 250
-  tags:
-    - "offensive"
-    - "counter"
-    - "rogue"
+  tags: ["offensive", "counter"]
   effects:
     - type: "damage-physical"
-      target: "target"  # The attacker who triggered this reaction
+      target: "attacker"
       value: "PPower * 1.0"
       params:
         trigger: "after-being-attacked"
-        requiresRange: true  # Only counter if attacker is in melee range
+        requiresWeaponRange: true
 ```
+
+---
+
+### Rogue Passive Abilities
+
+#### Fast
+```yaml
+- id: "fast-001"
+  name: "Fast"
+  description: "+3 Speed"
+  abilityType: "Passive"
+  experiencePrice: 400
+  tags: ["speed"]
+  effects:
+    - type: "stat-permanent"
+      target: "self"
+      value: 3
+      params:
+        stat: "speed"
+```
+
+#### Ready
+```yaml
+- id: "ready-001"
+  name: "Ready"
+  description: "Start combat with your action timer set to 50"
+  abilityType: "Passive"
+  experiencePrice: 300
+  tags: ["initiative"]
+  effects:
+    - type: "action-timer-modify"
+      target: "self"
+      value: 50
+      params:
+        timing: "combat-start"
+```
+
+#### Dodge
+```yaml
+- id: "dodge-001"
+  name: "Dodge"
+  description: "Increases Physical Evasion"
+  abilityType: "Passive"
+  experiencePrice: 500
+  tags: ["defensive", "evasion"]
+  effects:
+    - type: "stat-permanent"
+      target: "self"
+      value: 10
+      params:
+        stat: "physicalEvade"
+```
+
+---
+
+### Rogue Movement Abilities
+
+#### Extra Movement
+```yaml
+- id: "extra-movement-001"
+  name: "+1 Movement"
+  description: "Increases movement by 1"
+  abilityType: "Movement"
+  experiencePrice: 200
+  tags: ["movement"]
+  effects:
+    - type: "stat-permanent"
+      target: "self"
+      value: 1
+      params:
+        stat: "movement"
+```
+
+---
+
+### Apprentice Support Actions
+
+#### Heal
+```yaml
+- id: "heal-001"
+  name: "Heal"
+  description: "Heals a unit (6 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 100
+  tags: ["magic", "healing", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 6
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: false
+    validTargets: ["ally", "self"]
+  effects:
+    - type: "heal"
+      target: "target"
+      value: "MPower + Attunement"
+```
+
+#### Minor Shield
+```yaml
+- id: "minor-shield-001"
+  name: "Minor Shield"
+  description: "Grants a minor shield to a unit that absorbs up to 20 damage from the next attack"
+  abilityType: "Action"
+  experiencePrice: 200
+  tags: ["magic", "buff", "shield", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 6
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: false
+    validTargets: ["ally", "self"]
+  effects:
+    - type: "shield-absorb"
+      target: "target"
+      value: 20
+      duration: 0
+      params:
+        oneTime: true
+```
+
+#### Strength
+```yaml
+- id: "strength-001"
+  name: "Strength"
+  description: "Increases a unit's Physical Power (6 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 200
+  tags: ["magic", "buff", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 6
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: false
+    validTargets: ["ally", "self"]
+  effects:
+    - type: "stat-bonus"
+      target: "target"
+      value: 6
+      duration: 5
+      params:
+        stat: "physicalPower"
+```
+
+#### Reflexes
+```yaml
+- id: "reflexes-001"
+  name: "Reflexes"
+  description: "Increases a unit's Physical and Magical Evasion (10 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 400
+  tags: ["magic", "buff", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 10
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: false
+    validTargets: ["ally", "self"]
+  effects:
+    - type: "stat-bonus"
+      target: "target"
+      value: 10
+      duration: 5
+      params:
+        stat: "physicalEvade"
+    - type: "stat-bonus"
+      target: "target"
+      value: 10
+      duration: 5
+      params:
+        stat: "magicEvade"
+```
+
+---
+
+### Apprentice Offensive Actions
+
+#### Harm
+```yaml
+- id: "harm-001"
+  name: "Harm"
+  description: "Harms a unit (6 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 100
+  tags: ["magic", "damage", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 6
+  range: "los"  # Line of sight attack
+  effects:
+    - type: "damage-magical"
+      target: "target"
+      value: "MPower + Attunement"
+```
+
+#### Weakness
+```yaml
+- id: "weakness-001"
+  name: "Weakness"
+  description: "Decreases a unit's Physical Power (6 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 200
+  tags: ["magic", "debuff", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 6
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: false
+    validTargets: ["enemy"]
+  effects:
+    - type: "stat-penalty"
+      target: "target"
+      value: -6
+      duration: 5
+      params:
+        stat: "physicalPower"
+```
+
+#### Sluggish
+```yaml
+- id: "sluggish-001"
+  name: "Sluggish"
+  description: "Decreases a unit's Speed (10 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 300
+  tags: ["magic", "debuff", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 10
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: false
+    validTargets: ["enemy"]
+  effects:
+    - type: "stat-penalty"
+      target: "target"
+      value: -5
+      duration: 5
+      params:
+        stat: "speed"
+```
+
+#### Mesmerize
+```yaml
+- id: "mesmerize-001"
+  name: "Mesmerize"
+  description: "Mesmerizes a unit resetting its Action Timer (10 mana, range 3, single target)"
+  abilityType: "Action"
+  experiencePrice: 500
+  tags: ["magic", "control", "ranged"]
+  costs:
+    - type: "mana"
+      amount: 10
+  targeting:
+    minRange: 0
+    maxRange: 3
+    requiresLineOfSight: true
+    validTargets: ["enemy"]
+  effects:
+    - type: "action-timer-modify"
+      target: "target"
+      value: -100
+```
+
+---
+
+### Apprentice Reaction Abilities
+
+#### Quick Shield
+```yaml
+- id: "quick-shield-001"
+  name: "Quick Shield"
+  description: "Before taking physical damage, casts Minor Shield to absorb the blow (uses MP)"
+  abilityType: "Reaction"
+  experiencePrice: 200
+  tags: ["magic", "defensive", "shield"]
+  costs:
+    - type: "mana"
+      amount: 6
+  effects:
+    - type: "shield-absorb"
+      target: "self"
+      value: 20
+      params:
+        trigger: "before-physical-damage"
+        oneTime: true
+```
+
+---
+
+### Apprentice Passive Abilities
+
+#### Focused
+```yaml
+- id: "focused-001"
+  name: "Focused"
+  description: "Increases MP by 50"
+  abilityType: "Passive"
+  experiencePrice: 500
+  tags: ["mana"]
+  effects:
+    - type: "stat-permanent"
+      target: "self"
+      value: 50
+      params:
+        stat: "maxMana"
+```
+
+#### Mana Shield
+```yaml
+- id: "mana-shield-001"
+  name: "Mana Shield"
+  description: "Damage is dealt to Mana rather than Health"
+  abilityType: "Passive"
+  experiencePrice: 500
+  tags: ["mana", "defensive"]
+  effects:
+    - type: "damage-redirect"
+      target: "self"
+      params:
+        from: "health"
+        to: "mana"
+```
+
+---
+
+### Apprentice Movement Abilities
+
+#### Meditate
+```yaml
+- id: "meditate-001"
+  name: "Meditate"
+  description: "When this unit does not move, they gain 10% of their mana"
+  abilityType: "Movement"
+  experiencePrice: 200
+  tags: ["mana", "regeneration"]
+  effects:
+    - type: "mana-restore"
+      target: "self"
+      value: "maxMana * 0.1"
+      params:
+        condition: "no-movement"
+```
+
+---
+
+## Consolidated Parameter Reference
+
+### Common `params` Fields
+
+**Stat Modifiers:**
+- `stat: "statName"` - Which stat to modify (maxHealth, speed, physicalPower, etc.)
+
+**Triggers (Reactions):**
+- `trigger: "after-being-attacked"` - After unit is attacked
+- `trigger: "before-physical-damage"` - Before taking physical damage
+- `trigger: "after-taking-damage"` - After taking any damage
+
+**Conditions (Movement):**
+- `condition: "no-movement"` - Only if unit didn't move
+- `condition: "per-tile-moved"` - Per tile traveled
+
+**Special Behaviors:**
+- `autoHit: true` - Never misses
+- `requiresFacingAway: true` - Only works if target facing away
+- `requiresWeaponRange: true` - Only if attacker in weapon range
+- `oneTime: true` - Effect expires after one use
+- `ignoreEnemies: true` - Movement ignores enemy zones
+
+**Status Effects:**
+- `status: "statusName"` - Which status to apply (stun, haste, bleeding, etc.)
+- `damagePerTurn: N` - For damage-over-time effects
+
+**Equipment:**
+- `equipmentType: "typeName"` - Shield, weapon, armor, etc.
+
+### Range Usage Summary
+
+**Attack Abilities by Range Type:**
+
+| Range Type | Abilities |
+|-----------|-----------|
+| `"1-1"` (Adjacent) | Charge, Bash |
+| `"1-2"` (Close) | Pocket Sand |
+| `"2-6"` (Ranged) | Throw Stone |
+| `"weapon"` (Weapon Range) | Head Strike, Body Strike, Leg Strike, Cut, Sneak Attack, Disarm |
+| `"los"` (Line of Sight) | Harm |
+
+**Non-Attack Abilities** (use `targeting` object):
+- Heal, Minor Shield, Strength, Reflexes (buff allies)
+- Weakness, Sluggish, Mesmerize (debuff enemies)
+- All require specific `validTargets` validation (ally vs enemy)
 
 ## Edge Cases and Considerations
 
