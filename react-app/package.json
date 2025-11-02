@@ -8,6 +8,7 @@
     "dev:font-tool": "vite --open /font-tool.html",
     "build": "tsc -b && vite build",
     "build:font-tool": "npm run build && node scripts/extract-font-tool.js",
+    "deploy": "npm run build && node scripts/deploy-to-itch.js",
     "deploy:font-tool": "npm run build:font-tool && node scripts/deploy-font-tool.js",
     "lint": "eslint .",
     "preview": "vite preview",
