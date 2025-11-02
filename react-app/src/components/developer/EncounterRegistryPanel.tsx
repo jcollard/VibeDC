@@ -599,20 +599,20 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
     setTestingEncounter(selectedEncounter);
   };
 
-  const handleGenerateEncounter = () => {
+  const handleGenerateEncounter = async () => {
     try {
-      // Random dimensions between 10x8 and 21x13
-      const width = Math.floor(Math.random() * (21 - 10 + 1)) + 10;
-      const height = Math.floor(Math.random() * (13 - 8 + 1)) + 8;
+      // Fixed dimensions for consistency (21x13 like random encounters)
+      const width = 21;
+      const height = 13;
 
-      // Generate dungeon
+      // Generate dungeon with focus on small rooms
       const generator = new DungeonGenerator({
         width,
         height,
-        roomAttempts: Math.floor(Math.random() * 20) + 30, // 30-50 attempts
-        minRoomSize: 3,
-        maxRoomSize: 7,
-        extraConnections: true,
+        roomAttempts: 50, // More attempts for better room placement
+        minRoomSize: 3,   // Minimum 3x3 rooms
+        maxRoomSize: 5,   // Maximum 5x5 rooms (focused on smaller rooms)
+        extraConnections: false, // Sequential connections only
       });
 
       const { grid, rooms } = generator.generate();
@@ -678,20 +678,19 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
         }
       }
 
-      // Place 2-8 random enemies
+      // Place 2-8 random procedurally generated enemies with loot
       const enemyCount = Math.floor(Math.random() * 7) + 2; // 2 to 8
       const enemyPlacements: EnemyPlacement[] = [];
-      const allEnemyIds = EnemyRegistry.getAllIds();
-
-      if (allEnemyIds.length === 0) {
-        alert('Failed to generate encounter: No enemies found in registry');
-        return;
-      }
 
       // Filter walkable tiles to exclude deployment zones
       const availableForEnemies = walkableTiles.filter(tile =>
         !deploymentZones.some(z => z.x === tile.x && z.y === tile.y)
       );
+
+      // Import the random generation utilities
+      const { generateRandomEnemy } = await import('../../models/area/actions/RandomEnemyGenerator');
+      const { generateRandomLootTable } = await import('../../models/area/actions/RandomLootGenerator');
+      const { EquipmentRegistry } = await import('../../utils/EquipmentRegistry');
 
       for (let i = 0; i < enemyCount && availableForEnemies.length > 0; i++) {
         // Pick a random position
@@ -699,11 +698,20 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
         const position = availableForEnemies[randomIndex];
         availableForEnemies.splice(randomIndex, 1); // Remove from available
 
-        // Pick a random enemy
-        const enemyId = allEnemyIds[Math.floor(Math.random() * allEnemyIds.length)];
+        // Generate random loot table with 20% drop rate for this enemy
+        const { lootTable, equipmentDef } = generateRandomLootTable();
+
+        // Register the generated equipment so it can be used when dropped
+        EquipmentRegistry.register(equipmentDef);
+
+        // Generate a new random enemy with loot table
+        const enemy = generateRandomEnemy(undefined, lootTable);
+
+        // Register the generated enemy so it can be used in combat
+        EnemyRegistry.register(enemy);
 
         enemyPlacements.push({
-          enemyId,
+          enemyId: enemy.id,
           position,
         });
       }
@@ -720,7 +728,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
       const encounterData = {
         id: encounterId,
         name: `Generated Encounter ${counter > 1 ? counter - 1 : ''}`,
-        description: `A randomly generated ${width}x${height} dungeon with ${enemyCount} enemies.`,
+        description: `A procedurally generated dungeon with ${rooms.length} small chambers and ${enemyCount} procedural enemies with loot.`,
         map: {
           tilesetId: selectedTilesetId,
           grid: asciiMap,
@@ -750,7 +758,7 @@ export const EncounterRegistryPanel: React.FC<EncounterRegistryPanelProps> = ({ 
       // Select the newly created encounter
       setSelectedEncounter(newEncounter);
 
-      console.log(`Generated encounter: ${encounterId} (${width}x${height}, ${enemyCount} enemies, ${deploymentZones.length} deployment zones)`);
+      console.log(`Generated encounter: ${encounterId} (${width}x${height}, ${rooms.length} rooms, ${enemyCount} procedural enemies with loot, ${deploymentZones.length} deployment zones)`);
     } catch (error) {
       console.error('Failed to generate encounter:', error);
       alert(`Failed to generate encounter: ${error}`);

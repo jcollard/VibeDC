@@ -28,6 +28,13 @@ export class GenerateRandomEncounter implements EventAction {
 
   execute(state: GameState): GameState {
     try {
+      // 10% chance to trigger random encounter
+      const triggerChance = Math.random();
+      if (triggerChance > 0.1) {
+        // 90% of the time, do nothing
+        return state;
+      }
+
       // Fixed dimensions for consistency
       const width = 21;
       const height = 13;
