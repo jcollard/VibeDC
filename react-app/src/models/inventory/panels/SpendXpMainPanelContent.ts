@@ -79,29 +79,11 @@ export class SpendXpMainPanelContent implements PanelContent {
     const padding = 4;
     const lineSpacing = 8;
     const dividerWidth = 12; // Width of the divider sprite
-    const headerText = 'Available Classes';
+    const classesHeaderText = 'Classes';
+    const xpHeaderText = 'XP';
 
-    // Calculate left column width based on widest class name plus space for XP
-    let maxClassNameWidth = FontAtlasRenderer.measureTextByFontId(headerText, fontId);
-    let maxXpWidth = 0;
-
-    for (const cls of this.playerClasses) {
-      const classNameWidth = FontAtlasRenderer.measureTextByFontId(cls.name, fontId);
-      if (classNameWidth > maxClassNameWidth) {
-        maxClassNameWidth = classNameWidth;
-      }
-
-      const xp = this.getUnspentXp(cls);
-      const xpText = `${xp}`;
-      const xpWidth = FontAtlasRenderer.measureTextByFontId(xpText, fontId);
-      if (xpWidth > maxXpWidth) {
-        maxXpWidth = xpWidth;
-      }
-    }
-
-    // Left column width: class name + gap + XP number + padding
-    const xpGap = 8; // Gap between class name and XP number
-    const leftColumnWidth = maxClassNameWidth + xpGap + maxXpWidth + 4;
+    // Left column width is fixed to the width of "Available Classes" plus 12px (for backward compatibility)
+    const leftColumnWidth = FontAtlasRenderer.measureTextByFontId('Available Classes', fontId) + 12;
 
     // Column positions
     const leftX = region.x + padding;
@@ -109,11 +91,26 @@ export class SpendXpMainPanelContent implements PanelContent {
     const rightX = dividerX + dividerWidth;
     let currentY = region.y + padding;
 
-    // Render "Available Classes" header in dark orange
+    // Render "Classes" header in dark orange (left-aligned)
     FontAtlasRenderer.renderText(
       ctx,
-      headerText,
+      classesHeaderText,
       leftX,
+      currentY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      HEADER_COLOR
+    );
+
+    // Render "XP" header in dark orange (right-aligned)
+    const xpHeaderWidth = FontAtlasRenderer.measureTextByFontId(xpHeaderText, fontId);
+    const xpHeaderX = dividerX - xpHeaderWidth - 4; // 4px padding before divider
+    FontAtlasRenderer.renderText(
+      ctx,
+      xpHeaderText,
+      xpHeaderX,
       currentY,
       fontId,
       fontAtlasImage,
@@ -205,20 +202,82 @@ export class SpendXpMainPanelContent implements PanelContent {
       }
     }
 
-    // Right column: Abilities (stub for now)
+    // Right column: Abilities
     const rightColumnY = region.y + padding;
-    const stubText = 'Abilities Coming Soon';
-    FontAtlasRenderer.renderText(
-      ctx,
-      stubText,
-      rightX,
-      rightColumnY,
-      fontId,
-      fontAtlasImage,
-      1,
-      'left',
-      '#888888'
-    );
+
+    // Get the selected class
+    const selectedClass = UnitClass.getById(this.selectedClassId);
+
+    if (selectedClass) {
+      // Render abilities header with class name
+      const abilitiesHeaderText = `${selectedClass.name} Abilities`;
+      FontAtlasRenderer.renderText(
+        ctx,
+        abilitiesHeaderText,
+        rightX,
+        rightColumnY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        HEADER_COLOR
+      );
+
+      // Render "XP Cost" header (right-aligned)
+      const xpCostHeaderText = 'XP Cost';
+      const xpCostHeaderWidth = FontAtlasRenderer.measureTextByFontId(xpCostHeaderText, fontId);
+      const xpCostHeaderX = region.x + region.width - padding - xpCostHeaderWidth;
+      FontAtlasRenderer.renderText(
+        ctx,
+        xpCostHeaderText,
+        xpCostHeaderX,
+        rightColumnY,
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        HEADER_COLOR
+      );
+
+      let abilityY = rightColumnY + lineSpacing + 2;
+
+      // Render each learnable ability
+      for (const ability of selectedClass.learnableAbilities) {
+        const isLearned = this.unit.learnedAbilities.has(ability);
+
+        // Render ability name
+        FontAtlasRenderer.renderText(
+          ctx,
+          ability.name,
+          rightX,
+          abilityY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          '#ffffff'
+        );
+
+        // Render cost or "Learned" label (right-aligned)
+        const costText = isLearned ? 'Learned' : `${ability.experiencePrice}`;
+        const costWidth = FontAtlasRenderer.measureTextByFontId(costText, fontId);
+        const costX = region.x + region.width - padding - costWidth;
+
+        FontAtlasRenderer.renderText(
+          ctx,
+          costText,
+          costX,
+          abilityY,
+          fontId,
+          fontAtlasImage,
+          1,
+          'left',
+          isLearned ? '#888888' : '#ffffff'
+        );
+
+        abilityY += lineSpacing;
+      }
+    }
 
     ctx.restore();
   }
