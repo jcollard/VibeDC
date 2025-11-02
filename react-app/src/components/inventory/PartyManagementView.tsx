@@ -277,6 +277,9 @@ export const PartyManagementView: React.FC = () => {
   // Spend XP panel content (created when needed)
   const spendXpMainContentRef = useRef<SpendXpMainPanelContent | null>(null);
 
+  // Cache the selected party member to avoid recreating it every frame
+  const selectedMemberRef = useRef<CombatUnit | null>(null);
+
   // Initialize panel content
   useEffect(() => {
     // Bottom panel: Item details (initially empty)
@@ -623,14 +626,29 @@ export const PartyManagementView: React.FC = () => {
     if (!isDebugLogOnly) {
       // Check if we're in spend-xp mode
       if (panelMode === 'spend-xp') {
-        // Get current party member
+        // Get current party member - only create if not cached or if selected index changed
         const partyMemberConfigs = PartyMemberRegistry.getAll();
         const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
-        const selectedMember = selectedMemberConfig ? PartyMemberRegistry.createPartyMember(selectedMemberConfig.id) : null;
+
+        // Check if we need to create a new member instance
+        if (!selectedMemberRef.current ||
+            !selectedMemberConfig ||
+            selectedMemberRef.current.name !== selectedMemberConfig.name) {
+          if (selectedMemberConfig) {
+            const newMember = PartyMemberRegistry.createPartyMember(selectedMemberConfig.id);
+            selectedMemberRef.current = newMember ?? null;
+          } else {
+            selectedMemberRef.current = null;
+          }
+          // Clear spend-xp content to force recreation with new member
+          spendXpMainContentRef.current = null;
+        }
+
+        const selectedMember = selectedMemberRef.current;
 
         if (selectedMember) {
-          // Create or reuse spend-xp main content
-          if (!spendXpMainContentRef.current || (spendXpMainContentRef.current as any).unit !== selectedMember) {
+          // Create spend-xp main content only if not already created
+          if (!spendXpMainContentRef.current) {
             spendXpMainContentRef.current = new SpendXpMainPanelContent(selectedMember);
           }
 
@@ -1176,7 +1194,7 @@ export const PartyManagementView: React.FC = () => {
         renderFrame();
       }
     },
-    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, layoutManager, topInfoPanelManager, bottomPanelManager]
+    [viewState, mainPanelBounds, renderer, currentPageItems, totalPages, renderFrame, layoutManager, topInfoPanelManager, bottomPanelManager, panelMode]
   );
 
   // Handle mouse click
@@ -1229,6 +1247,7 @@ export const PartyManagementView: React.FC = () => {
 
           if (topInfoClickResult.type === 'party-member' && 'index' in topInfoClickResult) {
             // Clear the spend-xp content to force recreation with new unit
+            selectedMemberRef.current = null;
             spendXpMainContentRef.current = null;
             renderFrame();
             return;
