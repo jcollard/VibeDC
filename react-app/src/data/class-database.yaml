@@ -149,3 +149,299 @@ classes:
     tags:
       - "monster"
 
+  # ============================================================================
+  # TIER 2 CLASSES - PURE ADVANCEMENT
+  # ============================================================================
+
+  - id: "knight"
+    name: "Knight"
+    description: "Elite warrior specializing in heavy armor and defensive tactics. Masters of battlefield control and protection."
+    tags:
+      - "melee"
+      - "physical"
+      - "tank"
+      - "defensive"
+      - "player"
+      - "tier-2"
+    requirements:
+      fighter: 500
+    learnableAbilities:
+      - "shield-wall-001"
+      - "fortified-001"
+      - "guardians-stance-001"
+      - "stalwart-001"
+      - "defenders-march-001"
+      - "rally-001"
+      - "iron-will-001"
+      - "last-stand-001"
+    modifiers:
+      health: 40
+      physicalPower: 3
+      physicalEvade: -2
+      courage: 2
+    multipliers:
+      health: 1.3
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "heavy-weapon"
+      - "light-armor"
+      - "medium-armor"
+      - "heavy-armor"
+      - "shield"
+    starterConfig:
+      baseHealth: 60
+      baseMana: 5
+      basePhysicalPower: 12
+      baseMagicPower: 5
+      baseSpeed: 7
+      baseMovement: 3
+      basePhysicalEvade: 8
+      baseMagicEvade: 7
+      baseCourage: 15
+      baseAttunement: 6
+      rightHandId: "iron-sword-001"
+      leftHandId: "wooden-shield-001"
+      bodyId: "leather-armor-001"
+
+  - id: "assassin"
+    name: "Assassin"
+    description: "Master of stealth and precision strikes. Specializes in burst damage and evasion."
+    tags:
+      - "melee"
+      - "agile"
+      - "stealth"
+      - "player"
+      - "tier-2"
+    requirements:
+      rogue: 500
+    learnableAbilities:
+      - "shadow-step-001"
+      - "critical-eye-001"
+      - "evasive-maneuvers-001"
+      - "prey-tracker-001"
+      - "vanishing-act-001"
+      - "deadly-precision-001"
+      - "acrobat-001"
+      - "opportunist-001"
+    modifiers:
+      speed: 3
+      movement: 1
+      physicalPower: 2
+      physicalEvade: 15
+      magicEvade: 10
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "light-armor"
+      - "medium-armor"
+    starterConfig:
+      baseHealth: 35
+      baseMana: 20
+      basePhysicalPower: 10
+      baseMagicPower: 7
+      baseSpeed: 15
+      baseMovement: 6
+      basePhysicalEvade: 20
+      baseMagicEvade: 12
+      baseCourage: 10
+      baseAttunement: 10
+      rightHandId: "steel-dagger-001"
+      bodyId: "leather-armor-001"
+
+  - id: "wizard"
+    name: "Wizard"
+    description: "Powerful spellcaster with advanced magical abilities. Masters of both offensive and supportive magic."
+    tags:
+      - "ranged"
+      - "magic"
+      - "caster"
+      - "support"
+      - "player"
+      - "tier-2"
+    requirements:
+      apprentice: 500
+    learnableAbilities:
+      - "arcane-focus-001"
+      - "spell-mastery-001"
+      - "mana-surge-001"
+      - "mystic-barrier-001"
+      - "channeling-001"
+      - "arcane-momentum-001"
+      - "scholarly-001"
+      - "spell-reflection-001"
+    modifiers:
+      mana: 30
+      magicPower: 4
+      attunement: 3
+    multipliers:
+      mana: 1.35
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "light-armor"
+    starterConfig:
+      baseHealth: 30
+      baseMana: 50
+      basePhysicalPower: 5
+      baseMagicPower: 18
+      baseSpeed: 7
+      baseMovement: 3
+      basePhysicalEvade: 8
+      baseMagicEvade: 16
+      baseCourage: 8
+      baseAttunement: 18
+      rightHandId: "magic-staff-001"
+      bodyId: "wizards-robe-001"
+
+  # ============================================================================
+  # TIER 2 CLASSES - HYBRID
+  # ============================================================================
+
+  - id: "duelist"
+    name: "Duelist"
+    description: "Balanced warrior combining martial prowess with agility. Excels at one-on-one combat and mobility."
+    tags:
+      - "melee"
+      - "physical"
+      - "agile"
+      - "player"
+      - "tier-2"
+      - "hybrid"
+    requirements:
+      fighter: 250
+      rogue: 250
+    learnableAbilities:
+      - "riposte-master-001"
+      - "combat-flow-001"
+      - "dancing-blade-001"
+      - "deflect-001"
+      - "nimble-fighter-001"
+      - "strike-and-fade-001"
+      - "keen-reflexes-001"
+      - "exploit-weakness-001"
+    modifiers:
+      health: 15
+      speed: 2
+      physicalPower: 2
+      physicalEvade: 10
+      movement: 1
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "heavy-weapon"
+      - "light-armor"
+      - "medium-armor"
+    starterConfig:
+      baseHealth: 40
+      baseMana: 10
+      basePhysicalPower: 10
+      baseMagicPower: 6
+      baseSpeed: 11
+      baseMovement: 5
+      basePhysicalEvade: 15
+      baseMagicEvade: 9
+      baseCourage: 11
+      baseAttunement: 8
+      rightHandId: "iron-sword-001"
+      bodyId: "leather-armor-001"
+
+  - id: "spellblade"
+    name: "Spellblade"
+    description: "Warrior-mage hybrid combining melee combat with magic. Uses enchantments and combat spells."
+    tags:
+      - "melee"
+      - "magic"
+      - "hybrid"
+      - "player"
+      - "tier-2"
+    requirements:
+      fighter: 250
+      apprentice: 250
+    learnableAbilities:
+      - "arcane-strikes-001"
+      - "spell-guard-001"
+      - "battle-meditation-001"
+      - "mana-infusion-001"
+      - "arcane-recovery-001"
+      - "swift-caster-001"
+      - "resilient-caster-001"
+      - "retaliating-aura-001"
+    modifiers:
+      health: 20
+      mana: 15
+      physicalPower: 1
+      magicPower: 2
+    multipliers:
+      health: 1.1
+      mana: 1.1
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "heavy-weapon"
+      - "light-armor"
+      - "medium-armor"
+    starterConfig:
+      baseHealth: 40
+      baseMana: 25
+      basePhysicalPower: 9
+      baseMagicPower: 12
+      baseSpeed: 8
+      baseMovement: 4
+      basePhysicalEvade: 9
+      baseMagicEvade: 11
+      baseCourage: 10
+      baseAttunement: 12
+      rightHandId: "iron-sword-001"
+      bodyId: "leather-armor-001"
+
+  - id: "trickster"
+    name: "Trickster"
+    description: "Cunning spellcaster combining stealth with illusion magic. Masters of misdirection and debuffs."
+    tags:
+      - "ranged"
+      - "magic"
+      - "agile"
+      - "stealth"
+      - "player"
+      - "tier-2"
+      - "hybrid"
+    requirements:
+      rogue: 250
+      apprentice: 250
+    learnableAbilities:
+      - "illusionist-001"
+      - "mana-thief-001"
+      - "elusive-caster-001"
+      - "spell-dodge-001"
+      - "cunning-mind-001"
+      - "shadow-magic-001"
+      - "agile-spellcaster-001"
+      - "deceptive-strike-001"
+    modifiers:
+      mana: 20
+      speed: 2
+      magicPower: 2
+      physicalEvade: 10
+      magicEvade: 10
+      movement: 1
+    multipliers:
+      mana: 1.15
+    allowedEquipmentTypes:
+      - "light-weapon"
+      - "medium-weapon"
+      - "light-armor"
+    starterConfig:
+      baseHealth: 28
+      baseMana: 35
+      basePhysicalPower: 7
+      baseMagicPower: 12
+      baseSpeed: 10
+      baseMovement: 5
+      basePhysicalEvade: 15
+      baseMagicEvade: 13
+      baseCourage: 9
+      baseAttunement: 14
+      rightHandId: "steel-dagger-001"
+      bodyId: "wizards-robe-001"
+

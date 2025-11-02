@@ -572,3 +572,893 @@ abilities:
         duration: 2
         params:
           stat: "physicalPower"
+
+  # ============================================================================
+  # KNIGHT ABILITIES (Tier 2: Fighter -> Knight)
+  # ============================================================================
+
+  - id: "shield-wall-001"
+    name: "Shield Wall"
+    description: "+15 PhysicalEvade when shield equipped"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "defensive"
+      - "evasion"
+      - "shield"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 15
+        params:
+          stat: "physicalEvade"
+
+  - id: "fortified-001"
+    name: "Fortified"
+    description: "+20 MaxHealth, +2 Courage"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "health"
+      - "courage"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 20
+        params:
+          stat: "maxHealth"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "courage"
+
+  - id: "guardians-stance-001"
+    name: "Guardian's Stance"
+    description: "After being attacked, gain +10 PhysicalEvade for 2 turns"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "defensive"
+      - "protective"
+      - "after-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 10
+        duration: 2
+        params:
+          stat: "physicalEvade"
+
+  - id: "stalwart-001"
+    name: "Stalwart"
+    description: "Before being attacked, gain +15 PhysicalEvade for 1 turn"
+    abilityType: "Reaction"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "evasion"
+      - "before-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 15
+        duration: 1
+        params:
+          stat: "physicalEvade"
+
+  - id: "defenders-march-001"
+    name: "Defender's March"
+    description: "After moving, gain +3 PhysicalPower for 2 turns"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "buff"
+      - "after-move"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 3
+        duration: 2
+        params:
+          stat: "physicalPower"
+
+  - id: "rally-001"
+    name: "Rally"
+    description: "When not moving, restore 5% of your MaxHealth"
+    abilityType: "Movement"
+    experiencePrice: 350
+    tags:
+      - "healing"
+      - "regeneration"
+      - "after-no-move"
+    effects:
+      - type: "heal"
+        target: "self"
+        value: "5%"
+
+  - id: "iron-will-001"
+    name: "Iron Will"
+    description: "+5 Courage, +10 MagicEvade"
+    abilityType: "Passive"
+    experiencePrice: 500
+    tags:
+      - "defensive"
+      - "courage"
+      - "evasion"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 5
+        params:
+          stat: "courage"
+      - type: "stat-permanent"
+        target: "self"
+        value: 10
+        params:
+          stat: "magicEvade"
+
+  - id: "last-stand-001"
+    name: "Last Stand"
+    description: "After being attacked, gain +5 PhysicalPower for 3 turns"
+    abilityType: "Reaction"
+    experiencePrice: 500
+    tags:
+      - "offensive"
+      - "buff"
+      - "after-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 5
+        duration: 3
+        params:
+          stat: "physicalPower"
+
+  # ============================================================================
+  # ASSASSIN ABILITIES (Tier 2: Rogue -> Assassin)
+  # ============================================================================
+
+  - id: "shadow-step-001"
+    name: "Shadow Step"
+    description: "After moving, gain +10 PhysicalEvade and +10 MagicEvade for 1 turn"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "defensive"
+      - "evasion"
+      - "after-move"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 10
+        duration: 1
+        params:
+          stat: "physicalEvade"
+      - type: "stat-bonus"
+        target: "self"
+        value: 10
+        duration: 1
+        params:
+          stat: "magicEvade"
+
+  - id: "critical-eye-001"
+    name: "Critical Eye"
+    description: "+3 PhysicalPower, +2 Speed"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "offensive"
+      - "speed"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 3
+        params:
+          stat: "physicalPower"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "speed"
+
+  - id: "evasive-maneuvers-001"
+    name: "Evasive Maneuvers"
+    description: "After being attacked, gain +3 Speed for 2 turns"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "defensive"
+      - "speed"
+      - "after-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 3
+        duration: 2
+        params:
+          stat: "speed"
+
+  - id: "prey-tracker-001"
+    name: "Prey Tracker"
+    description: "+2 Movement, +2 PhysicalPower"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "offensive"
+      - "movement"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "movement"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "physicalPower"
+
+  - id: "vanishing-act-001"
+    name: "Vanishing Act"
+    description: "When not moving, gain +20 PhysicalEvade and +20 MagicEvade for 1 turn"
+    abilityType: "Movement"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "evasion"
+      - "after-no-move"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 20
+        duration: 1
+        params:
+          stat: "physicalEvade"
+      - type: "stat-bonus"
+        target: "self"
+        value: 20
+        duration: 1
+        params:
+          stat: "magicEvade"
+
+  - id: "deadly-precision-001"
+    name: "Deadly Precision"
+    description: "Before being attacked, gain +5 PhysicalPower for 1 turn"
+    abilityType: "Reaction"
+    experiencePrice: 500
+    tags:
+      - "offensive"
+      - "buff"
+      - "before-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 5
+        duration: 1
+        params:
+          stat: "physicalPower"
+
+  - id: "acrobat-001"
+    name: "Acrobat"
+    description: "+5 PhysicalEvade, +1 Movement"
+    abilityType: "Passive"
+    experiencePrice: 350
+    tags:
+      - "defensive"
+      - "evasion"
+      - "movement"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 5
+        params:
+          stat: "physicalEvade"
+      - type: "stat-permanent"
+        target: "self"
+        value: 1
+        params:
+          stat: "movement"
+
+  - id: "opportunist-001"
+    name: "Opportunist"
+    description: "After being attacked, gain +8 PhysicalPower for 2 turns"
+    abilityType: "Reaction"
+    experiencePrice: 450
+    tags:
+      - "offensive"
+      - "buff"
+      - "after-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 8
+        duration: 2
+        params:
+          stat: "physicalPower"
+
+  # ============================================================================
+  # WIZARD ABILITIES (Tier 2: Apprentice -> Wizard)
+  # ============================================================================
+
+  - id: "arcane-focus-001"
+    name: "Arcane Focus"
+    description: "+30 MaxMana, +2 MagicPower"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "mana"
+      - "magic"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 30
+        params:
+          stat: "maxMana"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "magicPower"
+
+  - id: "spell-mastery-001"
+    name: "Spell Mastery"
+    description: "+20 MaxMana, +3 Attunement"
+    abilityType: "Passive"
+    experiencePrice: 500
+    tags:
+      - "mana"
+      - "attunement"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 20
+        params:
+          stat: "maxMana"
+      - type: "stat-permanent"
+        target: "self"
+        value: 3
+        params:
+          stat: "attunement"
+
+  - id: "mana-surge-001"
+    name: "Mana Surge"
+    description: "After being attacked, restore 10% MaxMana"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "mana"
+      - "regeneration"
+      - "after-attacked"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: "10%"
+
+  - id: "mystic-barrier-001"
+    name: "Mystic Barrier"
+    description: "Before being attacked, gain +20 MagicEvade for 1 turn"
+    abilityType: "Reaction"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "magic"
+      - "evasion"
+      - "before-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 20
+        duration: 1
+        params:
+          stat: "magicEvade"
+
+  - id: "channeling-001"
+    name: "Channeling"
+    description: "When not moving, restore 15% MaxMana"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "mana"
+      - "regeneration"
+      - "after-no-move"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: "15%"
+
+  - id: "arcane-momentum-001"
+    name: "Arcane Momentum"
+    description: "After moving, restore 10 mana"
+    abilityType: "Movement"
+    experiencePrice: 350
+    tags:
+      - "mana"
+      - "regeneration"
+      - "after-move"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: 10
+
+  - id: "scholarly-001"
+    name: "Scholarly"
+    description: "+3 Attunement, +2 MagicPower"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "magic"
+      - "attunement"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 3
+        params:
+          stat: "attunement"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "magicPower"
+
+  - id: "spell-reflection-001"
+    name: "Spell Reflection"
+    description: "After being attacked, deal 10 magical damage to attacker"
+    abilityType: "Reaction"
+    experiencePrice: 500
+    tags:
+      - "offensive"
+      - "magic"
+      - "counter"
+      - "after-attacked"
+    effects:
+      - type: "damage-magical"
+        target: "enemy"
+        value: 10
+
+  # ============================================================================
+  # DUELIST ABILITIES (Tier 2: Fighter/Rogue Hybrid)
+  # ============================================================================
+
+  - id: "riposte-master-001"
+    name: "Riposte Master"
+    description: "After being attacked, counter-attack for 10 damage"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "offensive"
+      - "counter"
+      - "after-attacked"
+    effects:
+      - type: "damage-physical"
+        target: "enemy"
+        value: 10
+
+  - id: "combat-flow-001"
+    name: "Combat Flow"
+    description: "+2 Speed, +5 PhysicalEvade"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "speed"
+      - "evasion"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "speed"
+      - type: "stat-permanent"
+        target: "self"
+        value: 5
+        params:
+          stat: "physicalEvade"
+
+  - id: "dancing-blade-001"
+    name: "Dancing Blade"
+    description: "After moving 2+ tiles, gain +3 PhysicalPower for 2 turns"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "offensive"
+      - "buff"
+      - "after-move"
+      - "distance-threshold"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 3
+        duration: 2
+        params:
+          stat: "physicalPower"
+
+  - id: "deflect-001"
+    name: "Deflect"
+    description: "Before being attacked, gain +15 PhysicalEvade for 1 turn"
+    abilityType: "Reaction"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "evasion"
+      - "before-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 15
+        duration: 1
+        params:
+          stat: "physicalEvade"
+
+  - id: "nimble-fighter-001"
+    name: "Nimble Fighter"
+    description: "+1 Movement, +3 Speed"
+    abilityType: "Passive"
+    experiencePrice: 350
+    tags:
+      - "movement"
+      - "speed"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 1
+        params:
+          stat: "movement"
+      - type: "stat-permanent"
+        target: "self"
+        value: 3
+        params:
+          stat: "speed"
+
+  - id: "strike-and-fade-001"
+    name: "Strike and Fade"
+    description: "After not moving, gain +3 Speed for 2 turns"
+    abilityType: "Movement"
+    experiencePrice: 350
+    tags:
+      - "speed"
+      - "buff"
+      - "after-no-move"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 3
+        duration: 2
+        params:
+          stat: "speed"
+
+  - id: "keen-reflexes-001"
+    name: "Keen Reflexes"
+    description: "+10 PhysicalEvade, +5 MagicEvade"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "defensive"
+      - "evasion"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 10
+        params:
+          stat: "physicalEvade"
+      - type: "stat-permanent"
+        target: "self"
+        value: 5
+        params:
+          stat: "magicEvade"
+
+  - id: "exploit-weakness-001"
+    name: "Exploit Weakness"
+    description: "Before being attacked, gain +5 PhysicalPower for 2 turns"
+    abilityType: "Reaction"
+    experiencePrice: 450
+    tags:
+      - "offensive"
+      - "buff"
+      - "before-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 5
+        duration: 2
+        params:
+          stat: "physicalPower"
+
+  # ============================================================================
+  # SPELLBLADE ABILITIES (Tier 2: Fighter/Apprentice Hybrid)
+  # ============================================================================
+
+  - id: "arcane-strikes-001"
+    name: "Arcane Strikes"
+    description: "+2 PhysicalPower, +2 MagicPower"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "offensive"
+      - "hybrid"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "physicalPower"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "magicPower"
+
+  - id: "spell-guard-001"
+    name: "Spell Guard"
+    description: "Before being attacked, spend 5 mana to gain +15 PhysicalEvade"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "defensive"
+      - "magic"
+      - "evasion"
+      - "before-attacked"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 5
+      - type: "stat-bonus"
+        target: "self"
+        value: 15
+        duration: 1
+        params:
+          stat: "physicalEvade"
+
+  - id: "battle-meditation-001"
+    name: "Battle Meditation"
+    description: "When not moving, restore 10% MaxMana and 5 HP"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "mana"
+      - "healing"
+      - "regeneration"
+      - "after-no-move"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: "10%"
+      - type: "heal"
+        target: "self"
+        value: 5
+
+  - id: "mana-infusion-001"
+    name: "Mana Infusion"
+    description: "+20 MaxMana, +1 MagicPower"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "mana"
+      - "magic"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 20
+        params:
+          stat: "maxMana"
+      - type: "stat-permanent"
+        target: "self"
+        value: 1
+        params:
+          stat: "magicPower"
+
+  - id: "arcane-recovery-001"
+    name: "Arcane Recovery"
+    description: "After being attacked, restore 15% MaxMana"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "mana"
+      - "regeneration"
+      - "after-attacked"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: "15%"
+
+  - id: "swift-caster-001"
+    name: "Swift Caster"
+    description: "After moving, gain +2 MagicPower for 2 turns"
+    abilityType: "Movement"
+    experiencePrice: 350
+    tags:
+      - "magic"
+      - "buff"
+      - "after-move"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 2
+        duration: 2
+        params:
+          stat: "magicPower"
+
+  - id: "resilient-caster-001"
+    name: "Resilient Caster"
+    description: "+15 MaxHealth, +10 MaxMana"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "defensive"
+      - "health"
+      - "mana"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 15
+        params:
+          stat: "maxHealth"
+      - type: "stat-permanent"
+        target: "self"
+        value: 10
+        params:
+          stat: "maxMana"
+
+  - id: "retaliating-aura-001"
+    name: "Retaliating Aura"
+    description: "After taking damage, deal 5 magical damage to attacker"
+    abilityType: "Reaction"
+    experiencePrice: 450
+    tags:
+      - "offensive"
+      - "magic"
+      - "counter"
+      - "after-attacked"
+    effects:
+      - type: "damage-magical"
+        target: "enemy"
+        value: 5
+
+  # ============================================================================
+  # TRICKSTER ABILITIES (Tier 2: Rogue/Apprentice Hybrid)
+  # ============================================================================
+
+  - id: "illusionist-001"
+    name: "Illusionist"
+    description: "+10 PhysicalEvade, +10 MagicEvade"
+    abilityType: "Passive"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "evasion"
+      - "illusion"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 10
+        params:
+          stat: "physicalEvade"
+      - type: "stat-permanent"
+        target: "self"
+        value: 10
+        params:
+          stat: "magicEvade"
+
+  - id: "mana-thief-001"
+    name: "Mana Thief"
+    description: "After being attacked, restore 10 mana"
+    abilityType: "Reaction"
+    experiencePrice: 350
+    tags:
+      - "mana"
+      - "regeneration"
+      - "after-attacked"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: 10
+
+  - id: "elusive-caster-001"
+    name: "Elusive Caster"
+    description: "After moving, restore 8 mana"
+    abilityType: "Movement"
+    experiencePrice: 300
+    tags:
+      - "mana"
+      - "regeneration"
+      - "after-move"
+    effects:
+      - type: "mana-restore"
+        target: "self"
+        value: 8
+
+  - id: "spell-dodge-001"
+    name: "Spell Dodge"
+    description: "Before being attacked, spend 5 mana to gain +20 MagicEvade for 1 turn"
+    abilityType: "Reaction"
+    experiencePrice: 400
+    tags:
+      - "defensive"
+      - "magic"
+      - "evasion"
+      - "before-attacked"
+    effects:
+      - type: "mana-cost"
+        target: "self"
+        value: 5
+      - type: "stat-bonus"
+        target: "self"
+        value: 20
+        duration: 1
+        params:
+          stat: "magicEvade"
+
+  - id: "cunning-mind-001"
+    name: "Cunning Mind"
+    description: "+15 MaxMana, +2 Attunement"
+    abilityType: "Passive"
+    experiencePrice: 350
+    tags:
+      - "mana"
+      - "attunement"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 15
+        params:
+          stat: "maxMana"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "attunement"
+
+  - id: "shadow-magic-001"
+    name: "Shadow Magic"
+    description: "When not moving, gain +5 MagicPower for 2 turns"
+    abilityType: "Movement"
+    experiencePrice: 350
+    tags:
+      - "magic"
+      - "buff"
+      - "after-no-move"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 5
+        duration: 2
+        params:
+          stat: "magicPower"
+
+  - id: "agile-spellcaster-001"
+    name: "Agile Spellcaster"
+    description: "+1 Movement, +2 Speed"
+    abilityType: "Passive"
+    experiencePrice: 300
+    tags:
+      - "movement"
+      - "speed"
+    effects:
+      - type: "stat-permanent"
+        target: "self"
+        value: 1
+        params:
+          stat: "movement"
+      - type: "stat-permanent"
+        target: "self"
+        value: 2
+        params:
+          stat: "speed"
+
+  - id: "deceptive-strike-001"
+    name: "Deceptive Strike"
+    description: "After being attacked, gain +10 PhysicalEvade for 2 turns"
+    abilityType: "Reaction"
+    experiencePrice: 450
+    tags:
+      - "defensive"
+      - "evasion"
+      - "after-attacked"
+    effects:
+      - type: "stat-bonus"
+        target: "self"
+        value: 10
+        duration: 2
+        params:
+          stat: "physicalEvade"
