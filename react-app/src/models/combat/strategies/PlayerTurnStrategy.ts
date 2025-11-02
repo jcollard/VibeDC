@@ -14,7 +14,7 @@ import { CombatConstants } from '../CombatConstants';
 /**
  * Strategy mode - defines what the player is currently doing
  */
-type StrategyMode = 'normal' | 'moveSelection' | 'attackSelection' | 'abilitySelection';
+type StrategyMode = 'normal' | 'moveSelection' | 'attackSelection' | 'abilitySelection' | 'primaryClassMenu' | 'secondaryClassMenu';
 
 /**
  * Player turn strategy - waits for player input to decide actions
@@ -302,6 +302,35 @@ export class PlayerTurnStrategy implements TurnStrategy {
     if (actionId === 'ability') {
       // Show ability menu (handled by CombatLayoutManager)
       this.pendingAction = { type: 'show-ability-menu' };
+      return;
+    }
+
+    // Handle class menu navigation
+    if (actionId === 'primary-class') {
+      this.enterClassMenu('primary');
+      return;
+    }
+
+    if (actionId === 'secondary-class') {
+      this.enterClassMenu('secondary');
+      return;
+    }
+
+    if (actionId === 'back') {
+      this.exitClassMenu();
+      return;
+    }
+
+    // Handle ability selection from class menu
+    if (actionId.startsWith('ability-')) {
+      // Extract ability ID from action ID
+      const abilityId = actionId.substring('ability-'.length);
+
+      // Exit class menu mode
+      this.exitClassMenu();
+
+      // Enter ability selection mode using existing method
+      this.handleAbilitySelected(abilityId);
       return;
     }
 
@@ -600,6 +629,49 @@ export class PlayerTurnStrategy implements TurnStrategy {
    */
   handleCancelAttack(): void {
     this.exitAttackMode();
+  }
+
+  /**
+   * Enter class menu mode (primary or secondary)
+   */
+  private enterClassMenu(classType: 'primary' | 'secondary'): void {
+    if (!this.activeUnit) {
+      console.warn('[PlayerTurnStrategy] Cannot enter class menu - no active unit');
+      return;
+    }
+
+    // Exit any other modes
+    if (this.mode === 'moveSelection') {
+      this.exitMoveMode();
+    }
+    if (this.mode === 'attackSelection') {
+      this.exitAttackMode();
+    }
+    if (this.mode === 'abilitySelection') {
+      this.exitAbilityMode();
+    }
+
+    // Set the appropriate class menu mode
+    this.mode = classType === 'primary' ? 'primaryClassMenu' : 'secondaryClassMenu';
+
+    // Clear any selections
+    this.targetedUnit = null;
+    this.targetedPosition = null;
+  }
+
+  /**
+   * Exit class menu mode
+   */
+  private exitClassMenu(): void {
+    this.mode = 'normal';
+
+    // Re-select the active unit to restore its info display
+    if (this.activeUnit && this.currentState) {
+      const currentPosition = this.currentState.unitManifest.getUnitPosition(this.activeUnit);
+      if (currentPosition) {
+        this.selectUnit(this.activeUnit, currentPosition, this.currentState);
+      }
+    }
   }
 
   /**

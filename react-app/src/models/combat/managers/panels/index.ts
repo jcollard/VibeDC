@@ -16,3 +16,5 @@ export { AbilityInfoContent } from './AbilityInfoContent';
 export { EquipmentInfoContent } from './EquipmentInfoContent';
 export { AttackMenuContent } from './AttackMenuContent';
 export type { AttackMenuConfig } from './AttackMenuContent';
+export { ClassActionsMenuContent } from './ClassActionsMenuContent';
+export type { ClassActionsMenuConfig } from './ClassActionsMenuContent';

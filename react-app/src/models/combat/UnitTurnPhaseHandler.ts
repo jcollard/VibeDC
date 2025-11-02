@@ -1048,6 +1048,12 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     if (strategyMode === 'attackSelection') {
       return 'attack';
     }
+    if (strategyMode === 'primaryClassMenu') {
+      return 'primary-class';
+    }
+    if (strategyMode === 'secondaryClassMenu') {
+      return 'secondary-class';
+    }
     return null;
   }
 

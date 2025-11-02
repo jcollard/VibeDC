@@ -1,7 +1,7 @@
 import type { CombatLayoutRenderer, LayoutRenderContext } from './CombatLayoutRenderer';
 import { HorizontalVerticalLayout, type LayoutRegion } from './HorizontalVerticalLayout';
 import { SpriteRenderer } from '../../../utils/SpriteRenderer';
-import { UnitInfoContent, PartyMembersContent, EmptyContent, ActionsMenuContent, AttackMenuContent } from '../managers/panels';
+import { UnitInfoContent, PartyMembersContent, EmptyContent, ActionsMenuContent, AttackMenuContent, ClassActionsMenuContent } from '../managers/panels';
 import { AbilityInfoContent } from '../managers/panels/AbilityInfoContent';
 import { EquipmentInfoContent } from '../managers/panels/EquipmentInfoContent';
 import { CombatConstants } from '../CombatConstants';
@@ -27,16 +27,20 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
   private mapScrollDownButtonBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   // Cached panel content instances (per GeneralGuidelines.md - don't recreate every frame)
-  private cachedBottomPanelContent: PartyMembersContent | UnitInfoContent | ActionsMenuContent | AttackMenuContent | EmptyContent | null = null;
+  private cachedBottomPanelContent: PartyMembersContent | UnitInfoContent | ActionsMenuContent | AttackMenuContent | ClassActionsMenuContent | EmptyContent | null = null;
   private cachedTopPanelContent: UnitInfoContent | EmptyContent | null = null;
   private previousPhase: 'deployment' | 'enemy-deployment' | 'battle' | 'unit-turn' | null = null;
 
   // Detail panel state tracking for hover-based ability/equipment details
   private detailPanelActive: boolean = false;
-  private originalBottomPanelContent: PartyMembersContent | UnitInfoContent | ActionsMenuContent | AttackMenuContent | EmptyContent | null = null;
+  private originalBottomPanelContent: PartyMembersContent | UnitInfoContent | ActionsMenuContent | AttackMenuContent | ClassActionsMenuContent | EmptyContent | null = null;
 
   // Cache AttackMenuContent instance
   private cachedAttackMenuContent: AttackMenuContent | null = null;
+
+  // Cache ClassActionsMenuContent instances (primary and secondary)
+  private cachedPrimaryClassMenuContent: ClassActionsMenuContent | null = null;
+  private cachedSecondaryClassMenuContent: ClassActionsMenuContent | null = null;
 
   // Cache detail panel instances to avoid recreating on every hover
   private cachedAbilityPanel: AbilityInfoContent | null = null;
@@ -657,6 +661,46 @@ export class CombatLayoutManager implements CombatLayoutRenderer {
         // Re-enable buttons
         this.cachedAttackMenuContent.setButtonsDisabled(false);
         currentUnitPanelManager.setContent(this.cachedAttackMenuContent);
+      } else if (activeAction === 'primary-class') {
+        // Show primary class menu
+        if (!this.cachedPrimaryClassMenuContent) {
+          this.cachedPrimaryClassMenuContent = new ClassActionsMenuContent(
+            {
+              titleColor: '#ffa500', // Orange
+              padding: 1,
+              lineSpacing: 8,
+            },
+            currentUnit,
+            'primary'
+          );
+        } else {
+          // Determine canAct state (unit cannot act if they've already performed an action)
+          const canAct = true; // TODO: Track hasActed state when implementing action system
+          this.cachedPrimaryClassMenuContent.updateUnit(currentUnit, 'primary', canAct);
+        }
+        // Re-enable buttons
+        this.cachedPrimaryClassMenuContent.setButtonsDisabled(false);
+        currentUnitPanelManager.setContent(this.cachedPrimaryClassMenuContent);
+      } else if (activeAction === 'secondary-class') {
+        // Show secondary class menu
+        if (!this.cachedSecondaryClassMenuContent) {
+          this.cachedSecondaryClassMenuContent = new ClassActionsMenuContent(
+            {
+              titleColor: '#ffa500', // Orange
+              padding: 1,
+              lineSpacing: 8,
+            },
+            currentUnit,
+            'secondary'
+          );
+        } else {
+          // Determine canAct state (unit cannot act if they've already performed an action)
+          const canAct = true; // TODO: Track hasActed state when implementing action system
+          this.cachedSecondaryClassMenuContent.updateUnit(currentUnit, 'secondary', canAct);
+        }
+        // Re-enable buttons
+        this.cachedSecondaryClassMenuContent.setButtonsDisabled(false);
+        currentUnitPanelManager.setContent(this.cachedSecondaryClassMenuContent);
       } else {
         // Show actions menu in normal mode
         if (!(this.cachedBottomPanelContent instanceof ActionsMenuContent)) {

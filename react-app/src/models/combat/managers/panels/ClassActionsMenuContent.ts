@@ -1,172 +1,148 @@
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion, PanelClickResult } from './PanelContent';
-import { HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT, ACTIVE_COLOR } from './colors';
+import { HELPER_TEXT, ENABLED_TEXT, HOVERED_TEXT, DISABLED_TEXT } from './colors';
 import type { CombatUnit } from '../../CombatUnit';
+import type { HumanoidUnit } from '../../HumanoidUnit';
 
 /**
- * Configuration for actions menu panel appearance
+ * Configuration for class actions menu panel appearance
  */
-export interface ActionsMenuConfig {
-  title: string;
+export interface ClassActionsMenuConfig {
   titleColor: string;
   padding: number;
   lineSpacing: number;
 }
 
 /**
- * Button definition for actions menu
+ * Button definition for class actions menu
  */
-interface ActionButton {
-  id: string;           // Action ID ('delay', 'end-turn')
+interface ClassActionButton {
+  id: string;           // Action ID ('back', or ability ID)
   label: string;        // Display text
   enabled: boolean;     // Whether button is clickable
   helperText: string;   // Description shown on hover
 }
 
 /**
- * Panel content that displays action menu for the active unit's turn.
+ * Panel content that displays class-specific action menu.
  *
- * Displays clickable buttons for available actions:
- * - Delay: Set actionTimer to 50
- * - End Turn: Set actionTimer to 0
+ * Displays clickable buttons for:
+ * - Class abilities (Action abilities from the selected class)
+ * - Back button (returns to main actions menu)
  *
  * Button states:
  * - Enabled: White text
- * - Disabled: Grey text (future implementation)
+ * - Disabled: Grey text
  * - Hovered: Yellow text
  */
-export class ActionsMenuContent implements PanelContent {
-  private readonly config: ActionsMenuConfig;
-  private buttons: ActionButton[];
+export class ClassActionsMenuContent implements PanelContent {
+  private readonly config: ClassActionsMenuConfig;
+  private buttons: ClassActionButton[];
   private hoveredButtonIndex: number | null = null;
-  private buttonsDisabled: boolean = false; // Disable after first click
+  private buttonsDisabled: boolean = false;
   private currentUnit: CombatUnit | null = null;
-  private lastRegionWidth: number = 0; // Cache region width for bounds checking
-  private lastRegionHeight: number = 0; // Cache region height for bounds checking
-  private activeButtonId: string | null = null; // Track which button is active (green)
+  private lastRegionWidth: number = 0;
+  private lastRegionHeight: number = 0;
+  private className: string = '';
 
-  constructor(config: ActionsMenuConfig, unit?: CombatUnit) {
+  constructor(config: ClassActionsMenuConfig, unit?: CombatUnit, classType?: 'primary' | 'secondary') {
     this.config = config;
 
-    if (unit) {
+    if (unit && classType) {
       this.currentUnit = unit;
-      this.buttons = this.buildButtonList(unit);
+      this.buttons = this.buildButtonList(unit, classType);
     } else {
-      // Fallback: just Delay and End Turn if no unit provided
+      // Fallback: just Back button if no unit provided
       this.currentUnit = null;
       this.buttons = [
         {
-          id: 'delay',
-          label: 'Delay',
+          id: 'back',
+          label: 'Back',
           enabled: true,
-          helperText: 'Take no moves or actions and sets Action Timer to 50'
-        },
-        {
-          id: 'end-turn',
-          label: 'End Turn',
-          enabled: true,
-          helperText: 'Ends your turn and sets Action Timer to 0'
+          helperText: 'Return to main actions menu'
         }
       ];
     }
   }
 
   /**
-   * Update the action menu for a new unit
+   * Update the class actions menu for a new unit
    * @param unit - The combat unit whose turn it is
-   * @param hasMoved - Whether the unit has moved this turn
-   * @param activeAction - The currently active action (for highlighting)
-   * @param canResetMove - Whether the move can be reset
+   * @param classType - Which class menu to display (primary or secondary)
    * @param canAct - Whether the unit can still perform actions this turn
    */
-  updateUnit(unit: CombatUnit, hasMoved: boolean = false, activeAction: string | null = null, canResetMove: boolean = false, canAct: boolean = true): void {
-    // Store current unit reference
+  updateUnit(unit: CombatUnit, classType: 'primary' | 'secondary', canAct: boolean = true): void {
     this.currentUnit = unit;
-    this.activeButtonId = activeAction;
-
-    // Rebuild button list with current state
-    this.buttons = this.buildButtonList(unit, hasMoved, canResetMove, canAct);
+    this.buttons = this.buildButtonList(unit, classType, canAct);
+    this.buttonsDisabled = false;
 
     // Validate hover index is still valid
-    if (this.hoveredButtonIndex !== null &&
-        this.hoveredButtonIndex >= this.buttons.length) {
+    if (this.hoveredButtonIndex !== null && this.hoveredButtonIndex >= this.buttons.length) {
       this.hoveredButtonIndex = null;
     }
-
-    // Mark buttons as enabled (reset disabled state from previous turn)
-    this.buttonsDisabled = false;
   }
 
   /**
-   * Build dynamic button list based on unit's stats, classes, and state
+   * Build dynamic button list based on unit's class abilities
    * @param unit - The combat unit
-   * @param hasMoved - Whether the unit has moved this turn
-   * @param canResetMove - Whether the move can be reset
+   * @param classType - Which class to show abilities for
    * @param canAct - Whether the unit can still perform actions this turn
    */
-  private buildButtonList(unit: CombatUnit, hasMoved: boolean = false, canResetMove: boolean = false, canAct: boolean = true): ActionButton[] {
-    const buttons: ActionButton[] = [];
+  private buildButtonList(unit: CombatUnit, classType: 'primary' | 'secondary', canAct: boolean = true): ClassActionButton[] {
+    const buttons: ClassActionButton[] = [];
 
-    // Move or Reset Move button
-    if (canResetMove) {
+    // Get the appropriate class
+    const unitClass = classType === 'primary' ? unit.unitClass : unit.secondaryClass;
+    if (!unitClass) {
+      // No class (shouldn't happen for primary, but possible for secondary)
       buttons.push({
-        id: 'reset-move',
-        label: 'Reset Move',
+        id: 'back',
+        label: 'Back',
         enabled: true,
-        helperText: 'Return to original position'
+        helperText: 'Return to main actions menu'
       });
-    } else {
-      buttons.push({
-        id: 'move',
-        label: 'Move',
-        enabled: !hasMoved,
-        helperText: `Move this unit up to ${unit.movement} tiles`
-      });
+      return buttons;
     }
 
-    // Attack button
-    buttons.push({
-      id: 'attack',
-      label: 'Attack',
-      enabled: canAct,
-      helperText: 'Perform a basic attack with this unit\'s weapon'
-    });
+    // Store class name for title display
+    this.className = unitClass.name;
 
-    // Primary class button
-    const primaryClassName = unit.unitClass.name;
-    buttons.push({
-      id: 'primary-class',
-      label: primaryClassName,
-      enabled: canAct,
-      helperText: `Perform a ${primaryClassName} action`
-    });
-
-    // Secondary class button (conditional)
-    if (unit.secondaryClass) {
-      const secondaryClassName = unit.secondaryClass.name;
+    // Cast to HumanoidUnit to access learnedAbilities
+    const humanoidUnit = unit as HumanoidUnit;
+    if (!('learnedAbilities' in humanoidUnit)) {
+      // Not a humanoid unit, just show Back button
       buttons.push({
-        id: 'secondary-class',
-        label: secondaryClassName,
+        id: 'back',
+        label: 'Back',
+        enabled: true,
+        helperText: 'Return to main actions menu'
+      });
+      return buttons;
+    }
+
+    // Get all learned Action abilities that belong to this class
+    const learnableAbilityIds = new Set(unitClass.learnableAbilities.map(a => a.id));
+    const actionAbilities = Array.from(humanoidUnit.learnedAbilities).filter(
+      ability => ability.abilityType === 'Action' && learnableAbilityIds.has(ability.id)
+    );
+
+    // Add buttons for each action ability
+    for (const ability of actionAbilities) {
+      buttons.push({
+        id: `ability-${ability.id}`,
+        label: ability.name,
         enabled: canAct,
-        helperText: `Perform a ${secondaryClassName} action`
+        helperText: ability.description
       });
     }
 
-    // Delay button
+    // Always add Back button at the end
     buttons.push({
-      id: 'delay',
-      label: 'Delay',
-      enabled: !hasMoved && canAct,
-      helperText: 'Take no moves or actions and sets Action Timer to 50'
-    });
-
-    // End Turn button
-    buttons.push({
-      id: 'end-turn',
-      label: 'End Turn',
+      id: 'back',
+      label: 'Back',
       enabled: true,
-      helperText: 'Ends your turn and sets Action Timer to 0'
+      helperText: 'Return to main actions menu'
     });
 
     return buttons;
@@ -181,8 +157,6 @@ export class ActionsMenuContent implements PanelContent {
 
   /**
    * Enable or disable all buttons (used to prevent double-clicks)
-   * Note: This only affects the buttonsDisabled flag, not individual button states.
-   * Individual button enabled states are managed by buildButtonList based on game logic.
    */
   setButtonsDisabled(disabled: boolean): void {
     this.buttonsDisabled = disabled;
@@ -204,10 +178,11 @@ export class ActionsMenuContent implements PanelContent {
 
     let currentY = region.y + this.config.padding;
 
-    // Render title
+    // Render title (class name + " ACTIONS")
+    const title = this.className ? `${this.className.toUpperCase()} ACTIONS` : 'CLASS ACTIONS';
     FontAtlasRenderer.renderText(
       ctx,
-      this.config.title,
+      title,
       region.x + this.config.padding,
       currentY,
       fontId,
@@ -218,18 +193,15 @@ export class ActionsMenuContent implements PanelContent {
     );
     currentY += this.config.lineSpacing;
 
-    // Render action buttons (no blank line after title)
+    // Render action buttons
     for (let i = 0; i < this.buttons.length; i++) {
       const button = this.buttons[i];
-      const isActive = button.id === this.activeButtonId;
-      const isHovered = !isActive && this.hoveredButtonIndex === i; // Don't hover if active
+      const isHovered = this.hoveredButtonIndex === i;
 
-      // Determine button color based on state (priority: globally disabled > individually disabled > active > hovered > enabled)
+      // Determine button color based on state
       let color: string;
       if (this.buttonsDisabled || !button.enabled) {
         color = DISABLED_TEXT;
-      } else if (isActive) {
-        color = ACTIVE_COLOR; // Green for active button (overrides hover)
       } else if (isHovered) {
         color = HOVERED_TEXT;
       } else {
@@ -306,8 +278,7 @@ export class ActionsMenuContent implements PanelContent {
 
       // Only handle click if button is enabled
       if (button.enabled) {
-        // For all buttons (including class buttons), disable and report action
-        // The phase handler/strategy will handle the actual behavior
+        // Disable buttons to prevent double-clicks
         this.setButtonsDisabled(true);
 
         return {
@@ -360,7 +331,7 @@ export class ActionsMenuContent implements PanelContent {
     // Update hover state if changed
     if (finalButtonIndex !== this.hoveredButtonIndex) {
       this.hoveredButtonIndex = finalButtonIndex;
-      return { buttonIndex: finalButtonIndex }; // Signal that hover state changed
+      return { buttonIndex: finalButtonIndex };
     }
 
     return null;
