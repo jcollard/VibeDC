@@ -240,6 +240,7 @@ export class VictoryPhaseHandler extends PhaseBase {
       config.totalExperience = (config.totalExperience || 0) + this.rewards.xp;
 
       console.log(`[VictoryPhaseHandler] Awarded ${this.rewards.xp} XP to ${config.name} (${config.unitClassId})`);
+      console.log(`[VictoryPhaseHandler] New total XP: ${config.totalExperience}, Class XP for ${config.unitClassId}: ${config.classExperience[config.unitClassId]}`);
     });
 
     // 2. Add gold to party inventory

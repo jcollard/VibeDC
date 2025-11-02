@@ -99,82 +99,6 @@ export const GameView: React.FC<GameViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [handleQuickSave]);
 
-  // ✅ GUIDELINE: View transition handlers
-  const handleStartCombat = useCallback(async (encounterId: string) => {
-    console.log(`[GameView] Starting combat: ${encounterId}`);
-
-    setIsTransitioning(true);
-    await transitionManager.transitionTo(
-      gameState.currentView,
-      'combat',
-      () => {
-        // ✅ GUIDELINE: Immutable state update
-        setGameState(prevState => ({
-          ...prevState,
-          currentView: 'combat',
-          // TODO: Phase 4 - Initialize proper CombatState from encounter
-          combatState: undefined, // Will use encounter prop in CombatView for now
-        }));
-        // Store encounter ID separately (not in CompleteGameState yet)
-        setActiveEncounterId(encounterId);
-      }
-    );
-    setIsTransitioning(false);
-  }, [gameState.currentView, transitionManager]);
-
-  const handleCombatEnd = async (victory: boolean) => {
-    console.log(`[GameView] Combat ended - Victory: ${victory}`);
-
-    setIsTransitioning(true);
-    await transitionManager.transitionTo(
-      gameState.currentView,
-      'exploration',
-      () => {
-        // ✅ GUIDELINE: Immutable state update
-        setGameState(prevState => ({
-          ...prevState,
-          currentView: 'exploration',
-          // TODO: Phase 4 - Apply combat results to party state
-          // TODO: Phase 5 - Trigger post-combat events
-          combatState: undefined,
-        }));
-        // Clear active encounter
-        setActiveEncounterId(null);
-      }
-    );
-    setIsTransitioning(false);
-  };
-
-  // Helper for transitioning to exploration view
-  const handleStartExploration = useCallback(async () => {
-    console.log('[GameView] Transitioning to exploration view');
-
-    setIsTransitioning(true);
-    await transitionManager.transitionTo(
-      gameState.currentView,
-      'exploration',
-      () => {
-        // ✅ GUIDELINE: Immutable state update
-        setGameState(prevState => ({
-          ...prevState,
-          currentView: 'exploration',
-          combatState: undefined,
-        }));
-        // Clear active encounter
-        setActiveEncounterId(null);
-      }
-    );
-    setIsTransitioning(false);
-  }, [gameState.currentView, transitionManager]);
-
-  // Callback for FirstPersonView to sync exploration state changes
-  const handleExplorationStateChange = useCallback((explorationState: ExplorationState) => {
-    setGameState(prevState => ({
-      ...prevState,
-      explorationState,
-    }));
-  }, []);
-
   // ✅ GUIDELINE: Sync party state TO registries (before opening party management)
   const syncPartyStateToRegistries = useCallback((partyState: PartyState): void => {
     console.log('[GameView] Syncing party state to registries');
@@ -217,6 +141,85 @@ export const GameView: React.FC<GameViewProps> = ({
       inventory: { items, gold },
       equipment: new Map(), // TODO: Extract equipment from members if needed
     };
+  }, []);
+
+  // ✅ GUIDELINE: View transition handlers
+  const handleStartCombat = useCallback(async (encounterId: string) => {
+    console.log(`[GameView] Starting combat: ${encounterId}`);
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'combat',
+      () => {
+        // ✅ GUIDELINE: Immutable state update
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'combat',
+          // TODO: Phase 4 - Initialize proper CombatState from encounter
+          combatState: undefined, // Will use encounter prop in CombatView for now
+        }));
+        // Store encounter ID separately (not in CompleteGameState yet)
+        setActiveEncounterId(encounterId);
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager]);
+
+  const handleCombatEnd = useCallback(async (victory: boolean) => {
+    console.log(`[GameView] Combat ended - Victory: ${victory}`);
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'exploration',
+      () => {
+        // Sync registry changes (XP, gold, items) back to partyState
+        const updatedPartyState = syncRegistriesToPartyState();
+
+        // ✅ GUIDELINE: Immutable state update
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'exploration',
+          partyState: updatedPartyState, // Use updated state with XP gains
+          // TODO: Phase 5 - Trigger post-combat events
+          combatState: undefined,
+        }));
+        // Clear active encounter
+        setActiveEncounterId(null);
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager, syncRegistriesToPartyState]);
+
+  // Helper for transitioning to exploration view
+  const handleStartExploration = useCallback(async () => {
+    console.log('[GameView] Transitioning to exploration view');
+
+    setIsTransitioning(true);
+    await transitionManager.transitionTo(
+      gameState.currentView,
+      'exploration',
+      () => {
+        // ✅ GUIDELINE: Immutable state update
+        setGameState(prevState => ({
+          ...prevState,
+          currentView: 'exploration',
+          combatState: undefined,
+        }));
+        // Clear active encounter
+        setActiveEncounterId(null);
+      }
+    );
+    setIsTransitioning(false);
+  }, [gameState.currentView, transitionManager]);
+
+  // Callback for FirstPersonView to sync exploration state changes
+  const handleExplorationStateChange = useCallback((explorationState: ExplorationState) => {
+    setGameState(prevState => ({
+      ...prevState,
+      explorationState,
+    }));
   }, []);
 
   // ✅ GUIDELINE: Party management transition handlers
@@ -284,15 +287,35 @@ export const GameView: React.FC<GameViewProps> = ({
         handleOpenPartyManagement('exploration');
       };
 
+      (window as any).checkPartyXP = () => {
+        const configs = PartyMemberRegistry.getAll();
+        console.log('[DEV] Party XP values:');
+        configs.forEach(config => {
+          console.log(`  ${config.name}:`);
+          console.log(`    Total XP: ${config.totalExperience || 0}`);
+          console.log(`    Class XP:`, config.classExperience || {});
+        });
+      };
+
+      (window as any).checkInventory = () => {
+        console.log('[DEV] Party Inventory:');
+        console.log(`  Gold: ${PartyInventory.getGold()}`);
+        console.log(`  Items:`, PartyInventory.getAllItems());
+      };
+
       console.log('[DEV] Developer functions available:');
       console.log('  - startEncounter(id): Start combat with encounter ID');
       console.log('  - startFirstPersonView(): Return to exploration view');
       console.log('  - openPartyManagement(): Open party management view');
+      console.log('  - checkPartyXP(): Show party XP values from registry');
+      console.log('  - checkInventory(): Show party inventory and gold');
 
       return () => {
         delete (window as any).startEncounter;
         delete (window as any).startFirstPersonView;
         delete (window as any).openPartyManagement;
+        delete (window as any).checkPartyXP;
+        delete (window as any).checkInventory;
       };
     }
   }, [handleStartCombat, handleStartExploration, handleOpenPartyManagement]);
