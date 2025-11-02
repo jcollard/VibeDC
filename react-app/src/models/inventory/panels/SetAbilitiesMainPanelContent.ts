@@ -10,6 +10,7 @@ import type { CombatAbility } from '../../combat/CombatAbility';
 
 const HOVERED_ABILITY_COLOR = '#ffff00'; // Yellow for hovered ability
 const NORMAL_ABILITY_COLOR = '#ffffff'; // White for normal ability
+const EQUIPPED_ABILITY_COLOR = '#00ff00'; // Green for currently equipped ability
 const HEADER_COLOR = '#ff8c00'; // Dark orange for headers
 
 /**
@@ -21,6 +22,7 @@ export class SetAbilitiesMainPanelContent implements PanelContent {
   private abilities: CombatAbility[] = [];
   private hoveredAbilityIndex: number | null = null;
   private abilityBounds: Array<{ x: number; y: number; width: number; height: number; abilityId: string }> = [];
+  private equippedAbilityId: string | null = null;
 
   constructor(unit: CombatUnit, slotType: 'Reaction' | 'Passive' | 'Movement') {
     this.slotType = slotType;
@@ -29,6 +31,15 @@ export class SetAbilitiesMainPanelContent implements PanelContent {
     this.abilities = Array.from(unit.learnedAbilities).filter(
       ability => ability.abilityType === slotType
     );
+
+    // Store the currently equipped ability for this slot
+    if (slotType === 'Reaction') {
+      this.equippedAbilityId = unit.reactionAbility?.id ?? null;
+    } else if (slotType === 'Passive') {
+      this.equippedAbilityId = unit.passiveAbility?.id ?? null;
+    } else if (slotType === 'Movement') {
+      this.equippedAbilityId = unit.movementAbility?.id ?? null;
+    }
   }
 
   render(
@@ -72,9 +83,16 @@ export class SetAbilitiesMainPanelContent implements PanelContent {
     for (let i = 0; i < this.abilities.length; i++) {
       const ability = this.abilities[i];
       const isHovered = this.hoveredAbilityIndex === i;
+      const isEquipped = ability.id === this.equippedAbilityId;
 
-      // Determine ability name color based on hover state
-      const nameColor = isHovered ? HOVERED_ABILITY_COLOR : NORMAL_ABILITY_COLOR;
+      // Determine ability name color based on state
+      // Priority: Equipped (green) > Hovered (yellow) > Normal (white)
+      let nameColor = NORMAL_ABILITY_COLOR;
+      if (isEquipped) {
+        nameColor = EQUIPPED_ABILITY_COLOR;
+      } else if (isHovered) {
+        nameColor = HOVERED_ABILITY_COLOR;
+      }
 
       // Render ability name
       FontAtlasRenderer.renderText(

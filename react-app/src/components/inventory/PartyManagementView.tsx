@@ -1515,6 +1515,12 @@ export const PartyManagementView: React.FC = () => {
                 // Show confirmation message
                 addLogMessage(`Set ${slotType} ability to ${ability.name}`);
 
+                // Clear the selected slot highlight in top info panel
+                const topContent = topInfoPanelManager.getContent();
+                if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                  (topContent as any).setSelectedEquipmentSlot(null);
+                }
+
                 // Return to inventory mode
                 setPanelMode('inventory');
 
@@ -1545,6 +1551,11 @@ export const PartyManagementView: React.FC = () => {
           if (topInfoClickResult.type === 'view-toggled' && 'view' in topInfoClickResult) {
             topInfoPanelViewRef.current = topInfoClickResult.view as 'stats' | 'abilities';
             if (panelMode === 'set-abilities' && topInfoClickResult.view === 'stats') {
+              // Clear the selected slot highlight when returning to inventory mode
+              const topContent = topInfoPanelManager.getContent();
+              if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                (topContent as any).setSelectedEquipmentSlot(null);
+              }
               setPanelMode('inventory');
             }
             renderFrame();
@@ -1697,6 +1708,13 @@ export const PartyManagementView: React.FC = () => {
           setPanelMode('set-abilities');
           setAbilitiesSlotTypeRef.current = topInfoClickResult.slotType as 'Reaction' | 'Passive' | 'Movement';
           setAbilitiesMainContentRef.current = null; // Clear to force recreation
+
+          // Highlight the selected ability slot in green in the top info panel
+          const topContent = topInfoPanelManager.getContent();
+          if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+            (topContent as any).setSelectedEquipmentSlot(topInfoClickResult.slotType);
+          }
+
           addLogMessage(`Select a ${topInfoClickResult.slotType} ability`);
           renderFrame();
           return;
