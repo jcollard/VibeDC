@@ -10,10 +10,14 @@ describe('HumanoidUnit - StatModifier System', () => {
   beforeEach(() => {
     // Create a basic unit class for testing
     fighterClass = new UnitClass(
-      'fighter-001',
       'Fighter',
       'A basic warrior class',
-      [] // No abilities needed for these tests
+      [], // tags
+      [], // learnableAbilities - No abilities needed for these tests
+      undefined, // modifiers
+      undefined, // multipliers
+      new Map(), // requirements
+      'fighter-001' // id
     );
 
     // Create a test unit with base stats
