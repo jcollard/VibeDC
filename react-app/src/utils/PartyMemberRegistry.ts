@@ -151,20 +151,15 @@ export class PartyMemberRegistry {
   }
 
   /**
-   * Create a CombatUnit instance from a party member definition
-   * @param id The party member template ID
-   * @returns A new HumanoidUnit instance, or undefined if party member not found
+   * Create a CombatUnit instance from a party member definition object
+   * This method does NOT require the definition to be in the registry
+   * @param definition The party member definition
+   * @returns A new HumanoidUnit instance, or undefined if creation fails
    */
-  static createPartyMember(id: string): CombatUnit | undefined {
-    const definition = this.registry.get(id);
-    if (!definition) {
-      console.warn(`Cannot create party member: '${id}' not found in registry`);
-      return undefined;
-    }
-
+  static createFromDefinition(definition: PartyMemberDefinition): CombatUnit | undefined {
     const unitClass = UnitClass.getById(definition.unitClassId);
     if (!unitClass) {
-      console.error(`Cannot create party member '${id}': unit class '${definition.unitClassId}' not found`);
+      console.error(`Cannot create party member '${definition.name}': unit class '${definition.unitClassId}' not found`);
       return undefined;
     }
 
@@ -191,7 +186,7 @@ export class PartyMemberRegistry {
       if (secondaryClass) {
         unit.setSecondaryClass(secondaryClass);
       } else {
-        console.warn(`Secondary class '${definition.secondaryClassId}' not found for party member '${id}'`);
+        console.warn(`Secondary class '${definition.secondaryClassId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -201,10 +196,10 @@ export class PartyMemberRegistry {
       if (equipment) {
         const result = unit.equipLeftHand(equipment);
         if (!result.success) {
-          console.warn(`Failed to equip left hand for party member '${id}': ${result.message}`);
+          console.warn(`Failed to equip left hand for party member '${definition.name}': ${result.message}`);
         }
       } else {
-        console.warn(`Left hand equipment '${definition.leftHandId}' not found for party member '${id}'`);
+        console.warn(`Left hand equipment '${definition.leftHandId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -213,10 +208,10 @@ export class PartyMemberRegistry {
       if (equipment) {
         const result = unit.equipRightHand(equipment);
         if (!result.success) {
-          console.warn(`Failed to equip right hand for party member '${id}': ${result.message}`);
+          console.warn(`Failed to equip right hand for party member '${definition.name}': ${result.message}`);
         }
       } else {
-        console.warn(`Right hand equipment '${definition.rightHandId}' not found for party member '${id}'`);
+        console.warn(`Right hand equipment '${definition.rightHandId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -225,10 +220,10 @@ export class PartyMemberRegistry {
       if (equipment) {
         const result = unit.equipHead(equipment);
         if (!result.success) {
-          console.warn(`Failed to equip head for party member '${id}': ${result.message}`);
+          console.warn(`Failed to equip head for party member '${definition.name}': ${result.message}`);
         }
       } else {
-        console.warn(`Head equipment '${definition.headId}' not found for party member '${id}'`);
+        console.warn(`Head equipment '${definition.headId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -237,10 +232,10 @@ export class PartyMemberRegistry {
       if (equipment) {
         const result = unit.equipBody(equipment);
         if (!result.success) {
-          console.warn(`Failed to equip body for party member '${id}': ${result.message}`);
+          console.warn(`Failed to equip body for party member '${definition.name}': ${result.message}`);
         }
       } else {
-        console.warn(`Body equipment '${definition.bodyId}' not found for party member '${id}'`);
+        console.warn(`Body equipment '${definition.bodyId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -249,10 +244,10 @@ export class PartyMemberRegistry {
       if (equipment) {
         const result = unit.equipAccessory(equipment);
         if (!result.success) {
-          console.warn(`Failed to equip accessory for party member '${id}': ${result.message}`);
+          console.warn(`Failed to equip accessory for party member '${definition.name}': ${result.message}`);
         }
       } else {
-        console.warn(`Accessory equipment '${definition.accessoryId}' not found for party member '${id}'`);
+        console.warn(`Accessory equipment '${definition.accessoryId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -290,7 +285,7 @@ export class PartyMemberRegistry {
         if (ability) {
           unit.addLearnedAbility(ability);
         } else {
-          console.warn(`Ability '${abilityId}' not found for party member '${id}'`);
+          console.warn(`Ability '${abilityId}' not found for party member '${definition.name}'`);
         }
       }
     }
@@ -303,7 +298,7 @@ export class PartyMemberRegistry {
         unit.addLearnedAbility(ability); // Ensure ability is learned
         unit.assignReactionAbility(ability);
       } else {
-        console.warn(`Reaction ability '${definition.reactionAbilityId}' not found for party member '${id}'`);
+        console.warn(`Reaction ability '${definition.reactionAbilityId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -313,7 +308,7 @@ export class PartyMemberRegistry {
         unit.addLearnedAbility(ability); // Ensure ability is learned
         unit.assignPassiveAbility(ability);
       } else {
-        console.warn(`Passive ability '${definition.passiveAbilityId}' not found for party member '${id}'`);
+        console.warn(`Passive ability '${definition.passiveAbilityId}' not found for party member '${definition.name}'`);
       }
     }
 
@@ -323,11 +318,25 @@ export class PartyMemberRegistry {
         unit.addLearnedAbility(ability); // Ensure ability is learned
         unit.assignMovementAbility(ability);
       } else {
-        console.warn(`Movement ability '${definition.movementAbilityId}' not found for party member '${id}'`);
+        console.warn(`Movement ability '${definition.movementAbilityId}' not found for party member '${definition.name}'`);
       }
     }
 
     return unit;
+  }
+
+  /**
+   * Create a CombatUnit instance from a party member definition ID (looks up in registry)
+   * @param id The party member template ID
+   * @returns A new HumanoidUnit instance, or undefined if party member not found
+   */
+  static createPartyMember(id: string): CombatUnit | undefined {
+    const definition = this.registry.get(id);
+    if (!definition) {
+      console.warn(`Cannot create party member: '${id}' not found in registry`);
+      return undefined;
+    }
+    return this.createFromDefinition(definition);
   }
 
   /**

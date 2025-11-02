@@ -64,8 +64,9 @@ export class GuildRosterManager {
         // Store the mapping
         this.unitToIdMap.set(member, definition.id);
 
-        // Register with PartyMemberRegistry for future use
-        PartyMemberRegistry.register(definition);
+        // NOTE: Do NOT register with PartyMemberRegistry here!
+        // PartyMemberRegistry is a global singleton for default party members only.
+        // Guild roster is managed separately in partyState.guildRoster.
       } else {
         // Member already in roster, just ensure the mapping exists
         this.unitToIdMap.set(member, existingDef.id);
@@ -226,8 +227,9 @@ export class GuildRosterManager {
       tags: ['player-created'],
     };
 
-    // Register with PartyMemberRegistry for future use
-    PartyMemberRegistry.register(character);
+    // NOTE: Do NOT register with PartyMemberRegistry!
+    // PartyMemberRegistry is a global singleton for default party members only.
+    // Guild roster is managed in partyState.guildRoster and persisted via save/load.
 
     // ⚠️ IMMUTABLE UPDATE: Create new state object with spread operator
     this.partyState = {
@@ -264,8 +266,8 @@ export class GuildRosterManager {
       return false;
     }
 
-    // Create CombatUnit from definition
-    const combatUnit = PartyMemberRegistry.createPartyMember(characterId);
+    // Create CombatUnit from definition (NOT from registry)
+    const combatUnit = PartyMemberRegistry.createFromDefinition(character);
     if (!combatUnit) {
       console.error('[GuildRosterManager] Failed to create CombatUnit from party member definition');
       return false;
