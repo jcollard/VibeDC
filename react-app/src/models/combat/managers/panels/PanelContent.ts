@@ -30,6 +30,8 @@ export type PanelClickResult =
   | { type: 'learn-ability'; abilityId: string }
   | { type: 'cancel-ability-view' }
   | { type: 'exit-party-management' }
+  | { type: 'ability-selected'; abilityId: string }
+  | { type: 'cancel-ability-selection' }
   | null;
 
 /**
@@ -41,7 +43,7 @@ export function isPanelClickResult(value: unknown): value is PanelClickResult {
   if (!('type' in value)) return false;
 
   const result = value as { type: string };
-  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected', 'view-toggled', 'combat-log-message', 'cancel-attack', 'perform-attack', 'empty-slot', 'ability-slot-clicked', 'learn-abilities', 'set-primary-class', 'set-secondary-class', 'learn-ability', 'cancel-ability-view'].includes(result.type);
+  return ['button', 'party-member', 'unit-selected', 'action-selected', 'target-selected', 'view-toggled', 'combat-log-message', 'cancel-attack', 'perform-attack', 'empty-slot', 'ability-slot-clicked', 'learn-abilities', 'set-primary-class', 'set-secondary-class', 'learn-ability', 'cancel-ability-view', 'ability-selected', 'cancel-ability-selection'].includes(result.type);
 }
 
 /**
