@@ -35,6 +35,7 @@ import type { PanelContent, PanelRegion } from '../../models/combat/managers/pan
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { UnitClass } from '../../models/combat/UnitClass';
+import type { HumanoidUnit } from '../../models/combat/HumanoidUnit';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
@@ -1344,8 +1345,32 @@ export const PartyManagementView: React.FC = () => {
 
           // Handle learn-ability
           if (bottomClickResult.type === 'learn-ability' && 'abilityId' in bottomClickResult) {
-            addLogMessage(`Learn ability: Coming Soon`);
-            renderFrame();
+            if (selectedMemberRef.current && spendXpMainContentRef.current) {
+              const selectedClassId = spendXpMainContentRef.current.getSelectedClassId();
+              const selectedClass = UnitClass.getById(selectedClassId);
+              const ability = CombatAbility.getById(bottomClickResult.abilityId);
+
+              if (selectedClass && ability) {
+                // Cast to HumanoidUnit to access learnAbility method
+                const humanoid = selectedMemberRef.current as HumanoidUnit;
+                const success = humanoid.learnAbility(ability, selectedClass);
+
+                if (success) {
+                  addLogMessage(`Learned ${ability.name}!`);
+                  // Refresh the bottom panel to show "Learned!" status
+                  bottomPanelManager.setContent(new AbilityInfoContent(ability, selectedMemberRef.current));
+                } else {
+                  // Check if not enough XP
+                  const unspentXp = humanoid.getUnspentClassExperience(selectedClass);
+                  if (unspentXp < ability.experiencePrice) {
+                    addLogMessage(`Not enough XP! Need ${ability.experiencePrice} XP, have ${unspentXp} XP.`);
+                  } else {
+                    addLogMessage(`Cannot learn ${ability.name}.`);
+                  }
+                }
+                renderFrame();
+              }
+            }
             return;
           }
         }
