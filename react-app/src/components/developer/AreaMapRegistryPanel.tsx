@@ -10,6 +10,7 @@ import { ActionFactory } from '../../models/area/actions/ActionFactory';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
 import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { DungeonGenerator } from '../../utils/DungeonGenerator';
 import { AreaMapTileSetEditorPanel } from './AreaMapTileSetEditorPanel';
 import { EventEditorModal } from './EventEditorModal';
 import * as yaml from 'js-yaml';
@@ -269,6 +270,66 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const handleCancelEditMapName = () => {
     setIsEditingMapName(false);
     setEditingMapName('');
+  };
+
+  const handleGenerateDungeon = () => {
+    if (!editedMap) return;
+
+    const confirmed = confirm(
+      'This will replace the current map layout with a randomly generated dungeon. This action cannot be undone. Continue?'
+    );
+
+    if (!confirmed) return;
+
+    const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
+    if (!tileset) {
+      alert('Tileset not found. Cannot generate dungeon.');
+      return;
+    }
+
+    // Create dungeon generator
+    const generator = new DungeonGenerator({
+      width: editedMap.width,
+      height: editedMap.height,
+      roomAttempts: 50,
+      minRoomSize: 3,
+      maxRoomSize: Math.min(10, Math.floor(Math.min(editedMap.width, editedMap.height) / 2)),
+      corridorWidth: 1,
+    });
+
+    // Generate the dungeon
+    const { grid: charGrid, rooms, doors } = generator.generate();
+
+    // Convert character grid to tile grid
+    const tileGrid = DungeonGenerator.convertToTileGrid(charGrid, tileset);
+
+    // Create door objects
+    const doorObjects = DungeonGenerator.createDoorObjects(doors);
+
+    // Find a spawn point in the first room, or center of map if no rooms
+    let spawnX = Math.floor(editedMap.width / 2);
+    let spawnY = Math.floor(editedMap.height / 2);
+
+    if (rooms.length > 0) {
+      const firstRoom = rooms[0];
+      spawnX = Math.floor(firstRoom.x + firstRoom.width / 2);
+      spawnY = Math.floor(firstRoom.y + firstRoom.height / 2);
+    }
+
+    // Update the edited map with the generated dungeon
+    setEditedMap({
+      ...editedMap,
+      grid: tileGrid,
+      interactiveObjects: doorObjects,
+      playerSpawn: {
+        x: spawnX,
+        y: spawnY,
+        direction: 'North' as CardinalDirection,
+      },
+      // Clear encounter zones and NPCs since layout has changed
+      encounterZones: [],
+      npcSpawns: [],
+    });
   };
 
   // Helper to deserialize event areas from JSON to class instances
@@ -1726,8 +1787,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
               {/* Map dimensions */}
               {isEditing && (
                 <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #666' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Dimensions</div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Dimensions & Generation</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginBottom: '12px' }}>
                     <div style={{ width: '80px' }}>
                       <div style={{ fontSize: '9px', color: '#888', marginBottom: '2px' }}>Width</div>
                       <input
@@ -1787,6 +1848,24 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                       Apply
                     </button>
                   </div>
+                  <button
+                    onClick={handleGenerateDungeon}
+                    style={{
+                      width: '100%',
+                      padding: '8px 16px',
+                      background: 'rgba(156, 39, 176, 0.3)',
+                      border: '1px solid rgba(156, 39, 176, 0.6)',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontFamily: 'monospace',
+                      fontWeight: 'bold',
+                    }}
+                    title="Generate a random dungeon layout with rooms, corridors, and doors"
+                  >
+                    🎲 Generate Random Dungeon
+                  </button>
                 </div>
               )}
 
