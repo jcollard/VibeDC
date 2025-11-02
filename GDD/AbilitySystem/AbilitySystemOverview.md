@@ -49,19 +49,20 @@ The Ability System provides:
 **Execution**: Continuous effect or stat modification
 **Slot System**: **ONE SLOT** - Only one passive ability can be active at a time
 **Examples**:
-- **Meat Shield** - Increases max HP by 50
-- **Dual Wield** - Allows two one-handed weapons
-- **Heavy Armor** - Allows heavy armor regardless of class
-- **Dodge** - Increases Physical Evasion
-- **Fast** - Increases Speed by 3
+- **Meat Shield** - Increases max HP by 50 (✅ IMPLEMENTABLE)
+- **Dodge** - Increases Physical Evasion (✅ IMPLEMENTABLE)
+- **Fast** - Increases Speed by 3 (✅ IMPLEMENTABLE)
+- **Focused** - Increases max MP by 50 (✅ IMPLEMENTABLE)
+- ~~**Dual Wield** - Allows two one-handed weapons~~ (🚫 OUT OF SCOPE - equipment permissions)
+- ~~**Heavy Armor** - Allows heavy armor regardless of class~~ (🚫 OUT OF SCOPE - equipment permissions)
 
 **Key Properties**:
 - Must be assigned to passive slot to be active
 - Can swap passive abilities outside of combat
 - No activation cost once assigned
-- Can grant stat bonuses
-- Can remove equipment restrictions
-- Can modify damage calculations
+- Can grant stat bonuses (✅ IMPLEMENTED via StatModifier system)
+- ~~Can remove equipment restrictions~~ (🚫 OUT OF SCOPE - equipment permission system not implemented)
+- ~~Can modify damage calculations~~ (🚫 OUT OF SCOPE - damage calculation hooks not implemented)
 - **Cross-class usage**: Can use passive learned from Fighter while playing as Rogue
 
 ### Reaction Abilities
@@ -200,12 +201,12 @@ The `ability-database.yaml` file currently contains **32 abilities** across thre
 - **Meat Shield** (Fighter Passive) - Increases max HP by 50
 - **Dodge** (Rogue Passive) - Increases Physical Evasion
 
-**Out of Scope** (require status effect system NOT being implemented):
-- Knockback, Confusion, Stun, Bleeding, Blindness, Disarm, Haste
-- Shield absorption effects
-- Damage-over-time effects
-- Control effects (interrupts, mesmerize)
-- Equipment permission changes
+**Out of Scope** (require systems NOT being implemented):
+- **Status Effects**: Knockback, Confusion, Stun, Bleeding, Blindness, Disarm, Haste
+- **Shield System**: Shield absorption effects
+- **Damage-over-Time**: Bleeding, poison, burn effects
+- **Control Effects**: Interrupts, mesmerize (action timer modification)
+- **Equipment Permissions**: Abilities that change what equipment can be used (Shield Bearer, Dual Wield, Heavy Armor)
 
 **Note**: YAML examples in this document include some out-of-scope abilities for **reference only**. When implementing, focus on abilities that use `stat-bonus`, `stat-penalty`, `damage-physical`, `damage-magical`, and `heal` effect types.
 
@@ -1118,10 +1119,19 @@ static fromJSON(json: HumanoidUnitJSON): HumanoidUnit | null
 1. **Effect Execution System** - `AbilityExecutor` to actually execute ability effects
 2. **Effect Handlers** - Individual handlers for each effect type
 3. **Combat Integration** - Triggering abilities during combat phases
-4. **Passive Stat Application** - Applying passive ability bonuses to stats
+4. **Passive Stat Application** - Applying passive ability bonuses to stats (Phase 4 of StatModifierSystem.md)
 5. **Reaction Triggers** - Detecting and executing reaction abilities
 6. **Movement Triggers** - Detecting and executing movement abilities
 7. **UI Integration** - Ability selection menus and info panels
+
+#### Notes on Existing Fields Not Yet Used:
+
+**Equipment Permissions**: The `HumanoidUnit` class has a `canDualWield` boolean field that exists for future use, but is **not currently integrated** with the ability system. The following features require additional equipment system changes:
+- Dual-wield permission (requires equipment validation updates)
+- Armor type permissions (requires equipment restriction system)
+- Shield permissions (requires equipment restriction system)
+
+These will require implementing an `equipment-permission` effect type and modifying equipment validation logic to check passive abilities.
 
 ## Implementation Strategy
 
@@ -2192,11 +2202,16 @@ This system is complete when:
 - `AbilityExecutor` and effect resolution system
 - Effect handlers (damage, healing, stats, etc.)
 - Combat phase integration (triggering abilities)
-- Passive stat application
+- Passive stat application (Phase 4 of StatModifierSystem.md - applying modifiers when passive assigned)
 - Reaction detection and execution
 - Movement ability triggers
 - UI panels for ability management
-- Status Effect System (dependency)
+- Status Effect System (dependency - not planned)
+- Equipment Permission System (dependency - not planned):
+  - `equipment-permission` effect type
+  - Equipment validation integration with passive abilities
+  - Dual-wield enablement via abilities (note: `canDualWield` field exists but unused)
+  - Armor/shield permission overrides
 
 ---
 
