@@ -10,6 +10,8 @@ import type { CombatEncounter } from './CombatEncounter';
 import { VictoryModalRenderer } from './rendering/VictoryModalRenderer';
 import { CombatConstants } from './CombatConstants';
 import type { VictoryRewards } from './VictoryRewards';
+import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
+import { PartyInventory } from '../../utils/inventory/PartyInventory';
 
 /**
  * Phase handler for the victory screen.
@@ -205,17 +207,55 @@ export class VictoryPhaseHandler extends PhaseBase {
       Array.from(this.selectedItemIndices).map(i => this.rewards.items[i].name)
     );
 
-    // TODO: Phase 7 - Apply rewards to party state
-    // In the future, this will:
-    // 1. Award XP to party members
-    // 2. Add gold to party inventory
-    // 3. Add selected items to party inventory
+    // Apply rewards to party state
+    this.applyRewardsToParty();
 
     // Signal to CombatView that combat should end
     return {
       ...state,
       shouldEndCombat: true,
     };
+  }
+
+  /**
+   * Award XP to all party members and add selected items to inventory
+   */
+  private applyRewardsToParty(): void {
+    console.log('[VictoryPhaseHandler] Applying rewards to party');
+
+    // 1. Award XP to all party members (each gets XP for their primary class)
+    // IMPORTANT: Add XP directly to registry data, NOT to combat units (they won't persist)
+    const partyConfigs = PartyMemberRegistry.getAll();
+    partyConfigs.forEach(config => {
+      // Initialize classExperience if it doesn't exist
+      if (!config.classExperience) {
+        config.classExperience = {};
+      }
+
+      // Add XP to primary class
+      const currentXP = config.classExperience[config.unitClassId] || 0;
+      config.classExperience[config.unitClassId] = currentXP + this.rewards.xp;
+
+      // Update total experience
+      config.totalExperience = (config.totalExperience || 0) + this.rewards.xp;
+
+      console.log(`[VictoryPhaseHandler] Awarded ${this.rewards.xp} XP to ${config.name} (${config.unitClassId})`);
+    });
+
+    // 2. Add gold to party inventory
+    if (this.rewards.gold > 0) {
+      PartyInventory.addGold(this.rewards.gold);
+      console.log(`[VictoryPhaseHandler] Added ${this.rewards.gold} gold to party inventory`);
+    }
+
+    // 3. Add selected items to party inventory
+    this.selectedItemIndices.forEach(index => {
+      const item = this.rewards.items[index];
+      if (item && item.equipmentId) {
+        PartyInventory.addItem(item.equipmentId, 1);
+        console.log(`[VictoryPhaseHandler] Added ${item.name} to party inventory`);
+      }
+    });
   }
 
   private isPointInBounds(
