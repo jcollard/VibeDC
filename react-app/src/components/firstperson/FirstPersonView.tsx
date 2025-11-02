@@ -12,7 +12,7 @@ import { FirstPersonLayoutManager } from '../../models/firstperson/layouts/First
 import { UISettings } from '../../config/UISettings';
 import { ThreeJSViewport, type ThreeJSViewportHandle } from './ThreeJSViewport';
 import { MinimapRenderer } from '../../models/firstperson/rendering/MinimapRenderer';
-import { PartyMemberStatsPanel } from '../../models/firstperson/rendering/PartyMemberStatsPanel';
+import { MenuPanel, type MenuOption } from '../../models/firstperson/rendering/MenuPanel';
 import { FontAtlasRenderer } from '../../utils/FontAtlasRenderer';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
 import { EventProcessor } from '../../utils/EventProcessor';
@@ -149,6 +149,21 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
 
   // Layout manager
   const layoutManager = useMemo(() => new FirstPersonLayoutManager(), []);
+
+  // Menu panel
+  const menuPanel = useMemo(() => new MenuPanel(), []);
+
+  // Menu options
+  const menuOptions = useMemo<MenuOption[]>(() => [
+    {
+      label: 'Manage Party',
+      action: () => {
+        if (onOpenPartyManagement) {
+          onOpenPartyManagement();
+        }
+      },
+    },
+  ], [onOpenPartyManagement]);
 
   // Event processor (Guidelines Compliance: useMemo creates stable reference)
   const eventProcessor = useMemo(() => new EventProcessor(), []);
@@ -400,11 +415,11 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       spriteImagesRef.current
     );
 
-    // Render party member stats in bottom info panel
+    // Render menu panel in bottom info panel
     if (fontAtlasRef.current) {
-      PartyMemberStatsPanel.render(
+      menuPanel.render(
         ctx,
-        firstPersonState.partyMember,
+        menuOptions,
         bottomInfoRegion.x,
         bottomInfoRegion.y,
         bottomInfoRegion.width,
@@ -469,7 +484,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       displayCtx.imageSmoothingEnabled = false;
       displayCtx.drawImage(bufferCanvas, 0, 0);
     }
-  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef, showDebugRectangles]);
+  }, [spritesLoaded, firstPersonState, layoutManager, combatLogManager, viewportRef, showDebugRectangles, menuPanel, menuOptions]);
 
   // Animation loop
   useEffect(() => {
@@ -725,6 +740,65 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [firstPersonState, inputHandler, combatLogManager, processMovementEvents, onOpenPartyManagement]);
 
+  // Handle mouse events for menu interaction
+  useEffect(() => {
+    const canvas = displayCanvasRef.current;
+    if (!canvas) return;
+
+    const getCanvasCoordinates = (event: MouseEvent): { x: number; y: number } | null => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+
+      const canvasX = (event.clientX - rect.left) * scaleX;
+      const canvasY = (event.clientY - rect.top) * scaleY;
+
+      return { x: canvasX, y: canvasY };
+    };
+
+    const handleMouseMove = (event: MouseEvent) => {
+      const coords = getCanvasCoordinates(event);
+      if (!coords) return;
+
+      const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+      const changed = menuPanel.handleMouseMove(
+        coords.x,
+        coords.y,
+        menuOptions,
+        bottomInfoRegion.x,
+        bottomInfoRegion.y,
+        bottomInfoRegion.width
+      );
+
+      if (changed) {
+        renderFrame();
+      }
+    };
+
+    const handleMouseClick = (event: MouseEvent) => {
+      const coords = getCanvasCoordinates(event);
+      if (!coords) return;
+
+      const bottomInfoRegion = layoutManager.getBottomInfoPanelRegion();
+      menuPanel.handleMouseClick(
+        coords.x,
+        coords.y,
+        menuOptions,
+        bottomInfoRegion.x,
+        bottomInfoRegion.y,
+        bottomInfoRegion.width
+      );
+    };
+
+    canvas.addEventListener('mousemove', handleMouseMove);
+    canvas.addEventListener('click', handleMouseClick);
+
+    return () => {
+      canvas.removeEventListener('mousemove', handleMouseMove);
+      canvas.removeEventListener('click', handleMouseClick);
+    };
+  }, [menuPanel, menuOptions, layoutManager, renderFrame]);
+
   // Show error if map not found
   if (!areaMap || !firstPersonState) {
     return (
@@ -775,7 +849,7 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
             objectFit: 'contain',
             cursor: 'default',
             position: 'relative',
-            pointerEvents: 'none',
+            pointerEvents: 'auto',
           } as React.CSSProperties}
         />
 
