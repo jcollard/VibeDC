@@ -1090,6 +1090,28 @@ export const CombatView: React.FC<CombatViewProps> = ({
             }
             break;
 
+          case 'ability-selected':
+            // Handle ability selection from AbilityMenuContent
+            if (combatState.phase === 'unit-turn') {
+              if ('handleAbilitySelected' in phaseHandlerRef.current) {
+                const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
+                unitTurnHandler.handleAbilitySelected(clickResult.abilityId);
+                return; // Click was handled
+              }
+            }
+            break;
+
+          case 'cancel-ability-selection':
+            // Handle cancel from AbilityMenuContent
+            if (combatState.phase === 'unit-turn') {
+              if ('handleAbilityCancelled' in phaseHandlerRef.current) {
+                const unitTurnHandler = phaseHandlerRef.current as UnitTurnPhaseHandler;
+                unitTurnHandler.handleAbilityCancelled();
+                return; // Click was handled
+              }
+            }
+            break;
+
           case 'unit-selected':
           case 'target-selected':
             // Future: Handle other click types

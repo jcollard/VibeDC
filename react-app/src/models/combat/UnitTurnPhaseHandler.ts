@@ -1415,4 +1415,24 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
       (this.currentStrategy as any).handleCancelAttack();
     }
   }
+
+  /**
+   * Handle ability selection from ability menu
+   * Delegates to strategy to enter ability targeting mode
+   */
+  handleAbilitySelected(abilityId: string): void {
+    if (this.currentStrategy && 'handleAbilitySelected' in this.currentStrategy) {
+      (this.currentStrategy as any).handleAbilitySelected(abilityId);
+    }
+  }
+
+  /**
+   * Handle ability menu cancellation
+   * Delegates to strategy to exit ability mode
+   */
+  handleAbilityCancelled(): void {
+    if (this.currentStrategy && 'handleAbilityCancelled' in this.currentStrategy) {
+      (this.currentStrategy as any).handleAbilityCancelled();
+    }
+  }
 }
