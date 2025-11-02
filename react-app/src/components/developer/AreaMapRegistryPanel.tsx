@@ -10,6 +10,7 @@ import { ActionFactory } from '../../models/area/actions/ActionFactory';
 import { AreaMapRegistry } from '../../utils/AreaMapRegistry';
 import { AreaMapTileSetRegistry } from '../../utils/AreaMapTileSetRegistry';
 import { SpriteRegistry } from '../../utils/SpriteRegistry';
+import { DungeonGenerator } from '../../utils/DungeonGenerator';
 import { AreaMapTileSetEditorPanel } from './AreaMapTileSetEditorPanel';
 import { EventEditorModal } from './EventEditorModal';
 import * as yaml from 'js-yaml';
@@ -99,6 +100,25 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
 
+  // New map creation state
+  const [isCreatingNewMap, setIsCreatingNewMap] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
+  const [newMapId, setNewMapId] = useState('');
+  const [newMapWidth, setNewMapWidth] = useState(10);
+  const [newMapHeight, setNewMapHeight] = useState(10);
+  const [newMapTilesetId, setNewMapTilesetId] = useState('');
+
+  // Map name editing state
+  const [isEditingMapName, setIsEditingMapName] = useState(false);
+  const [editingMapName, setEditingMapName] = useState('');
+
+  // Dungeon generation parameters
+  const [showDungeonSettings, setShowDungeonSettings] = useState(false);
+  const [dungeonRoomAttempts, setDungeonRoomAttempts] = useState(50);
+  const [dungeonMinRoomSize, setDungeonMinRoomSize] = useState(3);
+  const [dungeonMaxRoomSize, setDungeonMaxRoomSize] = useState(8);
+  const [dungeonExtraConnections, setDungeonExtraConnections] = useState(true);
+
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
 
@@ -136,6 +156,194 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     // Initialize pending dimensions with current dimensions
     setPendingWidth(json.grid[0]?.length || 0);
     setPendingHeight(json.grid.length);
+  };
+
+  const handleCreateNewMap = () => {
+    // Get all available tilesets
+    const allTilesets = AreaMapTileSetRegistry.getAll();
+    if (allTilesets.length === 0) {
+      alert('No tilesets available. Please create a tileset first.');
+      return;
+    }
+
+    // Initialize with first available tileset
+    setNewMapTilesetId(allTilesets[0].id);
+    setNewMapName('New Area Map');
+    setNewMapId(`area-map-${Date.now()}`);
+    setNewMapWidth(10);
+    setNewMapHeight(10);
+    setIsCreatingNewMap(true);
+  };
+
+  const handleConfirmCreateNewMap = () => {
+    if (!newMapId || !newMapName || !newMapTilesetId) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Check if ID already exists
+    const existingMap = AreaMapRegistry.getById(newMapId);
+    if (existingMap) {
+      alert(`A map with ID "${newMapId}" already exists. Please use a different ID.`);
+      return;
+    }
+
+    const tileset = AreaMapTileSetRegistry.getById(newMapTilesetId);
+    if (!tileset) {
+      alert('Selected tileset not found');
+      return;
+    }
+
+    // Find a default floor tile from the tileset
+    const defaultTile = tileset.tileTypes.find(tt => tt.behavior === 'floor') || tileset.tileTypes[0];
+
+    // Create the grid with default tiles
+    const grid: any[][] = [];
+    for (let y = 0; y < newMapHeight; y++) {
+      const row: any[] = [];
+      for (let x = 0; x < newMapWidth; x++) {
+        row.push({
+          behavior: defaultTile.behavior,
+          walkable: defaultTile.walkable,
+          passable: defaultTile.passable,
+          spriteId: defaultTile.spriteId,
+          terrainType: defaultTile.terrainType,
+        });
+      }
+      grid.push(row);
+    }
+
+    // Create new map JSON
+    const newMapJson: AreaMapJSON = {
+      id: newMapId,
+      name: newMapName,
+      description: 'A new area map',
+      width: newMapWidth,
+      height: newMapHeight,
+      tilesetId: newMapTilesetId,
+      grid: grid,
+      playerSpawn: {
+        x: Math.floor(newMapWidth / 2),
+        y: Math.floor(newMapHeight / 2),
+        direction: 'North' as CardinalDirection,
+      },
+      interactiveObjects: [],
+      npcSpawns: [],
+      encounterZones: [],
+      eventAreas: [],
+    };
+
+    try {
+      // Create and register the new map
+      const newMap = AreaMap.fromJSON(newMapJson);
+      AreaMapRegistry.register(newMap);
+
+      // Update UI state
+      setAreaMaps(AreaMapRegistry.getAll());
+      setSelectedMap(newMap);
+      setIsCreatingNewMap(false);
+
+      // Automatically enter edit mode
+      setTimeout(() => handleEdit(), 0);
+    } catch (error) {
+      console.error('Failed to create new map:', error);
+      alert(`Failed to create new map: ${error}`);
+    }
+  };
+
+  const handleCancelCreateNewMap = () => {
+    setIsCreatingNewMap(false);
+  };
+
+  const handleStartEditMapName = () => {
+    if (!editedMap) return;
+    setEditingMapName(editedMap.name);
+    setIsEditingMapName(true);
+  };
+
+  const handleSaveMapName = () => {
+    if (!editedMap || !editingMapName.trim()) {
+      setIsEditingMapName(false);
+      return;
+    }
+
+    setEditedMap({
+      ...editedMap,
+      name: editingMapName.trim(),
+    });
+    setIsEditingMapName(false);
+  };
+
+  const handleCancelEditMapName = () => {
+    setIsEditingMapName(false);
+    setEditingMapName('');
+  };
+
+  const handleGenerateDungeon = () => {
+    if (!editedMap) return;
+
+    // Show settings modal instead of generating immediately
+    setShowDungeonSettings(true);
+  };
+
+  const handleConfirmGenerateDungeon = () => {
+    if (!editedMap) return;
+
+    setShowDungeonSettings(false);
+
+    const tileset = AreaMapTileSetRegistry.getById(editedMap.tilesetId);
+    if (!tileset) {
+      alert('Tileset not found. Cannot generate dungeon.');
+      return;
+    }
+
+    // Validate and clamp max room size
+    const clampedMaxRoomSize = Math.min(
+      dungeonMaxRoomSize,
+      Math.floor(Math.min(editedMap.width, editedMap.height) / 2)
+    );
+
+    // Create dungeon generator with user-specified parameters
+    const generator = new DungeonGenerator({
+      width: editedMap.width,
+      height: editedMap.height,
+      roomAttempts: dungeonRoomAttempts,
+      minRoomSize: dungeonMinRoomSize,
+      maxRoomSize: clampedMaxRoomSize,
+      corridorWidth: 1,
+      extraConnections: dungeonExtraConnections,
+    });
+
+    // Generate the dungeon
+    const { grid: charGrid, rooms } = generator.generate();
+
+    // Convert character grid to tile grid
+    const tileGrid = DungeonGenerator.convertToTileGrid(charGrid, tileset);
+
+    // Find a spawn point in the first room, or center of map if no rooms
+    let spawnX = Math.floor(editedMap.width / 2);
+    let spawnY = Math.floor(editedMap.height / 2);
+
+    if (rooms.length > 0) {
+      const firstRoom = rooms[0];
+      spawnX = Math.floor(firstRoom.x + firstRoom.width / 2);
+      spawnY = Math.floor(firstRoom.y + firstRoom.height / 2);
+    }
+
+    // Update the edited map with the generated dungeon
+    setEditedMap({
+      ...editedMap,
+      grid: tileGrid,
+      interactiveObjects: [], // Clear existing objects - user can place doors manually
+      playerSpawn: {
+        x: spawnX,
+        y: spawnY,
+        direction: 'North' as CardinalDirection,
+      },
+      // Clear encounter zones and NPCs since layout has changed
+      encounterZones: [],
+      npcSpawns: [],
+    });
   };
 
   // Helper to deserialize event areas from JSON to class instances
@@ -1360,9 +1568,26 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         <div style={{ width: '280px', borderRight: '2px solid #666', display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.3)' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid #666' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px' }}>Area Maps</div>
-            <div style={{ fontSize: '11px', color: '#aaa' }}>
+            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '12px' }}>
               <div><strong>Total:</strong> {areaMaps.length}</div>
             </div>
+            <button
+              onClick={handleCreateNewMap}
+              style={{
+                width: '100%',
+                padding: '8px',
+                background: 'rgba(76, 175, 80, 0.3)',
+                border: '1px solid rgba(76, 175, 80, 0.6)',
+                borderRadius: '4px',
+                color: '#fff',
+                fontSize: '11px',
+                cursor: 'pointer',
+                fontFamily: 'monospace',
+                fontWeight: 'bold',
+              }}
+            >
+              + Create New Map
+            </button>
           </div>
 
           {/* Map list */}
@@ -1414,11 +1639,106 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             <>
               {/* Map info */}
               <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #666' }}>
-                <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{selectedMap.name}</div>
-                <div style={{ fontSize: '11px', color: '#aaa' }}>{selectedMap.description}</div>
-                <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
-                  Size: {selectedMap.width}x{selectedMap.height} • Tileset: {selectedMap.tilesetId}
-                </div>
+                {isEditing && editedMap ? (
+                  <>
+                    {isEditingMapName ? (
+                      <div style={{ display: 'flex', gap: '8px', alignItems: 'center', marginBottom: '8px' }}>
+                        <input
+                          type="text"
+                          value={editingMapName}
+                          onChange={(e) => setEditingMapName(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter') {
+                              handleSaveMapName();
+                            } else if (e.key === 'Escape') {
+                              handleCancelEditMapName();
+                            }
+                          }}
+                          autoFocus
+                          style={{
+                            flex: 1,
+                            padding: '6px',
+                            background: 'rgba(255,255,255,0.1)',
+                            border: '2px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            fontSize: '16px',
+                            fontFamily: 'monospace',
+                            fontWeight: 'bold',
+                          }}
+                        />
+                        <button
+                          onClick={handleSaveMapName}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(76, 175, 80, 0.3)',
+                            border: '1px solid rgba(76, 175, 80, 0.6)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                          title="Save (Enter)"
+                        >
+                          ✓
+                        </button>
+                        <button
+                          onClick={handleCancelEditMapName}
+                          style={{
+                            padding: '6px 12px',
+                            background: 'rgba(244, 67, 54, 0.3)',
+                            border: '1px solid rgba(244, 67, 54, 0.6)',
+                            borderRadius: '4px',
+                            color: '#fff',
+                            fontSize: '11px',
+                            cursor: 'pointer',
+                            fontFamily: 'monospace',
+                          }}
+                          title="Cancel (Escape)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    ) : (
+                      <div
+                        onClick={handleStartEditMapName}
+                        style={{
+                          fontSize: '16px',
+                          fontWeight: 'bold',
+                          marginBottom: '8px',
+                          cursor: 'pointer',
+                          padding: '4px',
+                          borderRadius: '4px',
+                          border: '2px solid transparent',
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'rgba(255,255,255,0.05)';
+                          e.currentTarget.style.borderColor = 'rgba(76, 175, 80, 0.3)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = 'transparent';
+                          e.currentTarget.style.borderColor = 'transparent';
+                        }}
+                        title="Click to edit map name"
+                      >
+                        {editedMap.name}
+                      </div>
+                    )}
+                    <div style={{ fontSize: '11px', color: '#aaa' }}>{editedMap.description}</div>
+                    <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                      Size: {editedMap.width}x{editedMap.height} • Tileset: {editedMap.tilesetId}
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px' }}>{selectedMap.name}</div>
+                    <div style={{ fontSize: '11px', color: '#aaa' }}>{selectedMap.description}</div>
+                    <div style={{ fontSize: '10px', color: '#888', marginTop: '4px' }}>
+                      Size: {selectedMap.width}x{selectedMap.height} • Tileset: {selectedMap.tilesetId}
+                    </div>
+                  </>
+                )}
               </div>
 
               {/* Edit controls */}
@@ -1481,8 +1801,8 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
               {/* Map dimensions */}
               {isEditing && (
                 <div style={{ marginBottom: '16px', paddingBottom: '16px', borderBottom: '1px solid #666' }}>
-                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Dimensions</div>
-                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end' }}>
+                  <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '13px' }}>Dimensions & Generation</div>
+                  <div style={{ display: 'flex', gap: '8px', alignItems: 'flex-end', marginBottom: '12px' }}>
                     <div style={{ width: '80px' }}>
                       <div style={{ fontSize: '9px', color: '#888', marginBottom: '2px' }}>Width</div>
                       <input
@@ -1542,6 +1862,24 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
                       Apply
                     </button>
                   </div>
+                  <button
+                    onClick={handleGenerateDungeon}
+                    style={{
+                      width: '100%',
+                      padding: '8px 16px',
+                      background: 'rgba(156, 39, 176, 0.3)',
+                      border: '1px solid rgba(156, 39, 176, 0.6)',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      cursor: 'pointer',
+                      fontFamily: 'monospace',
+                      fontWeight: 'bold',
+                    }}
+                    title="Generate a random dungeon layout with rooms, corridors, and doors"
+                  >
+                    🎲 Generate Random Dungeon
+                  </button>
                 </div>
               )}
 
@@ -2201,6 +2539,378 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             setEditingEventId(null);
           }}
         />
+      )}
+
+      {/* New map creation modal */}
+      {isCreatingNewMap && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+          }}
+          onClick={handleCancelCreateNewMap}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(30, 30, 30, 0.98)',
+              border: '2px solid #666',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '500px',
+              maxWidth: '90%',
+              color: '#fff',
+              fontFamily: 'monospace',
+            }}
+          >
+            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
+              Create New Area Map
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Map Name */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Map Name:</div>
+                <input
+                  type="text"
+                  value={newMapName}
+                  onChange={(e) => setNewMapName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                  placeholder="Enter map name"
+                />
+              </div>
+
+              {/* Map ID */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Map ID:</div>
+                <input
+                  type="text"
+                  value={newMapId}
+                  onChange={(e) => setNewMapId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                  placeholder="Enter unique map ID"
+                />
+              </div>
+
+              {/* Tileset Selection */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Tileset:</div>
+                <select
+                  value={newMapTilesetId}
+                  onChange={(e) => setNewMapTilesetId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {AreaMapTileSetRegistry.getAll().map(ts => (
+                    <option key={ts.id} value={ts.id}>{ts.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Dimensions */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Width:</div>
+                  <input
+                    type="number"
+                    min="3"
+                    max="100"
+                    value={newMapWidth}
+                    onChange={(e) => setNewMapWidth(Math.max(3, Math.min(100, parseInt(e.target.value) || 3)))}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid #666',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Height:</div>
+                  <input
+                    type="number"
+                    min="3"
+                    max="100"
+                    value={newMapHeight}
+                    onChange={(e) => setNewMapHeight(Math.max(3, Math.min(100, parseInt(e.target.value) || 3)))}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid #666',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                onClick={handleConfirmCreateNewMap}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(76, 175, 80, 0.3)',
+                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Create Map
+              </button>
+              <button
+                onClick={handleCancelCreateNewMap}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(244, 67, 54, 0.3)',
+                  border: '1px solid rgba(244, 67, 54, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Dungeon generation settings modal */}
+      {showDungeonSettings && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+          }}
+          onClick={() => setShowDungeonSettings(false)}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(30, 30, 30, 0.98)',
+              border: '2px solid rgba(156, 39, 176, 0.8)',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '500px',
+              maxWidth: '90%',
+              color: '#fff',
+              fontFamily: 'monospace',
+            }}
+          >
+            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '8px' }}>
+              Dungeon Generation Settings
+            </div>
+            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '20px' }}>
+              Configure parameters for random dungeon generation
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Room Attempts */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+                  Room Attempts: {dungeonRoomAttempts}
+                </div>
+                <input
+                  type="range"
+                  min="10"
+                  max="150"
+                  value={dungeonRoomAttempts}
+                  onChange={(e) => setDungeonRoomAttempts(parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: 'rgba(156, 39, 176, 0.8)',
+                  }}
+                />
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                  Higher values create more densely packed dungeons
+                </div>
+              </div>
+
+              {/* Min Room Size */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+                  Min Room Size: {dungeonMinRoomSize}
+                </div>
+                <input
+                  type="range"
+                  min="2"
+                  max="10"
+                  value={dungeonMinRoomSize}
+                  onChange={(e) => {
+                    const newMin = parseInt(e.target.value);
+                    setDungeonMinRoomSize(newMin);
+                    // Ensure max is always >= min
+                    if (dungeonMaxRoomSize < newMin) {
+                      setDungeonMaxRoomSize(newMin);
+                    }
+                  }}
+                  style={{
+                    width: '100%',
+                    accentColor: 'rgba(156, 39, 176, 0.8)',
+                  }}
+                />
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                  Minimum width/height of generated rooms
+                </div>
+              </div>
+
+              {/* Max Room Size */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>
+                  Max Room Size: {dungeonMaxRoomSize}
+                </div>
+                <input
+                  type="range"
+                  min={dungeonMinRoomSize}
+                  max="20"
+                  value={dungeonMaxRoomSize}
+                  onChange={(e) => setDungeonMaxRoomSize(parseInt(e.target.value))}
+                  style={{
+                    width: '100%',
+                    accentColor: 'rgba(156, 39, 176, 0.8)',
+                  }}
+                />
+                <div style={{ fontSize: '9px', color: '#666', marginTop: '2px' }}>
+                  Maximum width/height of generated rooms
+                </div>
+              </div>
+
+              {/* Extra Connections */}
+              <div>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={dungeonExtraConnections}
+                    onChange={(e) => setDungeonExtraConnections(e.target.checked)}
+                    style={{
+                      width: '16px',
+                      height: '16px',
+                      cursor: 'pointer',
+                      accentColor: 'rgba(156, 39, 176, 0.8)',
+                    }}
+                  />
+                  <div>
+                    <div style={{ fontSize: '11px', color: '#fff' }}>Extra Connections</div>
+                    <div style={{ fontSize: '9px', color: '#666' }}>
+                      Add additional corridors between rooms for more complex layouts
+                    </div>
+                  </div>
+                </label>
+              </div>
+            </div>
+
+            {/* Warning */}
+            <div style={{
+              marginTop: '20px',
+              padding: '12px',
+              background: 'rgba(255, 152, 0, 0.1)',
+              border: '1px solid rgba(255, 152, 0, 0.3)',
+              borderRadius: '4px',
+              fontSize: '10px',
+              color: '#ffab40',
+            }}>
+              ⚠️ This will replace the current map layout. This action cannot be undone.
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+              <button
+                onClick={handleConfirmGenerateDungeon}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(156, 39, 176, 0.3)',
+                  border: '1px solid rgba(156, 39, 176, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Generate Dungeon
+              </button>
+              <button
+                onClick={() => setShowDungeonSettings(false)}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(244, 67, 54, 0.3)',
+                  border: '1px solid rgba(244, 67, 54, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
