@@ -91,9 +91,22 @@ function getInventoryMainPanelBounds(layoutManager: CombatLayoutManager, canvasW
  * @param fontId Font ID to use for measurement
  * @returns Array of wrapped message lines
  */
+/**
+ * Strip color and sprite tags from a message to get the plain text for width measurement
+ */
+function stripTags(message: string): string {
+  return message
+    .replace(/\[color=#[0-9a-fA-F]{6}\]/g, '')
+    .replace(/\[\/color\]/g, '')
+    .replace(/\[sprite:[\w-]+\]/g, 'S'); // Replace sprite tags with single char
+}
+
 function wrapMessage(message: string, maxWidth: number, fontId: string): string[] {
-  // Measure the full message
-  const fullWidth = FontAtlasRenderer.measureTextByFontId(message, fontId);
+  // Strip tags for width measurement
+  const plainMessage = stripTags(message);
+
+  // Measure the full message (without tags)
+  const fullWidth = FontAtlasRenderer.measureTextByFontId(plainMessage, fontId);
 
   // If it fits, return as-is
   if (fullWidth <= maxWidth) {
@@ -108,7 +121,7 @@ function wrapMessage(message: string, maxWidth: number, fontId: string): string[
   for (let i = 0; i < words.length; i++) {
     const word = words[i];
     const testLine = currentLine === '' ? word : `${currentLine} ${word}`;
-    const testWidth = FontAtlasRenderer.measureTextByFontId(testLine, fontId);
+    const testWidth = FontAtlasRenderer.measureTextByFontId(stripTags(testLine), fontId);
 
     if (testWidth <= maxWidth) {
       currentLine = testLine;
@@ -119,13 +132,13 @@ function wrapMessage(message: string, maxWidth: number, fontId: string): string[
       }
 
       // Check if single word is too long
-      const wordWidth = FontAtlasRenderer.measureTextByFontId(word, fontId);
+      const wordWidth = FontAtlasRenderer.measureTextByFontId(stripTags(word), fontId);
       if (wordWidth > maxWidth) {
         // Split the word by characters
         let charLine = '';
         for (const char of word) {
           const charTestLine = charLine + char;
-          const charTestWidth = FontAtlasRenderer.measureTextByFontId(charTestLine, fontId);
+          const charTestWidth = FontAtlasRenderer.measureTextByFontId(stripTags(charTestLine), fontId);
 
           if (charTestWidth <= maxWidth) {
             charLine = charTestLine;
@@ -666,7 +679,9 @@ export const PartyManagementView: React.FC = () => {
             const selectedClassId = spendXpMainContentRef.current.getSelectedClassId();
             const selectedClass = UnitClass.getById(selectedClassId);
             if (selectedClass) {
-              bottomPanelManager.setContent(new ClassInfoContent(selectedClass));
+              bottomPanelManager.setContent(new ClassInfoContent(selectedClass, selectedMember));
+              // Add class description to combat log with orange class name
+              addLogMessage(`[color=#ff8c00]${selectedClass.name}[/color] - ${selectedClass.description}`);
             }
           }
 
@@ -1242,8 +1257,10 @@ export const PartyManagementView: React.FC = () => {
           if (clickResult && clickResult.type === 'class-selected') {
             // Class was selected - show class info in bottom panel (no caching in spend-xp mode)
             const unitClass = UnitClass.getById(clickResult.classId);
-            if (unitClass) {
-              bottomPanelManager.setContent(new ClassInfoContent(unitClass));
+            if (unitClass && selectedMemberRef.current) {
+              bottomPanelManager.setContent(new ClassInfoContent(unitClass, selectedMemberRef.current));
+              // Add class description to combat log with orange class name
+              addLogMessage(`[color=#ff8c00]${unitClass.name}[/color] - ${unitClass.description}`);
             }
             renderFrame();
             return;
@@ -1287,6 +1304,30 @@ export const PartyManagementView: React.FC = () => {
             return;
           }
         }
+
+        // Check bottom panel click in spend-xp mode (for ClassInfoContent menu options)
+        const bottomPanelRegion = layoutManager.getBottomInfoPanelRegion();
+        const bottomClickResult = bottomPanelManager.handleClick(
+          canvasX,
+          canvasY,
+          bottomPanelRegion
+        );
+        if (bottomClickResult) {
+          // Handle set-primary-class
+          if (bottomClickResult.type === 'set-primary-class' && 'classId' in bottomClickResult) {
+            addLogMessage(`Set primary class: Coming Soon`);
+            renderFrame();
+            return;
+          }
+
+          // Handle set-secondary-class
+          if (bottomClickResult.type === 'set-secondary-class' && 'classId' in bottomClickResult) {
+            addLogMessage(`Set secondary class: Coming Soon`);
+            renderFrame();
+            return;
+          }
+        }
+
         return; // Don't process other clicks in spend-xp mode
       }
 
