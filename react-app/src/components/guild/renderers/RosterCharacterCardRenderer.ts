@@ -41,22 +41,24 @@ export class RosterCharacterCardRenderer {
     ctx.fillRect(x, y, card.WIDTH, card.HEIGHT);
 
     // ⚠️ RENDERING GUIDELINE: Use SpriteRenderer + round coordinates!
+    // Shift 16px to the right to avoid arrow overlap
     SpriteRenderer.renderSpriteById(
       ctx,
       character.spriteId,
       spriteImages,
       12, // sprite size (12px per sprite)
-      Math.floor(x + card.PADDING),
+      Math.floor(x + card.PADDING + 16),
       Math.floor(y + card.PADDING),
       card.SPRITE_SIZE,
       card.SPRITE_SIZE
     );
 
     // ⚠️ RENDERING GUIDELINE: Use FontAtlasRenderer for all text!
+    // Shift 16px to the right to avoid arrow overlap
     FontAtlasRenderer.renderText(
       ctx,
       character.name,
-      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2),
+      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2 + 16),
       Math.floor(y + card.PADDING),
       '7px-04b03',
       fontAtlasImage,
@@ -65,13 +67,21 @@ export class RosterCharacterCardRenderer {
       card.NAME_COLOR
     );
 
-    // Render class
+    // Render primary class / secondary class
     const unitClass = UnitClass.getById(character.unitClassId);
-    const className = unitClass?.name || 'Unknown';
+    let classText = unitClass?.name || 'Unknown';
+
+    if (character.secondaryClassId) {
+      const secondaryClass = UnitClass.getById(character.secondaryClassId);
+      if (secondaryClass) {
+        classText = `${classText}/${secondaryClass.name}`;
+      }
+    }
+
     FontAtlasRenderer.renderText(
       ctx,
-      className,
-      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2),
+      classText,
+      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2 + 16),
       Math.floor(y + card.PADDING + 8),
       '7px-04b03',
       fontAtlasImage,
@@ -80,13 +90,13 @@ export class RosterCharacterCardRenderer {
       card.CLASS_COLOR
     );
 
-    // Render level (TODO: calculate from totalExperience)
-    const level = 1;
+    // Render total XP
+    const totalXP = character.totalExperience ?? 0;
     FontAtlasRenderer.renderText(
       ctx,
-      `Lv. ${level}`,
-      Math.floor(x + card.WIDTH - 30),
-      Math.floor(y + card.PADDING),
+      `XP: ${totalXP}`,
+      Math.floor(x + card.SPRITE_SIZE + card.PADDING * 2 + 16),
+      Math.floor(y + card.PADDING + 16),
       '7px-04b03',
       fontAtlasImage,
       1,
