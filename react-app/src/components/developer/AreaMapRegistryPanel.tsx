@@ -99,6 +99,14 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editingValue, setEditingValue] = useState<string>('');
 
+  // New map creation state
+  const [isCreatingNewMap, setIsCreatingNewMap] = useState(false);
+  const [newMapName, setNewMapName] = useState('');
+  const [newMapId, setNewMapId] = useState('');
+  const [newMapWidth, setNewMapWidth] = useState(10);
+  const [newMapHeight, setNewMapHeight] = useState(10);
+  const [newMapTilesetId, setNewMapTilesetId] = useState('');
+
   // Store original map state before editing
   const originalMapRef = useRef<AreaMapJSON | null>(null);
 
@@ -136,6 +144,103 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
     // Initialize pending dimensions with current dimensions
     setPendingWidth(json.grid[0]?.length || 0);
     setPendingHeight(json.grid.length);
+  };
+
+  const handleCreateNewMap = () => {
+    // Get all available tilesets
+    const allTilesets = AreaMapTileSetRegistry.getAll();
+    if (allTilesets.length === 0) {
+      alert('No tilesets available. Please create a tileset first.');
+      return;
+    }
+
+    // Initialize with first available tileset
+    setNewMapTilesetId(allTilesets[0].id);
+    setNewMapName('New Area Map');
+    setNewMapId(`area-map-${Date.now()}`);
+    setNewMapWidth(10);
+    setNewMapHeight(10);
+    setIsCreatingNewMap(true);
+  };
+
+  const handleConfirmCreateNewMap = () => {
+    if (!newMapId || !newMapName || !newMapTilesetId) {
+      alert('Please fill in all required fields');
+      return;
+    }
+
+    // Check if ID already exists
+    const existingMap = AreaMapRegistry.getById(newMapId);
+    if (existingMap) {
+      alert(`A map with ID "${newMapId}" already exists. Please use a different ID.`);
+      return;
+    }
+
+    const tileset = AreaMapTileSetRegistry.getById(newMapTilesetId);
+    if (!tileset) {
+      alert('Selected tileset not found');
+      return;
+    }
+
+    // Find a default floor tile from the tileset
+    const defaultTile = tileset.tileTypes.find(tt => tt.behavior === 'floor') || tileset.tileTypes[0];
+
+    // Create the grid with default tiles
+    const grid: any[][] = [];
+    for (let y = 0; y < newMapHeight; y++) {
+      const row: any[] = [];
+      for (let x = 0; x < newMapWidth; x++) {
+        row.push({
+          behavior: defaultTile.behavior,
+          walkable: defaultTile.walkable,
+          passable: defaultTile.passable,
+          spriteId: defaultTile.spriteId,
+          terrainType: defaultTile.terrainType,
+        });
+      }
+      grid.push(row);
+    }
+
+    // Create new map JSON
+    const newMapJson: AreaMapJSON = {
+      id: newMapId,
+      name: newMapName,
+      description: 'A new area map',
+      width: newMapWidth,
+      height: newMapHeight,
+      tilesetId: newMapTilesetId,
+      grid: grid,
+      playerSpawn: {
+        x: Math.floor(newMapWidth / 2),
+        y: Math.floor(newMapHeight / 2),
+        direction: 'North' as CardinalDirection,
+      },
+      interactiveObjects: [],
+      npcSpawns: [],
+      encounterZones: [],
+      eventAreas: [],
+    };
+
+    try {
+      // Create and register the new map
+      const newMap = AreaMap.fromJSON(newMapJson);
+      AreaMapRegistry.register(newMap);
+
+      // Update UI state
+      setAreaMaps(AreaMapRegistry.getAll());
+      setSelectedMap(newMap);
+      setIsCreatingNewMap(false);
+
+      // Automatically enter edit mode
+      setTimeout(() => handleEdit(), 0);
+    } catch (error) {
+      console.error('Failed to create new map:', error);
+      alert(`Failed to create new map: ${error}`);
+    }
+  };
+
+  const handleCancelCreateNewMap = () => {
+    setIsCreatingNewMap(false);
   };
 
   // Helper to deserialize event areas from JSON to class instances
@@ -1360,9 +1465,26 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
         <div style={{ width: '280px', borderRight: '2px solid #666', display: 'flex', flexDirection: 'column', background: 'rgba(0,0,0,0.3)' }}>
           <div style={{ padding: '16px', borderBottom: '1px solid #666' }}>
             <div style={{ fontWeight: 'bold', marginBottom: '8px', fontSize: '14px' }}>Area Maps</div>
-            <div style={{ fontSize: '11px', color: '#aaa' }}>
+            <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '12px' }}>
               <div><strong>Total:</strong> {areaMaps.length}</div>
             </div>
+            <button
+              onClick={handleCreateNewMap}
+              style={{
+                width: '100%',
+                padding: '8px',
+                background: 'rgba(76, 175, 80, 0.3)',
+                border: '1px solid rgba(76, 175, 80, 0.6)',
+                borderRadius: '4px',
+                color: '#fff',
+                fontSize: '11px',
+                cursor: 'pointer',
+                fontFamily: 'monospace',
+                fontWeight: 'bold',
+              }}
+            >
+              + Create New Map
+            </button>
           </div>
 
           {/* Map list */}
@@ -2201,6 +2323,192 @@ export const AreaMapRegistryPanel: React.FC<AreaMapRegistryPanelProps> = ({ onCl
             setEditingEventId(null);
           }}
         />
+      )}
+
+      {/* New map creation modal */}
+      {isCreatingNewMap && (
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.85)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 3000,
+          }}
+          onClick={handleCancelCreateNewMap}
+        >
+          <div
+            onClick={(e) => e.stopPropagation()}
+            style={{
+              background: 'rgba(30, 30, 30, 0.98)',
+              border: '2px solid #666',
+              borderRadius: '8px',
+              padding: '24px',
+              width: '500px',
+              maxWidth: '90%',
+              color: '#fff',
+              fontFamily: 'monospace',
+            }}
+          >
+            <div style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '20px' }}>
+              Create New Area Map
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              {/* Map Name */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Map Name:</div>
+                <input
+                  type="text"
+                  value={newMapName}
+                  onChange={(e) => setNewMapName(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                  placeholder="Enter map name"
+                />
+              </div>
+
+              {/* Map ID */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Map ID:</div>
+                <input
+                  type="text"
+                  value={newMapId}
+                  onChange={(e) => setNewMapId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                  placeholder="Enter unique map ID"
+                />
+              </div>
+
+              {/* Tileset Selection */}
+              <div>
+                <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Tileset:</div>
+                <select
+                  value={newMapTilesetId}
+                  onChange={(e) => setNewMapTilesetId(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '8px',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #666',
+                    borderRadius: '4px',
+                    color: '#fff',
+                    fontSize: '12px',
+                    fontFamily: 'monospace',
+                  }}
+                >
+                  {AreaMapTileSetRegistry.getAll().map(ts => (
+                    <option key={ts.id} value={ts.id}>{ts.name}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Dimensions */}
+              <div style={{ display: 'flex', gap: '12px' }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Width:</div>
+                  <input
+                    type="number"
+                    min="3"
+                    max="100"
+                    value={newMapWidth}
+                    onChange={(e) => setNewMapWidth(Math.max(3, Math.min(100, parseInt(e.target.value) || 3)))}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid #666',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '11px', color: '#aaa', marginBottom: '6px' }}>Height:</div>
+                  <input
+                    type="number"
+                    min="3"
+                    max="100"
+                    value={newMapHeight}
+                    onChange={(e) => setNewMapHeight(Math.max(3, Math.min(100, parseInt(e.target.value) || 3)))}
+                    style={{
+                      width: '100%',
+                      padding: '8px',
+                      background: 'rgba(255,255,255,0.1)',
+                      border: '1px solid #666',
+                      borderRadius: '4px',
+                      color: '#fff',
+                      fontSize: '12px',
+                      fontFamily: 'monospace',
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Buttons */}
+            <div style={{ display: 'flex', gap: '12px', marginTop: '24px' }}>
+              <button
+                onClick={handleConfirmCreateNewMap}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(76, 175, 80, 0.3)',
+                  border: '1px solid rgba(76, 175, 80, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Create Map
+              </button>
+              <button
+                onClick={handleCancelCreateNewMap}
+                style={{
+                  flex: 1,
+                  padding: '10px 16px',
+                  background: 'rgba(244, 67, 54, 0.3)',
+                  border: '1px solid rgba(244, 67, 54, 0.6)',
+                  borderRadius: '4px',
+                  color: '#fff',
+                  fontSize: '12px',
+                  cursor: 'pointer',
+                  fontFamily: 'monospace',
+                  fontWeight: 'bold',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
