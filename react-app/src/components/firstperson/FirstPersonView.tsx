@@ -585,6 +585,42 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
     };
   }, [combatLogManager]);
 
+  // Expose developer random battle function
+  useEffect(() => {
+    // @ts-ignore - Developer function
+    window.startRandomBattle = () => {
+      console.log('[FirstPersonView] Starting random battle via developer function');
+
+      // Import the action dynamically to avoid circular dependencies
+      import('../../models/area/actions/GenerateRandomEncounter').then(({ GenerateRandomEncounter }) => {
+        const action = new GenerateRandomEncounter();
+        const newState = action.execute(gameState);
+
+        // Check if combat was triggered
+        if (newState.combatState?.active && newState.combatState.encounterId) {
+          const encounterId = newState.combatState.encounterId;
+          console.log(`[FirstPersonView] Random encounter generated: ${encounterId}`);
+          combatLogManager.addMessage(`Random encounter: ${encounterId}`);
+
+          // Trigger combat transition via GameView callback
+          if (onStartCombat) {
+            onStartCombat(encounterId);
+          }
+        } else {
+          console.error('[FirstPersonView] Failed to generate random encounter');
+          combatLogManager.addMessage('Failed to generate random encounter (no enemies available?)');
+        }
+      }).catch((error) => {
+        console.error('[FirstPersonView] Failed to load GenerateRandomEncounter:', error);
+      });
+    };
+
+    return () => {
+      // @ts-ignore
+      delete window.startRandomBattle;
+    };
+  }, [combatLogManager, gameState, onStartCombat]);
+
   // Helper function to process events after movement
   const processMovementEvents = useCallback((previousX: number, previousY: number, newX: number, newY: number) => {
     if (!firstPersonState) return;
