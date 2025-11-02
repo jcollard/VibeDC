@@ -173,6 +173,13 @@ export class SetAbilitiesMainPanelContent implements PanelContent {
   }
 
   /**
+   * Get ability by index
+   */
+  getAbilityByIndex(index: number): CombatAbility | null {
+    return this.abilities[index] ?? null;
+  }
+
+  /**
    * Handle click event
    */
   handleClick(relativeX: number, relativeY: number): any {

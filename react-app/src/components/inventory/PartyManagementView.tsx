@@ -1126,7 +1126,28 @@ export const PartyManagementView: React.FC = () => {
         if (relativeX >= 0 && relativeY >= 0 &&
             relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
           const hoverResult = setAbilitiesMainContentRef.current.handleHover(relativeX, relativeY);
-          if (hoverResult) {
+          if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult) {
+            // Handle ability hover - show ability details in bottom panel
+            if (hoverResult.type === 'ability-hover' && 'abilityIndex' in hoverResult && selectedMemberRef.current) {
+              const ability = setAbilitiesMainContentRef.current.getAbilityByIndex(hoverResult.abilityIndex as number);
+              if (ability) {
+                // Cache original bottom panel content if not already cached
+                if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
+                  originalBottomPanelContentRef.current = bottomPanelManager.getContent();
+                }
+
+                // Show ability details in bottom panel
+                bottomPanelManager.setContent(new AbilityInfoContent(ability, selectedMemberRef.current));
+                detailPanelActiveRef.current = true;
+              }
+            } else if (hoverResult.type === 'hover-cleared') {
+              // Restore original bottom panel content when hover is cleared
+              if (detailPanelActiveRef.current && originalBottomPanelContentRef.current) {
+                bottomPanelManager.setContent(originalBottomPanelContentRef.current);
+                detailPanelActiveRef.current = false;
+                originalBottomPanelContentRef.current = null;
+              }
+            }
             needsRerender = true;
           }
         }
