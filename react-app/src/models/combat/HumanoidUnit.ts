@@ -724,10 +724,28 @@ export class HumanoidUnit implements CombatUnit {
   // Class management methods
   /**
    * Set the primary class for this unit
+   * Resets base stats to the new class's starter configuration if available
    * @param unitClass The class to set as primary
    */
   setPrimaryClass(unitClass: UnitClass): void {
     this._unitClass = unitClass;
+
+    // Update base stats from the new class's starter config
+    if (unitClass.starterConfig) {
+      this.baseHealth = unitClass.starterConfig.baseHealth;
+      this.baseMana = unitClass.starterConfig.baseMana;
+      this.basePhysicalPower = unitClass.starterConfig.basePhysicalPower;
+      this.baseMagicPower = unitClass.starterConfig.baseMagicPower;
+      this.baseSpeed = unitClass.starterConfig.baseSpeed;
+      this.baseMovement = unitClass.starterConfig.baseMovement;
+      this.basePhysicalEvade = unitClass.starterConfig.basePhysicalEvade;
+      this.baseMagicEvade = unitClass.starterConfig.baseMagicEvade;
+      this.baseCourage = unitClass.starterConfig.baseCourage;
+      this.baseAttunement = unitClass.starterConfig.baseAttunement;
+    }
+
+    // Update dual-wield capability from the new class
+    this._canDualWield = unitClass.canDualWield;
   }
 
   /**

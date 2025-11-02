@@ -418,9 +418,9 @@ export class PartyMemberRegistry {
   }
 
   /**
-   * Update learned abilities and XP for a party member definition from a HumanoidUnit
+   * Update learned abilities, XP, and base stats for a party member definition from a HumanoidUnit
    * @param id The party member ID
-   * @param unit The HumanoidUnit with updated abilities and XP
+   * @param unit The HumanoidUnit with updated abilities, XP, and base stats
    * @returns true if updated successfully, false if party member not found
    */
   static updateFromUnit(id: string, unit: HumanoidUnit): boolean {
@@ -428,6 +428,21 @@ export class PartyMemberRegistry {
     if (!definition) {
       return false;
     }
+
+    // Get unit data via toJSON to access private base stats
+    const unitJSON = unit.toJSON();
+
+    // Update base stats (these may have changed when primary class changed)
+    definition.baseHealth = unitJSON.baseHealth;
+    definition.baseMana = unitJSON.baseMana;
+    definition.basePhysicalPower = unitJSON.basePhysicalPower;
+    definition.baseMagicPower = unitJSON.baseMagicPower;
+    definition.baseSpeed = unitJSON.baseSpeed;
+    definition.baseMovement = unitJSON.baseMovement;
+    definition.basePhysicalEvade = unitJSON.basePhysicalEvade;
+    definition.baseMagicEvade = unitJSON.baseMagicEvade;
+    definition.baseCourage = unitJSON.baseCourage;
+    definition.baseAttunement = unitJSON.baseAttunement;
 
     // Update learned abilities
     definition.learnedAbilityIds = Array.from(unit.learnedAbilities).map(ability => ability.id);

@@ -12,13 +12,13 @@ describe('Equipment Stat Calculations', () => {
     Equipment.clearRegistry();
 
     testClass = new UnitClass(
-      'test-class',
       'Test Class',
       'A test class',
       [],
+      [],
       { health: 0 },
       {},
-      [],
+      new Map(),
       'test-class'
     );
 
