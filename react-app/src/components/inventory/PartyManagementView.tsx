@@ -295,6 +295,7 @@ export const PartyManagementView: React.FC = () => {
 
   // Spend XP panel content (created when needed)
   const spendXpMainContentRef = useRef<SpendXpMainPanelContent | null>(null);
+  const spendXpSelectedClassIdRef = useRef<string | null>(null);
 
   // Set Abilities panel content (created when needed)
   const setAbilitiesMainContentRef = useRef<SetAbilitiesMainPanelContent | null>(null);
@@ -733,6 +734,11 @@ export const PartyManagementView: React.FC = () => {
           // Create spend-xp main content only if not already created
           if (!spendXpMainContentRef.current) {
             spendXpMainContentRef.current = new SpendXpMainPanelContent(selectedMember);
+
+            // Restore previously selected class if available
+            if (spendXpSelectedClassIdRef.current) {
+              spendXpMainContentRef.current.setSelectedClass(spendXpSelectedClassIdRef.current);
+            }
 
             // Set initial bottom panel to show the selected class info
             const selectedClassId = spendXpMainContentRef.current.getSelectedClassId();
@@ -1468,6 +1474,9 @@ export const PartyManagementView: React.FC = () => {
             // Class was selected - show class info in bottom panel (no caching in spend-xp mode)
             const unitClass = UnitClass.getById(clickResult.classId);
             if (unitClass && selectedMemberRef.current) {
+              // Save the selected class ID
+              spendXpSelectedClassIdRef.current = clickResult.classId;
+
               bottomPanelManager.setContent(new ClassInfoContent(unitClass, selectedMemberRef.current));
               // Add class description to combat log with orange class name
               addLogMessage(`[color=#ff8c00]${unitClass.name}[/color] - ${unitClass.description}`);
@@ -1547,6 +1556,11 @@ export const PartyManagementView: React.FC = () => {
                 PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
               }
 
+              // Save the currently selected class before clearing the panel
+              if (spendXpMainContentRef.current) {
+                spendXpSelectedClassIdRef.current = spendXpMainContentRef.current.getSelectedClassId();
+              }
+
               // Clear cached references to force recreation from updated registry
               selectedMemberRef.current = null;
               spendXpMainContentRef.current = null;
@@ -1590,6 +1604,11 @@ export const PartyManagementView: React.FC = () => {
               const selectedMemberConfig = partyMemberConfigs[selectedPartyMemberIndex];
               if (selectedMemberConfig) {
                 PartyMemberRegistry.updateFromUnit(selectedMemberConfig.id, humanoid);
+              }
+
+              // Save the currently selected class before clearing the panel
+              if (spendXpMainContentRef.current) {
+                spendXpSelectedClassIdRef.current = spendXpMainContentRef.current.getSelectedClassId();
               }
 
               // Clear cached references to force recreation from updated registry
