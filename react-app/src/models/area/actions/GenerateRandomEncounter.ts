@@ -7,6 +7,8 @@ import { DungeonGenerator } from '../../../utils/DungeonGenerator';
 import { TilesetRegistry } from '../../../utils/TilesetRegistry';
 import { EnemyRegistry } from '../../../utils/EnemyRegistry';
 import { generateRandomEnemy, type PartyStatRanges } from './RandomEnemyGenerator';
+import { generateRandomLootTable, calculatePartyEquipmentRanges } from './RandomLootGenerator';
+import { EquipmentRegistry } from '../../../utils/EquipmentRegistry';
 
 /**
  * Generates a random combat encounter with procedurally generated dungeon layout.
@@ -17,9 +19,11 @@ export class GenerateRandomEncounter implements EventAction {
   readonly type = "GenerateRandomEncounter";
 
   private partyStatRanges?: PartyStatRanges;
+  private partyMembers?: any[]; // Store party members for equipment range calculation
 
-  constructor(partyStatRanges?: PartyStatRanges) {
+  constructor(partyStatRanges?: PartyStatRanges, partyMembers?: any[]) {
     this.partyStatRanges = partyStatRanges;
+    this.partyMembers = partyMembers;
   }
 
   execute(state: GameState): GameState {
@@ -112,14 +116,23 @@ export class GenerateRandomEncounter implements EventAction {
         !deploymentZones.some(z => z.x === tile.x && z.y === tile.y)
       );
 
+      // Calculate party equipment ranges for loot scaling
+      const partyEquipmentRanges = this.partyMembers ? calculatePartyEquipmentRanges(this.partyMembers) : undefined;
+
       for (let i = 0; i < enemyCount && availableForEnemies.length > 0; i++) {
         // Pick a random position
         const randomIndex = Math.floor(Math.random() * availableForEnemies.length);
         const position = availableForEnemies[randomIndex];
         availableForEnemies.splice(randomIndex, 1); // Remove from available
 
-        // Generate a new random enemy (scaled to party stats if available)
-        const enemy = generateRandomEnemy(this.partyStatRanges);
+        // Generate random loot table with 20% drop rate for this enemy
+        const { lootTable, equipmentDef } = generateRandomLootTable(partyEquipmentRanges);
+
+        // Register the generated equipment so it can be used when dropped
+        EquipmentRegistry.register(equipmentDef);
+
+        // Generate a new random enemy (scaled to party stats if available) with loot table
+        const enemy = generateRandomEnemy(this.partyStatRanges, lootTable);
 
         // Register the generated enemy so it can be used in combat
         EnemyRegistry.register(enemy);

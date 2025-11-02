@@ -598,12 +598,14 @@ export const FirstPersonView: React.FC<FirstPersonViewProps> = ({
       ]).then(([{ GenerateRandomEncounter }, { calculatePartyStatRanges }]) => {
         // Calculate party stat ranges for difficulty scaling
         let partyStatRanges;
+        let partyMembers;
         if (partyState && partyState.members.length > 0) {
           partyStatRanges = calculatePartyStatRanges(partyState.members);
+          partyMembers = partyState.members;
           console.log('[FirstPersonView] Scaling enemies to party stats:', partyStatRanges);
         }
 
-        const action = new GenerateRandomEncounter(partyStatRanges);
+        const action = new GenerateRandomEncounter(partyStatRanges, partyMembers);
         const newState = action.execute(gameState);
 
         // Check if combat was triggered

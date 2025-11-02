@@ -1,4 +1,5 @@
 import type { EnemyDefinition } from '../../../utils/EnemyRegistry';
+import type { LootTable } from '../../combat/LootTable';
 
 /**
  * Sprite definitions based on available monster and humanoid sprites
@@ -163,8 +164,9 @@ export function calculatePartyStatRanges(partyMembers: Array<{
 /**
  * Generates a random enemy definition for procedural encounters
  * @param partyStatRanges Optional stat ranges based on party members (for difficulty scaling)
+ * @param lootTable Optional loot table to attach to this enemy
  */
-export function generateRandomEnemy(partyStatRanges?: PartyStatRanges): EnemyDefinition {
+export function generateRandomEnemy(partyStatRanges?: PartyStatRanges, lootTable?: LootTable): EnemyDefinition {
   // Pick a random sprite
   const sprite = SPRITE_DEFINITIONS[Math.floor(Math.random() * SPRITE_DEFINITIONS.length)];
 
@@ -229,7 +231,7 @@ export function generateRandomEnemy(partyStatRanges?: PartyStatRanges): EnemyDef
   // Generate unique ID
   const id = `random-${sprite.spriteId.replace('/', '-')}-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-  return {
+  const enemy: EnemyDefinition = {
     id,
     name,
     unitType,
@@ -249,4 +251,11 @@ export function generateRandomEnemy(partyStatRanges?: PartyStatRanges): EnemyDef
     goldValue,
     tags: sprite.tags,
   };
+
+  // Add loot table if provided
+  if (lootTable) {
+    enemy.lootTable = lootTable;
+  }
+
+  return enemy;
 }
