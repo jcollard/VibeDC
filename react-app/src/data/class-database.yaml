@@ -21,6 +21,8 @@ classes:
       - "meat-shield-001"
       - "shield-bearer-001"
       - "journeyman-001"
+      - "regenerate-001"
+      - "power-walker-001"
     modifiers:
       health: 30
       physicalPower: 2
@@ -71,6 +73,7 @@ classes:
       - "ready-001"
       - "dodge-001"
       - "extra-movement-001"
+      - "regenerate-001"
     modifiers:
       speed: 2
       movement: 1

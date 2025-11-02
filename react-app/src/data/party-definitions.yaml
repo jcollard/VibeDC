@@ -16,10 +16,10 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 10
     spriteId: "crystalwarriors-14"
-    learnedAbilityIds: ["leg-strike-001", "parry-001"]
+    learnedAbilityIds: ["leg-strike-001", "parry-001", "regenerate-001"]
     reactionAbilityId: "parry-001"
     passiveAbilityId: "meat-shield-001"
-    movementAbilityId: "journeyman-001"
+    movementAbilityId: "regenerate-001"
     leftHandId: "flame-blade-001"
     rightHandId: "tower-shield-001"
     headId: "iron-helmet-001"
@@ -41,8 +41,9 @@ partyMembers:
     baseAttunement: 6
     spriteId: "crystalwarriors-0"
     secondaryClassId: "rogue"
-    learnedAbilityIds: ["charge-001", "focused-001", "shove-001", "bash-001", "taunt-001", "throw-stone-001", "sneak-001", "cut-001", "parry-001", "repost-001"]
+    learnedAbilityIds: ["charge-001", "focused-001", "shove-001", "bash-001", "taunt-001", "throw-stone-001", "sneak-001", "cut-001", "parry-001", "repost-001", "power-walker-001"]
     reactionAbilityId: "repost-001"
+    movementAbilityId: "power-walker-001"
     leftHandId: "war-bow-001"
     headId: "iron-helmet-001"
     bodyId: "plate-armor-001"
@@ -70,8 +71,9 @@ partyMembers:
     baseCourage: 10
     baseAttunement: 20
     spriteId: "crystalwarriors-10"
-    learnedAbilityIds: ["heal-001", "harm-001", "strength-001", "quick-shield-001"]
+    learnedAbilityIds: ["heal-001", "harm-001", "strength-001", "quick-shield-001", "meditate-001"]
     reactionAbilityId: "quick-shield-001"
+    movementAbilityId: "meditate-001"
     leftHandId: "heavy-crossbow-001"
     headId: "wizards-hat-001"
     bodyId: "wizards-robe-001"
@@ -94,8 +96,9 @@ partyMembers:
     baseCourage: 12
     baseAttunement: 10
     spriteId: "crystalwarriors-4"
-    learnedAbilityIds: ["throw-stone-001", "slippery-001"]
+    learnedAbilityIds: ["throw-stone-001", "slippery-001", "regenerate-001"]
     reactionAbilityId: "slippery-001"
+    movementAbilityId: "regenerate-001"
     leftHandId: "steel-dagger-001"
     rightHandId: "steel-dagger-001"
     bodyId: "leather-armor-001"

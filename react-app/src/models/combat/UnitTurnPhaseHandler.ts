@@ -30,6 +30,7 @@ import type { Equipment } from './Equipment';
 import { AbilityExecutor, type AbilityExecutionContext } from './abilities/AbilityExecutor';
 import { ReactionHandler } from './abilities/ReactionHandler';
 import type { ReactionTriggerContext } from './abilities/ReactionTrigger';
+import { MovementAbilityHandler } from './abilities/MovementAbilityHandler';
 
 /**
  * Unit turn phase handler - manages individual unit turns using strategy pattern
@@ -663,6 +664,27 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
         return state;
     }
 
+    // ============================================================
+    // TRIGGER: after-no-move (if Delay/End Turn without moving)
+    // ============================================================
+    if ((action.type === 'delay' || action.type === 'end-turn') && !this.unitHasMoved && this.activeUnitPosition) {
+      const movementResult = MovementAbilityHandler.checkMovementAbility({
+        triggerType: 'after-no-move',
+        mover: this.activeUnit,
+        startPosition: this.activeUnitPosition,
+        endPosition: this.activeUnitPosition,
+        tilesMoved: 0,
+        state
+      });
+
+      if (movementResult.shouldExecute) {
+        state = movementResult.newState;
+        for (const msg of movementResult.logMessages) {
+          this.pendingLogMessages.push(msg);
+        }
+      }
+    }
+
     // Capture current turn order BEFORE mutation (for slide animation)
     // Get turn order from the turn order renderer if available
     // Store the actual unit instances (not names) to handle duplicate names correctly
@@ -825,6 +847,11 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Get final position from animation
     const finalPosition = this.movementSequence.getDestination();
 
+    // Calculate tiles moved (Manhattan distance)
+    const startPos = this.originalPosition || this.activeUnitPosition;
+    const tilesMoved = Math.abs(Math.round(finalPosition.x) - startPos.x) +
+                       Math.abs(Math.round(finalPosition.y) - startPos.y);
+
     // Update unit position in manifest
     state.unitManifest.moveUnit(this.activeUnit, {
       x: Math.round(finalPosition.x),
@@ -853,6 +880,27 @@ export class UnitTurnPhaseHandler extends PhaseBase implements CombatPhaseHandle
     // Notify strategy that unit has moved (clears movement range)
     if (this.currentStrategy && 'onUnitMoved' in this.currentStrategy) {
       (this.currentStrategy as any).onUnitMoved();
+    }
+
+    // ============================================================
+    // TRIGGER: after-move (if unit moved)
+    // ============================================================
+    if (tilesMoved > 0) {
+      const movementResult = MovementAbilityHandler.checkMovementAbility({
+        triggerType: 'after-move',
+        mover: this.activeUnit,
+        startPosition: startPos,
+        endPosition: this.activeUnitPosition,
+        tilesMoved,
+        state
+      });
+
+      if (movementResult.shouldExecute) {
+        state = movementResult.newState;
+        for (const msg of movementResult.logMessages) {
+          this.pendingLogMessages.push(msg);
+        }
+      }
     }
 
     // Re-evaluate AI behaviors after movement completes (action economy system)
