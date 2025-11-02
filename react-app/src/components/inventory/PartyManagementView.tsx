@@ -1569,6 +1569,63 @@ export const PartyManagementView: React.FC = () => {
             renderFrame();
             return;
           }
+
+          // Handle ability slot clicked (to switch to a different slot while in set-abilities mode)
+          if (topInfoClickResult.type === 'ability-slot-clicked' && 'slotType' in topInfoClickResult) {
+            const newSlotType = topInfoClickResult.slotType as 'Reaction' | 'Passive' | 'Movement';
+
+            // Only update if switching to a different slot
+            if (newSlotType !== setAbilitiesSlotTypeRef.current) {
+              setAbilitiesSlotTypeRef.current = newSlotType;
+              setAbilitiesMainContentRef.current = null; // Clear to force recreation with new slot type
+
+              // Update the selected ability slot highlight in the top info panel
+              const topContent = topInfoPanelManager.getContent();
+              if (topContent && 'setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                (topContent as any).setSelectedEquipmentSlot(newSlotType);
+              }
+
+              addLogMessage(`Select a ${newSlotType} ability`);
+              renderFrame();
+            }
+            return;
+          }
+        }
+
+        // Check if clicking on equipment slot in abilities view - if so, switch back to inventory mode
+        const relativeX = canvasX - topInfoPanelRegion.x;
+        const relativeY = canvasY - topInfoPanelRegion.y;
+        const topContent = topInfoPanelManager.getContent();
+        if (topContent && 'handleHover' in topContent && typeof topContent.handleHover === 'function') {
+          const hoverResult = topContent.handleHover(relativeX, relativeY);
+
+          if (hoverResult && typeof hoverResult === 'object' && 'type' in hoverResult) {
+            if ('item' in hoverResult && hoverResult.type === 'equipment-detail') {
+              // Equipment slot clicked - switch to inventory mode
+              const slotLabel = (topContent as any).hoveredStatId as string | null;
+
+              // Clear the ability slot highlight
+              if ('setSelectedEquipmentSlot' in topContent && typeof (topContent as any).setSelectedEquipmentSlot === 'function') {
+                (topContent as any).setSelectedEquipmentSlot(slotLabel);
+              }
+
+              // Set as selected equipment
+              selectedEquipmentRef.current = {
+                type: 'equipment',
+                item: hoverResult.item,
+                slotLabel: slotLabel
+              };
+
+              // Return to inventory mode
+              setPanelMode('inventory');
+
+              // Set detail panel active and increment version to trigger re-render
+              detailPanelActiveRef.current = true;
+              setEquipmentSlotSelectionVersion(v => v + 1);
+
+              return;
+            }
+          }
         }
 
         return; // Don't process other clicks in set-abilities mode
