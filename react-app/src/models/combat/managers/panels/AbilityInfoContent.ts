@@ -2,16 +2,21 @@ import type { CombatAbility } from '../../CombatAbility';
 import { FontAtlasRenderer } from '../../../../utils/FontAtlasRenderer';
 import { FontRegistry } from '../../../../utils/FontRegistry';
 import type { PanelContent, PanelRegion } from './PanelContent';
-import { ITEM_NAME_COLOR } from './colors';
+import { ITEM_NAME_COLOR, HOVERED_TEXT } from './colors';
+
+const MENU_OPTION_COLOR = '#ffffff';
 
 /**
  * Panel content that displays detailed information about a combat ability.
- * Shows: centered ability name (orange) and wrapped description text.
+ * Shows: ability name, type, XP cost, description, and Learn/Cancel options.
  */
 export class AbilityInfoContent implements PanelContent {
   private ability: CombatAbility;
-  private padding: number = 1;
+  private padding: number = 4;
   private lineSpacing: number = 8;
+  private hoveredOption: 'learn' | 'cancel' | null = null;
+  private learnOptionBounds: { x: number; y: number; width: number; height: number } | null = null;
+  private cancelOptionBounds: { x: number; y: number; width: number; height: number } | null = null;
 
   constructor(ability: CombatAbility) {
     this.ability = ability;
@@ -35,15 +40,16 @@ export class AbilityInfoContent implements PanelContent {
     const font = FontRegistry.getById(fontId);
     if (!font) return;
 
+    ctx.save();
+    ctx.imageSmoothingEnabled = false;
+
     let y = region.y + this.padding;
 
-    // Render ability name (centered, orange)
-    const nameWidth = FontAtlasRenderer.measureText(this.ability.name, font);
-    const nameX = region.x + Math.floor((region.width - nameWidth) / 2);
+    // Render ability name (left-aligned, orange)
     FontAtlasRenderer.renderText(
       ctx,
       this.ability.name,
-      nameX,
+      region.x + this.padding,
       y,
       fontId,
       fontAtlasImage,
@@ -52,7 +58,38 @@ export class AbilityInfoContent implements PanelContent {
       ITEM_NAME_COLOR
     );
 
-    y += this.lineSpacing + 2; // Spacing after name
+    // Render XP cost (right-aligned, orange)
+    const xpText = `${this.ability.experiencePrice} XP`;
+    const xpWidth = FontAtlasRenderer.measureText(xpText, font);
+    const xpX = region.x + region.width - this.padding - xpWidth;
+    FontAtlasRenderer.renderText(
+      ctx,
+      xpText,
+      xpX,
+      y,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      ITEM_NAME_COLOR
+    );
+
+    y += this.lineSpacing;
+
+    // Render ability type (left-aligned, white)
+    FontAtlasRenderer.renderText(
+      ctx,
+      this.ability.abilityType,
+      region.x + this.padding,
+      y,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      '#ffffff'
+    );
+
+    y += this.lineSpacing + 2; // Spacing before description
 
     // Render description (wrapped, white)
     const maxWidth = region.width - (this.padding * 2);
@@ -77,6 +114,66 @@ export class AbilityInfoContent implements PanelContent {
       );
       y += this.lineSpacing;
     }
+
+    y += 8; // Extra spacing before options
+
+    // Render "Learn" option (centered)
+    const learnText = 'Learn';
+    const learnColor = this.hoveredOption === 'learn' ? HOVERED_TEXT : MENU_OPTION_COLOR;
+    const learnWidth = FontAtlasRenderer.measureText(learnText, font);
+    const learnX = region.x + Math.floor((region.width - learnWidth) / 2);
+    const learnY = y;
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      learnText,
+      learnX,
+      learnY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      learnColor
+    );
+
+    // Store bounds for hover/click detection
+    this.learnOptionBounds = {
+      x: learnX - region.x,
+      y: learnY - region.y,
+      width: learnWidth,
+      height: this.lineSpacing
+    };
+
+    y += this.lineSpacing;
+
+    // Render "Cancel" option (centered)
+    const cancelText = 'Cancel';
+    const cancelColor = this.hoveredOption === 'cancel' ? HOVERED_TEXT : MENU_OPTION_COLOR;
+    const cancelWidth = FontAtlasRenderer.measureText(cancelText, font);
+    const cancelX = region.x + Math.floor((region.width - cancelWidth) / 2);
+    const cancelY = y;
+
+    FontAtlasRenderer.renderText(
+      ctx,
+      cancelText,
+      cancelX,
+      cancelY,
+      fontId,
+      fontAtlasImage,
+      1,
+      'left',
+      cancelColor
+    );
+
+    // Store bounds for hover/click detection
+    this.cancelOptionBounds = {
+      x: cancelX - region.x,
+      y: cancelY - region.y,
+      width: cancelWidth,
+      height: this.lineSpacing
+    };
+
+    ctx.restore();
   }
 
   /**
@@ -108,5 +205,79 @@ export class AbilityInfoContent implements PanelContent {
     }
 
     return lines.length > 0 ? lines : [text];
+  }
+
+  /**
+   * Handle hover event
+   */
+  handleHover(relativeX: number, relativeY: number): unknown {
+    let newHoveredOption: 'learn' | 'cancel' | null = null;
+
+    // Check if hovering over learn option
+    if (this.learnOptionBounds) {
+      const bounds = this.learnOptionBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        newHoveredOption = 'learn';
+      }
+    }
+
+    // Check if hovering over cancel option
+    if (this.cancelOptionBounds && newHoveredOption === null) {
+      const bounds = this.cancelOptionBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        newHoveredOption = 'cancel';
+      }
+    }
+
+    // Check if hover state changed
+    if (newHoveredOption !== this.hoveredOption) {
+      this.hoveredOption = newHoveredOption;
+      return { type: 'ability-option-hover', option: newHoveredOption };
+    }
+
+    return null;
+  }
+
+  /**
+   * Handle click event
+   */
+  handleClick(relativeX: number, relativeY: number): any {
+    // Check if clicking on learn option
+    if (this.learnOptionBounds) {
+      const bounds = this.learnOptionBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        return { type: 'learn-ability', abilityId: this.ability.id };
+      }
+    }
+
+    // Check if clicking on cancel option
+    if (this.cancelOptionBounds) {
+      const bounds = this.cancelOptionBounds;
+      if (
+        relativeX >= bounds.x &&
+        relativeX <= bounds.x + bounds.width &&
+        relativeY >= bounds.y &&
+        relativeY <= bounds.y + bounds.height
+      ) {
+        return { type: 'cancel-ability-view' };
+      }
+    }
+
+    return null;
   }
 }
