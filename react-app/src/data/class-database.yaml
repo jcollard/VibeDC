@@ -59,6 +59,7 @@ classes:
       - "agile"
       - "stealth"
       - "player"
+    canDualWield: true
     learnableAbilities:
       - "throw-stone-001"
       - "sneak-001"

@@ -187,7 +187,8 @@ export function loadClasses(): void {
       requirements,
       classData.id,
       classData.allowedEquipmentTypes,
-      classData.starterConfig
+      classData.starterConfig,
+      classData.canDualWield ?? false
     );
   }
 

@@ -121,6 +121,9 @@ export class HumanoidUnit implements CombatUnit {
     this.baseAttunement = baseAttunement;
     this._spriteId = spriteId;
     this._isPlayerControlled = isPlayerControlled;
+
+    // Set dual-wield capability from primary class
+    this._canDualWield = unitClass.canDualWield;
   }
 
   get name(): string {
