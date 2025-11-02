@@ -67,12 +67,10 @@ export const GameView: React.FC<GameViewProps> = ({
     loadResources();
   }, [resourceManager, onGameReady]);
 
-  // ✅ GUIDELINE: Sync to registries if loading into party management view
+  // ✅ GUIDELINE: Initialize registries on mount with current party state
   useEffect(() => {
-    if (gameState.currentView === 'party-management') {
-      console.log('[GameView] Loaded into party management view - syncing to registries');
-      syncPartyStateToRegistries(gameState.partyState);
-    }
+    console.log('[GameView] Initializing registries on mount');
+    syncPartyStateToRegistries(gameState.partyState);
   }, []); // Only run once on mount
   // eslint-disable-next-line react-hooks/exhaustive-deps
 
@@ -522,7 +520,9 @@ function createNewGameState(initialMapId: string): CompleteGameState {
   }
 
   // Create default party (load all party members from registry)
-  const partyMembers = PartyMemberRegistry.getAll()
+  // Also populate guildRoster with their definitions
+  const initialPartyDefinitions = PartyMemberRegistry.getAll();
+  const partyMembers = initialPartyDefinitions
     .map(member => PartyMemberRegistry.createPartyMember(member.id))
     .filter((unit): unit is CombatUnit => unit !== undefined);
 
@@ -538,7 +538,7 @@ function createNewGameState(initialMapId: string): CompleteGameState {
     },
     partyState: {
       members: partyMembers,
-      guildRoster: [],
+      guildRoster: initialPartyDefinitions, // Initialize with default party definitions
       inventory: {
         items: [],
         gold: 0,
