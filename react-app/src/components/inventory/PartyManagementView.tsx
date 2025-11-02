@@ -26,6 +26,7 @@ import { EmptySlotInfoContent } from '../../models/inventory/panels/EmptySlotInf
 import { EquipmentComparisonContent } from '../../models/inventory/panels/EquipmentComparisonContent';
 import { SpendXpTitlePanelContent } from '../../models/inventory/panels/SpendXpTitlePanelContent';
 import { SpendXpMainPanelContent } from '../../models/inventory/panels/SpendXpMainPanelContent';
+import { ClassInfoContent } from '../../models/inventory/panels/ClassInfoContent';
 import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager';
 import { isEquipmentCompatibleWithSlot, isEquipmentSlot } from '../../utils/EquipmentSlotUtil';
 import { UISettings } from '../../config/UISettings';
@@ -33,6 +34,7 @@ import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
 import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { CombatAbility } from '../../models/combat/CombatAbility';
+import { UnitClass } from '../../models/combat/UnitClass';
 
 // Canvas dimensions (same as CombatView)
 const CANVAS_WIDTH = CombatConstants.CANVAS_WIDTH; // 384 pixels (32 tiles)
@@ -651,6 +653,13 @@ export const PartyManagementView: React.FC = () => {
           // Create spend-xp main content only if not already created
           if (!spendXpMainContentRef.current) {
             spendXpMainContentRef.current = new SpendXpMainPanelContent(selectedMember);
+
+            // Set initial bottom panel to show the selected class info
+            const selectedClassId = spendXpMainContentRef.current.getSelectedClassId();
+            const selectedClass = UnitClass.getById(selectedClassId);
+            if (selectedClass) {
+              bottomPanelManager.setContent(new ClassInfoContent(selectedClass));
+            }
           }
 
           // Render spend-xp title panel
@@ -1101,7 +1110,8 @@ export const PartyManagementView: React.FC = () => {
 
       // Handle ability/equipment detail panel swapping (similar to CombatView)
       // Skip hover changes if equipment/ability is selected (clicked)
-      if (!selectedEquipmentRef.current) {
+      // Skip this logic entirely in spend-xp mode (bottom panel managed differently)
+      if (!selectedEquipmentRef.current && panelMode !== 'spend-xp') {
         if (canvasX >= topInfoPanelRegion.x && canvasX < topInfoPanelRegion.x + topInfoPanelRegion.width &&
             canvasY >= topInfoPanelRegion.y && canvasY < topInfoPanelRegion.y + topInfoPanelRegion.height) {
 
@@ -1219,21 +1229,18 @@ export const PartyManagementView: React.FC = () => {
             relativeX < mainPanelBounds.width && relativeY < mainPanelBounds.height) {
           const clickResult = spendXpMainContentRef.current.handleClick(relativeX, relativeY);
           if (clickResult && clickResult.type === 'class-selected') {
-            // Class was selected, re-render
+            // Class was selected - show class info in bottom panel (no caching in spend-xp mode)
+            const unitClass = UnitClass.getById(clickResult.classId);
+            if (unitClass) {
+              bottomPanelManager.setContent(new ClassInfoContent(unitClass));
+            }
             renderFrame();
             return;
           } else if (clickResult && clickResult.type === 'ability-selected') {
-            // Ability was clicked - show details in bottom panel
+            // Ability was clicked - show details in bottom panel (no caching in spend-xp mode)
             const ability = CombatAbility.getById(clickResult.abilityId);
             if (ability) {
-              // Cache original bottom panel content if not already cached
-              if (!detailPanelActiveRef.current && bottomPanelManager.getContent()) {
-                originalBottomPanelContentRef.current = bottomPanelManager.getContent();
-              }
-
-              // Show ability details in bottom panel
               bottomPanelManager.setContent(new AbilityInfoContent(ability));
-              detailPanelActiveRef.current = true;
               renderFrame();
             }
             return;
