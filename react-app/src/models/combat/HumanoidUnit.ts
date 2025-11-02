@@ -168,7 +168,11 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get maxHealth(): number {
-    return Math.max(0, this.baseHealth + this.getStatModifierTotal('maxHealth'));
+    const base = this.baseHealth;
+    const modifiers = this.getStatModifierTotal('maxHealth');
+    const equipmentMods = this.getEquipmentModifierTotal('health');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('health');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get wounds(): number {
@@ -204,7 +208,11 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get maxMana(): number {
-    return Math.max(0, this.baseMana + this.getStatModifierTotal('maxMana'));
+    const base = this.baseMana;
+    const modifiers = this.getStatModifierTotal('maxMana');
+    const equipmentMods = this.getEquipmentModifierTotal('mana');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('mana');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get manaUsed(): number {
@@ -236,15 +244,27 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get physicalPower(): number {
-    return Math.max(0, this.basePhysicalPower + this.getStatModifierTotal('physicalPower'));
+    const base = this.basePhysicalPower;
+    const modifiers = this.getStatModifierTotal('physicalPower');
+    const equipmentMods = this.getEquipmentModifierTotal('physicalPower');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('physicalPower');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get magicPower(): number {
-    return Math.max(0, this.baseMagicPower + this.getStatModifierTotal('magicPower'));
+    const base = this.baseMagicPower;
+    const modifiers = this.getStatModifierTotal('magicPower');
+    const equipmentMods = this.getEquipmentModifierTotal('magicPower');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('magicPower');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get speed(): number {
-    return Math.max(0, this.baseSpeed + this.getStatModifierTotal('speed'));
+    const base = this.baseSpeed;
+    const modifiers = this.getStatModifierTotal('speed');
+    const equipmentMods = this.getEquipmentModifierTotal('speed');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('speed');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get actionTimer(): number {
@@ -260,23 +280,43 @@ export class HumanoidUnit implements CombatUnit {
   }
 
   get movement(): number {
-    return Math.max(0, this.baseMovement + this.getStatModifierTotal('movement'));
+    const base = this.baseMovement;
+    const modifiers = this.getStatModifierTotal('movement');
+    const equipmentMods = this.getEquipmentModifierTotal('movement');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('movement');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get physicalEvade(): number {
-    return Math.max(0, this.basePhysicalEvade + this.getStatModifierTotal('physicalEvade'));
+    const base = this.basePhysicalEvade;
+    const modifiers = this.getStatModifierTotal('physicalEvade');
+    const equipmentMods = this.getEquipmentModifierTotal('physicalEvade');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('physicalEvade');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get magicEvade(): number {
-    return Math.max(0, this.baseMagicEvade + this.getStatModifierTotal('magicEvade'));
+    const base = this.baseMagicEvade;
+    const modifiers = this.getStatModifierTotal('magicEvade');
+    const equipmentMods = this.getEquipmentModifierTotal('magicEvade');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('magicEvade');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get courage(): number {
-    return Math.max(0, this.baseCourage + this.getStatModifierTotal('courage'));
+    const base = this.baseCourage;
+    const modifiers = this.getStatModifierTotal('courage');
+    const equipmentMods = this.getEquipmentModifierTotal('courage');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('courage');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get attunement(): number {
-    return Math.max(0, this.baseAttunement + this.getStatModifierTotal('attunement'));
+    const base = this.baseAttunement;
+    const modifiers = this.getStatModifierTotal('attunement');
+    const equipmentMods = this.getEquipmentModifierTotal('attunement');
+    const equipmentMultipliers = this.getEquipmentMultiplierTotal('attunement');
+    return Math.max(0, Math.floor((base + modifiers + equipmentMods) * equipmentMultipliers));
   }
 
   get spriteId(): string {
@@ -912,6 +952,76 @@ export class HumanoidUnit implements CombatUnit {
     return this._statModifiers
       .filter(m => m.stat === stat)
       .reduce((total, m) => total + m.value, 0);
+  }
+
+  /**
+   * Get the total equipment modifier for a specific stat
+   * @param stat The stat name (e.g., 'health', 'physicalPower')
+   * @returns The sum of all equipment modifiers for that stat
+   */
+  private getEquipmentModifierTotal(stat: string): number {
+    let total = 0;
+    const equipment = [this._leftHand, this._rightHand, this._head, this._body, this._accessory];
+
+    for (const item of equipment) {
+      if (!item) continue;
+
+      // Skip weapon power modifiers
+      if (item.isWeapon() && (stat === 'physicalPower' || stat === 'magicPower')) {
+        continue;
+      }
+
+      // Get modifier based on stat name
+      switch (stat) {
+        case 'health': total += item.modifiers.healthModifier; break;
+        case 'mana': total += item.modifiers.manaModifier; break;
+        case 'physicalPower': total += item.modifiers.physicalPowerModifier; break;
+        case 'magicPower': total += item.modifiers.magicPowerModifier; break;
+        case 'speed': total += item.modifiers.speedModifier; break;
+        case 'movement': total += item.modifiers.movementModifier; break;
+        case 'physicalEvade': total += item.modifiers.physicalEvadeModifier; break;
+        case 'magicEvade': total += item.modifiers.magicEvadeModifier; break;
+        case 'courage': total += item.modifiers.courageModifier; break;
+        case 'attunement': total += item.modifiers.attunementModifier; break;
+      }
+    }
+
+    return total;
+  }
+
+  /**
+   * Get the total equipment multiplier for a specific stat
+   * @param stat The stat name (e.g., 'health', 'physicalPower')
+   * @returns The product of all equipment multipliers for that stat
+   */
+  private getEquipmentMultiplierTotal(stat: string): number {
+    let total = 1.0;
+    const equipment = [this._leftHand, this._rightHand, this._head, this._body, this._accessory];
+
+    for (const item of equipment) {
+      if (!item) continue;
+
+      // Skip weapon power multipliers
+      if (item.isWeapon() && (stat === 'physicalPower' || stat === 'magicPower')) {
+        continue;
+      }
+
+      // Multiply by equipment multiplier based on stat name
+      switch (stat) {
+        case 'health': total *= item.modifiers.healthMultiplier; break;
+        case 'mana': total *= item.modifiers.manaMultiplier; break;
+        case 'physicalPower': total *= item.modifiers.physicalPowerMultiplier; break;
+        case 'magicPower': total *= item.modifiers.magicPowerMultiplier; break;
+        case 'speed': total *= item.modifiers.speedMultiplier; break;
+        case 'movement': total *= item.modifiers.movementMultiplier; break;
+        case 'physicalEvade': total *= item.modifiers.physicalEvadeMultiplier; break;
+        case 'magicEvade': total *= item.modifiers.magicEvadeMultiplier; break;
+        case 'courage': total *= item.modifiers.courageMultiplier; break;
+        case 'attunement': total *= item.modifiers.attunementMultiplier; break;
+      }
+    }
+
+    return total;
   }
 
   /**
