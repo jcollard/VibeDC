@@ -29,6 +29,7 @@ export type PanelClickResult =
   | { type: 'set-secondary-class'; classId: string }
   | { type: 'learn-ability'; abilityId: string }
   | { type: 'cancel-ability-view' }
+  | { type: 'exit-party-management' }
   | null;
 
 /**

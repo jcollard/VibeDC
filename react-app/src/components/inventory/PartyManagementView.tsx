@@ -33,7 +33,7 @@ import { InfoPanelManager } from '../../models/combat/managers/InfoPanelManager'
 import { isEquipmentCompatibleWithSlot, isEquipmentSlot } from '../../utils/EquipmentSlotUtil';
 import { UISettings } from '../../config/UISettings';
 import { PartyMemberRegistry } from '../../utils/PartyMemberRegistry';
-import type { PanelContent, PanelRegion } from '../../models/combat/managers/panels/PanelContent';
+import type { PanelContent, PanelRegion, PanelClickResult } from '../../models/combat/managers/panels/PanelContent';
 import type { CombatUnit } from '../../models/combat/CombatUnit';
 import { CombatAbility } from '../../models/combat/CombatAbility';
 import { UnitClass } from '../../models/combat/UnitClass';
@@ -168,9 +168,16 @@ function wrapMessage(message: string, maxWidth: number, fontId: string): string[
 }
 
 /**
- * Empty panel content for when no item is hovered
+ * Menu panel content for party management
  */
-class EmptyPanelContent implements PanelContent {
+class PartyManagementMenuContent implements PanelContent {
+  private hoveredOptionIndex: number | null = null;
+  private options: Array<{ label: string; resultType: string }>;
+
+  constructor(options: Array<{ label: string; resultType: string }>) {
+    this.options = options;
+  }
+
   render(
     ctx: CanvasRenderingContext2D,
     region: PanelRegion,
@@ -183,21 +190,101 @@ class EmptyPanelContent implements PanelContent {
     ctx.imageSmoothingEnabled = false;
 
     const padding = 4;
-    const text = 'Hover over an item';
+    const lineHeight = 8;
+    let currentY = region.y + padding;
 
+    // Title "Menu" in orange
     FontAtlasRenderer.renderText(
       ctx,
-      text,
+      'Menu',
       Math.round(region.x + padding),
-      Math.round(region.y + padding),
+      Math.round(currentY),
       fontId,
       fontAtlasImage,
       1,
       'left',
-      '#888888'
+      '#ff8800' // Orange
     );
+    currentY += lineHeight + 2;
+
+    // Render menu options
+    this.options.forEach((option, index) => {
+      const isHovered = this.hoveredOptionIndex === index;
+      const color = isHovered ? '#ffff00' : '#ffffff'; // Yellow when hovered, white otherwise
+
+      FontAtlasRenderer.renderText(
+        ctx,
+        option.label,
+        Math.round(region.x + padding),
+        Math.round(currentY),
+        fontId,
+        fontAtlasImage,
+        1,
+        'left',
+        color
+      );
+
+      currentY += lineHeight + 2;
+    });
 
     ctx.restore();
+  }
+
+  /**
+   * Handle hover to update which option is hovered
+   * @param _relativeX - X coordinate relative to panel region
+   * @param relativeY - Y coordinate relative to panel region
+   * @returns true if hover state changed
+   */
+  handleHover(_relativeX: number, relativeY: number): boolean {
+    const padding = 4;
+    const lineHeight = 8;
+    const titleHeight = lineHeight + 2;
+    let optionY = padding + titleHeight;
+
+    let newHoveredIndex: number | null = null;
+
+    for (let i = 0; i < this.options.length; i++) {
+      const optionHeight = lineHeight + 2;
+
+      // Check if mouse is over this option (using relative coordinates)
+      if (relativeY >= optionY && relativeY < optionY + optionHeight) {
+        newHoveredIndex = i;
+        break;
+      }
+
+      optionY += optionHeight;
+    }
+
+    const changed = newHoveredIndex !== this.hoveredOptionIndex;
+    this.hoveredOptionIndex = newHoveredIndex;
+    return changed;
+  }
+
+  /**
+   * Handle click to trigger option action
+   * @param _relativeX - X coordinate relative to panel region
+   * @param relativeY - Y coordinate relative to panel region
+   * @returns Click result with option type
+   */
+  handleClick(_relativeX: number, relativeY: number): PanelClickResult {
+    const padding = 4;
+    const lineHeight = 8;
+    const titleHeight = lineHeight + 2;
+    let optionY = padding + titleHeight;
+
+    for (let i = 0; i < this.options.length; i++) {
+      const optionHeight = lineHeight + 2;
+
+      // Check if mouse clicked this option (using relative coordinates)
+      if (relativeY >= optionY && relativeY < optionY + optionHeight) {
+        return { type: this.options[i].resultType as any };
+      }
+
+      optionY += optionHeight;
+    }
+
+    return null;
   }
 }
 
@@ -310,15 +397,19 @@ export const PartyManagementView: React.FC<PartyManagementViewProps> = ({ onClos
 
   // Initialize panel content
   useEffect(() => {
-    // Bottom panel: Item details (initially empty)
-    bottomPanelManager.setContent(new EmptyPanelContent());
+    // Bottom panel: Menu with exit option
+    bottomPanelManager.setContent(new PartyManagementMenuContent([
+      { label: 'Exit Party Management', resultType: 'exit-party-management' }
+    ]));
   }, [bottomPanelManager]);
 
   // Reset bottom panel when exiting spend-xp mode
   useEffect(() => {
     if (panelMode === 'inventory') {
-      // Clear the bottom panel when returning to inventory mode
-      bottomPanelManager.setContent(new EmptyPanelContent());
+      // Clear the bottom panel when returning to inventory mode - show menu
+      bottomPanelManager.setContent(new PartyManagementMenuContent([
+        { label: 'Exit Party Management', resultType: 'exit-party-management' }
+      ]));
     }
   }, [panelMode, bottomPanelManager]);
 
@@ -639,8 +730,10 @@ export const PartyManagementView: React.FC<PartyManagementViewProps> = ({ onClos
         bottomPanelManager.setContent(new EquipmentInfoContent(hoveredEquipment));
       }
     } else {
-      // No slot selected and no item hovered
-      bottomPanelManager.setContent(new EmptyPanelContent());
+      // No slot selected and no item hovered - show menu
+      bottomPanelManager.setContent(new PartyManagementMenuContent([
+        { label: 'Exit Party Management', resultType: 'exit-party-management' }
+      ]));
     }
 
     // Trigger a re-render by updating version
@@ -2059,6 +2152,14 @@ export const PartyManagementView: React.FC<PartyManagementViewProps> = ({ onClos
         bottomPanelRegion
       );
       if (bottomClickResult) {
+        // Handle exit-party-management menu option
+        if (bottomClickResult.type === 'exit-party-management') {
+          if (onClose) {
+            onClose();
+          }
+          return;
+        }
+
         // Handle cancel-selection button
         if (bottomClickResult.type === 'button' && 'buttonId' in bottomClickResult && bottomClickResult.buttonId === 'cancel-selection') {
           // Clear equipment selection
