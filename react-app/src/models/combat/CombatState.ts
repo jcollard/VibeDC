@@ -75,6 +75,13 @@ export interface CombatState {
    */
   pendingActionTimerMutation?: { unit: CombatUnit; newValue: number };
 
+  /**
+   * Flag indicating combat should end and return to exploration view
+   * Set by victory/defeat phase handlers when player clicks Continue/Skip
+   * NOTE: This is NOT serialized - it's a transient runtime-only field
+   */
+  shouldEndCombat?: boolean;
+
   // Additional fields will be added as combat mechanics are implemented
 }
 

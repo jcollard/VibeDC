@@ -177,10 +177,20 @@ export class DefeatPhaseHandler extends PhaseBase {
     }
   }
 
-  private handleSkipEncounter(_state: CombatState): CombatState | null {
-    // TODO: Implement skip encounter logic (future work)
-    console.log("[DefeatPhaseHandler] Skip encounter clicked (not yet implemented)");
-    return null;
+  private handleSkipEncounter(state: CombatState): CombatState | null {
+    console.log("[DefeatPhaseHandler] Skip encounter clicked - returning to exploration");
+
+    // TODO: Phase 7 - Apply defeat consequences to party state
+    // In the future, this might:
+    // - Apply penalties for skipping (e.g., loss of items, gold)
+    // - Track skipped encounters for story purposes
+    // - Trigger defeat-specific events
+
+    // Signal to CombatView that combat should end (with defeat)
+    return {
+      ...state,
+      shouldEndCombat: true,
+    };
   }
 
   private isPointInBounds(

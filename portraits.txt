@@ -1,0 +1,16 @@
+portraits-0 - Male Blond
+portraits-1 - Male green hair
+portraits-2 - Ninja
+portraits-3 - Female red hair
+portraits-4 - Male red mage
+portraits-5 - Female white mage
+portraits-6 - Black mage
+portraits-7 - Male armor
+portraits-8 - Knight
+portraits-9 - Male blue hair
+portraits-10 - Cat
+portraits-11 - Silhoutte
+portraits-12 - Squire
+portraits-13 - Old Man
+portraits-14 - Elf green hair
+portraits-15 - Bearded red hair
