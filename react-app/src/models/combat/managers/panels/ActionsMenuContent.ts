@@ -155,17 +155,6 @@ export class ActionsMenuContent implements PanelContent {
       });
     }
 
-    // Ability button (conditional - only if unit has Action abilities, disabled if canAct is false)
-    const actionAbilities = Array.from(unit.learnedAbilities).filter(a => a.abilityType === 'Action');
-    if (actionAbilities.length > 0) {
-      buttons.push({
-        id: 'ability',
-        label: 'Ability',
-        enabled: canAct,
-        helperText: 'Use a learned ability'
-      });
-    }
-
     // Delay button (disabled if already moved OR canAct is false)
     buttons.push({
       id: 'delay',
